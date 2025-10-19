@@ -22,7 +22,7 @@ coverage.html
 go.work
 
 # Build artifacts
-tinct
+/tinct
 *.tar.gz
 *.zip
 
