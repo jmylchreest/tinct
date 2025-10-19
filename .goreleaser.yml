@@ -1,0 +1,310 @@
+# GoReleaser configuration for Tinct
+# https://goreleaser.com/customization/
+
+version: 2
+
+# Project metadata
+project_name: tinct
+
+# Before hooks - run before building
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+    # Run tests before building
+    - go test ./...
+    # Run linter
+    - golangci-lint run ./...
+
+# Build configuration
+builds:
+  - id: tinct
+    main: ./cmd/tinct
+    binary: tinct
+
+    # Build for multiple platforms
+    goos:
+      - linux
+      - darwin
+      - windows
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Ignore specific combinations
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+      - goos: freebsd
+        goarch: arm
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+    # Ensure we use Go 1.25+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+# Archive configuration
+archives:
+  - id: tinct-archive
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    format_overrides:
+      - goos: windows
+        format: zip
+
+    files:
+      - README.md
+      - LICENSE
+      - DEVELOPMENT.md
+      - configs/**/*
+      - docs/**/*
+
+# Checksums
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# Snapshots (non-tagged builds)
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+# Changelog generation
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "^build\\(deps\\):"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Performance Improvements"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+# Package managers
+brews:
+  - name: tinct
+    repository:
+      owner: jmylchreest
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+    directory: Formula
+    homepage: "https://github.com/jmylchreest/tinct"
+    description: "Generate color palettes from images and apply system-wide theming"
+    license: MIT
+
+    install: |
+      bin.install "tinct"
+
+      # Install shell completions
+      bash_completion.install "completions/tinct.bash" => "tinct"
+      zsh_completion.install "completions/_tinct" => "_tinct"
+      fish_completion.install "completions/tinct.fish"
+
+      # Install example config
+      (share/"tinct").install "configs/tinct.yaml"
+
+    test: |
+      system "#{bin}/tinct", "version"
+
+# AUR (Arch User Repository) packages
+aurs:
+  - name: tinct-bin
+    homepage: "https://github.com/jmylchreest/tinct"
+    description: "Generate color palettes from images and apply system-wide theming"
+    maintainers:
+      - "John Mylchreest <jmylchreest@gmail.com>"
+    license: MIT
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/tinct-bin.git"
+    package: |-
+      # bin
+      install -Dm755 "./tinct" "${pkgdir}/usr/bin/tinct"
+
+      # license
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct/LICENSE"
+
+      # completions
+      mkdir -p "${pkgdir}/usr/share/bash-completion/completions/"
+      mkdir -p "${pkgdir}/usr/share/zsh/site-functions/"
+      mkdir -p "${pkgdir}/usr/share/fish/vendor_completions.d/"
+      install -Dm644 "./completions/tinct.bash" "${pkgdir}/usr/share/bash-completion/completions/tinct"
+      install -Dm644 "./completions/_tinct" "${pkgdir}/usr/share/zsh/site-functions/_tinct"
+      install -Dm644 "./completions/tinct.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/tinct.fish"
+
+# Nix packages
+nix:
+  - name: tinct
+    repository:
+      owner: jmylchreest
+      name: nur-packages
+      token: "{{ .Env.NIX_GITHUB_TOKEN }}"
+    homepage: "https://github.com/jmylchreest/tinct"
+    description: "Generate color palettes from images and apply system-wide theming"
+    license: mit
+    install: |-
+      mkdir -p $out/bin
+      cp tinct $out/bin/
+
+# Linux packages
+nfpms:
+  - id: tinct-nfpm
+    package_name: tinct
+
+    homepage: "https://github.com/jmylchreest/tinct"
+    description: "Generate color palettes from images and apply system-wide theming"
+    maintainer: "John Mylchreest <jmylchreest@gmail.com>"
+    license: MIT
+
+    formats:
+      - deb
+      - rpm
+      - apk
+      - archlinux
+
+    bindir: /usr/bin
+
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/licenses/tinct/LICENSE
+
+      - src: ./configs/tinct.yaml
+        dst: /usr/share/tinct/tinct.yaml.example
+
+      # Completions
+      - src: ./completions/tinct.bash
+        dst: /usr/share/bash-completion/completions/tinct
+
+      - src: ./completions/_tinct
+        dst: /usr/share/zsh/site-functions/_tinct
+
+      - src: ./completions/tinct.fish
+        dst: /usr/share/fish/vendor_completions.d/tinct.fish
+
+    # Debian/RPM specific
+    deb:
+      lintian_overrides:
+        - statically-linked-binary
+        - changelog-file-missing-in-native-package
+
+    rpm:
+      summary: Color palette generator with system-wide theming
+      group: Applications/System
+
+# GitHub release
+release:
+  github:
+    owner: jmylchreest
+    name: tinct
+
+  draft: false
+  prerelease: auto
+  mode: append
+
+  name_template: "{{.ProjectName}} v{{.Version}}"
+
+  header: |
+    ## Tinct {{.Version}}
+
+    **Release Date**: {{.Date}}
+
+    ### Installation
+
+    #### Homebrew (macOS/Linux)
+    ```bash
+    brew install jmylchreest/tap/tinct
+    ```
+
+    #### Download Binary
+    Download the appropriate binary for your system from the assets below.
+
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/jmylchreest/tinct/compare/{{.PreviousTag}}...{{.Tag}}
+
+    ## What's Next?
+
+    - 📖 [Documentation](https://github.com/jmylchreest/tinct/blob/main/README.md)
+    - 🐛 [Report Issues](https://github.com/jmylchreest/tinct/issues)
+    - 💬 [Discussions](https://github.com/jmylchreest/tinct/discussions)
+
+# Announce release
+announce:
+  skip: "{{gt .Patch 0}}"
+
+  discord:
+    enabled: true
+    message_template: |
+      🎨 **Tinct {{.Tag}}** has been released!
+
+      {{.ReleaseNotes}}
+
+      Download: {{.ReleaseURL}}
+
+# SBOMs (Software Bill of Materials)
+sboms:
+  - id: archive
+    artifacts: archive
+  - id: source
+    artifacts: source
+
+# Signs artifacts
+signs:
+  - cmd: cosign
+    env:
+      - COSIGN_EXPERIMENTAL=1
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: all
+    output: true
