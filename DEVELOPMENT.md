@@ -230,7 +230,7 @@ go build -pgo=default.pgo -o tinct ./cmd/tinct
 
 Tinct follows a plugin-based architecture with the following components:
 
-1. **Core Engine**: Color extraction and palette generation
+1. **Core Engine**: Colour extraction and palette generation
 2. **Source Plugin System**: Extensible wallpaper generation and fetching
 3. **Output Plugin System**: Extensible configuration file generators
 4. **Hook System**: Pre/post execution lifecycle management
@@ -253,7 +253,7 @@ Source Plugins (optional) → Input (Image/Colors) → Color Extraction → Pale
 
 ### Key Architectural Goals
 
-- **Extensibility**: Easy to add new color extraction algorithms and output plugins
+- **Extensibility**: Easy to add new colour extraction algorithms and output plugins
 - **Composability**: Plugins work independently but can be chained
 - **Testability**: Each component is independently testable
 - **Performance**: Efficient color processing, concurrent plugin execution where safe
@@ -559,7 +559,7 @@ tinct/
 │   ├── app/
 │   │   └── app.go              # Application orchestration
 │   ├── color/
-│   │   ├── extractor.go        # Color extraction interfaces
+│   │   ├── extractor.go        # Colour extraction interfaces
 │   │   ├── kmeans.go           # K-means implementation
 │   │   ├── mediancut.go        # Median cut implementation
 │   │   └── palette.go          # Palette types and operations
@@ -588,7 +588,7 @@ tinct/
 ├── docs/
 │   ├── plugins.md              # Plugin development guide
 │   ├── hooks.md                # Hook system guide
-│   └── algorithms.md           # Color extraction algorithms
+│   └── algorithms.md           # Colour extraction algorithms
 ├── go.mod
 ├── go.sum
 ├── README.md
@@ -614,8 +614,8 @@ tinct/
 // cmd/tinct/main.go
 var rootCmd = &cobra.Command{
     Use:   "tinct",
-    Short: "Generate color palettes from images or colors",
-    Long:  `Tinct extracts color palettes and applies them via plugins.`,
+    Short: "Generate colour palettes from images or colours",
+    Long:  `Tinct extracts colour palettes and applies them via plugins.`,
 }
 
 var generateCmd = &cobra.Command{
@@ -1228,7 +1228,7 @@ type SourceMetadataProvider interface {
 
 ### Output Plugin Interface
 
-Output plugins generate configuration files from color palettes.
+Output plugins generate configuration files from colour palettes.
 
 ```go
 package plugin
@@ -1717,11 +1717,11 @@ func BenchmarkColorExtraction(b *testing.B) {
 ### Package Documentation
 
 ```go
-// Package palette provides color palette generation and manipulation.
+// Package palette provides colour palette generation and manipulation.
 //
 // The palette package defines the core types and operations for working
-// with color palettes. It supports multiple color spaces and provides
-// utilities for palette optimization and color harmony analysis.
+// with colour palettes. It supports multiple colour spaces and provides
+// utilities for palette optimization and colour harmony analysis.
 //
 // Example usage:
 //

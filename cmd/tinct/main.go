@@ -1,9 +1,9 @@
-// Tinct - A modern color palette generator
+// Tinct - A modern colour palette generator
 //
-// Tinct extracts color palettes from images and generates configuration
+// Tinct extracts colour palettes from images and generates configuration
 // files for your favorite applications.
 //
-// Copyright (c) 2024 John Mylchreest
+// Copyright (c) 2025 John Mylchreest
 // Licensed under the MIT License
 package main
 

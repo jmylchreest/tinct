@@ -1,6 +1,6 @@
 # Tinct Project Setup Guide
 
-This document provides an overview of the project configuration and setup for the Tinct color palette generator.
+This document provides an overview of the project configuration and setup for the Tinct colour palette generator.
 
 ## 📋 Overview
 
@@ -17,7 +17,7 @@ tinct/
 │   └── tinct/                   # Main application entry point
 ├── internal/                    # Private application code
 │   ├── app/                     # Application orchestration
-│   ├── color/                   # Color extraction & palette generation
+│   ├── color/                   # Colour extraction & palette generation
 │   ├── config/                  # Configuration management
 │   ├── plugin/                  # Plugin system (Source & Output)
 │   ├── hook/                    # Lifecycle hooks
@@ -335,7 +335,7 @@ go install github.com/jmylchreest/tinct/cmd/tinct@latest
 - **Unit Tests**: Test individual components
 - **Integration Tests**: Test plugin system and hooks
 - **Table-Driven Tests**: Comprehensive input/output coverage
-- **Benchmarks**: Performance testing for color extraction
+- **Benchmarks**: Performance testing for colour extraction
 - **Race Detection**: Concurrent execution safety
 - **Coverage Target**: >80% for critical paths, 100% for public APIs
 

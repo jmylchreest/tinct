@@ -1,6 +1,6 @@
 # AI Wallpaper Generation Guide
 
-This guide covers using Tinct's AI-powered wallpaper generation feature to create custom wallpapers from text prompts and automatically generate color palettes from them.
+This guide covers using Tinct's AI-powered wallpaper generation feature to create custom wallpapers from text prompts and automatically generate colour palettes from them.
 
 ## 📋 Table of Contents
 
@@ -19,7 +19,7 @@ This guide covers using Tinct's AI-powered wallpaper generation feature to creat
 The AI wallpaper generation feature allows you to:
 
 1. **Generate wallpapers from text prompts** using AI image generation services
-2. **Automatically extract color palettes** from the generated images
+2. **Automatically extract colour palettes** from the generated images
 3. **Apply palettes system-wide** using output plugins
 4. **Cache generated wallpapers** to avoid regeneration costs
 
@@ -278,9 +278,9 @@ tinct generate --ai "serene Japanese garden, cherry blossoms, soft morning light
 
 **3. Specify Art Style**
 ```bash
-# For distinct color palettes
+# For distinct colour palettes
 tinct generate --ai "cyberpunk city, neon lights, dark background, high contrast, digital art"
-tinct generate --ai "minimalist desert, pastel colors, flat design, simple shapes"
+tinct generate --ai "minimalist desert, pastel colours, flat design, simple shapes"
 ```
 
 **4. Control Color Palette**

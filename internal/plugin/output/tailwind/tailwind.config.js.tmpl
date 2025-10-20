@@ -1,0 +1,19 @@
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+{{- range $key, $value := .Colors }}
+{{- if eq (printf "%T" $value) "string" }}
+        {{ $key }}: '{{ $value }}',
+{{- else }}
+        {{ $key }}: {
+{{- range $k, $v := $value }}
+          {{ $k }}: '{{ $v }}',
+{{- end }}
+        },
+{{- end }}
+{{- end }}
+      }
+    }
+  }
+}

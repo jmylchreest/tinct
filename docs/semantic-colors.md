@@ -218,7 +218,7 @@ Output includes semantic colors with full metadata:
 
 ### HSL Color Space
 
-Semantic color enhancement uses the HSL (Hue, Saturation, Lightness) color space for adjustments:
+Semantic colour enhancement uses the HSL (Hue, Saturation, Lightness) colour space for adjustments:
 
 - **Hue (H)**: 0-360° color wheel position
 - **Saturation (S)**: 0-1, intensity of color (0 = grey, 1 = pure color)

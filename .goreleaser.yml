@@ -135,7 +135,7 @@ brews:
 
     directory: Formula
     homepage: "https://github.com/jmylchreest/tinct"
-    description: "Generate color palettes from images and apply system-wide theming"
+    description: "Generate colour palettes from images and apply system-wide theming"
     license: MIT
 
     install: |
@@ -156,7 +156,7 @@ brews:
 aurs:
   - name: tinct-bin
     homepage: "https://github.com/jmylchreest/tinct"
-    description: "Generate color palettes from images and apply system-wide theming"
+    description: "Generate colour palettes from images and apply system-wide theming"
     maintainers:
       - "John Mylchreest <jmylchreest@gmail.com>"
     license: MIT
@@ -185,7 +185,7 @@ nix:
       name: nur-packages
       token: "{{ .Env.NIX_GITHUB_TOKEN }}"
     homepage: "https://github.com/jmylchreest/tinct"
-    description: "Generate color palettes from images and apply system-wide theming"
+    description: "Generate colour palettes from images and apply system-wide theming"
     license: mit
     install: |-
       mkdir -p $out/bin
@@ -197,7 +197,7 @@ nfpms:
     package_name: tinct
 
     homepage: "https://github.com/jmylchreest/tinct"
-    description: "Generate color palettes from images and apply system-wide theming"
+    description: "Generate colour palettes from images and apply system-wide theming"
     maintainer: "John Mylchreest <jmylchreest@gmail.com>"
     license: MIT
 

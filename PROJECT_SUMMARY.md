@@ -9,7 +9,7 @@
 
 ## 🎯 Project Overview
 
-**Tinct** is a modern, extensible CLI tool written in Go 1.25+ that generates color palettes and applies them system-wide. It features:
+**Tinct** is a modern, extensible CLI tool written in Go 1.25+ that generates colour palettes and applies them system-wide. It features:
 
 - **AI-Powered Wallpaper Generation**: Create wallpapers from text prompts using DALL-E, Stable Diffusion, etc.
 - **Custom Wallpaper Sizes**: Support for 4K (default), ultrawide, multi-monitor (dual, triple), and custom dimensions
@@ -28,7 +28,7 @@ tinct/
 ├── cmd/tinct/                   # Main application entry point
 ├── internal/                    # Private application code
 │   ├── app/                     # Application orchestration
-│   ├── color/                   # Color extraction & palette generation
+│   ├── color/                   # Colour extraction & palette generation
 │   ├── config/                  # Configuration management (Viper)
 │   ├── plugin/                  # Dual plugin system
 │   │   ├── source/              # Source plugins (AI, fetch, local)
@@ -335,14 +335,14 @@ tinct generate --ai "forest scene" \
 
 MIT License - See [LICENSE](LICENSE) file
 
-Copyright (c) 2024 John Mylchreest
+// Copyright (c) 2025 John Mylchreest
 
 ---
 
 **Project Status**: 🚧 In Development
 
 **Next Steps**:
-1. Implement core color extraction algorithms
+1. Implement core colour extraction algorithms
 2. Build plugin system (Source & Output)
 3. Implement hook system
 4. Create built-in plugins (Alacritty, Kitty, etc.)
