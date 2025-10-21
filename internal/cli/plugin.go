@@ -2,6 +2,10 @@
 package cli
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -194,10 +198,10 @@ func init() {
 	// Add plugins command flags
 	pluginsCmd.PersistentFlags().StringVar(&pluginLockPath, "lock-file", "", "path to plugin lock file (default: .tinct-plugins.json in current or home directory)")
 
-	// Add type flag to relevant commands
-	pluginEnableCmd.Flags().StringVarP(&pluginType, "type", "t", "", "plugin type (input or output)")
-	pluginDisableCmd.Flags().StringVarP(&pluginType, "type", "t", "", "plugin type (input or output)")
-	pluginAddCmd.Flags().StringVarP(&pluginType, "type", "t", "output", "plugin type (input or output)")
+	// Add type flag to relevant commands (no shorthand to avoid conflict with global -t theme flag)
+	pluginEnableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
+	pluginDisableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
+	pluginAddCmd.Flags().StringVar(&pluginType, "type", "output", "plugin type (input or output)")
 	pluginAddCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force overwrite if plugin already exists")
 	pluginDeleteCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force deletion without confirmation")
 
@@ -1074,7 +1078,18 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 
 	// HTTP/HTTPS URL
 	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
-		info.URL = source
+		// Check for file path specification: url.tar.gz:path/to/plugin
+		if idx := strings.LastIndex(source, ":"); idx > 0 {
+			// Check if it's part of the protocol (http:// or https://)
+			if idx > 7 && source[idx-2:idx] != "tp" && source[idx-3:idx] != "tps" {
+				info.URL = source[:idx]
+				info.FilePath = source[idx+1:]
+			} else {
+				info.URL = source
+			}
+		} else {
+			info.URL = source
+		}
 		return "http", info
 	}
 
@@ -1130,32 +1145,225 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 		return "", fmt.Errorf("failed to download plugin: HTTP %d", resp.StatusCode)
 	}
 
-	// Determine filename from URL or use plugin name
+	// Read the entire response into memory for archive detection
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read download: %w", err)
+	}
+
+	// Determine filename from URL
 	filename := filepath.Base(info.URL)
 	if filename == "" || filename == "." {
 		filename = pluginName
 	}
+
+	// Check if it's an archive
+	if strings.HasSuffix(info.URL, ".tar.gz") || strings.HasSuffix(info.URL, ".tgz") {
+		// Extract from tar.gz archive
+		return extractFromTarGz(data, info.FilePath, pluginDir, verbose)
+	} else if strings.HasSuffix(info.URL, ".zip") {
+		// Extract from zip archive
+		return extractFromZip(data, info.FilePath, pluginDir, verbose)
+	}
+
+	// Not an archive - treat as direct plugin file
 	destPath := filepath.Join(pluginDir, filename)
 
-	// Create destination file
+	// Write file
+	if err := os.WriteFile(destPath, data, 0755); err != nil {
+		return "", fmt.Errorf("failed to write plugin file: %w", err)
+	}
+
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Downloaded plugin to: %s\n", destPath)
+	}
+
+	return destPath, nil
+}
+
+// extractFromTarGz extracts a plugin from a tar.gz archive
+func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (string, error) {
+	// Create gzip reader
+	gzr, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer gzr.Close()
+
+	// Create tar reader
+	tr := tar.NewReader(gzr)
+
+	// If no specific file requested, find the first executable or use first file
+	var targetPath string
+	foundFiles := []string{}
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to read tar archive: %w", err)
+		}
+
+		// Skip directories
+		if header.Typeflag == tar.TypeDir {
+			continue
+		}
+
+		foundFiles = append(foundFiles, header.Name)
+
+		// Check if this is the file we want
+		if targetFile != "" {
+			if header.Name == targetFile || strings.HasSuffix(header.Name, "/"+targetFile) {
+				targetPath = header.Name
+				break
+			}
+		} else {
+			// Auto-detect: prefer executable files
+			if header.FileInfo().Mode()&0111 != 0 {
+				targetPath = header.Name
+				break
+			}
+		}
+	}
+
+	// If we didn't find the target, reset and look for any match
+	if targetPath == "" && targetFile != "" {
+		return "", fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
+	}
+
+	// If still no target and we have files, use the first one
+	if targetPath == "" && len(foundFiles) > 0 {
+		targetPath = foundFiles[0]
+	}
+
+	if targetPath == "" {
+		return "", fmt.Errorf("no files found in archive")
+	}
+
+	// Reset readers to extract the target file
+	gzr, err = gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("failed to create gzip reader: %w", err)
+	}
+	defer gzr.Close()
+
+	tr = tar.NewReader(gzr)
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			return "", fmt.Errorf("file not found in archive")
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to read tar archive: %w", err)
+		}
+
+		if header.Name == targetPath {
+			// Extract the file
+			destPath := filepath.Join(pluginDir, filepath.Base(targetPath))
+
+			out, err := os.Create(destPath)
+			if err != nil {
+				return "", fmt.Errorf("failed to create plugin file: %w", err)
+			}
+			defer out.Close()
+
+			if _, err := io.Copy(out, tr); err != nil {
+				return "", fmt.Errorf("failed to extract plugin: %w", err)
+			}
+
+			// Make executable
+			if err := os.Chmod(destPath, 0755); err != nil {
+				return "", fmt.Errorf("failed to make plugin executable: %w", err)
+			}
+
+			if verbose {
+				fmt.Fprintf(os.Stderr, "Extracted plugin to: %s\n", destPath)
+			}
+
+			return destPath, nil
+		}
+	}
+}
+
+// extractFromZip extracts a plugin from a zip archive
+func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (string, error) {
+	// Create zip reader
+	reader := bytes.NewReader(data)
+	zr, err := zip.NewReader(reader, int64(len(data)))
+	if err != nil {
+		return "", fmt.Errorf("failed to create zip reader: %w", err)
+	}
+
+	// If no specific file requested, find the first executable or use first file
+	var targetZipFile *zip.File
+	foundFiles := []string{}
+
+	for _, f := range zr.File {
+		// Skip directories
+		if f.FileInfo().IsDir() {
+			continue
+		}
+
+		foundFiles = append(foundFiles, f.Name)
+
+		// Check if this is the file we want
+		if targetFile != "" {
+			if f.Name == targetFile || strings.HasSuffix(f.Name, "/"+targetFile) {
+				targetZipFile = f
+				break
+			}
+		} else {
+			// Auto-detect: prefer executable files
+			if f.FileInfo().Mode()&0111 != 0 {
+				targetZipFile = f
+				break
+			}
+		}
+	}
+
+	// If we didn't find the target, check if any file matches
+	if targetZipFile == nil && targetFile != "" {
+		return "", fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
+	}
+
+	// If still no target and we have files, use the first one
+	if targetZipFile == nil && len(foundFiles) > 0 {
+		targetZipFile = zr.File[0]
+	}
+
+	if targetZipFile == nil {
+		return "", fmt.Errorf("no files found in archive")
+	}
+
+	// Extract the file
+	destPath := filepath.Join(pluginDir, filepath.Base(targetZipFile.Name))
+
+	rc, err := targetZipFile.Open()
+	if err != nil {
+		return "", fmt.Errorf("failed to open file in archive: %w", err)
+	}
+	defer rc.Close()
+
 	out, err := os.Create(destPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create plugin file: %w", err)
 	}
 	defer out.Close()
 
-	// Copy content
-	if _, err := io.Copy(out, resp.Body); err != nil {
-		return "", fmt.Errorf("failed to write plugin file: %w", err)
+	if _, err := io.Copy(out, rc); err != nil {
+		return "", fmt.Errorf("failed to extract plugin: %w", err)
 	}
 
-	// Make it executable
+	// Make executable
 	if err := os.Chmod(destPath, 0755); err != nil {
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Downloaded plugin to: %s\n", destPath)
+		fmt.Fprintf(os.Stderr, "Extracted plugin to: %s\n", destPath)
 	}
 
 	return destPath, nil

@@ -4,10 +4,20 @@ Simple guide for creating and using external plugins with Tinct.
 
 ## Quick Start
 
-### Using Plugins
+### Installing Plugins
 
+**From GitHub Releases** (recommended):
 ```bash
-# Add a plugin
+# Install compiled binary plugin
+tinct plugins add https://github.com/jmylchreest/tinct/releases/download/v1.0.0/tinct-plugin-random_v1.0.0_Linux_x86_64.tar.gz:random
+
+# Install script-based plugin
+tinct plugins add https://github.com/jmylchreest/tinct/releases/download/v1.0.0/tinct-plugin-scripts_v1.0.0.tar.gz:notify-send
+```
+
+**From Local Files**:
+```bash
+# Add a local plugin
 tinct plugins add ./contrib/notify-send.py
 
 # List plugins
@@ -16,6 +26,8 @@ tinct plugins list
 # Use a plugin
 tinct generate -i image -p wallpaper.jpg -o notify-send
 ```
+
+See [Plugin Packages Documentation](../docs/PLUGIN-PACKAGES.md) for detailed installation instructions.
 
 ### Creating Plugins
 
@@ -416,11 +428,22 @@ echo '{}' | ./input-plugin.sh | jq 'has("colours") and has("all_colours") and ha
 
 Plugins can be added from:
 
+- **GitHub Releases** (recommended): `tinct plugins add https://github.com/jmylchreest/tinct/releases/download/v1.0.0/tinct-plugin-random_v1.0.0_Linux_x86_64.tar.gz:random`
 - **Local files**: `tinct plugins add ./plugin.sh`
 - **HTTP URLs**: `tinct plugins add https://example.com/plugin.sh`
 - **Git repos**: `tinct plugins add https://github.com/user/repo.git:path/to/plugin.sh`
+- **Archives**: Automatically extracts from `.tar.gz`, `.tgz`, or `.zip` files
 
 Plugins are copied to `~/.local/share/tinct/plugins/` and tracked in `.tinct-plugins.json`.
+
+### Official Plugin Packages
+
+Official plugins are distributed as separate downloadable packages:
+
+- **Compiled plugins**: Platform-specific binaries (e.g., `random` for Go)
+- **Script plugins**: Platform-independent scripts (e.g., `notify-send`, `example-minimal`)
+
+For complete list and installation instructions, see [Plugin Packages Documentation](../docs/PLUGIN-PACKAGES.md).
 
 ## Input vs Output Plugins
 
@@ -436,8 +459,29 @@ Plugins are copied to `~/.local/share/tinct/plugins/` and tracked in `.tinct-plu
 - **Output:** Write files, send notifications, or display results
 - **Examples:** `hyprland` (config files), `tailwind` (CSS/JS), `notify-send` (notifications)
 
+## Plugin Distribution
+
+### As a User
+
+Install plugins from GitHub releases:
+```bash
+# Check latest release at https://github.com/jmylchreest/tinct/releases
+tinct plugins add https://github.com/jmylchreest/tinct/releases/download/v1.0.0/tinct-plugin-random_v1.0.0_Linux_x86_64.tar.gz:random
+```
+
+### As a Developer
+
+To distribute your plugin officially:
+
+1. Add your plugin to `contrib/`
+2. Update `.goreleaser.yml` to build/package it
+3. Submit a pull request
+
+See [Plugin Packages Documentation](../docs/PLUGIN-PACKAGES.md) for packaging guidelines.
+
 ## More Information
 
-- Tinct Documentation: `docs/`
-- Example plugins: `contrib/example-minimal.sh`, `contrib/notify-send.py`
-- Lock file format: `docs/PLUGIN-LOCK-FILE.md`
+- [Plugin Packages](../docs/PLUGIN-PACKAGES.md) - Distribution and installation
+- [Plugin Lock File](../docs/PLUGIN-LOCK-FILE.md) - Lock file format
+- [External Plugin Execution](../docs/EXTERNAL-PLUGIN-EXECUTION.md) - How plugins are executed
+- Example plugins: `contrib/example-minimal.sh`, `contrib/notify-send.py`, `contrib/random.go`

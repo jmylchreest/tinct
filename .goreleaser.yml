@@ -65,9 +65,54 @@ builds:
     # Ensure we use Go 1.25+
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: random (Go)
+  - id: plugin-random
+    main: ./contrib/random.go
+    binary: random
+
+    # Build for multiple platforms
+    goos:
+      - linux
+      - darwin
+      - windows
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Ignore specific combinations
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+      - goos: freebsd
+        goarch: arm
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+
+    ldflags:
+      - -s -w
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 # Archive configuration
 archives:
   - id: tinct-archive
+    builds:
+      - tinct
     name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
@@ -77,9 +122,10 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+    formats: [tar.gz]
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
     files:
       - README.md
@@ -88,6 +134,52 @@ archives:
       - configs/**/*
       - docs/**/*
 
+  # Plugin archives - separate downloadable packages
+  - id: plugin-random-archive
+    builds:
+      - plugin-random
+    name_template: >-
+      tinct-plugin-random_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    files:
+      - src: contrib/README-random.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+
+  # Script-based plugins archive (platform-independent)
+  - id: plugin-scripts-archive
+    name_template: "tinct-plugin-scripts_{{ .Version }}"
+
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    files:
+      - src: contrib/example-minimal.sh
+        dst: example-minimal
+      - src: contrib/notify-send.py
+        dst: notify-send
+      - src: contrib/README.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+
+    # Only build once (platform-independent scripts)
+    meta: true
+
 # Checksums
 checksum:
   name_template: "checksums.txt"
@@ -95,7 +187,7 @@ checksum:
 
 # Snapshots (non-tagged builds)
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 # Changelog generation
 changelog:
@@ -123,8 +215,7 @@ changelog:
 
 # Package managers
 brews:
-  - name: tinct
-    repository:
+  - repository:
       owner: jmylchreest
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
@@ -154,8 +245,7 @@ brews:
 
 # AUR (Arch User Repository) packages
 aurs:
-  - name: tinct-bin
-    homepage: "https://github.com/jmylchreest/tinct"
+  - homepage: "https://github.com/jmylchreest/tinct"
     description: "Generate colour palettes from images and apply system-wide theming"
     maintainers:
       - "John Mylchreest <jmylchreest@gmail.com>"
@@ -179,8 +269,7 @@ aurs:
 
 # Nix packages
 nix:
-  - name: tinct
-    repository:
+  - repository:
       owner: jmylchreest
       name: nur-packages
       token: "{{ .Env.NIX_GITHUB_TOKEN }}"
@@ -193,10 +282,7 @@ nix:
 
 # Linux packages
 nfpms:
-  - id: tinct-nfpm
-    package_name: tinct
-
-    homepage: "https://github.com/jmylchreest/tinct"
+  - homepage: "https://github.com/jmylchreest/tinct"
     description: "Generate colour palettes from images and apply system-wide theming"
     maintainer: "John Mylchreest <jmylchreest@gmail.com>"
     license: MIT
@@ -268,9 +354,29 @@ release:
 
     **Full Changelog**: https://github.com/jmylchreest/tinct/compare/{{.PreviousTag}}...{{.Tag}}
 
+    ## Plugin Installation
+
+    Plugins are available as separate downloadable archives. Install them using:
+
+    ```bash
+    # Install random plugin (compiled binary)
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-random_{{.Version}}_Linux_x86_64.tar.gz:random
+
+    # Install script-based plugins
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-scripts_{{.Version}}.tar.gz:notify-send
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-scripts_{{.Version}}.tar.gz:example-minimal
+    ```
+
+    Or download manually from the assets below and add locally:
+    ```bash
+    tinct plugins add ./random
+    tinct plugins add ./notify-send
+    ```
+
     ## What's Next?
 
     - 📖 [Documentation](https://github.com/jmylchreest/tinct/blob/main/README.md)
+    - 🔌 [Plugin Development Guide](https://github.com/jmylchreest/tinct/blob/main/contrib/README.md)
     - 🐛 [Report Issues](https://github.com/jmylchreest/tinct/issues)
     - 💬 [Discussions](https://github.com/jmylchreest/tinct/discussions)
 
