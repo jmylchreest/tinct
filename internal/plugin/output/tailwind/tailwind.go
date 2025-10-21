@@ -5,9 +5,12 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"os"
+	"path/filepath"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl
@@ -15,20 +18,23 @@ var templates embed.FS
 
 // Plugin implements the output.Plugin interface for Tailwind CSS.
 type Plugin struct {
-	format string // "css" or "config"
+	format    string // "css" or "config"
+	outputDir string
 }
 
 // New creates a new Tailwind CSS output plugin.
 func New() *Plugin {
 	return &Plugin{
-		format: "css",
+		format:    "css",
+		outputDir: "",
 	}
 }
 
 // NewWithFormat creates a new Tailwind CSS output plugin with a specific format.
 func NewWithFormat(format string) *Plugin {
 	return &Plugin{
-		format: format,
+		format:    format,
+		outputDir: "",
 	}
 }
 
@@ -42,32 +48,65 @@ func (p *Plugin) Description() string {
 	return "Generate Tailwind CSS / shadcn/ui theme configuration"
 }
 
-// FileExtension returns the file extension based on format.
-func (p *Plugin) FileExtension() string {
-	if p.format == "config" {
-		return "js"
-	}
-	return "css"
+// RegisterFlags registers plugin-specific flags with the cobra command.
+func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&p.format, "tailwind.format", "css", "Output format (css or config)")
+	cmd.Flags().StringVar(&p.outputDir, "tailwind.output-dir", "", "Output directory (default: current directory)")
 }
 
-// DefaultPath returns the default output path.
-func (p *Plugin) DefaultPath() string {
-	if p.format == "config" {
-		return "tailwind.config.js"
+// Validate checks if the plugin configuration is valid.
+func (p *Plugin) Validate() error {
+	if p.format != "css" && p.format != "config" {
+		return fmt.Errorf("invalid format: %s (must be 'css' or 'config')", p.format)
 	}
-	return "app/globals.css"
+	return nil
+}
+
+// DefaultOutputDir returns the default output directory for this plugin.
+func (p *Plugin) DefaultOutputDir() string {
+	if p.outputDir != "" {
+		return p.outputDir
+	}
+
+	// Default paths based on format
+	if p.format == "config" {
+		return "."
+	}
+
+	// For CSS, try to detect if we're in a Next.js project
+	if _, err := os.Stat("app"); err == nil {
+		return "app"
+	}
+	if _, err := os.Stat("src"); err == nil {
+		return filepath.Join("src", "app")
+	}
+
+	return "."
 }
 
 // Generate creates the Tailwind CSS configuration from the palette.
-func (p *Plugin) Generate(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte, error) {
 	if palette == nil {
 		return nil, fmt.Errorf("palette cannot be nil")
 	}
 
+	files := make(map[string][]byte)
+
 	if p.format == "config" {
-		return p.generateConfig(palette)
+		content, err := p.generateConfig(palette)
+		if err != nil {
+			return nil, err
+		}
+		files["tailwind.config.js"] = content
+	} else {
+		content, err := p.generateCSS(palette)
+		if err != nil {
+			return nil, err
+		}
+		files["globals.css"] = content
 	}
-	return p.generateCSS(palette)
+
+	return files, nil
 }
 
 // generateCSS creates a CSS file with shadcn/ui CSS variables.
@@ -156,7 +195,7 @@ type CSSCustomColour struct {
 
 // ConfigData holds data for config template.
 type ConfigData struct {
-	Colors map[string]interface{}
+	Colors map[string]any
 }
 
 // prepareCSSData converts a categorised palette to CSS template data.
@@ -287,7 +326,7 @@ func buildCSSTheme(
 
 // prepareConfigData converts a categorised palette to config template data.
 func prepareConfigData(palette *colour.CategorisedPalette) ConfigData {
-	colors := make(map[string]interface{})
+	colors := make(map[string]any)
 
 	// Add semantic colours
 	if danger, ok := palette.Get(colour.RoleDanger); ok {

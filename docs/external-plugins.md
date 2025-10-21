@@ -861,12 +861,12 @@ archives:
 
 ```bash
 # Publish to Tinct plugin registry
-tinct plugin publish wallhaven \
+tinct plugins publish wallhaven \
   --repo github.com/yourusername/tinct-source-wallhaven \
   --version 1.0.0
 
 # Users can install
-tinct plugin install wallhaven
+tinct plugins install wallhaven
 ```
 
 ### Installation Script

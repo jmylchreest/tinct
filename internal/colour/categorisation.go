@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"strings"
 )
 
 // Luminance calculates the relative luminance of a colour according to WCAG 2.0.
@@ -56,15 +57,15 @@ type ColourRole string
 const (
 	// Core roles
 	RoleBackground      ColourRole = "background"
-	RoleBackgroundMuted ColourRole = "background-muted"
+	RoleBackgroundMuted ColourRole = "backgroundMuted"
 	RoleForeground      ColourRole = "foreground"
-	RoleForegroundMuted ColourRole = "foreground-muted"
+	RoleForegroundMuted ColourRole = "foregroundMuted"
 
 	// Accent roles
-	RoleAccent1 ColourRole = "accent-1"
-	RoleAccent2 ColourRole = "accent-2"
-	RoleAccent3 ColourRole = "accent-3"
-	RoleAccent4 ColourRole = "accent-4"
+	RoleAccent1 ColourRole = "accent1"
+	RoleAccent2 ColourRole = "accent2"
+	RoleAccent3 ColourRole = "accent3"
+	RoleAccent4 ColourRole = "accent4"
 
 	// Semantic roles
 	RoleDanger       ColourRole = "danger"
@@ -76,14 +77,17 @@ const (
 
 // CategorisedColour represents a colour with its assigned role and metadata.
 type CategorisedColour struct {
-	Colour     color.Color `json:"-"`
-	Role       ColourRole  `json:"role"`
-	Hex        string      `json:"hex"`
-	RGB        RGB         `json:"rgb"`
-	Luminance  float64     `json:"luminance"`
-	IsLight    bool        `json:"is_light"`
-	Hue        float64     `json:"hue,omitempty"`        // HSL hue (0-360)
-	Saturation float64     `json:"saturation,omitempty"` // HSL saturation (0-1)
+	Colour      color.Color `json:"-"`
+	Role        ColourRole  `json:"role"`
+	Hex         string      `json:"hex"`
+	RGB         RGB         `json:"rgb"`
+	Luminance   float64     `json:"luminance"`
+	IsLight     bool        `json:"is_light"`
+	Hue         float64     `json:"hue,omitempty"`          // HSL hue (0-360)
+	Saturation  float64     `json:"saturation,omitempty"`   // HSL saturation (0-1)
+	Index       int         `json:"index,omitempty"`        // Index in AllColours array (sorted by luminance)
+	IsGenerated bool        `json:"is_generated,omitempty"` // True if colour was generated/enhanced, not extracted
+	Weight      float64     `json:"weight,omitempty"`       // Original weight from palette (0.0-1.0, 0 if generated)
 }
 
 // ThemeType represents whether a theme is light-on-dark or dark-on-light.
@@ -184,75 +188,113 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	}
 
 	// Create categorised colours with metadata
-	categorised := make([]CategorisedColour, len(palette.Colors))
-	totalLuminance := 0.0
+	extracted := make([]CategorisedColour, len(palette.Colors))
+
+	// Use equal weights if not provided
+	weights := palette.Weights
+	if weights == nil || len(weights) != len(palette.Colors) {
+		weights = make([]float64, len(palette.Colors))
+		equalWeight := 1.0 / float64(len(palette.Colors))
+		for i := range weights {
+			weights[i] = equalWeight
+		}
+	}
 
 	for i, c := range palette.Colors {
 		lum := Luminance(c)
 		rgb := ToRGB(c)
 		h, s, _ := rgbToHSL(rgb)
 
-		categorised[i] = CategorisedColour{
-			Colour:     c,
-			Hex:        rgb.Hex(),
-			RGB:        rgb,
-			Luminance:  lum,
-			IsLight:    lum > 0.5,
-			Hue:        h,
-			Saturation: s,
+		extracted[i] = CategorisedColour{
+			Colour:      c,
+			Hex:         rgb.Hex(),
+			RGB:         rgb,
+			Luminance:   lum,
+			IsLight:     lum > 0.5,
+			Hue:         h,
+			Saturation:  s,
+			IsGenerated: false,
+			Weight:      weights[i],
 		}
-		totalLuminance += lum
 	}
+
+	// Store all extracted colors for later inclusion
+	allExtracted := make([]CategorisedColour, len(extracted))
+	copy(allExtracted, extracted)
 
 	// Determine theme type if auto
 	themeType := config.ThemeType
 	if themeType == ThemeAuto {
-		avgLuminance := totalLuminance / float64(len(categorised))
-		if avgLuminance > 0.5 {
-			themeType = ThemeLight
-		} else {
+		// Use weighted color distribution to determine theme
+		// Count the volume of dark vs light colors
+		const luminanceThreshold = 0.5
+		darkWeight := 0.0
+		lightWeight := 0.0
+
+		for i, color := range extracted {
+			if color.Luminance < luminanceThreshold {
+				darkWeight += weights[i]
+			} else {
+				lightWeight += weights[i]
+			}
+		}
+
+		// Theme is determined by the majority of color volume
+		// If most of the image is dark colors, it's a dark theme
+		if darkWeight > lightWeight {
 			themeType = ThemeDark
+		} else {
+			themeType = ThemeLight
 		}
 	}
 
-	result := NewCategorisedPalette(themeType)
-	result.AllColours = categorised
+	// Sort extracted colours by luminance
+	// Dark theme: dark to light (ascending luminance)
+	// Light theme: light to dark (descending luminance)
+	sortByLuminance(extracted, themeType)
 
-	// Find background colour (darkest for dark theme, lightest for light theme)
-	bgIdx := findBackgroundIndex(categorised, themeType)
-	bg := categorised[bgIdx]
+	result := NewCategorisedPalette(themeType)
+
+	// Background is now first colour (darkest for dark theme, lightest for light theme)
+	bg := extracted[0]
 	bg.Role = RoleBackground
 	result.Set(RoleBackground, bg)
 
 	// Create background-muted variant
 	bgMuted := createMutedVariant(bg, config.MutedLuminanceAdjust, themeType, true)
 	bgMuted.Role = RoleBackgroundMuted
+	bgMuted.IsGenerated = true
 	result.Set(RoleBackgroundMuted, bgMuted)
 
 	// Find foreground colour (highest contrast with background)
-	fgIdx := findForegroundIndex(categorised, bg, config, bgIdx)
+	fgIdx := findForegroundIndex(extracted, bg, config, 0)
+	var fg CategorisedColour
 	if fgIdx >= 0 {
-		fg := categorised[fgIdx]
+		fg = extracted[fgIdx]
 		fg.Role = RoleForeground
 		result.Set(RoleForeground, fg)
 
 		// Create foreground-muted variant
 		fgMuted := createMutedVariant(fg, config.MutedLuminanceAdjust, themeType, false)
 		fgMuted.Role = RoleForegroundMuted
+		fgMuted.IsGenerated = true
 		result.Set(RoleForegroundMuted, fgMuted)
 	}
 
-	// Categorise remaining colours by saturation and hue
+	// Collect remaining colours for accents (excluding background and foreground)
 	accents := make([]CategorisedColour, 0)
-	for i, cc := range categorised {
-		if i == bgIdx || i == fgIdx {
+	for i, cc := range extracted {
+		if i == 0 || i == fgIdx {
 			continue
 		}
 		accents = append(accents, cc)
 	}
 
-	// Sort accents by saturation (most vibrant first)
-	sortBySaturation(accents)
+	// Sort accents by contrast with background (highest to lowest)
+	sortByContrast(accents, bg)
+
+	// Track which accent colors are used for semantic roles
+	usedForSemantic := make(map[string]bool) // Track by hex value
 
 	// Assign accent roles (up to 4)
 	accentRoles := []ColourRole{RoleAccent1, RoleAccent2, RoleAccent3, RoleAccent4}
@@ -264,8 +306,30 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// Assign semantic roles based on hue
-	assignSemanticRoles(result, accents)
+	// Assign semantic roles based on hue and track which colors are used
+	assignSemanticRoles(result, accents, usedForSemantic)
+
+	// Collect all remaining colors that weren't assigned to any role
+	// These preserve the full extracted palette beyond the 13 semantic roles
+	additionalColors := make([]CategorisedColour, 0)
+	for _, cc := range allExtracted {
+		// Check if this color was assigned to any role
+		alreadyAssigned := false
+		for _, assigned := range result.Colours {
+			if assigned.Hex == cc.Hex {
+				alreadyAssigned = true
+				break
+			}
+		}
+		if !alreadyAssigned {
+			// This color wasn't assigned to any semantic role - preserve it
+			additionalColors = append(additionalColors, cc)
+		}
+	}
+
+	// Build final AllColours array with consistent indices
+	// Order: all colours sorted by luminance (including generated ones)
+	result.AllColours = buildSortedAllColours(result, themeType, additionalColors)
 
 	return result
 }
@@ -359,7 +423,7 @@ func createMutedVariant(cc CategorisedColour, adjustment float64, themeType Them
 
 	// Convert back to RGB (approximate)
 	h, s, _ := rgbToHSL(cc.RGB)
-	newRGB := hslToRGB(h, s*0.8, newLum) // Also reduce saturation for muted effect
+	newRGB := HSLToRGB(h, s*0.8, newLum) // Also reduce saturation for muted effect
 
 	return CategorisedColour{
 		Colour:     color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255},
@@ -373,7 +437,7 @@ func createMutedVariant(cc CategorisedColour, adjustment float64, themeType Them
 }
 
 // assignSemanticRoles assigns semantic roles (danger, warning, success, etc.) based on hue.
-func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColour) {
+func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool) {
 	// Map hue ranges to semantic roles
 	// Red: 0-30, 330-360 (danger)
 	// Orange/Yellow: 30-60 (warning)
@@ -428,6 +492,7 @@ func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColou
 	if danger != nil {
 		enhanced := enhanceSemanticColour(*danger, RoleDanger, themeType, hasBg, bg)
 		palette.Set(RoleDanger, enhanced)
+		usedForSemantic[danger.Hex] = true
 	} else {
 		// Generate fallback danger color if none found
 		fallback := generateFallbackSemanticColour(RoleDanger, themeType, hasBg, bg)
@@ -437,6 +502,7 @@ func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColou
 	if warning != nil {
 		enhanced := enhanceSemanticColour(*warning, RoleWarning, themeType, hasBg, bg)
 		palette.Set(RoleWarning, enhanced)
+		usedForSemantic[warning.Hex] = true
 	} else {
 		fallback := generateFallbackSemanticColour(RoleWarning, themeType, hasBg, bg)
 		palette.Set(RoleWarning, fallback)
@@ -445,6 +511,7 @@ func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColou
 	if success != nil {
 		enhanced := enhanceSemanticColour(*success, RoleSuccess, themeType, hasBg, bg)
 		palette.Set(RoleSuccess, enhanced)
+		usedForSemantic[success.Hex] = true
 	} else {
 		fallback := generateFallbackSemanticColour(RoleSuccess, themeType, hasBg, bg)
 		palette.Set(RoleSuccess, fallback)
@@ -453,6 +520,7 @@ func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColou
 	if info != nil {
 		enhanced := enhanceSemanticColour(*info, RoleInfo, themeType, hasBg, bg)
 		palette.Set(RoleInfo, enhanced)
+		usedForSemantic[info.Hex] = true
 	} else {
 		fallback := generateFallbackSemanticColour(RoleInfo, themeType, hasBg, bg)
 		palette.Set(RoleInfo, fallback)
@@ -461,6 +529,7 @@ func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColou
 	if notification != nil {
 		enhanced := enhanceSemanticColour(*notification, RoleNotification, themeType, hasBg, bg)
 		palette.Set(RoleNotification, enhanced)
+		usedForSemantic[notification.Hex] = true
 	} else {
 		fallback := generateFallbackSemanticColour(RoleNotification, themeType, hasBg, bg)
 		palette.Set(RoleNotification, fallback)
@@ -498,7 +567,7 @@ func enhanceSemanticColour(cc CategorisedColour, role ColourRole, themeType Them
 
 	// Ensure good contrast with background if available
 	if hasBg {
-		newRGB := hslToRGB(h, s, l)
+		newRGB := HSLToRGB(h, s, l)
 		testColor := color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255}
 		contrast := ContrastRatio(testColor, bg.Colour)
 
@@ -512,16 +581,17 @@ func enhanceSemanticColour(cc CategorisedColour, role ColourRole, themeType Them
 		}
 	}
 
-	newRGB := hslToRGB(h, s, l)
+	newRGB := HSLToRGB(h, s, l)
 	return CategorisedColour{
-		Colour:     color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255},
-		Role:       role,
-		Hex:        newRGB.Hex(),
-		RGB:        newRGB,
-		Luminance:  Luminance(color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255}),
-		IsLight:    l > 0.5,
-		Hue:        h,
-		Saturation: s,
+		Colour:      color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255},
+		Role:        role,
+		Hex:         newRGB.Hex(),
+		RGB:         newRGB,
+		Luminance:   Luminance(color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255}),
+		IsLight:     l > 0.5,
+		Hue:         h,
+		Saturation:  s,
+		IsGenerated: true, // Enhanced colour
 	}
 }
 
@@ -545,7 +615,7 @@ func generateFallbackSemanticColour(role ColourRole, themeType ThemeType, hasBg 
 
 	// Ensure good contrast with background if available
 	if hasBg {
-		newRGB := hslToRGB(hue, saturation, lightness)
+		newRGB := HSLToRGB(hue, saturation, lightness)
 		testColor := color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255}
 		contrast := ContrastRatio(testColor, bg.Colour)
 
@@ -557,33 +627,144 @@ func generateFallbackSemanticColour(role ColourRole, themeType ThemeType, hasBg 
 			} else {
 				lightness = math.Max(0.25, lightness-0.1)
 			}
-			newRGB = hslToRGB(hue, saturation, lightness)
+			newRGB = HSLToRGB(hue, saturation, lightness)
 			testColor = color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255}
 			contrast = ContrastRatio(testColor, bg.Colour)
 			attempts++
 		}
 	}
 
-	newRGB := hslToRGB(hue, saturation, lightness)
+	newRGB := HSLToRGB(hue, saturation, lightness)
 	return CategorisedColour{
-		Colour:     color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255},
-		Role:       role,
-		Hex:        newRGB.Hex(),
-		RGB:        newRGB,
-		Luminance:  Luminance(color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255}),
-		IsLight:    lightness > 0.5,
-		Hue:        hue,
-		Saturation: saturation,
+		Colour:      color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255},
+		Role:        role,
+		Hex:         newRGB.Hex(),
+		RGB:         newRGB,
+		Luminance:   Luminance(color.RGBA{R: newRGB.R, G: newRGB.G, B: newRGB.B, A: 255}),
+		IsLight:     lightness > 0.5,
+		Hue:         hue,
+		Saturation:  saturation,
+		IsGenerated: true, // Generated fallback colour
 	}
 }
 
-// sortBySaturation sorts colours by saturation (highest first).
+// buildSortedAllColours creates the final sorted array of all colours with consistent indices.
+// Indices are assigned by role first (fixed positions), then additional colours sorted by luminance.
+// Index mapping:
+//
+//	0 = background
+//	1 = foreground
+//	2 = backgroundMuted
+//	3 = foregroundMuted
+//	4-7 = accent1-4
+//	8-12 = danger, warning, success, info, notification
+//	13+ = remaining colours sorted by luminance
+func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, additionalColors []CategorisedColour) []CategorisedColour {
+	// Fixed index assignments by role
+	roleIndexMap := map[ColourRole]int{
+		RoleBackground:      0,
+		RoleForeground:      1,
+		RoleBackgroundMuted: 2,
+		RoleForegroundMuted: 3,
+		RoleAccent1:         4,
+		RoleAccent2:         5,
+		RoleAccent3:         6,
+		RoleAccent4:         7,
+		RoleDanger:          8,
+		RoleWarning:         9,
+		RoleSuccess:         10,
+		RoleInfo:            11,
+		RoleNotification:    12,
+	}
+
+	// Create array with fixed size for known roles, plus extra for additional colours
+	maxFixedIndex := 12
+	allColours := make([]CategorisedColour, 0, len(palette.Colours))
+
+	// Temporary slice to hold colours for fixed positions
+	fixedColours := make(map[int]CategorisedColour)
+	additionalColours := make([]CategorisedColour, 0)
+
+	// Separate colours into fixed positions and additional
+	for _, cc := range palette.Colours {
+		if idx, hasFixedIndex := roleIndexMap[cc.Role]; hasFixedIndex {
+			cc.Index = idx
+			fixedColours[idx] = cc
+		} else {
+			additionalColours = append(additionalColours, cc)
+		}
+	}
+
+	// Add any extra colors that weren't assigned to semantic roles
+	additionalColours = append(additionalColours, additionalColors...)
+
+	// Sort additional colours by luminance
+	sortByLuminance(additionalColours, themeType)
+
+	// Assign indices to additional colours starting after fixed roles
+	nextIndex := maxFixedIndex + 1
+	for i := range additionalColours {
+		additionalColours[i].Index = nextIndex
+		nextIndex++
+	}
+
+	// Build final array in index order
+	// First add fixed position colours
+	for i := 0; i <= maxFixedIndex; i++ {
+		if cc, exists := fixedColours[i]; exists {
+			allColours = append(allColours, cc)
+		}
+	}
+
+	// Then add additional colours
+	allColours = append(allColours, additionalColours...)
+
+	return allColours
+}
+
+// sortBySaturation sorts colours by saturation (most vibrant first).
 func sortBySaturation(colours []CategorisedColour) {
 	// Simple bubble sort - good enough for small arrays
 	n := len(colours)
 	for i := 0; i < n-1; i++ {
 		for j := 0; j < n-i-1; j++ {
 			if colours[j].Saturation < colours[j+1].Saturation {
+				colours[j], colours[j+1] = colours[j+1], colours[j]
+			}
+		}
+	}
+}
+
+// sortByLuminance sorts colours by luminance based on theme type.
+// Dark theme: ascending (dark to light)
+// Light theme: descending (light to dark)
+func sortByLuminance(colours []CategorisedColour, themeType ThemeType) {
+	n := len(colours)
+	for i := 0; i < n-1; i++ {
+		for j := 0; j < n-i-1; j++ {
+			var shouldSwap bool
+			if themeType == ThemeDark {
+				// Ascending: dark to light
+				shouldSwap = colours[j].Luminance > colours[j+1].Luminance
+			} else {
+				// Descending: light to dark
+				shouldSwap = colours[j].Luminance < colours[j+1].Luminance
+			}
+			if shouldSwap {
+				colours[j], colours[j+1] = colours[j+1], colours[j]
+			}
+		}
+	}
+}
+
+// sortByContrast sorts colours by contrast ratio with background (highest to lowest).
+func sortByContrast(colours []CategorisedColour, bg CategorisedColour) {
+	n := len(colours)
+	for i := 0; i < n-1; i++ {
+		for j := 0; j < n-i-1; j++ {
+			contrast1 := ContrastRatio(colours[j].Colour, bg.Colour)
+			contrast2 := ContrastRatio(colours[j+1].Colour, bg.Colour)
+			if contrast1 < contrast2 {
 				colours[j], colours[j+1] = colours[j+1], colours[j]
 			}
 		}
@@ -634,8 +815,9 @@ func rgbToHSL(rgb RGB) (h, s, l float64) {
 	return
 }
 
-// hslToRGB converts HSL to RGB colour space.
-func hslToRGB(h, s, l float64) RGB {
+// HSLToRGB converts HSL to RGB colour space.
+// h is hue (0-360), s is saturation (0-1), l is luminance (0-1).
+func HSLToRGB(h, s, l float64) RGB {
 	if s == 0 {
 		// Achromatic (grey)
 		v := uint8(l * 255)
@@ -698,63 +880,50 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	var result string
 	result += fmt.Sprintf("Theme Type: %s\n\n", cp.ThemeType.String())
 
-	// Core colours
-	result += "Core Colours:\n"
-	coreRoles := []ColourRole{RoleBackground, RoleBackgroundMuted, RoleForeground, RoleForegroundMuted}
-	for _, role := range coreRoles {
-		if cc, ok := cp.Get(role); ok {
-			if showPreview {
-				preview := ColourPreview(cc.RGB, 8)
-				result += fmt.Sprintf("  %s  %-20s %s (luminance: %.2f)\n", preview, role, cc.Hex, cc.Luminance)
-			} else {
-				result += fmt.Sprintf("  %-20s %s (luminance: %.2f)\n", role, cc.Hex, cc.Luminance)
-			}
-		}
-	}
-
 	// Show contrast ratio for foreground
 	if bg, bgOk := cp.Get(RoleBackground); bgOk {
 		if fg, fgOk := cp.Get(RoleForeground); fgOk {
 			contrast := ContrastRatio(fg.Colour, bg.Colour)
-			result += fmt.Sprintf("  Contrast ratio: %.2f:1\n", contrast)
+			result += fmt.Sprintf("Background/Foreground Contrast: %.2f:1\n\n", contrast)
 		}
 	}
 
-	// Accent colours
-	result += "\nAccent Colours:\n"
-	accentRoles := []ColourRole{RoleAccent1, RoleAccent2, RoleAccent3, RoleAccent4}
-	for _, role := range accentRoles {
-		if cc, ok := cp.Get(role); ok {
-			if showPreview {
-				preview := ColourPreview(cc.RGB, 8)
-				result += fmt.Sprintf("  %s  %-20s %s (sat: %.2f)\n", preview, role, cc.Hex, cc.Saturation)
-			} else {
-				result += fmt.Sprintf("  %-20s %s (saturation: %.2f)\n", role, cc.Hex, cc.Saturation)
-			}
-		}
+	// Tabular format showing all colours
+	result += "All Colours (sorted by luminance):\n"
+	if showPreview {
+		result += fmt.Sprintf("  %-10s %-18s %-10s %-10s %-10s %-10s %-8s %-10s\n",
+			"Preview", "Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source")
+		result += fmt.Sprintf("  %s\n", strings.Repeat("-", 92))
+	} else {
+		result += fmt.Sprintf("  %-18s %-10s %-10s %-10s %-10s %-8s %-10s\n",
+			"Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source")
+		result += fmt.Sprintf("  %s\n", strings.Repeat("-", 78))
 	}
 
-	// Semantic colours
-	semanticRoles := []ColourRole{RoleDanger, RoleWarning, RoleSuccess, RoleInfo, RoleNotification}
-	hasSemanticRoles := false
-	for _, role := range semanticRoles {
-		if _, ok := cp.Get(role); ok {
-			hasSemanticRoles = true
-			break
+	// Show all colours from AllColours (now includes both extracted and generated, sorted by luminance)
+	for _, cc := range cp.AllColours {
+		roleName := string(cc.Role)
+		if roleName == "" {
+			roleName = "-"
 		}
-	}
+		indexStr := fmt.Sprintf("colour%d", cc.Index)
+		source := "extracted"
+		if cc.IsGenerated {
+			source = "generated"
+		}
 
-	if hasSemanticRoles {
-		result += "\nSemantic Colours:\n"
-		for _, role := range semanticRoles {
-			if cc, ok := cp.Get(role); ok {
-				if showPreview {
-					preview := ColourPreview(cc.RGB, 8)
-					result += fmt.Sprintf("  %s  %-20s %s\n", preview, role, cc.Hex)
-				} else {
-					result += fmt.Sprintf("  %-20s %s\n", role, cc.Hex)
-				}
-			}
+		weightStr := "-"
+		if cc.Weight > 0 {
+			weightStr = fmt.Sprintf("%.1f%%", cc.Weight*100)
+		}
+
+		if showPreview {
+			preview := ColourPreview(cc.RGB, 8)
+			result += fmt.Sprintf("  %s   %-18s %-10s %-10s %-10.2f %-10.2f %-8s %-10s\n",
+				preview, roleName, indexStr, cc.Hex, cc.Luminance, cc.Saturation, weightStr, source)
+		} else {
+			result += fmt.Sprintf("  %-18s %-10s %-10s %-10.2f %-10.2f %-8s %-10s\n",
+				roleName, indexStr, cc.Hex, cc.Luminance, cc.Saturation, weightStr, source)
 		}
 	}
 

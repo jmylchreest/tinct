@@ -7,6 +7,9 @@
 bin/
 dist/
 
+# Contrib plugin binaries
+contrib/random
+
 # Test binary, built with `go test -c`
 *.test
 

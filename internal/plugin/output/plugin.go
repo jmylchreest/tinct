@@ -3,56 +3,30 @@ package output
 
 import (
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/spf13/cobra"
 )
 
 // Plugin represents an output plugin that can generate configuration files
 // from a categorised colour palette.
 type Plugin interface {
-	// Name returns the plugin's name (e.g., "tailwind", "alacritty").
+	// Name returns the plugin's name (e.g., "tailwind", "hyprland").
 	Name() string
 
 	// Description returns a human-readable description of the plugin.
 	Description() string
 
-	// Generate creates the output file content from the given palette.
-	Generate(palette *colour.CategorisedPalette) ([]byte, error)
+	// Generate creates output file(s) from the given palette.
+	// Returns map of filename -> content to support plugins that generate multiple files.
+	Generate(palette *colour.CategorisedPalette) (map[string][]byte, error)
 
-	// FileExtension returns the file extension for the output (e.g., "css", "toml").
-	FileExtension() string
+	// RegisterFlags registers plugin-specific flags with cobra command.
+	RegisterFlags(cmd *cobra.Command)
 
-	// DefaultPath returns the default output path for the generated file.
-	// This is relative to the user's home directory or config directory.
-	DefaultPath() string
-}
+	// Validate checks if the plugin configuration is valid.
+	Validate() error
 
-// GenerateOptions holds options for output generation.
-type GenerateOptions struct {
-	// OutputPath is the path where the file should be written.
-	// If empty, stdout is used.
-	OutputPath string
-
-	// Format specifies the output format variant (if plugin supports multiple).
-	Format string
-
-	// Overwrite determines whether to overwrite existing files.
-	Overwrite bool
-
-	// DryRun generates output without writing to disk.
-	DryRun bool
-
-	// BackupExisting creates a backup of existing files before overwriting.
-	BackupExisting bool
-}
-
-// DefaultGenerateOptions returns the default generation options.
-func DefaultGenerateOptions() GenerateOptions {
-	return GenerateOptions{
-		OutputPath:     "",
-		Format:         "default",
-		Overwrite:      false,
-		DryRun:         false,
-		BackupExisting: true,
-	}
+	// DefaultOutputDir returns the default output directory for this plugin.
+	DefaultOutputDir() string
 }
 
 // Registry holds all registered output plugins.
@@ -87,7 +61,7 @@ func (r *Registry) List() []string {
 	return names
 }
 
-// All returns all registered plugins.
+// All returns all registered plugins (including disabled ones).
 func (r *Registry) All() map[string]Plugin {
 	// Return a copy to prevent external modification
 	plugins := make(map[string]Plugin, len(r.plugins))

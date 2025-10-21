@@ -24,57 +24,43 @@ func TestTailwindPlugin_Description(t *testing.T) {
 	}
 }
 
-func TestTailwindPlugin_FileExtension(t *testing.T) {
-	tests := []struct {
-		name   string
-		format string
-		want   string
-	}{
-		{
-			name:   "CSS format",
-			format: "css",
-			want:   "css",
-		},
-		{
-			name:   "Config format",
-			format: "config",
-			want:   "js",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := NewWithFormat(tt.format)
-			if got := plugin.FileExtension(); got != tt.want {
-				t.Errorf("FileExtension() = %s, want %s", got, tt.want)
-			}
-		})
+func TestTailwindPlugin_DefaultOutputDir(t *testing.T) {
+	plugin := New()
+	dir := plugin.DefaultOutputDir()
+	if dir == "" {
+		t.Error("DefaultOutputDir() should not be empty")
 	}
 }
 
-func TestTailwindPlugin_DefaultPath(t *testing.T) {
+func TestTailwindPlugin_Validate(t *testing.T) {
 	tests := []struct {
-		name   string
-		format string
-		want   string
+		name    string
+		format  string
+		wantErr bool
 	}{
 		{
-			name:   "CSS format",
-			format: "css",
-			want:   "app/globals.css",
+			name:    "Valid CSS format",
+			format:  "css",
+			wantErr: false,
 		},
 		{
-			name:   "Config format",
-			format: "config",
-			want:   "tailwind.config.js",
+			name:    "Valid config format",
+			format:  "config",
+			wantErr: false,
+		},
+		{
+			name:    "Invalid format",
+			format:  "invalid",
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := NewWithFormat(tt.format)
-			if got := plugin.DefaultPath(); got != tt.want {
-				t.Errorf("DefaultPath() = %s, want %s", got, tt.want)
+			err := plugin.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -85,12 +71,20 @@ func TestTailwindPlugin_GenerateCSS(t *testing.T) {
 	palette := createTestPalette(colour.ThemeDark)
 
 	plugin := New() // Default is CSS format
-	output, err := plugin.Generate(palette)
+	files, err := plugin.Generate(palette)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	outputStr := string(output)
+	if len(files) != 1 {
+		t.Fatalf("Expected 1 file, got %d", len(files))
+	}
+
+	var outputStr string
+	for _, content := range files {
+		outputStr = string(content)
+		break
+	}
 
 	// Check for essential CSS structure
 	requiredStrings := []string{
@@ -127,12 +121,20 @@ func TestTailwindPlugin_GenerateConfig(t *testing.T) {
 	palette := createTestPalette(colour.ThemeDark)
 
 	plugin := NewWithFormat("config")
-	output, err := plugin.Generate(palette)
+	files, err := plugin.Generate(palette)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	outputStr := string(output)
+	if len(files) != 1 {
+		t.Fatalf("Expected 1 file, got %d", len(files))
+	}
+
+	var outputStr string
+	for _, content := range files {
+		outputStr = string(content)
+		break
+	}
 
 	// Check for essential config structure
 	requiredStrings := []string{

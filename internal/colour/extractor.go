@@ -61,31 +61,3 @@ func NewExtractor(alg Algorithm) (Extractor, error) {
 		return nil, fmt.Errorf("unknown algorithm: %s (valid algorithms: %v)", alg, ValidAlgorithms())
 	}
 }
-
-// ExtractorConfig holds configuration for color extraction.
-type ExtractorConfig struct {
-	Algorithm  Algorithm
-	ColorCount int
-}
-
-// DefaultExtractorConfig returns the default extractor configuration.
-func DefaultExtractorConfig() ExtractorConfig {
-	return ExtractorConfig{
-		Algorithm:  AlgorithmKMeans,
-		ColorCount: 16,
-	}
-}
-
-// Validate validates the extractor configuration.
-func (c ExtractorConfig) Validate() error {
-	if !IsValidAlgorithm(c.Algorithm) {
-		return fmt.Errorf("invalid algorithm: %s", c.Algorithm)
-	}
-	if c.ColorCount < 1 {
-		return fmt.Errorf("color count must be at least 1, got %d", c.ColorCount)
-	}
-	if c.ColorCount > 256 {
-		return fmt.Errorf("color count too large: %d (maximum: 256)", c.ColorCount)
-	}
-	return nil
-}

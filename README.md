@@ -282,6 +282,80 @@ Output:
 tinct version dev (go1.25.1, linux/amd64)
 ```
 
+### Plugin Management
+
+Tinct features a powerful plugin system for managing input and output plugins. Plugins can be enabled, disabled, and extended with external scripts.
+
+#### List Plugins
+
+View all available plugins and their status:
+
+```bash
+tinct plugins list
+```
+
+Output:
+```
+Plugins:
+------------------------------------------------------------------------------------------
+PLUGIN                         STATUS     DESCRIPTION
+------------------------------------------------------------------------------------------
+input:file                     enabled    Load palette from file or build from colour specifications
+input:image                    enabled    Extract colour palette from an image file
+output:hyprland                enabled    Generate Hyprland colour theme configuration
+output:notify *                enabled    External plugin (source: ./contrib/notify-send.py)
+output:tailwind                disabled   Generate Tailwind CSS / shadcn/ui theme configuration
+
+* = external plugin
+```
+
+Plugins are shown with their fully qualified name (type:name). External plugins are marked with an asterisk (*).
+
+#### Enable/Disable Plugins
+
+```bash
+# Enable a plugin
+tinct plugins enable tailwind
+
+# Disable a plugin
+tinct plugins disable tailwind
+```
+
+#### Add External Plugins
+
+Extend Tinct with custom plugins:
+
+```bash
+# Add a local plugin
+tinct plugins add notify ./contrib/notify-send.py
+
+# Update all external plugins from lock file sources
+tinct plugins update
+
+# Delete an external plugin
+tinct plugins delete notify --force
+```
+
+#### Plugin Priority
+
+Plugin state is determined by (highest to lowest priority):
+1. **Plugin lock file** (`.tinct-plugins.json`)
+2. **Environment variables** (`TINCT_ENABLED_PLUGINS`, `TINCT_DISABLED_PLUGINS`)
+3. **Plugin defaults**
+
+**Environment Variables:**
+```bash
+# Enable only specific plugins (whitelist mode)
+export TINCT_ENABLED_PLUGINS="output:hyprland,input:image"
+
+# Disable specific plugins (blacklist mode)
+export TINCT_DISABLED_PLUGINS="output:tailwind"
+```
+
+**Priority**: `TINCT_ENABLED_PLUGINS` takes precedence over `TINCT_DISABLED_PLUGINS`. When enabled plugins are specified, only those plugins will be active (whitelist mode). Otherwise, disabled plugins are filtered out (blacklist mode).
+
+See [docs/PLUGINS.md](docs/PLUGINS.md) for comprehensive plugin management documentation and [contrib/README.md](contrib/README.md) for writing custom plugins.
+
 ## 🎨 Features in Detail
 
 ### Colour Categorisation

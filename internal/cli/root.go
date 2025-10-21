@@ -10,6 +10,9 @@ import (
 )
 
 var (
+	// Global theme flag
+	globalTheme string
+
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd = &cobra.Command{
 		Use:   "tinct",
@@ -36,6 +39,7 @@ func init() {
 	// Global flags
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress non-error output")
+	rootCmd.PersistentFlags().StringVarP(&globalTheme, "theme", "t", "auto", "theme type (auto, dark, light)")
 
 	// Set version template
 	rootCmd.SetVersionTemplate(version.String() + "\n")
@@ -43,6 +47,8 @@ func init() {
 	// Add subcommands
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(extractCmd)
+	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(pluginsCmd)
 }
 
 // versionCmd represents the version command

@@ -9,13 +9,49 @@ import (
 
 // Palette represents a collection of colors extracted from an image.
 type Palette struct {
-	Colors []color.Color
+	Colors  []color.Color
+	Weights []float64 // Optional: relative frequency/volume of each color (0.0-1.0)
 }
 
 // NewPalette creates a new Palette with the given colors.
 func NewPalette(colors []color.Color) *Palette {
 	return &Palette{
-		Colors: colors,
+		Colors:  colors,
+		Weights: nil, // No weights by default
+	}
+}
+
+// NewPaletteWithWeights creates a new Palette with colors and their relative weights.
+// Weights represent the frequency/volume of each color (e.g., from k-means cluster sizes).
+// Weights should be normalized (sum to 1.0) but will be normalized if not.
+func NewPaletteWithWeights(colors []color.Color, weights []float64) *Palette {
+	if len(weights) != len(colors) {
+		// Fallback to equal weights if mismatch
+		return NewPalette(colors)
+	}
+
+	// Normalize weights to sum to 1.0
+	sum := 0.0
+	for _, w := range weights {
+		sum += w
+	}
+
+	normalized := make([]float64, len(weights))
+	if sum > 0 {
+		for i, w := range weights {
+			normalized[i] = w / sum
+		}
+	} else {
+		// Equal weights if all zero
+		equalWeight := 1.0 / float64(len(weights))
+		for i := range normalized {
+			normalized[i] = equalWeight
+		}
+	}
+
+	return &Palette{
+		Colors:  colors,
+		Weights: normalized,
 	}
 }
 

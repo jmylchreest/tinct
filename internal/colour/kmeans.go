@@ -26,6 +26,7 @@ func NewKMeansExtractor() *KMeansExtractor {
 }
 
 // Extract extracts colors from an image using k-means clustering.
+// Returns colors with their relative weights (cluster sizes).
 func (e *KMeansExtractor) Extract(img image.Image, count int) (*Palette, error) {
 	if img == nil {
 		return nil, fmt.Errorf("image cannot be nil")
@@ -59,8 +60,8 @@ func (e *KMeansExtractor) Extract(img image.Image, count int) (*Palette, error) 
 		return NewPalette(uniqueColors), nil
 	}
 
-	// Run k-means clustering
-	centroids := e.kmeans(pixels, count)
+	// Run k-means clustering and get cluster weights
+	centroids, weights := e.kmeans(pixels, count)
 
 	// Convert centroids to colors
 	colors := make([]color.Color, len(centroids))
@@ -73,7 +74,7 @@ func (e *KMeansExtractor) Extract(img image.Image, count int) (*Palette, error) 
 		}
 	}
 
-	return NewPalette(colors), nil
+	return NewPaletteWithWeights(colors, weights), nil
 }
 
 // point3D represents a point in 3D RGB color space.
@@ -132,7 +133,8 @@ func samplePixels(img image.Image) []color.Color {
 }
 
 // kmeans performs k-means clustering on the pixel data.
-func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) []point3D {
+// Returns centroids and their weights (relative cluster sizes).
+func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []float64) {
 	// Convert colors to 3D points
 	points := make([]point3D, len(pixels))
 	for i, c := range pixels {
@@ -185,7 +187,19 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) []point3D {
 		}
 	}
 
-	return centroids
+	// Calculate cluster weights (relative sizes)
+	weights := make([]float64, k)
+	for _, assignment := range assignments {
+		weights[assignment]++
+	}
+
+	// Normalize weights to sum to 1.0
+	totalPixels := float64(len(assignments))
+	for i := range weights {
+		weights[i] /= totalPixels
+	}
+
+	return centroids, weights
 }
 
 // initializeCentroidsKMeansPlusPlus initializes centroids using k-means++ algorithm.
@@ -296,12 +310,4 @@ func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []i
 	}
 
 	return centroids
-}
-
-// min returns the minimum of two integers.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

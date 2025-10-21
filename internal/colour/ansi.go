@@ -13,7 +13,6 @@ const (
 	ansiBgPrefix = "\033[48;2;"
 	ansiSuffix   = "m"
 	defaultWidth = 8
-	narrowWidth  = 4
 )
 
 // ColourPreview returns an ANSI-coloured preview string for a colour.
