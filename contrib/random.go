@@ -3,7 +3,7 @@
 // This is an example Tinct input plugin written in Go. It demonstrates:
 // - Plugin metadata via --plugin-info flag
 // - Reading plugin arguments from JSON stdin
-// - Generating random color palettes
+// - Generating random color palettes with semantic role assignments
 // - Returning proper CategorisedPalette output
 // - Supporting dry-run mode
 // - Handling verbose output
@@ -16,11 +16,12 @@
 // Build:
 //   go build -o random random.go
 //
-// Usage:
-//   # Get plugin info
+// Plugin Protocol:
+//   # Get plugin metadata
 //   ./random --plugin-info
 //
-//   # Generate default palette
+// Direct Usage:
+//   # Generate default 16-color palette
 //   echo '{}' | ./random
 //
 //   # Generate with specific number of colors
@@ -29,11 +30,64 @@
 //   # Generate with specific seed (reproducible)
 //   echo '{"plugin_args":{"seed":12345}}' | ./random
 //
-//   # Dry-run mode
+//   # Dry-run mode (returns empty palette)
 //   echo '{"dry_run":true}' | ./random
 //
-//   # Verbose mode
-//   echo '{"verbose":true}' | ./random
+//   # Verbose mode (logs to stderr)
+//   echo '{"verbose":true}' | ./random 2>&1
+//
+//   # Multiple arguments
+//   echo '{"verbose":true,"plugin_args":{"count":24,"seed":99999}}' | ./random 2>&1
+//
+// Integration with Tinct:
+//   # Add plugin to Tinct
+//   tinct plugins add ./contrib/random
+//
+//   # Enable plugin
+//   tinct plugins enable random
+//
+//   # Generate with default settings
+//   tinct generate -i random -o tailwind
+//
+//   # Generate with custom arguments
+//   tinct generate -i random -o hyprland --plugin-args 'random={"count":16,"seed":12345}'
+//
+//   # Preview the generated palette
+//   tinct generate -i random --preview --plugin-args 'random={"seed":99999}'
+//
+//   # Save generated palette to file
+//   tinct generate -i random --save-palette my-palette.json
+//
+//   # Verbose mode (shows plugin stderr)
+//   tinct generate -i random -o tailwind -v
+//
+//   # Dry-run mode
+//   tinct generate -i random -o tailwind --dry-run
+//
+// Plugin Arguments:
+//   count (int): Number of colors to generate (default: 16)
+//   seed  (int): Random seed for reproducibility (default: random)
+//
+// Output Format:
+//   The plugin outputs a CategorisedPalette with:
+//   - colours: Map of semantic roles (background, foreground, accent1-4, danger, etc.)
+//   - all_colours: Array of all generated colors with metadata
+//   - theme_type: 0=auto, 1=dark, 2=light
+//
+// Testing Reproducibility:
+//   # Same seed should produce same colors
+//   echo '{"plugin_args":{"seed":12345}}' | ./random > output1.json
+//   echo '{"plugin_args":{"seed":12345}}' | ./random > output2.json
+//   diff output1.json output2.json  # Should be identical
+//
+// Installation via Repository:
+//   # From official plugin repository
+//   tinct plugins repo add official https://raw.githubusercontent.com/jmylchreest/tinct-plugins/main/repository.json
+//   tinct plugins install random
+//
+// Note: This is an example plugin demonstrating the protocol. Colors are
+// completely random with no color theory or accessibility considerations.
+// For production use, consider image-based extraction or color theory algorithms.
 //
 // Author: Tinct Contributors
 // License: MIT

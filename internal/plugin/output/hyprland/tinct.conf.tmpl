@@ -6,7 +6,7 @@
 source = ~/.config/hypr/themes/tinct-colours.conf
 
 # ============================================================================
-# General Settings - Colours
+# General Settings
 # ============================================================================
 general {
     # Border colours for active and inactive windows
@@ -15,17 +15,17 @@ general {
 }
 
 # ============================================================================
-# Decoration - Colours
+# Decoration
 # ============================================================================
 decoration {
     # Drop shadow colours
     # Use RGBDec variables with rgba() for opacity control
-    col.shadow = rgba($backgroundRGBDec, 0.25)           # Background at 25% opacity
-    col.shadow_inactive = rgba($backgroundMutedRGBDec, 0.50)  # Muted background at 50% opacity
+    col.shadow = rgba($backgroundRGBDec, 0.25)
+    col.shadow_inactive = rgba($backgroundMutedRGBDec, 0.50)
 }
 
 # ============================================================================
-# Miscellaneous - Background Colour
+# Miscellaneous
 # ============================================================================
 misc {
     # Background colour for empty areas
@@ -33,7 +33,7 @@ misc {
 }
 
 # ============================================================================
-# Group Settings - Colours
+# Group Settings
 # ============================================================================
 group {
     # Group border colours
@@ -49,68 +49,33 @@ group {
 }
 
 # ============================================================================
-# Window Rules - Colour-based Examples
+# Window Rules - Examples
 # ============================================================================
 
-# Semantic colour borders based on window title/class
-windowrulev2 = bordercolor $dangerRGB, title:^(.*[Ee]rror.*)$
-windowrulev2 = bordercolor $warningRGB, title:^(.*[Ww]arning.*)$
-windowrulev2 = bordercolor $successRGB, title:^(.*[Ss]uccess.*)$
-
-# Application-specific borders using accent colours
-windowrulev2 = bordercolor $infoRGB, class:^(kitty)$
-windowrulev2 = bordercolor $accent2RGB, class:^(Alacritty)$
-windowrulev2 = bordercolor $notificationRGB, class:^(dunst)$
-windowrulev2 = bordercolor $notificationRGB, class:^(mako)$
-windowrulev2 = bordercolor $successRGB, class:^(thunar)$
-windowrulev2 = bordercolor $successRGB, class:^(org.gnome.Nautilus)$
-windowrulev2 = bordercolor $accent1RGB, class:^(firefox)$
-windowrulev2 = bordercolor $accent3RGB, class:^(chromium)$
-windowrulev2 = bordercolor $infoRGB, class:^(code)$
-windowrulev2 = bordercolor $infoRGB, class:^(Code)$
+# Semantic colour borders based on window title
+windowrule = bordercolor $dangerRGB, title:^(.*[Ee]rror.*)$
+windowrule = bordercolor $warningRGB, title:^(.*[Ww]arning.*)$
+windowrule = bordercolor $successRGB, title:^(.*[Ss]uccess.*)$
 
 # ============================================================================
 # Available Colour Variables
 # ============================================================================
 #
-# Semantic palette colours:
-#   $background          - Main background colour
-#   $backgroundMuted     - Muted/dimmed background
-#   $foreground          - Main text colour
-#   $foregroundMuted     - Muted/dimmed text
-#   $accent1             - Primary accent colour
-#   $accent2             - Secondary accent colour
-#   $accent3             - Tertiary accent colour
-#   $accent4             - Quaternary accent colour
-#   $danger              - Errors, danger, destructive actions
-#   $warning             - Warnings, caution
-#   $success             - Success, confirmation
-#   $info                - Information, help
-#   $notification        - Notifications, badges
+# Semantic colours:
+#   $background, $backgroundMuted     - Background colours
+#   $foreground, $foregroundMuted     - Text colours
+#   $accent1, $accent2, $accent3, $accent4 - Accent colours
+#   $danger, $warning, $success, $info, $notification - Status colours
 #
-# Indexed colours (all extracted colours):
-#   $colour0, $colour1, $colour2, ..., $colour15 (or more based on extraction)
-#   These are the raw extracted colours before categorisation
-#   Use these for custom mappings and additional colour variations
+# Indexed colours:
+#   $colour0, $colour1, $colour2, ... - All extracted colours
 #
-# Each colour has two variables:
-#   $backgroundRGB    - rgb(hex) format for direct use: rgb(1e1e2e)
-#   $backgroundRGBDec - decimal format for rgba(): 30,30,46
+# Each colour has two formats:
+#   $backgroundRGB    - For direct use: rgb(1e1e2e)
+#   $backgroundRGBDec - For rgba with opacity: rgba(30,30,46, 0.50)
 #
 # Usage examples:
-#   col.active_border = $accent1RGB              # Direct RGB value
-#   col.shadow = rgba($backgroundRGBDec, 0.50)   # With 50% opacity
-#   col.shadow = rgba($dangerRGBDec, 0.25)       # Danger at 25% opacity
-#   background_color = $backgroundRGB            )
+#   col.active_border = $accent1RGB
+#   col.shadow = rgba($backgroundRGBDec, 0.50)
+#   background_color = $backgroundRGB
 #
-# For rgba with opacity, use the RGB decimal variables (suffix: RGB):
-#   rgba($backgroundRGB, 0.50)    # Background at 50% opacity
-#   rgba($dangerRGB, 0.25)        # Danger color at 25% opacity
-#   rgba($foregroundRGB, 1.0)     # Foreground at 100% opacity
-#   rgba($accent1RGB, 0.75)       # Accent1 at 75% opacity
-#
-# Each colour has two variables:
-#   $background     - for use with rgb() or direct assignment
-#   $backgroundRGB  - for use with rgba() when you need opacity control
-#
-# ============================================================================

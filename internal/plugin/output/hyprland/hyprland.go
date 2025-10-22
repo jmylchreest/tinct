@@ -90,7 +90,7 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 
 	// Generate stub if requested
 	if p.generateStub {
-		stubContent, err := p.generateStubConfig(palette)
+		stubContent, err := p.generateStubConfig()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate stub: %w", err)
 		}
@@ -128,7 +128,7 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 }
 
 // generateStubConfig creates an example configuration file showing how to use the theme.
-func (p *Plugin) generateStubConfig(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) generateStubConfig() ([]byte, error) {
 	tmplContent, err := templates.ReadFile("tinct.conf.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read example template: %w", err)
@@ -150,29 +150,8 @@ func (p *Plugin) generateStubConfig(palette *colour.CategorisedPalette) ([]byte,
 // ThemeData holds data for the theme template.
 type ThemeData struct {
 	SourceTheme string           // "dark" or "light" - the source theme from extraction
-	Colours     []ColourVariable // Primary theme colours (semantic roles from detected theme)
+	Colours     []ColourVariable // Semantic theme colours
 	Indexed     []ColourVariable // Indexed colours (colour0, colour1, etc.)
-
-	// Optional extended palettes for templates that want explicit light/dark access
-	Light ThemeColours // Light theme palette (available but optional)
-	Dark  ThemeColours // Dark theme palette (available but optional)
-}
-
-// ThemeColours holds colour variables for a specific theme.
-type ThemeColours struct {
-	Background      ColourVariable
-	BackgroundMuted ColourVariable
-	Foreground      ColourVariable
-	ForegroundMuted ColourVariable
-	Accent1         ColourVariable
-	Accent2         ColourVariable
-	Accent3         ColourVariable
-	Accent4         ColourVariable
-	Danger          ColourVariable
-	Warning         ColourVariable
-	Success         ColourVariable
-	Info            ColourVariable
-	Notification    ColourVariable
 }
 
 // ColourVariable represents a colour variable in Hyprland format.
@@ -183,7 +162,6 @@ type ColourVariable struct {
 }
 
 // prepareThemeData converts a categorised palette to Hyprland theme data.
-// It generates both light and dark themes, creating the opposite theme if needed.
 func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData {
 	data := ThemeData{
 		SourceTheme: palette.ThemeType.String(),
@@ -191,7 +169,7 @@ func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData 
 		Indexed:     []ColourVariable{},
 	}
 
-	// Map our roles to Hyprland variable names (using Tinct semantic names in camelCase)
+	// Map semantic roles to variable names
 	roleMapping := map[colour.ColourRole]string{
 		colour.RoleBackground:      "background",
 		colour.RoleBackgroundMuted: "backgroundMuted",
@@ -208,170 +186,27 @@ func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData 
 		colour.RoleNotification:    "notification",
 	}
 
-	// Generate primary theme colour variables (detected theme)
+	// Generate semantic colour variables
 	for role, name := range roleMapping {
 		if color, ok := palette.Get(role); ok {
-			rgb := stripHash(color.Hex)
 			data.Colours = append(data.Colours, ColourVariable{
 				Name:     name,
-				RGBHex:   rgb,
+				RGBHex:   stripHash(color.Hex),
 				RGBDecim: fmt.Sprintf("%d,%d,%d", color.RGB.R, color.RGB.G, color.RGB.B),
 			})
 		}
 	}
 
-	// Add indexed colour variables (colour0, colour1, etc.) for all colours in palette
+	// Add indexed colour variables (colour0, colour1, etc.)
 	for _, color := range palette.AllColours {
-		rgb := stripHash(color.Hex)
 		data.Indexed = append(data.Indexed, ColourVariable{
 			Name:     fmt.Sprintf("colour%d", color.Index),
-			RGBHex:   rgb,
+			RGBHex:   stripHash(color.Hex),
 			RGBDecim: fmt.Sprintf("%d,%d,%d", color.RGB.R, color.RGB.G, color.RGB.B),
 		})
 	}
 
-	// Generate extended light and dark palettes (optional for advanced templates)
-	if palette.ThemeType == colour.ThemeDark {
-		data.Dark = paletteToThemeColours(palette)
-		data.Light = generateInvertedThemeColours(palette)
-	} else {
-		data.Light = paletteToThemeColours(palette)
-		data.Dark = generateInvertedThemeColours(palette)
-	}
-
 	return data
-}
-
-// paletteToThemeColours converts a CategorisedPalette to ThemeColours.
-func paletteToThemeColours(palette *colour.CategorisedPalette) ThemeColours {
-	theme := ThemeColours{}
-
-	if c, ok := palette.Get(colour.RoleBackground); ok {
-		theme.Background = toColourVariable("background", c)
-	}
-	if c, ok := palette.Get(colour.RoleBackgroundMuted); ok {
-		theme.BackgroundMuted = toColourVariable("backgroundMuted", c)
-	}
-	if c, ok := palette.Get(colour.RoleForeground); ok {
-		theme.Foreground = toColourVariable("foreground", c)
-	}
-	if c, ok := palette.Get(colour.RoleForegroundMuted); ok {
-		theme.ForegroundMuted = toColourVariable("foregroundMuted", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent1); ok {
-		theme.Accent1 = toColourVariable("accent1", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent2); ok {
-		theme.Accent2 = toColourVariable("accent2", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent3); ok {
-		theme.Accent3 = toColourVariable("accent3", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent4); ok {
-		theme.Accent4 = toColourVariable("accent4", c)
-	}
-	if c, ok := palette.Get(colour.RoleDanger); ok {
-		theme.Danger = toColourVariable("danger", c)
-	}
-	if c, ok := palette.Get(colour.RoleWarning); ok {
-		theme.Warning = toColourVariable("warning", c)
-	}
-	if c, ok := palette.Get(colour.RoleSuccess); ok {
-		theme.Success = toColourVariable("success", c)
-	}
-	if c, ok := palette.Get(colour.RoleInfo); ok {
-		theme.Info = toColourVariable("info", c)
-	}
-	if c, ok := palette.Get(colour.RoleNotification); ok {
-		theme.Notification = toColourVariable("notification", c)
-	}
-
-	return theme
-}
-
-// generateInvertedThemeColours creates the opposite theme (light->dark or dark->light).
-func generateInvertedThemeColours(palette *colour.CategorisedPalette) ThemeColours {
-	theme := ThemeColours{}
-
-	if c, ok := palette.Get(colour.RoleBackground); ok {
-		theme.Background = toColourVariableInverted("background", c)
-	}
-	if c, ok := palette.Get(colour.RoleBackgroundMuted); ok {
-		theme.BackgroundMuted = toColourVariableInverted("backgroundMuted", c)
-	}
-	if c, ok := palette.Get(colour.RoleForeground); ok {
-		theme.Foreground = toColourVariableInverted("foreground", c)
-	}
-	if c, ok := palette.Get(colour.RoleForegroundMuted); ok {
-		theme.ForegroundMuted = toColourVariableInverted("foregroundMuted", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent1); ok {
-		theme.Accent1 = toColourVariableInvertedModerate("accent1", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent2); ok {
-		theme.Accent2 = toColourVariableInvertedModerate("accent2", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent3); ok {
-		theme.Accent3 = toColourVariableInvertedModerate("accent3", c)
-	}
-	if c, ok := palette.Get(colour.RoleAccent4); ok {
-		theme.Accent4 = toColourVariableInvertedModerate("accent4", c)
-	}
-	if c, ok := palette.Get(colour.RoleDanger); ok {
-		theme.Danger = toColourVariableInvertedModerate("danger", c)
-	}
-	if c, ok := palette.Get(colour.RoleWarning); ok {
-		theme.Warning = toColourVariableInvertedModerate("warning", c)
-	}
-	if c, ok := palette.Get(colour.RoleSuccess); ok {
-		theme.Success = toColourVariableInvertedModerate("success", c)
-	}
-	if c, ok := palette.Get(colour.RoleInfo); ok {
-		theme.Info = toColourVariableInvertedModerate("info", c)
-	}
-	if c, ok := palette.Get(colour.RoleNotification); ok {
-		theme.Notification = toColourVariableInvertedModerate("notification", c)
-	}
-
-	return theme
-}
-
-// toColourVariable converts a CategorisedColour to a ColourVariable.
-func toColourVariable(name string, c colour.CategorisedColour) ColourVariable {
-	return ColourVariable{
-		Name:     name,
-		RGBHex:   stripHash(c.Hex),
-		RGBDecim: fmt.Sprintf("%d,%d,%d", c.RGB.R, c.RGB.G, c.RGB.B),
-	}
-}
-
-// toColourVariableInverted converts a colour with inverted luminance.
-func toColourVariableInverted(name string, c colour.CategorisedColour) ColourVariable {
-	invertedLum := 1.0 - c.Luminance
-	rgb := colour.HSLToRGB(c.Hue, c.Saturation, invertedLum)
-	return ColourVariable{
-		Name:     name,
-		RGBHex:   stripHash(rgb.Hex()),
-		RGBDecim: fmt.Sprintf("%d,%d,%d", rgb.R, rgb.G, rgb.B),
-	}
-}
-
-// toColourVariableInvertedModerate inverts luminance but keeps it in a moderate range.
-func toColourVariableInvertedModerate(name string, c colour.CategorisedColour) ColourVariable {
-	var invertedLum float64
-	if c.Luminance < 0.5 {
-		// Dark color -> make it lighter (but not too light)
-		invertedLum = 0.5 + (0.5-c.Luminance)*0.6
-	} else {
-		// Light color -> make it darker (but not too dark)
-		invertedLum = 0.5 - (c.Luminance-0.5)*0.6
-	}
-	rgb := colour.HSLToRGB(c.Hue, c.Saturation, invertedLum)
-	return ColourVariable{
-		Name:     name,
-		RGBHex:   stripHash(rgb.Hex()),
-		RGBDecim: fmt.Sprintf("%d,%d,%d", rgb.R, rgb.G, rgb.B),
-	}
 }
 
 // stripHash removes the # prefix from a hex colour string.

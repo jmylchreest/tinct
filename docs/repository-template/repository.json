@@ -1,0 +1,86 @@
+{
+  "version": "1",
+  "name": "my-plugins",
+  "description": "My Tinct plugin repository - customize this description",
+  "url": "https://github.com/YOUR_USERNAME/YOUR_REPO",
+  "maintained_by": "Your Name <your@email.com>",
+  "last_updated": "2025-01-10T12:00:00Z",
+
+  "plugins": {
+    "example-plugin": {
+      "name": "example-plugin",
+      "type": "output",
+      "description": "Example plugin - replace with your plugin details",
+      "repository": "https://github.com/user/tinct-plugin-example",
+      "author": "Plugin Author",
+      "license": "MIT",
+      "tags": ["example", "template"],
+
+      "versions": [
+        {
+          "version": "1.0.0",
+          "released": "2025-01-10T12:00:00Z",
+          "compatibility": ">=1.0.0",
+          "changelog_url": "https://github.com/user/tinct-plugin-example/releases/tag/v1.0.0",
+
+          "downloads": {
+            "linux_amd64": {
+              "url": "https://github.com/user/tinct-plugin-example/releases/download/v1.0.0/example_linux_amd64.tar.gz",
+              "checksum": "sha256:replace-with-actual-checksum",
+              "size": 2048576
+            },
+            "linux_arm64": {
+              "url": "https://github.com/user/tinct-plugin-example/releases/download/v1.0.0/example_linux_arm64.tar.gz",
+              "checksum": "sha256:replace-with-actual-checksum",
+              "size": 1953792
+            },
+            "darwin_amd64": {
+              "url": "https://github.com/user/tinct-plugin-example/releases/download/v1.0.0/example_darwin_amd64.tar.gz",
+              "checksum": "sha256:replace-with-actual-checksum",
+              "size": 2150400
+            },
+            "darwin_arm64": {
+              "url": "https://github.com/user/tinct-plugin-example/releases/download/v1.0.0/example_darwin_arm64.tar.gz",
+              "checksum": "sha256:replace-with-actual-checksum",
+              "size": 2097152
+            },
+            "windows_amd64": {
+              "url": "https://github.com/user/tinct-plugin-example/releases/download/v1.0.0/example_windows_amd64.zip",
+              "checksum": "sha256:replace-with-actual-checksum",
+              "size": 2203648
+            }
+          }
+        }
+      ]
+    },
+
+    "example-script": {
+      "name": "example-script",
+      "type": "output",
+      "description": "Example script plugin (Python/Bash) - platform-independent",
+      "repository": "https://github.com/user/tinct-plugin-script",
+      "author": "Plugin Author",
+      "license": "MIT",
+      "tags": ["example", "script", "python"],
+
+      "versions": [
+        {
+          "version": "1.0.0",
+          "released": "2025-01-10T12:00:00Z",
+          "compatibility": ">=1.0.0",
+          "changelog_url": "https://github.com/user/tinct-plugin-script/releases/tag/v1.0.0",
+
+          "downloads": {
+            "any": {
+              "url": "https://github.com/user/tinct-plugin-script/releases/download/v1.0.0/script.py",
+              "checksum": "sha256:replace-with-actual-checksum",
+              "size": 4096,
+              "runtime": "python3",
+              "dependencies": ["python3"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

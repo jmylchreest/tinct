@@ -17,7 +17,6 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
-	"github.com/jmylchreest/tinct/internal/plugin/output/tailwind"
 	"github.com/spf13/cobra"
 )
 
@@ -88,7 +87,6 @@ func (m *Manager) registerBuiltinPlugins() {
 
 	// Register output plugins
 	m.outputRegistry.Register(hyprland.New())
-	m.outputRegistry.Register(tailwind.New())
 }
 
 // InputRegistry returns the input plugin registry.

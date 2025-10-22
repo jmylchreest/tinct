@@ -284,55 +284,120 @@ tinct version dev (go1.25.1, linux/amd64)
 
 ### Plugin Management
 
-Tinct features a powerful plugin system for managing input and output plugins. Plugins can be enabled, disabled, and extended with external scripts.
+Tinct features a powerful plugin system for managing input and output plugins. Plugins can be discovered from repositories, installed, and managed with a lock file for reproducibility.
 
-#### List Plugins
-
-View all available plugins and their status:
+#### Quick Start
 
 ```bash
+# Add the official plugin repository
+tinct plugins repo add official https://raw.githubusercontent.com/jmylchreest/tinct-plugins/main/repository.json
+
+# Search for plugins
+tinct plugins search notification
+
+# Install a plugin
+tinct plugins install random
+
+# Sync plugins from lock file (on new machine)
+tinct plugins sync
+```
+
+#### Plugin Repositories
+
+Discover and install plugins from curated repositories:
+
+```bash
+# Add a repository
+tinct plugins repo add official <manifest-url>
+
+# List repositories
+tinct plugins repo list
+
+# Update repository manifests
+tinct plugins repo update
+
+# Search for plugins
+tinct plugins search random
+tinct plugins search --type input
+tinct plugins search --tag notification
+
+# Browse all available plugins
+tinct plugins browse
+
+# Show plugin details
+tinct plugins info random
+```
+
+#### Installing Plugins
+
+Install plugins from repositories or direct URLs:
+
+```bash
+# Install from repository (searches all repos)
+tinct plugins install random
+
+# Install specific version
+tinct plugins install random@1.2.0
+
+# Install from specific repository
+tinct plugins install random --repo official
+
+# Install from HTTP URL
+tinct plugins add https://example.com/plugin.py
+
+# Install local plugin
+tinct plugins add ./my-plugin.sh
+```
+
+#### Lock File & Sync
+
+Tinct tracks installed plugins in `.tinct-plugins.json`, making it easy to sync configurations across machines:
+
+```bash
+# Install missing plugins from lock file
+tinct plugins sync
+
+# Verify installed plugins match lock file
+tinct plugins verify
+
+# Reinstall all plugins
+tinct plugins sync --force
+
+# Remove plugins not in lock file
+tinct plugins clean
+```
+
+**Workflow Example:**
+```bash
+# On machine 1: Install plugins normally
+tinct plugins install random notify-send
+
+# Commit lock file to dotfiles
+cp ~/.config/tinct/.tinct-plugins.json ~/dotfiles/tinct/
+
+# On machine 2: Clone and sync
+git clone https://github.com/user/dotfiles ~/dotfiles
+ln -sf ~/dotfiles/tinct/.tinct-plugins.json ~/.config/tinct/
+tinct plugins sync  # Automatically installs random and notify-send
+```
+
+#### List & Manage Plugins
+
+View and manage installed plugins:
+
+```bash
+# List all plugins
 tinct plugins list
-```
 
-Output:
-```
-Plugins:
-------------------------------------------------------------------------------------------
-PLUGIN                         STATUS     DESCRIPTION
-------------------------------------------------------------------------------------------
-input:file                     enabled    Load palette from file or build from colour specifications
-input:image                    enabled    Extract colour palette from an image file
-output:hyprland                enabled    Generate Hyprland colour theme configuration
-output:notify *                enabled    External plugin (source: ./contrib/notify-send.py)
-output:tailwind                disabled   Generate Tailwind CSS / shadcn/ui theme configuration
+# Enable/disable plugins
+tinct plugins enable hyprland
+tinct plugins disable hyprland
 
-* = external plugin
-```
+# Update plugins to latest versions
+tinct plugins update random
+tinct plugins update --all
 
-Plugins are shown with their fully qualified name (type:name). External plugins are marked with an asterisk (*).
-
-#### Enable/Disable Plugins
-
-```bash
-# Enable a plugin
-tinct plugins enable tailwind
-
-# Disable a plugin
-tinct plugins disable tailwind
-```
-
-#### Add External Plugins
-
-Extend Tinct with custom plugins:
-
-```bash
-# Add a local plugin
-tinct plugins add notify ./contrib/notify-send.py
-
-# Update all external plugins from lock file sources
-tinct plugins update
-
-# Delete an external plugin
+# Remove a plugin
 tinct plugins delete notify --force
 ```
 
@@ -349,12 +414,14 @@ Plugin state is determined by (highest to lowest priority):
 export TINCT_ENABLED_PLUGINS="output:hyprland,input:image"
 
 # Disable specific plugins (blacklist mode)
-export TINCT_DISABLED_PLUGINS="output:tailwind"
+export TINCT_DISABLED_PLUGINS="output:notify"
 ```
 
-**Priority**: `TINCT_ENABLED_PLUGINS` takes precedence over `TINCT_DISABLED_PLUGINS`. When enabled plugins are specified, only those plugins will be active (whitelist mode). Otherwise, disabled plugins are filtered out (blacklist mode).
+For comprehensive plugin development guides, see [contrib/README.md](contrib/README.md).
 
-See [docs/PLUGINS.md](docs/PLUGINS.md) for comprehensive plugin management documentation and [contrib/README.md](contrib/README.md) for writing custom plugins.
+**Repository Hosting:**
+- [Host Your Own Repository](docs/HOSTING-PLUGIN-REPOSITORY.md) - Complete guide for hosting and maintaining plugin repositories
+- [Repository Template](docs/repository-template/) - Template structure for creating your own plugin repository
 
 ## 🎨 Features in Detail
 

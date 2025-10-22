@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
+	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +28,9 @@ const (
 
 // PluginLock represents the plugin lock file structure
 type PluginLock struct {
+	// Version of the lock file format
+	Version string `json:"version,omitempty"`
+
 	// EnabledPlugins is a list of explicitly enabled plugins
 	EnabledPlugins []string `json:"enabled_plugins,omitempty"`
 
@@ -48,14 +52,20 @@ type ExternalPluginMeta struct {
 	// Type is the plugin type (input or output)
 	Type string `json:"type"`
 
-	// Source is where the plugin came from (e.g., URL, path)
-	Source string `json:"source"`
-
 	// Version is the plugin version if available
 	Version string `json:"version,omitempty"`
 
 	// Description is the plugin description if available
 	Description string `json:"description,omitempty"`
+
+	// Source contains structured information about where the plugin came from
+	Source *repository.PluginSource `json:"source,omitempty"`
+
+	// SourceLegacy is the old string-based source field for backward compatibility
+	SourceLegacy string `json:"source_legacy,omitempty"`
+
+	// InstalledAt is the timestamp when the plugin was installed
+	InstalledAt string `json:"installed_at,omitempty"`
 }
 
 var (
@@ -64,6 +74,8 @@ var (
 	pluginType     string
 	pluginForce    bool
 	pluginClear    bool
+	pluginVerify   bool
+	pluginYes      bool
 )
 
 // pluginsCmd represents the plugins command
@@ -270,7 +282,11 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		if isExternal && lock != nil && lock.ExternalPlugins != nil {
 			for _, meta := range lock.ExternalPlugins {
 				if meta.Name == name && meta.Type == "input" {
-					pluginSource = meta.Source
+					if meta.Source != nil {
+						pluginSource = formatPluginSourceString(meta.Source)
+					} else if meta.SourceLegacy != "" {
+						pluginSource = meta.SourceLegacy
+					}
 					break
 				}
 			}
@@ -309,7 +325,11 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		if isExternal && lock != nil && lock.ExternalPlugins != nil {
 			for _, meta := range lock.ExternalPlugins {
 				if meta.Name == name && meta.Type == "output" {
-					pluginSource = meta.Source
+					if meta.Source != nil {
+						pluginSource = formatPluginSourceString(meta.Source)
+					} else if meta.SourceLegacy != "" {
+						pluginSource = meta.SourceLegacy
+					}
 					break
 				}
 			}
@@ -351,7 +371,13 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			// Use plugin's description if available, otherwise show source
 			description := meta.Description
 			if description == "" {
-				description = fmt.Sprintf("External plugin (source: %s)", meta.Source)
+				sourceStr := ""
+				if meta.Source != nil {
+					sourceStr = formatPluginSourceString(meta.Source)
+				} else if meta.SourceLegacy != "" {
+					sourceStr = meta.SourceLegacy
+				}
+				description = fmt.Sprintf("External plugin (source: %s)", sourceStr)
 			}
 
 			allPlugins = append(allPlugins, pluginInfo{
@@ -359,7 +385,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 				status:      status,
 				description: description,
 				isExternal:  true,
-				source:      meta.Source,
+				source:      formatPluginSourceString(meta.Source),
 			})
 		}
 	}
@@ -672,12 +698,12 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 
 	// Add to lock file
 	lock.ExternalPlugins[pluginName] = ExternalPluginMeta{
-		Name:        pluginName,
-		Path:        pluginPath,
-		Type:        pluginType,
-		Source:      source,
-		Version:     version,
-		Description: pluginDescription,
+		Name:         pluginName,
+		Path:         pluginPath,
+		Type:         pluginType,
+		SourceLegacy: source,
+		Version:      version,
+		Description:  pluginDescription,
 	}
 
 	// Save lock file
@@ -801,10 +827,16 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 
 	for _, name := range pluginNames {
 		meta := lock.ExternalPlugins[name]
-		fmt.Printf("Updating plugin '%s' from %s...\n", name, meta.Source)
+		sourceStr := ""
+		if meta.Source != nil {
+			sourceStr = formatPluginSourceString(meta.Source)
+		} else if meta.SourceLegacy != "" {
+			sourceStr = meta.SourceLegacy
+		}
+		fmt.Printf("Updating plugin '%s' from %s...\n", name, sourceStr)
 
 		// Install plugin from source
-		pluginPath, err := installPluginFromSource(meta.Source, name, pluginDir, verbose)
+		pluginPath, err := installPluginFromSource(sourceStr, name, pluginDir, verbose)
 		if err != nil {
 			fmt.Printf("  ✗ %v\n", err)
 			failCount++
@@ -916,7 +948,7 @@ func savePluginLock(path string, lock *PluginLock) error {
 	}
 
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write plugin lock file: %w", err)
+		return fmt.Errorf("failed to update lock file: %w", err)
 	}
 
 	return nil
@@ -1022,13 +1054,21 @@ func getPluginDir() (string, error) {
 	return filepath.Join(home, ".local", "share", "tinct", "plugins"), nil
 }
 
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return err
+// formatPluginSourceString converts a PluginSource struct to a display string
+func formatPluginSourceString(source *repository.PluginSource) string {
+	if source == nil {
+		return ""
 	}
-	return os.WriteFile(dst, data, 0644)
+	switch source.Type {
+	case "repository":
+		return fmt.Sprintf("repo:%s/%s@%s", source.Repository, source.Plugin, source.Version)
+	case "http":
+		return source.URL
+	case "local":
+		return source.OriginalPath
+	default:
+		return source.Type
+	}
 }
 
 // installPluginFromSource installs a plugin from various source types
