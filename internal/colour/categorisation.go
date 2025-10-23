@@ -358,8 +358,8 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// Sort accents by contrast with background (highest to lowest)
-	sortByContrast(accents, bg)
+	// Sort accents intelligently for better visual progression
+	sortAccentsForTheme(accents, bg, fg, themeType)
 
 	// Track which accent colors are used for semantic roles
 	usedForSemantic := make(map[string]bool) // Track by hex value
@@ -768,8 +768,9 @@ func generateFallbackSemanticColour(role ColourRole, themeType ThemeType, hasBg 
 //	2 = backgroundMuted
 //	3 = foregroundMuted
 //	4-7 = accent1-4
-//	8-12 = danger, warning, success, info, notification
-//	13+ = remaining colours sorted by luminance
+//	8-11 = accent1Muted-accent4Muted
+//	12-16 = danger, warning, success, info, notification
+//	17+ = remaining colours sorted by luminance
 func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, additionalColors []CategorisedColour) []CategorisedColour {
 	// Fixed index assignments by role
 	// Muted variants are indexed right after their primary colours
@@ -779,12 +780,12 @@ func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, add
 		RoleBackgroundMuted: 2,
 		RoleForegroundMuted: 3,
 		RoleAccent1:         4,
-		RoleAccent1Muted:    5,
-		RoleAccent2:         6,
-		RoleAccent2Muted:    7,
-		RoleAccent3:         8,
-		RoleAccent3Muted:    9,
-		RoleAccent4:         10,
+		RoleAccent2:         5,
+		RoleAccent3:         6,
+		RoleAccent4:         7,
+		RoleAccent1Muted:    8,
+		RoleAccent2Muted:    9,
+		RoleAccent3Muted:    10,
 		RoleAccent4Muted:    11,
 		RoleDanger:          12,
 		RoleWarning:         13,
@@ -794,7 +795,7 @@ func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, add
 	}
 
 	// Create array with fixed size for known roles, plus extra for additional colours
-	maxFixedIndex := 16
+	maxFixedIndex := 16 // 0-16 for fixed roles (17 total)
 	allColours := make([]CategorisedColour, 0, len(palette.Colours))
 
 	// Temporary slice to hold colours for fixed positions
@@ -885,6 +886,115 @@ func sortByContrast(colours []CategorisedColour, bg CategorisedColour) {
 			}
 		}
 	}
+}
+
+// sortAccentsForTheme sorts accent colors to:
+// 1. Prefer colors similar in hue/saturation to foreground (for visual cohesion)
+// 2. Ensure good contrast with both background and foreground
+// 3. Progress in luminance (darker→lighter for dark themes, lighter→darker for light themes)
+// 4. Ensure distinct visual differences between accents
+func sortAccentsForTheme(accents []CategorisedColour, bg, fg CategorisedColour, theme ThemeType) {
+	// Calculate a score for each accent based on multiple factors
+	type accentScore struct {
+		index int
+		score float64
+	}
+
+	scores := make([]accentScore, len(accents))
+
+	for i, accent := range accents {
+		score := 0.0
+
+		// Factor 1: Similarity to foreground hue (0-1, higher is better)
+		// This makes accents visually cohesive with the foreground
+		hueDiff := math.Abs(accent.Hue - fg.Hue)
+		if hueDiff > 180 {
+			hueDiff = 360 - hueDiff // Handle wraparound
+		}
+		hueSimilarity := 1.0 - (hueDiff / 180.0)
+		score += hueSimilarity * 3.0 // Weight: 3.0
+
+		// Factor 2: Saturation similarity to foreground (prefer colorful like fg)
+		satDiff := math.Abs(accent.Saturation - fg.Saturation)
+		satSimilarity := 1.0 - satDiff
+		score += satSimilarity * 2.0 // Weight: 2.0
+
+		// Factor 3: Contrast with background (must be readable)
+		bgContrast := ContrastRatio(accent.Colour, bg.Colour)
+		if bgContrast >= 4.5 {
+			score += 2.0 // Good contrast bonus
+		} else if bgContrast >= 3.0 {
+			score += 1.0 // Acceptable contrast
+		}
+
+		// Factor 4: Contrast with foreground (accents should be distinguishable)
+		fgContrast := ContrastRatio(accent.Colour, fg.Colour)
+		if fgContrast >= 3.0 {
+			score += 1.5 // Good distinction bonus
+		} else if fgContrast >= 2.0 {
+			score += 0.75
+		}
+
+		// Factor 5: Saturation (prefer more saturated colors for accents)
+		if accent.Saturation >= 0.4 {
+			score += accent.Saturation * 1.5 // Weight: 1.5
+		}
+
+		scores[i] = accentScore{index: i, score: score}
+	}
+
+	// Sort by score (highest first)
+	n := len(scores)
+	for i := 0; i < n-1; i++ {
+		for j := 0; j < n-i-1; j++ {
+			if scores[j].score < scores[j+1].score {
+				scores[j], scores[j+1] = scores[j+1], scores[j]
+			}
+		}
+	}
+
+	// Reorder accents based on scores
+	reordered := make([]CategorisedColour, len(accents))
+	for i, s := range scores {
+		reordered[i] = accents[s.index]
+	}
+
+	// Now sort the top candidates by luminance for visual progression
+	// For dark themes: darker → lighter (accent1 darkest, accent4 lightest)
+	// For light themes: lighter → darker (accent1 lightest, accent4 darkest)
+	topCount := min(12, len(reordered)) // Consider top 12 candidates
+	if topCount > 0 {
+		if theme == ThemeDark {
+			// Sort darker → lighter for dark themes
+			for i := 0; i < topCount-1; i++ {
+				for j := 0; j < topCount-i-1; j++ {
+					if reordered[j].Luminance > reordered[j+1].Luminance {
+						reordered[j], reordered[j+1] = reordered[j+1], reordered[j]
+					}
+				}
+			}
+		} else {
+			// Sort lighter → darker for light themes
+			for i := 0; i < topCount-1; i++ {
+				for j := 0; j < topCount-i-1; j++ {
+					if reordered[j].Luminance < reordered[j+1].Luminance {
+						reordered[j], reordered[j+1] = reordered[j+1], reordered[j]
+					}
+				}
+			}
+		}
+	}
+
+	// Copy back to original slice
+	copy(accents, reordered)
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // rgbToHSL converts RGB to HSL colour space.
