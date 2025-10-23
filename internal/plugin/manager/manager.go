@@ -16,9 +16,12 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/file"
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
+	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
+	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
+	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
 	"github.com/spf13/cobra"
 )
 
@@ -86,10 +89,13 @@ func (m *Manager) registerBuiltinPlugins() {
 	// Register input plugins
 	m.inputRegistry.Register(image.New())
 	m.inputRegistry.Register(file.New())
+	m.inputRegistry.Register(remotejson.New())
+	m.inputRegistry.Register(remotecss.New())
 
 	// Register output plugins
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(kitty.New())
+	m.outputRegistry.Register(waybar.New())
 }
 
 // InputRegistry returns the input plugin registry.
@@ -386,7 +392,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 
 	// Debug: show what's being sent to plugin
 	if opts.Verbose {
-		fmt.Fprintf(os.Stderr, "  └─ Sending to plugin: %s\n", string(optsJSON))
+		fmt.Fprintf(os.Stderr, "   Sending to plugin: %s\n", string(optsJSON))
 	}
 
 	// Execute external plugin

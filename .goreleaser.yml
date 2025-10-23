@@ -375,10 +375,10 @@ release:
 
     ## What's Next?
 
-    - 📖 [Documentation](https://github.com/jmylchreest/tinct/blob/main/README.md)
-    - 🔌 [Plugin Development Guide](https://github.com/jmylchreest/tinct/blob/main/contrib/README.md)
-    - 🐛 [Report Issues](https://github.com/jmylchreest/tinct/issues)
-    - 💬 [Discussions](https://github.com/jmylchreest/tinct/discussions)
+    -  [Documentation](https://github.com/jmylchreest/tinct/blob/main/README.md)
+    -  [Plugin Development Guide](https://github.com/jmylchreest/tinct/blob/main/contrib/README.md)
+    -  [Report Issues](https://github.com/jmylchreest/tinct/issues)
+    -  [Discussions](https://github.com/jmylchreest/tinct/discussions)
 
 # Announce release
 announce:
@@ -387,7 +387,7 @@ announce:
   discord:
     enabled: true
     message_template: |
-      🎨 **Tinct {{.Tag}}** has been released!
+       **Tinct {{.Tag}}** has been released!
 
       {{.ReleaseNotes}}
 

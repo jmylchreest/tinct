@@ -134,7 +134,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 			// Verify checksum if requested and available
 			if syncVerify && meta.Source != nil && meta.Source.Checksum != "" {
 				if err := verifyPluginChecksum(meta.Path, meta.Source.Checksum); err != nil {
-					fmt.Printf("  ✗ Checksum mismatch: %v\n", err)
+					fmt.Printf("   Checksum mismatch: %v\n", err)
 					if !syncForce {
 						stats.Failed++
 						continue
@@ -142,12 +142,12 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 					fmt.Printf("  → Reinstalling...\n")
 					exists = false
 				} else {
-					fmt.Printf("  ✓ Checksum verified\n")
+					fmt.Printf("   Checksum verified\n")
 				}
 			}
 
 			if exists {
-				fmt.Printf("  ✓ Already installed (v%s)\n", meta.Version)
+				fmt.Printf("   Already installed (v%s)\n", meta.Version)
 				stats.Existing++
 				continue
 			}
@@ -159,23 +159,23 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 		} else if meta.SourceLegacy != "" {
 			fmt.Printf("  → Installing from %s\n", meta.SourceLegacy)
 		} else {
-			fmt.Printf("  ✗ No source information available\n")
+			fmt.Printf("   No source information available\n")
 			stats.Failed++
 			continue
 		}
 
 		if err := reinstallPlugin(meta); err != nil {
-			fmt.Printf("  ✗ Failed: %v\n", err)
+			fmt.Printf("   Failed: %v\n", err)
 			if !syncSkipMissing {
 				stats.Failed++
 				continue
 			}
-			fmt.Printf("  ⚠ Skipped\n")
+			fmt.Printf("   Skipped\n")
 			stats.Skipped++
 			continue
 		}
 
-		fmt.Printf("  ✓ Installed\n")
+		fmt.Printf("   Installed\n")
 		stats.Installed++
 	}
 
@@ -301,9 +301,9 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 		}
 
 		if inLockFile {
-			fmt.Printf("  ✓ %s - in lock file\n", name)
+			fmt.Printf("   %s - in lock file\n", name)
 		} else {
-			fmt.Printf("  ✗ %s - not in lock file\n", name)
+			fmt.Printf("   %s - not in lock file\n", name)
 			toRemove = append(toRemove, path)
 		}
 	}
@@ -335,9 +335,9 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 	for _, path := range toRemove {
 		fmt.Printf("Removing %s...\n", filepath.Base(path))
 		if err := os.Remove(path); err != nil {
-			fmt.Printf("  ✗ Failed: %v\n", err)
+			fmt.Printf("   Failed: %v\n", err)
 		} else {
-			fmt.Printf("  ✓ Deleted\n")
+			fmt.Printf("   Deleted\n")
 			removed++
 		}
 	}
@@ -628,16 +628,16 @@ func getArch() string {
 func printSyncSummary(stats repository.SyncStats) {
 	fmt.Println("Summary:")
 	if stats.Installed > 0 {
-		fmt.Printf("  ✓ %d newly installed\n", stats.Installed)
+		fmt.Printf("   %d newly installed\n", stats.Installed)
 	}
 	if stats.Existing > 0 {
-		fmt.Printf("  ✓ %d already installed\n", stats.Existing)
+		fmt.Printf("   %d already installed\n", stats.Existing)
 	}
 	if stats.Failed > 0 {
-		fmt.Printf("  ✗ %d failed\n", stats.Failed)
+		fmt.Printf("   %d failed\n", stats.Failed)
 	}
 	if stats.Skipped > 0 {
-		fmt.Printf("  ⚠ %d skipped\n", stats.Skipped)
+		fmt.Printf("   %d skipped\n", stats.Skipped)
 	}
 }
 
@@ -651,11 +651,11 @@ func printVerifyResults(results []repository.VerifyResult) {
 	for _, result := range results {
 		switch result.Status {
 		case "valid":
-			fmt.Printf("✓ %s\n", result.Name)
+			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Checksum: %s [VALID]\n", result.Expected)
 			validCount++
 		case "mismatch":
-			fmt.Printf("✗ %s\n", result.Name)
+			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Checksum: [MISMATCH]\n")
 			if result.Expected != "" {
 				fmt.Printf("  Expected: %s\n", result.Expected)
@@ -665,15 +665,15 @@ func printVerifyResults(results []repository.VerifyResult) {
 			}
 			mismatchCount++
 		case "missing":
-			fmt.Printf("✗ %s\n", result.Name)
+			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Status: [MISSING]\n")
 			missingCount++
 		case "no_checksum":
-			fmt.Printf("⚠ %s\n", result.Name)
+			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Checksum: [NOT AVAILABLE]\n")
 			noChecksumCount++
 		case "no_path":
-			fmt.Printf("⚠ %s\n", result.Name)
+			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Status: [NO PATH]\n")
 			noChecksumCount++
 		}
@@ -682,15 +682,15 @@ func printVerifyResults(results []repository.VerifyResult) {
 
 	fmt.Println("Summary:")
 	if validCount > 0 {
-		fmt.Printf("  ✓ %d valid\n", validCount)
+		fmt.Printf("   %d valid\n", validCount)
 	}
 	if mismatchCount > 0 {
-		fmt.Printf("  ✗ %d checksum mismatch\n", mismatchCount)
+		fmt.Printf("   %d checksum mismatch\n", mismatchCount)
 	}
 	if missingCount > 0 {
-		fmt.Printf("  ✗ %d missing\n", missingCount)
+		fmt.Printf("   %d missing\n", missingCount)
 	}
 	if noChecksumCount > 0 {
-		fmt.Printf("  ⚠ %d no checksum\n", noChecksumCount)
+		fmt.Printf("   %d no checksum\n", noChecksumCount)
 	}
 }

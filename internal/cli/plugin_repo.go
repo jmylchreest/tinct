@@ -144,7 +144,7 @@ func runPluginRepoAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to add repository: %w", err)
 	}
 
-	fmt.Printf("✓ Repository %q added successfully\n", name)
+	fmt.Printf(" Repository %q added successfully\n", name)
 	fmt.Printf("  Priority: %d\n", repoPriority)
 	fmt.Printf("\nRun 'tinct plugins search' to discover available plugins.\n")
 
@@ -203,7 +203,7 @@ func runPluginRepoRemove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to remove repository: %w", err)
 	}
 
-	fmt.Printf("✓ Repository %q removed successfully\n", name)
+	fmt.Printf(" Repository %q removed successfully\n", name)
 	return nil
 }
 
@@ -230,13 +230,13 @@ func runPluginRepoUpdate(cmd *cobra.Command, args []string) error {
 
 			fmt.Printf("\n%s...\n", repo.Name)
 			if err := mgr.UpdateRepository(repo.Name); err != nil {
-				fmt.Printf("  ✗ Failed: %v\n", err)
+				fmt.Printf("   Failed: %v\n", err)
 			} else {
-				fmt.Printf("  ✓ Updated\n")
+				fmt.Printf("   Updated\n")
 			}
 		}
 
-		fmt.Println("\n✓ Repository update complete")
+		fmt.Println("\n Repository update complete")
 	} else {
 		// Update specific repository
 		name := args[0]
@@ -246,7 +246,7 @@ func runPluginRepoUpdate(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to update repository: %w", err)
 		}
 
-		fmt.Printf("✓ Repository %q updated successfully\n", name)
+		fmt.Printf(" Repository %q updated successfully\n", name)
 	}
 
 	return nil

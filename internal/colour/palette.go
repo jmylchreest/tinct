@@ -9,15 +9,17 @@ import (
 
 // Palette represents a collection of colors extracted from an image.
 type Palette struct {
-	Colors  []color.Color
-	Weights []float64 // Optional: relative frequency/volume of each color (0.0-1.0)
+	Colors    []color.Color
+	Weights   []float64          // Optional: relative frequency/volume of each color (0.0-1.0)
+	RoleHints map[ColourRole]int // Optional: explicit role assignments (role -> color index)
 }
 
 // NewPalette creates a new Palette with the given colors.
 func NewPalette(colors []color.Color) *Palette {
 	return &Palette{
-		Colors:  colors,
-		Weights: nil, // No weights by default
+		Colors:    colors,
+		Weights:   nil, // No weights by default
+		RoleHints: nil, // No role hints by default
 	}
 }
 
@@ -50,8 +52,20 @@ func NewPaletteWithWeights(colors []color.Color, weights []float64) *Palette {
 	}
 
 	return &Palette{
-		Colors:  colors,
-		Weights: normalized,
+		Colors:    colors,
+		Weights:   normalized,
+		RoleHints: nil, // No role hints by default
+	}
+}
+
+// NewPaletteWithRoleHints creates a new Palette with colors and explicit role assignments.
+// RoleHints maps semantic roles to color indices, allowing input plugins to override
+// automatic categorization for specific roles.
+func NewPaletteWithRoleHints(colors []color.Color, roleHints map[ColourRole]int) *Palette {
+	return &Palette{
+		Colors:    colors,
+		Weights:   nil,
+		RoleHints: roleHints,
 	}
 }
 

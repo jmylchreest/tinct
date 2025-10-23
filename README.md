@@ -1,4 +1,4 @@
-# Tinct 🎨
+# Tinct 
 
 > A modern, blazingly fast colour palette generator for your terminal and beyond
 
@@ -7,22 +7,24 @@ Tinct extracts vibrant colour palettes from images using advanced clustering alg
 [![Go Version](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## ✨ Features
+##  Features
 
-- 🚀 **Blazingly Fast**: K-means clustering optimised for speed (< 0.01s for most images)
-- 🎨 **Smart Categorisation**: Automatically categorises colours by role (background, foreground, accents)
-- 🌈 **Colour Previews**: See actual colours in your terminal with ANSI colour blocks
-- 🌓 **Theme-Aware**: Auto-detects or forces dark/light theme with WCAG contrast checking
-- 🏷️ **Semantic Colours**: Intelligent assignment of danger, warning, success, info, notification colours
-- 🔇 **Muted Variants**: Automatically generates muted background/foreground for inactive states
-- 📊 **Multiple Formats**: Output as hex, RGB, JSON, or categorised
-- 🖼️ **Wide Format Support**: JPEG, PNG, GIF, WebP
-- 🔧 **Simple CLI**: Built with Cobra for intuitive command-line usage
-- 📦 **Zero Dependencies**: Self-contained binary with no runtime dependencies
-- 🧪 **Well Tested**: Comprehensive unit tests with >80% coverage
-- ♿ **Accessibility**: WCAG 2.0 compliant contrast ratio calculations
+-  **Blazingly Fast**: K-means clustering optimised for speed (< 0.01s for most images)
+-  **Smart Categorisation**: Automatically categorises colours by role (background, foreground, accents)
+-  **Colour Previews**: See actual colours in your terminal with ANSI colour blocks
+-  **Theme-Aware**: Auto-detects or forces dark/light theme with WCAG contrast checking
+-  **Semantic Colours**: Intelligent assignment of danger, warning, success, info, notification colours
+-  **Muted Variants**: Automatically generates muted background/foreground for inactive states
+-  **Remote Palettes**: Fetch themes from URLs (JSON, CSS) with role mapping
+-  **[Theme Cookbook](docs/THEME-COOKBOOK.md)**: Ready-to-use commands for Catppuccin, Dracula, Tokyo Night, Nord, Gruvbox, Solarized
+-  **Multiple Formats**: Output as hex, RGB, JSON, or categorised
+-  **Wide Format Support**: JPEG, PNG, GIF, WebP
+-  **Simple CLI**: Built with Cobra for intuitive command-line usage
+-  **Zero Dependencies**: Self-contained binary with no runtime dependencies
+-  **Well Tested**: Comprehensive unit tests with >80% coverage
+-  **Accessibility**: WCAG 2.0 compliant contrast ratio calculations
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Installation
 
@@ -68,7 +70,88 @@ tinct extract --format json wallpaper.jpg
 tinct extract --output palette.txt wallpaper.jpg
 ```
 
-## 📖 Usage
+### Popular Themes
+
+See the **[Theme Cookbook](docs/THEME-COOKBOOK.md)** for ready-to-use commands for popular themes like Catppuccin, Dracula, Tokyo Night, and more!
+
+**Quick example - Catppuccin Mocha:**
+```bash
+tinct generate --input remote-json \
+  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
+  --remote-json.query "$.mocha.colors" \
+  --remote-json.map base=background,text=foreground,red=danger,green=success \
+  --theme dark \
+  --outputs waybar
+```
+
+### Using Remote Palettes
+
+Tinct can fetch and use pre-defined color palettes from popular themes using specialized remote plugins:
+
+#### Remote JSON Plugin (with JSONPath queries)
+
+```bash
+# Catppuccin Mocha from GitHub (with nested JSON path)
+tinct generate --input remote-json \
+  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
+  --remote-json.query "$.colors.mocha" \
+  --remote-json.map base=background,text=foreground,red=danger,green=success,yellow=warning,blue=info \
+  --outputs waybar
+
+# Simple flat JSON palette
+tinct generate --input remote-json \
+  --remote-json.url "https://example.com/theme.json" \
+  --remote-json.map primary=background,secondary=foreground \
+  --outputs hyprland,kitty
+```
+
+#### Remote CSS Plugin (extracts CSS variables)
+
+```bash
+# Fetch colors from a CSS theme file
+tinct generate --input remote-css \
+  --remote-css.url "https://example.com/theme.css" \
+  --remote-css.map color-base=background,color-text=foreground,color-accent=accent1 \
+  --outputs waybar
+
+# Extract all colors without mapping (automatic categorization)
+tinct generate --input remote-css \
+  --remote-css.url "https://example.com/colors.css" \
+  --preview
+```
+
+#### Saving Palettes for Reuse
+
+```bash
+# Save palette for later use
+tinct generate --input remote-json \
+  --remote-json.url "https://example.com/palette.json" \
+  --remote-json.map base=background,text=foreground \
+  --save-palette my-theme.txt
+
+# Then use the saved palette
+tinct generate --input file --file.path my-theme.txt --outputs hyprland,kitty
+```
+
+**File Input Formats:**
+
+Without role hints (automatic categorization):
+```
+1e1e2e
+cdd6f4
+f38ba8
+a6e3a1
+```
+
+With explicit role hints (override auto-categorization):
+```
+background=#1e1e2e
+foreground=#cdd6f4
+danger=#f38ba8
+success=#a6e3a1
+```
+
+##  Usage
 
 ### Extract Command
 
@@ -103,14 +186,14 @@ tinct extract wallpaper.jpg --preview --colours 8
 
 Output:
 ```
-████████ #ff0000
-████████ #00ff00
-████████ #0000ff
-████████ #ffff00
-████████ #ff00ff
-████████ #00ffff
-████████ #808080
-████████ #ff8000
+ #ff0000
+ #00ff00
+ #0000ff
+ #ffff00
+ #ff00ff
+ #00ffff
+ #808080
+ #ff8000
 ```
 
 #### Colour Categorisation
@@ -125,24 +208,24 @@ Output:
 Theme Type: dark
 
 Core Colours:
-  ████████  background           #0000ff (luminance: 0.07)
-  ████████  background-muted     #0b0b65 (luminance: 0.22)
-  ████████  foreground           #ffff00 (luminance: 0.93)
-  ████████  foreground-muted     #f3f399 (luminance: 0.78)
+    background           #0000ff (luminance: 0.07)
+    background-muted     #0b0b65 (luminance: 0.22)
+    foreground           #ffff00 (luminance: 0.93)
+    foreground-muted     #f3f399 (luminance: 0.78)
   Contrast ratio: 8.00:1
 
 Accent Colours:
-  ████████  accent-1             #ff0000 (sat: 1.00)
-  ████████  accent-2             #00ff00 (sat: 1.00)
-  ████████  accent-3             #ff00ff (sat: 1.00)
-  ████████  accent-4             #00ffff (sat: 1.00)
+    accent-1             #ff0000 (sat: 1.00)
+    accent-2             #00ff00 (sat: 1.00)
+    accent-3             #ff00ff (sat: 1.00)
+    accent-4             #00ffff (sat: 1.00)
 
 Semantic Colours:
-  ████████  danger               #ff0000
-  ████████  warning              #ff8000
-  ████████  success              #00ff00
-  ████████  info                 #00ffff
-  ████████  notification         #ff00ff
+    danger               #ff0000
+    warning              #ff8000
+    success              #00ff00
+    info                 #00ffff
+    notification         #ff00ff
 ```
 
 #### Theme-Specific Categorisation
@@ -157,15 +240,15 @@ Output:
 Theme Type: light
 
 Core Colours:
-  ████████  background           #ffff00 (luminance: 0.93)
-  ████████  background-muted     #f3f399 (luminance: 0.78)
-  ████████  foreground           #0000ff (luminance: 0.07)
-  ████████  foreground-muted     #0b0b65 (luminance: 0.22)
+    background           #ffff00 (luminance: 0.93)
+    background-muted     #f3f399 (luminance: 0.78)
+    foreground           #0000ff (luminance: 0.07)
+    foreground-muted     #0b0b65 (luminance: 0.22)
   Contrast ratio: 8.00:1
 
 Accent Colours:
-  ████████  accent-1             #ff0000 (sat: 1.00)
-  ████████  accent-2             #00ff00 (sat: 1.00)
+    accent-1             #ff0000 (sat: 1.00)
+    accent-2             #00ff00 (sat: 1.00)
   ...
 ```
 
@@ -249,11 +332,11 @@ tinct extract wallpaper.jpg --format rgb --preview --colours 5
 
 Output:
 ```
-████████  rgb(255, 0, 0)
-████████  rgb(0, 255, 0)
-████████  rgb(0, 0, 255)
-████████  rgb(255, 255, 0)
-████████  rgb(128, 128, 128)
+  rgb(255, 0, 0)
+  rgb(0, 255, 0)
+  rgb(0, 0, 255)
+  rgb(255, 255, 0)
+  rgb(128, 128, 128)
 ```
 
 #### Save Palette to File
@@ -296,6 +379,12 @@ Tinct includes built-in plugins for generating theme configurations:
   - Configures foreground, background, cursor, tabs, borders
   - Includes full 16-colour ANSI palette
 
+- **waybar**: Waybar status bar colour themes
+  - Generates `~/.config/waybar/tinct-colours.css`
+  - Creates example CSS with GTK `@define-color` format
+  - Includes comprehensive module styling and semantic colours
+  - Optional auto-reload with `--waybar.reload` flag
+
 To use a plugin, include the generated file in your configuration:
 
 ```bash
@@ -304,6 +393,9 @@ include ~/.config/kitty/tinct.conf
 
 # Hyprland example - add to ~/.config/hypr/hyprland.conf  
 source = ~/.config/hypr/tinct-colours.conf
+
+# Waybar example - add to ~/.config/waybar/style.css
+@import "tinct-colours.css";
 ```
 
 ### Plugin Management
@@ -485,7 +577,7 @@ For comprehensive plugin development guides, see [contrib/README.md](contrib/REA
 - [Host Your Own Repository](docs/HOSTING-PLUGIN-REPOSITORY.md) - Complete guide for hosting and maintaining plugin repositories
 - [Repository Template](docs/repository-template/) - Template structure for creating your own plugin repository
 
-## 🎨 Features in Detail
+##  Features in Detail
 
 ### Plugin Hooks
 
@@ -584,7 +676,7 @@ Use the `--preview` flag to see actual colour blocks in your terminal:
 tinct extract image.jpg --preview
 ```
 
-This uses ANSI 24-bit true colour escape codes to display colour blocks (████████) in your terminal. Works in most modern terminals including:
+This uses ANSI 24-bit true colour escape codes to display colour blocks () in your terminal. Works in most modern terminals including:
 - iTerm2, Terminal.app (macOS)
 - GNOME Terminal, Konsole, Alacritty, Kitty (Linux)
 - Windows Terminal (Windows 10+)
@@ -597,7 +689,7 @@ This uses ANSI 24-bit true colour escape codes to display colour blocks (██�
 - **Custom Contrast Ratios**: AAA compliance option (7:1)
 - **Colour Harmony**: Complementary, triadic, analogous schemes
 
-## 🔧 Development
+##  Development
 
 ### Prerequisites
 
@@ -645,34 +737,34 @@ go vet ./...
 
 ```
 tinct/
-├── cmd/tinct/              # Main application entry point
-├── internal/               # Private application code
-│   ├── cli/                # CLI commands (Cobra)
-│   ├── colour/             # Colour extraction algorithms
-│   │   ├── extractor.go    # Extractor interface & factory
-│   │   ├── kmeans.go       # K-means implementation
-│   │   ├── palette.go      # Palette type & conversions
-│   │   ├── categorisation.go # Smart categorisation
-│   │   └── ansi.go         # Terminal colour previews
-│   ├── image/              # Image loading utilities
-│   └── version/            # Version info (ldflags)
-├── testdata/               # Test images and data
-└── plan.md                 # Development roadmap
+ cmd/tinct/              # Main application entry point
+ internal/               # Private application code
+    cli/                # CLI commands (Cobra)
+    colour/             # Colour extraction algorithms
+       extractor.go    # Extractor interface & factory
+       kmeans.go       # K-means implementation
+       palette.go      # Palette type & conversions
+       categorisation.go # Smart categorisation
+       ansi.go         # Terminal colour previews
+    image/              # Image loading utilities
+    version/            # Version info (ldflags)
+ testdata/               # Test images and data
+ plan.md                 # Development roadmap
 ```
 
-## 🛣️ Roadmap
+##  Roadmap
 
-### Phase 1: Foundation ✅ **COMPLETE**
-- ✅ CLI framework with Cobra
-- ✅ K-means colour extraction (blazingly fast - <5ms!)
-- ✅ Multiple output formats (hex, rgb, json, categorised)
-- ✅ Colour categorisation with WCAG contrast checking
-- ✅ Theme detection (auto, dark, light)
-- ✅ Semantic colour assignment (danger, warning, success, etc.)
-- ✅ Muted colour variants
-- ✅ ANSI terminal colour previews
-- ✅ Version management
-- ✅ British English spelling throughout
+### Phase 1: Foundation  **COMPLETE**
+-  CLI framework with Cobra
+-  K-means colour extraction (blazingly fast - <5ms!)
+-  Multiple output formats (hex, rgb, json, categorised)
+-  Colour categorisation with WCAG contrast checking
+-  Theme detection (auto, dark, light)
+-  Semantic colour assignment (danger, warning, success, etc.)
+-  Muted colour variants
+-  ANSI terminal colour previews
+-  Version management
+-  British English spelling throughout
 
 ### Phase 2: Enhanced Features (Coming Soon)
 - [ ] Additional algorithms (Median Cut, Dominant Colour)
@@ -683,10 +775,10 @@ tinct/
 - [ ] Colour harmony analysis
 
 ### Phase 3: Plugin System
-- [x] Output plugins (Hyprland ✅, Kitty ✅)
+- [x] Output plugins (Hyprland , Kitty )
 - [ ] More output plugins (Alacritty, i3, etc.)
 - [ ] Source plugins (wallpaper fetchers)
-- [x] External plugin support ✅
+- [x] External plugin support 
 
 ### Phase 4: AI Integration
 - [ ] AI wallpaper generation (Stable Diffusion, DALL-E)
@@ -695,7 +787,7 @@ tinct/
 
 See [plan.md](plan.md) for detailed roadmap and implementation status.
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -716,24 +808,24 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/):
 - `perf:` - Performance improvements
 - `chore:` - Maintenance tasks
 
-## 📝 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👤 Author
+##  Author
 
 **John Mylchreest**
 - Email: jmylchreest@gmail.com
 - GitHub: [@jmylchreest](https://github.com/jmylchreest)
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Inspired by [pywal](https://github.com/dylanaraps/pywal)
 - Built with [Cobra](https://github.com/spf13/cobra) CLI framework
 - K-means++ algorithm for optimal centroid initialisation
 - WCAG 2.0 guidelines for accessibility compliance
 
-## 📚 Performance
+##  Performance
 
 **Before optimisation**: 4 minutes+ (reported issue)
 **After optimisation**: ~3ms average (**80,000x faster!**)
@@ -754,4 +846,4 @@ Average: 3.3ms
 
 ---
 
-**Made with 🎨 and Go 1.25+**
+**Made with  and Go 1.25+**

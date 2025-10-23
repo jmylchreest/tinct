@@ -259,39 +259,103 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 
 	result := NewCategorisedPalette(themeType)
 
-	// Background is now first colour (darkest for dark theme, lightest for light theme)
-	bg := extracted[0]
-	bg.Role = RoleBackground
-	result.Set(RoleBackground, bg)
+	// Apply explicit role hints from input plugins (if provided)
+	// These override automatic categorization for the specified roles
+	// Note: We need to match by color value, not index, since extracted array was sorted
+	hintsApplied := make(map[ColourRole]bool)
+	if palette.RoleHints != nil {
+		for role, originalIndex := range palette.RoleHints {
+			if originalIndex >= 0 && originalIndex < len(allExtracted) {
+				// Get the color from the original unsorted array
+				hintedColor := allExtracted[originalIndex]
 
-	// Create background-muted variant
-	bgMuted := createMutedVariant(bg, config.MutedLuminanceAdjust, themeType, true)
-	bgMuted.Role = RoleBackgroundMuted
-	bgMuted.IsGenerated = true
-	result.Set(RoleBackgroundMuted, bgMuted)
+				// Find this color in the sorted extracted array by matching hex value
+				for _, cc := range extracted {
+					if cc.Hex == hintedColor.Hex {
+						cc.Role = role
+						result.Set(role, cc)
+						hintsApplied[role] = true
+						break
+					}
+				}
+			}
+		}
+	}
 
-	// Find foreground colour (highest contrast with background)
-	fgIdx := findForegroundIndex(extracted, bg, config, 0)
+	// Background assignment (use hint if provided, otherwise auto-detect)
+	var bg CategorisedColour
+	if !hintsApplied[RoleBackground] {
+		// Background is now first colour (darkest for dark theme, lightest for light theme)
+		bg = extracted[0]
+		bg.Role = RoleBackground
+		result.Set(RoleBackground, bg)
+	} else {
+		// Use the hinted background
+		bg, _ = result.Get(RoleBackground)
+	}
+
+	// Create background-muted variant (use hint if provided)
+	if !hintsApplied[RoleBackgroundMuted] {
+		bgMuted := createMutedVariant(bg, config.MutedLuminanceAdjust, themeType, true)
+		bgMuted.Role = RoleBackgroundMuted
+		bgMuted.IsGenerated = true
+		result.Set(RoleBackgroundMuted, bgMuted)
+	}
+
+	// Foreground assignment (use hint if provided, otherwise auto-detect)
 	var fg CategorisedColour
-	if fgIdx >= 0 {
-		fg = extracted[fgIdx]
-		fg.Role = RoleForeground
-		result.Set(RoleForeground, fg)
+	var fgIdx int = -1
+	if !hintsApplied[RoleForeground] {
+		// Find foreground colour (highest contrast with background)
+		fgIdx = findForegroundIndex(extracted, bg, config, 0)
+		if fgIdx >= 0 {
+			fg = extracted[fgIdx]
+			fg.Role = RoleForeground
+			result.Set(RoleForeground, fg)
+		}
+	} else {
+		// Use the hinted foreground
+		fg, _ = result.Get(RoleForeground)
+		// Find the index in extracted for later exclusion
+		for i, cc := range extracted {
+			if cc.Hex == fg.Hex {
+				fgIdx = i
+				break
+			}
+		}
+	}
 
-		// Create foreground-muted variant
+	// Create foreground-muted variant (use hint if provided)
+	if fgIdx >= 0 && !hintsApplied[RoleForegroundMuted] {
 		fgMuted := createMutedVariant(fg, config.MutedLuminanceAdjust, themeType, false)
 		fgMuted.Role = RoleForegroundMuted
 		fgMuted.IsGenerated = true
 		result.Set(RoleForegroundMuted, fgMuted)
 	}
 
-	// Collect remaining colours for accents (excluding background and foreground)
+	// Collect remaining colours for accents (excluding background, foreground, and hinted roles)
 	accents := make([]CategorisedColour, 0)
-	for i, cc := range extracted {
-		if i == 0 || i == fgIdx {
-			continue
+	usedIndices := make(map[int]bool)
+
+	// Mark background index as used
+	if !hintsApplied[RoleBackground] {
+		usedIndices[0] = true
+	}
+	// Mark foreground index as used
+	if fgIdx >= 0 {
+		usedIndices[fgIdx] = true
+	}
+	// Mark any hinted role indices as used
+	if palette.RoleHints != nil {
+		for _, index := range palette.RoleHints {
+			usedIndices[index] = true
 		}
-		accents = append(accents, cc)
+	}
+
+	for i, cc := range extracted {
+		if !usedIndices[i] {
+			accents = append(accents, cc)
+		}
 	}
 
 	// Sort accents by contrast with background (highest to lowest)
@@ -301,6 +365,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	usedForSemantic := make(map[string]bool) // Track by hex value
 
 	// Assign accent roles (up to 4) and their muted variants
+	// Skip roles that were explicitly hinted
 	accentRoles := []struct {
 		primary ColourRole
 		muted   ColourRole
@@ -310,22 +375,33 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		{RoleAccent3, RoleAccent3Muted},
 		{RoleAccent4, RoleAccent4Muted},
 	}
-	for i, roles := range accentRoles {
-		if i < len(accents) {
-			accent := accents[i]
+	accentIndex := 0
+	for _, roles := range accentRoles {
+		// Skip if this accent role was explicitly hinted
+		if hintsApplied[roles.primary] {
+			continue
+		}
+
+		if accentIndex < len(accents) {
+			accent := accents[accentIndex]
 			accent.Role = roles.primary
 			result.Set(roles.primary, accent)
 
-			// Create muted variant for this accent
-			accentMuted := createMutedVariant(accent, config.MutedLuminanceAdjust, themeType, false)
-			accentMuted.Role = roles.muted
-			accentMuted.IsGenerated = true
-			result.Set(roles.muted, accentMuted)
+			// Create muted variant for this accent (skip if hinted)
+			if !hintsApplied[roles.muted] {
+				accentMuted := createMutedVariant(accent, config.MutedLuminanceAdjust, themeType, false)
+				accentMuted.Role = roles.muted
+				accentMuted.IsGenerated = true
+				result.Set(roles.muted, accentMuted)
+			}
+
+			accentIndex++
 		}
 	}
 
-	// Assign semantic roles based on hue and track which colors are used
-	assignSemanticRoles(result, accents, usedForSemantic)
+	// Assign semantic roles based on hue (skip roles that were explicitly hinted)
+	// Pass hintsApplied so assignSemanticRoles can skip those roles
+	assignSemanticRolesWithHints(result, accents, usedForSemantic, hintsApplied)
 
 	// Collect all remaining colors that weren't assigned to any role
 	// These preserve the full extracted palette beyond the 13 semantic roles
@@ -454,8 +530,9 @@ func createMutedVariant(cc CategorisedColour, adjustment float64, themeType Them
 	}
 }
 
-// assignSemanticRoles assigns semantic roles (danger, warning, success, etc.) based on hue.
-func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool) {
+// assignSemanticRolesWithHints assigns semantic roles (danger, warning, success, etc.) based on hue.
+// Skips roles that were explicitly provided via role hints.
+func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool, hintsApplied map[ColourRole]bool) {
 	// Map hue ranges to semantic roles
 	// Red: 0-30, 330-360 (danger)
 	// Orange/Yellow: 30-60 (warning)
@@ -506,52 +583,68 @@ func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColou
 	bg, hasBg := palette.Get(RoleBackground)
 	themeType := palette.ThemeType
 
-	// Set semantic roles with enhancement
-	if danger != nil {
-		enhanced := enhanceSemanticColour(*danger, RoleDanger, themeType, hasBg, bg)
-		palette.Set(RoleDanger, enhanced)
-		usedForSemantic[danger.Hex] = true
-	} else {
-		// Generate fallback danger color if none found
-		fallback := generateFallbackSemanticColour(RoleDanger, themeType, hasBg, bg)
-		palette.Set(RoleDanger, fallback)
+	// Set semantic roles with enhancement (skip if role was explicitly hinted)
+	if !hintsApplied[RoleDanger] {
+		if danger != nil {
+			enhanced := enhanceSemanticColour(*danger, RoleDanger, themeType, hasBg, bg)
+			palette.Set(RoleDanger, enhanced)
+			usedForSemantic[danger.Hex] = true
+		} else {
+			// Generate fallback danger color if none found
+			fallback := generateFallbackSemanticColour(RoleDanger, themeType, hasBg, bg)
+			palette.Set(RoleDanger, fallback)
+		}
 	}
 
-	if warning != nil {
-		enhanced := enhanceSemanticColour(*warning, RoleWarning, themeType, hasBg, bg)
-		palette.Set(RoleWarning, enhanced)
-		usedForSemantic[warning.Hex] = true
-	} else {
-		fallback := generateFallbackSemanticColour(RoleWarning, themeType, hasBg, bg)
-		palette.Set(RoleWarning, fallback)
+	if !hintsApplied[RoleWarning] {
+		if warning != nil {
+			enhanced := enhanceSemanticColour(*warning, RoleWarning, themeType, hasBg, bg)
+			palette.Set(RoleWarning, enhanced)
+			usedForSemantic[warning.Hex] = true
+		} else {
+			fallback := generateFallbackSemanticColour(RoleWarning, themeType, hasBg, bg)
+			palette.Set(RoleWarning, fallback)
+		}
 	}
 
-	if success != nil {
-		enhanced := enhanceSemanticColour(*success, RoleSuccess, themeType, hasBg, bg)
-		palette.Set(RoleSuccess, enhanced)
-		usedForSemantic[success.Hex] = true
-	} else {
-		fallback := generateFallbackSemanticColour(RoleSuccess, themeType, hasBg, bg)
-		palette.Set(RoleSuccess, fallback)
+	if !hintsApplied[RoleSuccess] {
+		if success != nil {
+			enhanced := enhanceSemanticColour(*success, RoleSuccess, themeType, hasBg, bg)
+			palette.Set(RoleSuccess, enhanced)
+			usedForSemantic[success.Hex] = true
+		} else {
+			fallback := generateFallbackSemanticColour(RoleSuccess, themeType, hasBg, bg)
+			palette.Set(RoleSuccess, fallback)
+		}
 	}
 
-	if info != nil {
-		enhanced := enhanceSemanticColour(*info, RoleInfo, themeType, hasBg, bg)
-		palette.Set(RoleInfo, enhanced)
-		usedForSemantic[info.Hex] = true
-	} else {
-		fallback := generateFallbackSemanticColour(RoleInfo, themeType, hasBg, bg)
-		palette.Set(RoleInfo, fallback)
+	if !hintsApplied[RoleInfo] {
+		if info != nil {
+			enhanced := enhanceSemanticColour(*info, RoleInfo, themeType, hasBg, bg)
+			palette.Set(RoleInfo, enhanced)
+			usedForSemantic[info.Hex] = true
+		} else {
+			fallback := generateFallbackSemanticColour(RoleInfo, themeType, hasBg, bg)
+			palette.Set(RoleInfo, fallback)
+		}
 	}
 
-	if notification != nil {
-		enhanced := enhanceSemanticColour(*notification, RoleNotification, themeType, hasBg, bg)
-		palette.Set(RoleNotification, enhanced)
-		usedForSemantic[notification.Hex] = true
-	} else {
-		fallback := generateFallbackSemanticColour(RoleNotification, themeType, hasBg, bg)
-		palette.Set(RoleNotification, fallback)
+	if !hintsApplied[RoleNotification] {
+		if notification != nil {
+			enhanced := enhanceSemanticColour(*notification, RoleNotification, themeType, hasBg, bg)
+			palette.Set(RoleNotification, enhanced)
+			usedForSemantic[notification.Hex] = true
+		} else {
+			fallback := generateFallbackSemanticColour(RoleNotification, themeType, hasBg, bg)
+			palette.Set(RoleNotification, fallback)
+		}
 	}
+}
+
+// assignSemanticRoles assigns semantic roles (danger, warning, success, etc.) based on hue.
+// This is a wrapper that calls assignSemanticRolesWithHints with no hints applied.
+func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool) {
+	assignSemanticRolesWithHints(palette, accents, usedForSemantic, make(map[ColourRole]bool))
 }
 
 // enhanceSemanticColour boosts saturation and adjusts lightness for better visibility.
@@ -901,15 +994,16 @@ func (cp *CategorisedPalette) String() string {
 // StringWithPreview returns a string representation with optional ANSI colour previews.
 func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	var result string
-	result += fmt.Sprintf("Theme Type: %s\n\n", cp.ThemeType.String())
 
-	// Show contrast ratio for foreground
+	// Show theme type and contrast ratio on one line
+	themeInfo := fmt.Sprintf("Theme Type: %s", cp.ThemeType.String())
 	if bg, bgOk := cp.Get(RoleBackground); bgOk {
 		if fg, fgOk := cp.Get(RoleForeground); fgOk {
 			contrast := ContrastRatio(fg.Colour, bg.Colour)
-			result += fmt.Sprintf("Background/Foreground Contrast: %.2f:1\n\n", contrast)
+			themeInfo += fmt.Sprintf(" | Contrast: %.2f:1", contrast)
 		}
 	}
+	result += themeInfo + "\n\n"
 
 	// Tabular format showing all colours
 	result += "All Colours (sorted by luminance):\n"

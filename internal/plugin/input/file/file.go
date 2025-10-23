@@ -108,10 +108,13 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		return nil, fmt.Errorf("no colors provided")
 	}
 
-	palette := colour.NewPalette(colors)
-
-	// Store role hints as metadata if needed (for now we'll handle this in categorization)
-	// TODO: Add metadata support to Palette type if needed
+	// Create palette with role hints if any were provided
+	var palette *colour.Palette
+	if len(roleHints) > 0 {
+		palette = colour.NewPaletteWithRoleHints(colors, roleHints)
+	} else {
+		palette = colour.NewPalette(colors)
+	}
 
 	return palette, nil
 }

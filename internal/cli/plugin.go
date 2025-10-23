@@ -838,7 +838,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		// Install plugin from source
 		pluginPath, err := installPluginFromSource(sourceStr, name, pluginDir, verbose)
 		if err != nil {
-			fmt.Printf("  ✗ %v\n", err)
+			fmt.Printf("   %v\n", err)
 			failCount++
 			continue
 		}
@@ -865,7 +865,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			Description: pluginDescription,
 		}
 
-		fmt.Printf("  ✓ Updated: %s\n", pluginPath)
+		fmt.Printf("   Updated: %s\n", pluginPath)
 		successCount++
 	}
 

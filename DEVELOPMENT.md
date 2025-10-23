@@ -22,7 +22,7 @@ This document provides comprehensive guidelines for developers and LLMs working 
 
 **Minimum Version: Go 1.25+**
 
-📖 **[Go 1.25 Language Specification](https://go.dev/ref/spec)**
+ **[Go 1.25 Language Specification](https://go.dev/ref/spec)**
 
 #### Go 1.25+ Features to Leverage
 
@@ -206,10 +206,10 @@ go build -pgo=default.pgo -o tinct ./cmd/tinct
 ```
 
 **Resources:**
-- 📖 [Go 1.25 Release Notes](https://go.dev/doc/go1.25)
-- 📖 [Go Language Specification](https://go.dev/ref/spec)
-- 📖 [Effective Go](https://go.dev/doc/effective_go)
-- 📖 [Go Blog](https://go.dev/blog/)
+-  [Go 1.25 Release Notes](https://go.dev/doc/go1.25)
+-  [Go Language Specification](https://go.dev/ref/spec)
+-  [Effective Go](https://go.dev/doc/effective_go)
+-  [Go Blog](https://go.dev/blog/)
 
 ### CLI Framework
 - **Cobra**: Command-line interface structure and commands
@@ -552,49 +552,49 @@ if slices.Contains(supportedFormats, format) {
 
 ```
 tinct/
-├── cmd/
-│   └── tinct/
-│       └── main.go              # Entry point
-├── internal/
-│   ├── app/
-│   │   └── app.go              # Application orchestration
-│   ├── color/
-│   │   ├── extractor.go        # Colour extraction interfaces
-│   │   ├── kmeans.go           # K-means implementation
-│   │   ├── mediancut.go        # Median cut implementation
-│   │   └── palette.go          # Palette types and operations
-│   ├── config/
-│   │   └── config.go           # Configuration types and loading
-│   ├── plugin/
-│   │   ├── plugin.go           # Plugin interface and registry
-│   │   ├── executor.go         # Plugin execution logic
-│   │   └── builtin/            # Built-in plugins
-│   │       ├── alacritty.go
-│   │       ├── kitty.go
-│   │       └── ...
-│   ├── hook/
-│   │   ├── hook.go             # Hook interface and manager
-│   │   └── types.go            # Hook types (pre/post)
-│   └── image/
-│       ├── loader.go           # Image loading
-│       └── processor.go        # Image preprocessing
-├── pkg/
-│   └── palette/                # Public palette API
-│       └── palette.go
-├── plugins/                     # External plugin examples
-│   └── example/
-├── configs/
-│   └── tinct.yaml              # Example config
-├── docs/
-│   ├── plugins.md              # Plugin development guide
-│   ├── hooks.md                # Hook system guide
-│   └── algorithms.md           # Colour extraction algorithms
-├── go.mod
-├── go.sum
-├── README.md
-├── DEVELOPMENT.md              # This file
-├── LICENSE
-└── .golangci.yml               # Linter configuration
+ cmd/
+    tinct/
+        main.go              # Entry point
+ internal/
+    app/
+       app.go              # Application orchestration
+    color/
+       extractor.go        # Colour extraction interfaces
+       kmeans.go           # K-means implementation
+       mediancut.go        # Median cut implementation
+       palette.go          # Palette types and operations
+    config/
+       config.go           # Configuration types and loading
+    plugin/
+       plugin.go           # Plugin interface and registry
+       executor.go         # Plugin execution logic
+       builtin/            # Built-in plugins
+           alacritty.go
+           kitty.go
+           ...
+    hook/
+       hook.go             # Hook interface and manager
+       types.go            # Hook types (pre/post)
+    image/
+        loader.go           # Image loading
+        processor.go        # Image preprocessing
+ pkg/
+    palette/                # Public palette API
+        palette.go
+ plugins/                     # External plugin examples
+    example/
+ configs/
+    tinct.yaml              # Example config
+ docs/
+    plugins.md              # Plugin development guide
+    hooks.md                # Hook system guide
+    algorithms.md           # Colour extraction algorithms
+ go.mod
+ go.sum
+ README.md
+ DEVELOPMENT.md              # This file
+ LICENSE
+ .golangci.yml               # Linter configuration
 ```
 
 ### Package Organization
@@ -714,10 +714,10 @@ For external plugins, Tinct uses the **HashiCorp go-plugin** architecture:
 **Example:**
 ```
 ~/.config/tinct/plugins/
-├── tinct-source-myai          # Custom AI provider
-├── tinct-source-wallhaven     # Wallhaven API fetcher
-├── tinct-output-hyprland      # Hyprland compositor
-└── tinct-output-waybar        # Waybar status bar
+ tinct-source-myai          # Custom AI provider
+ tinct-source-wallhaven     # Wallhaven API fetcher
+ tinct-output-hyprland      # Hyprland compositor
+ tinct-output-waybar        # Waybar status bar
 ```
 
 ### External Plugin Implementation

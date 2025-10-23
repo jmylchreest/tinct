@@ -10,6 +10,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
 	"github.com/spf13/cobra"
 )
 
@@ -198,7 +199,7 @@ func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
 
 		// Show what was successfully dumped
 		for _, path := range dumped {
-			fmt.Printf("  ✓ %s\n", path)
+			fmt.Printf("   %s\n", path)
 			totalDumped++
 		}
 
@@ -253,9 +254,11 @@ func getAvailableOutputPlugins() map[string]output.Plugin {
 	// Register built-in output plugins
 	hyprlandPlugin := hyprland.New()
 	kittyPlugin := kitty.New()
+	waybarPlugin := waybar.New()
 
 	plugins[hyprlandPlugin.Name()] = hyprlandPlugin
 	plugins[kittyPlugin.Name()] = kittyPlugin
+	plugins[waybarPlugin.Name()] = waybarPlugin
 
 	// TODO: Add support for external plugins when that system is implemented
 
@@ -280,6 +283,12 @@ func getPluginTemplateLoader(pluginName string, plugin output.Plugin) (*template
 		if kp, ok := plugin.(*kitty.Plugin); ok {
 			loader := template.New(pluginName, kitty.GetEmbeddedTemplates())
 			return loader, kp
+		}
+	case "waybar":
+		// Access waybar's embedded templates
+		if wp, ok := plugin.(*waybar.Plugin); ok {
+			loader := template.New(pluginName, waybar.GetEmbeddedTemplates())
+			return loader, wp
 		}
 	}
 

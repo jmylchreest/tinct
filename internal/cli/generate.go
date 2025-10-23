@@ -148,13 +148,13 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 				if err := pluginManager.RegisterExternalPlugin(pluginName, meta.Type, meta.Path, desc); err != nil {
 					if generateVerbose {
-						fmt.Fprintf(os.Stderr, "⚠ Failed to register external plugin '%s': %v\n", pluginName, err)
+						fmt.Fprintf(os.Stderr, " Failed to register external plugin '%s': %v\n", pluginName, err)
 					}
 				} else {
 					// Set dry-run mode on external plugin
 					if err := setPluginDryRun(pluginManager, pluginName, meta.Type, generateDryRun); err != nil {
 						if generateVerbose {
-							fmt.Fprintf(os.Stderr, "⚠ Failed to set dry-run for plugin '%s': %v\n", pluginName, err)
+							fmt.Fprintf(os.Stderr, " Failed to set dry-run for plugin '%s': %v\n", pluginName, err)
 						}
 					}
 
@@ -162,7 +162,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 					if argsJSON, ok := generatePluginArgs[pluginName]; ok {
 						if err := setPluginArgs(pluginManager, pluginName, meta.Type, argsJSON); err != nil {
 							if generateVerbose {
-								fmt.Fprintf(os.Stderr, "⚠ Failed to set args for plugin '%s': %v\n", pluginName, err)
+								fmt.Fprintf(os.Stderr, " Failed to set args for plugin '%s': %v\n", pluginName, err)
 							}
 						}
 					}
@@ -191,8 +191,8 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// Generate palette
 	if generateVerbose {
-		fmt.Fprintf(os.Stderr, "✓ Input plugin: %s\n", inputPlugin.Name())
-		fmt.Fprintf(os.Stderr, "  └─ %s\n", inputPlugin.Description())
+		fmt.Fprintf(os.Stderr, " Input plugin: %s\n", inputPlugin.Name())
+		fmt.Fprintf(os.Stderr, "   %s\n", inputPlugin.Description())
 	}
 
 	// Prepare options for input plugin
@@ -209,10 +209,10 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		if err := json.Unmarshal([]byte(argsJSON), &args); err == nil {
 			inputOpts.PluginArgs = args
 			if generateVerbose {
-				fmt.Fprintf(os.Stderr, "  └─ Plugin args: %v\n", args)
+				fmt.Fprintf(os.Stderr, "   Plugin args: %v\n", args)
 			}
 		} else if generateVerbose {
-			fmt.Fprintf(os.Stderr, "  └─ Failed to parse plugin args: %v\n", err)
+			fmt.Fprintf(os.Stderr, "   Failed to parse plugin args: %v\n", err)
 		}
 	}
 
@@ -223,7 +223,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	if generateVerbose {
-		fmt.Fprintf(os.Stderr, "  └─ Generated raw palette (%d colours)\n", len(rawPalette.Colors))
+		fmt.Fprintf(os.Stderr, "   Generated raw palette (%d colours)\n", len(rawPalette.Colors))
 	}
 
 	// Determine theme type from global flag
@@ -238,7 +238,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		if hinter, ok := inputPlugin.(input.ThemeHinter); ok {
 			hint := hinter.ThemeHint()
 			if generateVerbose && hint != "" && hint != "auto" {
-				fmt.Fprintf(os.Stderr, "  └─ Plugin suggests theme: %s\n", hint)
+				fmt.Fprintf(os.Stderr, "   Plugin suggests theme: %s\n", hint)
 			}
 			// Plugin hints are advisory only - we let the categorizer decide
 			// based on weighted color distribution
@@ -252,8 +252,9 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	palette := colour.Categorise(rawPalette, config)
 
 	if generateVerbose {
-		fmt.Fprintf(os.Stderr, "  └─ Categorized palette (%d colours, %s theme)\n",
+		fmt.Fprintf(os.Stderr, "   Categorized palette (%d colours, %s theme)\n",
 			len(palette.AllColours), palette.ThemeType.String())
+		fmt.Fprintf(os.Stderr, "   Plugin execution complete.\n")
 	}
 
 	// Show preview if requested
@@ -269,7 +270,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to save palette: %w", err)
 		}
 		if generateVerbose {
-			fmt.Fprintf(os.Stderr, "✓ Saved palette to: %s\n", generateSavePalette)
+			fmt.Fprintf(os.Stderr, " Saved palette to: %s\n", generateSavePalette)
 		}
 	}
 
@@ -303,7 +304,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	// Run global pre-hook script if it exists
 	if err := runGlobalHookScript(ctx, "pre-generate", generateVerbose, generateDryRun); err != nil {
 		if generateVerbose {
-			fmt.Fprintf(os.Stderr, "⚠ Global pre-hook failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, " Global pre-hook failed: %v\n", err)
 		}
 	}
 
@@ -327,7 +328,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		// Validate plugin
 		if err := plugin.Validate(); err != nil {
 			if generateVerbose {
-				fmt.Fprintf(os.Stderr, "⚠ Skipping %s: %v\n", plugin.Name(), err)
+				fmt.Fprintf(os.Stderr, " Skipping %s: %v\n", plugin.Name(), err)
 			}
 			exec.skip = true
 			exec.skipReason = fmt.Sprintf("validation failed: %v", err)
@@ -342,7 +343,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 			cancel()
 
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "✗ %s pre-execution check failed: %v\n", plugin.Name(), err)
+				fmt.Fprintf(os.Stderr, " %s pre-execution check failed: %v\n", plugin.Name(), err)
 				exec.skip = true
 				exec.skipReason = fmt.Sprintf("pre-hook error: %v", err)
 				executions = append(executions, exec)
@@ -365,6 +366,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// Phase 2: Generate and write files for non-skipped plugins
 	successCount := 0
+	firstOutputPlugin := true
 	for i := range executions {
 		exec := &executions[i]
 		if exec.skip {
@@ -374,14 +376,19 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		plugin := exec.plugin
 
 		if generateVerbose {
-			fmt.Fprintf(os.Stderr, "\n✓ Output plugin: %s\n", plugin.Name())
-			fmt.Fprintf(os.Stderr, "  └─ %s\n", plugin.Description())
+			// Add blank line before first output plugin for separation from preview
+			if firstOutputPlugin {
+				fmt.Fprintf(os.Stderr, "\n")
+				firstOutputPlugin = false
+			}
+			fmt.Fprintf(os.Stderr, " Output plugin: %s\n", plugin.Name())
+			fmt.Fprintf(os.Stderr, "   %s\n", plugin.Description())
 		}
 
 		// Generate files
 		files, err := plugin.Generate(palette)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "✗ %s failed: %v\n", plugin.Name(), err)
+			fmt.Fprintf(os.Stderr, " %s failed: %v\n", plugin.Name(), err)
 			exec.skip = true
 			exec.skipReason = fmt.Sprintf("generation failed: %v", err)
 			continue
@@ -391,7 +398,22 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		outputDir := plugin.DefaultOutputDir()
 		exec.writtenFiles = make([]string, 0, len(files))
 
+		// Convert files map to slice for proper ordering
+		fileList := make([]struct {
+			name    string
+			content []byte
+		}, 0, len(files))
 		for filename, content := range files {
+			fileList = append(fileList, struct {
+				name    string
+				content []byte
+			}{filename, content})
+		}
+
+		for _, file := range fileList {
+			filename := file.name
+			content := file.content
+
 			// Check if this is external plugin output (virtual file)
 			if strings.HasSuffix(filename, "-output.txt") && outputDir == "" {
 				// External plugin - display output directly
@@ -403,15 +425,15 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 				fullPath := filepath.Join(outputDir, filename)
 
 				if generateDryRun {
-					fmt.Printf("  Would write: %s (%d bytes)\n", fullPath, len(content))
+					fmt.Printf("   Would write: %s (%d bytes)\n", fullPath, len(content))
 				} else {
 					if err := writeFile(fullPath, content); err != nil {
-						fmt.Fprintf(os.Stderr, "✗ Failed to write %s: %v\n", fullPath, err)
+						fmt.Fprintf(os.Stderr, " Failed to write %s: %v\n", fullPath, err)
 						exec.skip = true
 						exec.skipReason = fmt.Sprintf("write failed: %v", err)
 						continue
 					}
-					fmt.Printf("  ├─ %s (%d bytes)\n", fullPath, len(content))
+					fmt.Printf("   %s (%d bytes)\n", fullPath, len(content))
 					exec.writtenFiles = append(exec.writtenFiles, fullPath)
 				}
 			}
@@ -419,11 +441,31 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 		if !exec.skip {
 			successCount++
+			if generateVerbose {
+				fmt.Fprintf(os.Stderr, "   Plugin execution complete.\n")
+			}
 		}
 	}
 
 	// Phase 3: Run all post-execute hooks for successful plugins
 	if !generateDryRun {
+		// Check if any plugins have post-hooks to run
+		hasPostHooks := false
+		for _, exec := range executions {
+			if exec.skip || len(exec.writtenFiles) == 0 {
+				continue
+			}
+			if _, ok := exec.plugin.(output.PostExecuteHook); ok {
+				hasPostHooks = true
+				break
+			}
+		}
+
+		// Print separator if we have post-hooks to run
+		if hasPostHooks && generateVerbose {
+			fmt.Fprintf(os.Stderr, "→ Running post hooks...\n")
+		}
+
 		for _, exec := range executions {
 			if exec.skip || len(exec.writtenFiles) == 0 {
 				continue
@@ -436,9 +478,9 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 				cancel()
 
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "  ⚠ %s post-hook failed: %v\n", plugin.Name(), err)
+					fmt.Fprintf(os.Stderr, "   %s post-hook failed: %v\n", plugin.Name(), err)
 				} else if generateVerbose {
-					fmt.Fprintf(os.Stderr, "  ✓ %s post-hook completed\n", plugin.Name())
+					fmt.Fprintf(os.Stderr, "   %s post-hook completed\n", plugin.Name())
 				}
 			}
 		}
@@ -446,7 +488,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		// Run global post-hook script if it exists
 		if err := runGlobalHookScript(ctx, "post-generate", generateVerbose, generateDryRun); err != nil {
 			if generateVerbose {
-				fmt.Fprintf(os.Stderr, "⚠ Global post-hook failed: %v\n", err)
+				fmt.Fprintf(os.Stderr, " Global post-hook failed: %v\n", err)
 			}
 		}
 	}
@@ -455,7 +497,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	if !generateDryRun {
 		fmt.Println()
 		if successCount > 0 {
-			fmt.Printf("✓ Done! Generated %d output plugin(s)\n", successCount)
+			fmt.Printf(" Done! Generated %d output plugin(s)\n", successCount)
 		} else {
 			return fmt.Errorf("no output plugins succeeded")
 		}
@@ -490,7 +532,7 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose bool, dry
 	// Check if executable
 	if info.Mode()&0111 == 0 {
 		if verbose {
-			fmt.Fprintf(os.Stderr, "⚠ Hook script exists but is not executable: %s\n", hookPath)
+			fmt.Fprintf(os.Stderr, " Hook script exists but is not executable: %s\n", hookPath)
 		}
 		return nil
 	}
@@ -538,8 +580,10 @@ command-line colour specifications. Generated files are written to their
 default locations or a custom output directory.
 
 Input Plugins:
-  image  - Extract colours from an image file
-  file   - Load palette from file or build from colour specifications
+  image        - Extract colours from an image file
+  file         - Load palette from file or build from colour specifications
+  remote-json  - Fetch colour palette from remote JSON source with optional JSONPath queries
+  remote-css   - Fetch colour palette from remote CSS source (extracts CSS variables and color values)
 
 Output Plugins:
 `
@@ -666,9 +710,9 @@ func writeFile(path string, content []byte) error {
 		backupPath := path + ".backup"
 		if err := os.Rename(path, backupPath); err != nil {
 			// If backup fails, continue anyway
-			fmt.Fprintf(os.Stderr, "  ⚠ Could not create backup: %v\n", err)
+			fmt.Fprintf(os.Stderr, "    Could not create backup: %v\n", err)
 		} else {
-			fmt.Fprintf(os.Stderr, "  ℹ Created backup: %s\n", backupPath)
+			fmt.Fprintf(os.Stderr, "   Created backup: %s\n", backupPath)
 		}
 	}
 

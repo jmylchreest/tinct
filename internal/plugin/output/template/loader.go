@@ -58,14 +58,14 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 
 	if content, err := os.ReadFile(customPath); err == nil {
 		if l.verbose && l.logger != nil {
-			l.logger.Printf("  └─ Using custom template: %s", customPath)
+			l.logger.Printf("   Using custom template: %s", customPath)
 		}
 		return content, true, nil
 	}
 
 	// Fall back to embedded template
 	if l.verbose && l.logger != nil {
-		l.logger.Printf("  └─ Using embedded template: %s", filename)
+		l.logger.Printf("   Using embedded template: %s", filename)
 	}
 
 	content, err = l.embedFS.ReadFile(filename)

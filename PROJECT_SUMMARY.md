@@ -7,7 +7,7 @@
 
 ---
 
-## 🎯 Project Overview
+##  Project Overview
 
 **Tinct** is a modern, extensible CLI tool written in Go 1.25+ that generates colour palettes and applies them system-wide. It features:
 
@@ -19,37 +19,37 @@
 - **Lifecycle Hooks**: Pre/post execution for readiness checks, reloads, and cleanup
 - **Modern Go Architecture**: SOLID principles, generics, structured logging, comprehensive testing
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 tinct/
-├── .github/workflows/
-│   └── release.yml              # CI/CD pipeline with GitHub Actions
-├── cmd/tinct/                   # Main application entry point
-├── internal/                    # Private application code
-│   ├── app/                     # Application orchestration
-│   ├── color/                   # Colour extraction & palette generation
-│   ├── config/                  # Configuration management (Viper)
-│   ├── plugin/                  # Dual plugin system
-│   │   ├── source/              # Source plugins (AI, fetch, local)
-│   │   └── output/              # Output plugins (alacritty, kitty, etc.)
-│   ├── hook/                    # Lifecycle hooks
-│   └── image/                   # Image loading & processing
-├── pkg/                         # Public API
-├── configs/                     # Example configurations
-├── docs/                        # Documentation
-│   └── ai-wallpaper.md         # AI wallpaper generation guide
-├── completions/                 # Shell completions (generated)
-├── .goreleaser.yml             # Automated release configuration
-├── .golangci.yml               # Comprehensive linting config
-├── Dockerfile                   # Multi-stage container build
-├── DEVELOPMENT.md              # LLM & developer guidelines
-├── README.md                    # User documentation
-├── SETUP.md                     # Setup and configuration guide
-└── PROJECT_SUMMARY.md          # This file
+ .github/workflows/
+    release.yml              # CI/CD pipeline with GitHub Actions
+ cmd/tinct/                   # Main application entry point
+ internal/                    # Private application code
+    app/                     # Application orchestration
+    color/                   # Colour extraction & palette generation
+    config/                  # Configuration management (Viper)
+    plugin/                  # Dual plugin system
+       source/              # Source plugins (AI, fetch, local)
+       output/              # Output plugins (alacritty, kitty, etc.)
+    hook/                    # Lifecycle hooks
+    image/                   # Image loading & processing
+ pkg/                         # Public API
+ configs/                     # Example configurations
+ docs/                        # Documentation
+    ai-wallpaper.md         # AI wallpaper generation guide
+ completions/                 # Shell completions (generated)
+ .goreleaser.yml             # Automated release configuration
+ .golangci.yml               # Comprehensive linting config
+ Dockerfile                   # Multi-stage container build
+ DEVELOPMENT.md              # LLM & developer guidelines
+ README.md                    # User documentation
+ SETUP.md                     # Setup and configuration guide
+ PROJECT_SUMMARY.md          # This file
 ```
 
-## 🚀 Key Features
+##  Key Features
 
 ### 1. AI Wallpaper Generation
 - Generate wallpapers from text prompts
@@ -93,7 +93,7 @@ tinct/
 - **Post-Execution**: Service reloads, wallpaper setting, notifications
 - **On Error**: Rollback, cleanup, error logging
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 ### Core Technologies
 - **Language**: Go 1.25+
@@ -117,7 +117,7 @@ tinct/
 - **Signing**: Cosign for artifact signing
 - **SBOMs**: Software Bill of Materials generation
 
-## 📦 Distribution
+##  Distribution
 
 ### Supported Platforms
 - **Operating Systems**: Linux, macOS, Windows, FreeBSD
@@ -132,7 +132,7 @@ tinct/
 - **Nix**: Nix packages
 - **Go Install**: `go install github.com/jmylchreest/tinct/cmd/tinct@latest`
 
-## 🔧 Development Workflow
+##  Development Workflow
 
 ### Quick Commands
 ```bash
@@ -170,7 +170,7 @@ git push origin v1.0.0
 #    - Generates SBOMs
 ```
 
-## 📖 Documentation
+##  Documentation
 
 ### For Users
 - **[README.md](README.md)**: Main user documentation
@@ -213,7 +213,7 @@ git push origin v1.0.0
   - Environment variables
   - Docker usage
 
-## 🎨 Usage Examples
+##  Usage Examples
 
 ### Basic Usage
 ```bash
@@ -264,7 +264,7 @@ tinct generate --ai "forest scene" \
                --save-wallpaper ~/Pictures/wallpaper.png
 ```
 
-## 🔐 Security Features
+##  Security Features
 
 - **Static Analysis**: Gosec security scanning
 - **Dependency Scanning**: Trivy vulnerability detection
@@ -272,7 +272,7 @@ tinct generate --ai "forest scene" \
 - **SBOM Generation**: Complete dependency tracking
 - **Secure Defaults**: No hardcoded secrets, API keys via environment
 
-## 📊 Quality Metrics
+##  Quality Metrics
 
 ### Testing
 - **Coverage Target**: >80% for critical paths, 100% for public APIs
@@ -286,7 +286,7 @@ tinct generate --ai "forest scene" \
 - **Static Analysis**: go vet, staticcheck
 - **Complexity**: gocyclo, gocognit monitoring
 
-## 🌟 Design Principles
+##  Design Principles
 
 ### SOLID Principles
 - **Single Responsibility**: Each type/package has one clear purpose
@@ -303,7 +303,7 @@ tinct generate --ai "forest scene" \
 - Table-driven tests
 - Functional options pattern
 
-## 🔗 Resources
+##  Resources
 
 ### Go Language
 - [Go 1.25 Language Specification](https://go.dev/ref/spec)
@@ -322,7 +322,7 @@ tinct generate --ai "forest scene" \
 - [Cobra](https://github.com/spf13/cobra): CLI framework
 - [Viper](https://github.com/spf13/viper): Configuration management
 
-## 📝 Contributing
+##  Contributing
 
 1. Read [DEVELOPMENT.md](DEVELOPMENT.md)
 2. Fork the repository
@@ -331,7 +331,7 @@ tinct generate --ai "forest scene" \
 5. Run tests and linting: `go test ./... && golangci-lint run`
 6. Push and create pull request
 
-## 📄 License
+##  License
 
 MIT License - See [LICENSE](LICENSE) file
 
@@ -339,7 +339,7 @@ MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Project Status**: 🚧 In Development
+**Project Status**:  In Development
 
 **Next Steps**:
 1. Implement core colour extraction algorithms
@@ -353,4 +353,4 @@ MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Made with 🎨 and Go 1.25+**
+**Made with  and Go 1.25+**

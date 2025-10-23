@@ -1,0 +1,175 @@
+{
+  "version": "1",
+  "name": "tinct-official",
+  "description": "Official Tinct plugin repository",
+  "url": "https://github.com/jmylchreest/tinct-plugins",
+  "maintained_by": "John Mylchreest <jmylchreest@gmail.com>",
+  "last_updated": "2025-01-10T12:00:00Z",
+
+  "plugins": {
+    "random": {
+      "name": "random",
+      "type": "input",
+      "description": "Generate random color palettes with optional seeding for reproducibility",
+      "repository": "https://github.com/jmylchreest/tinct-plugin-random",
+      "author": "John Mylchreest",
+      "license": "MIT",
+      "tags": ["generator", "random", "testing", "development"],
+
+      "versions": [
+        {
+          "version": "1.2.0",
+          "released": "2025-01-10T12:00:00Z",
+          "compatibility": ">=1.0.0",
+          "changelog_url": "https://github.com/jmylchreest/tinct-plugin-random/releases/tag/v1.2.0",
+
+          "downloads": {
+            "linux_amd64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-random/releases/download/v1.2.0/random_linux_amd64.tar.gz",
+              "checksum": "sha256:abc123def456...",
+              "size": 2458624
+            },
+            "linux_arm64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-random/releases/download/v1.2.0/random_linux_arm64.tar.gz",
+              "checksum": "sha256:def456ghi789...",
+              "size": 2354688
+            },
+            "darwin_amd64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-random/releases/download/v1.2.0/random_darwin_amd64.tar.gz",
+              "checksum": "sha256:ghi789jkl012...",
+              "size": 2654208
+            },
+            "darwin_arm64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-random/releases/download/v1.2.0/random_darwin_arm64.tar.gz",
+              "checksum": "sha256:jkl012mno345...",
+              "size": 2556416
+            },
+            "windows_amd64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-random/releases/download/v1.2.0/random_windows_amd64.zip",
+              "checksum": "sha256:mno345pqr678...",
+              "size": 2752512
+            }
+          }
+        },
+        {
+          "version": "1.1.0",
+          "released": "2024-12-15T10:00:00Z",
+          "compatibility": ">=0.9.0",
+          "changelog_url": "https://github.com/jmylchreest/tinct-plugin-random/releases/tag/v1.1.0",
+
+          "downloads": {
+            "linux_amd64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-random/releases/download/v1.1.0/random_linux_amd64.tar.gz",
+              "checksum": "sha256:old123version...",
+              "size": 2400000
+            }
+          }
+        }
+      ]
+    },
+
+    "notify-send": {
+      "name": "notify-send",
+      "type": "output",
+      "description": "Send desktop notifications with color palette information using D-Bus",
+      "repository": "https://github.com/jmylchreest/tinct-plugin-notify",
+      "author": "John Mylchreest",
+      "license": "MIT",
+      "tags": ["notification", "desktop", "integration", "dbus"],
+
+      "versions": [
+        {
+          "version": "1.0.1",
+          "released": "2025-01-05T09:00:00Z",
+          "compatibility": ">=1.0.0",
+          "changelog_url": "https://github.com/jmylchreest/tinct-plugin-notify/releases/tag/v1.0.1",
+
+          "downloads": {
+            "any": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-notify/releases/download/v1.0.1/notify-send.py",
+              "checksum": "sha256:xyz789abc123...",
+              "size": 3072,
+              "runtime": "python3",
+              "dependencies": ["python3-notify2", "python3-dbus"]
+            }
+          }
+        },
+        {
+          "version": "1.0.0",
+          "released": "2024-12-20T08:00:00Z",
+          "compatibility": ">=1.0.0",
+
+          "downloads": {
+            "any": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-notify/releases/download/v1.0.0/notify-send.py",
+              "checksum": "sha256:oldversion123...",
+              "size": 2816,
+              "runtime": "python3",
+              "dependencies": ["python3-notify2"]
+            }
+          }
+        }
+      ]
+    },
+
+    "alacritty-advanced": {
+      "name": "alacritty-advanced",
+      "type": "output",
+      "description": "Advanced Alacritty configuration with font, opacity, and padding customization",
+      "repository": "https://github.com/jmylchreest/tinct-plugin-alacritty-advanced",
+      "author": "John Mylchreest",
+      "license": "MIT",
+      "tags": ["terminal", "alacritty", "configuration"],
+
+      "versions": [
+        {
+          "version": "2.0.0",
+          "released": "2025-01-08T14:00:00Z",
+          "compatibility": ">=1.0.0",
+          "changelog_url": "https://github.com/jmylchreest/tinct-plugin-alacritty-advanced/releases/tag/v2.0.0",
+
+          "downloads": {
+            "any": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-alacritty-advanced/releases/download/v2.0.0/alacritty-advanced.sh",
+              "checksum": "sha256:bash456script...",
+              "size": 4096,
+              "runtime": "bash"
+            }
+          }
+        }
+      ]
+    },
+
+    "wallpaper-setter": {
+      "name": "wallpaper-setter",
+      "type": "output",
+      "description": "Automatically set wallpaper across multiple desktop environments (GNOME, KDE, i3, sway)",
+      "repository": "https://github.com/jmylchreest/tinct-plugin-wallpaper",
+      "author": "John Mylchreest",
+      "license": "MIT",
+      "tags": ["wallpaper", "desktop", "gnome", "kde", "i3", "sway"],
+
+      "versions": [
+        {
+          "version": "1.5.0",
+          "released": "2025-01-12T16:00:00Z",
+          "compatibility": ">=1.0.0",
+          "changelog_url": "https://github.com/jmylchreest/tinct-plugin-wallpaper/releases/tag/v1.5.0",
+
+          "downloads": {
+            "linux_amd64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-wallpaper/releases/download/v1.5.0/wallpaper-setter_linux_amd64.tar.gz",
+              "checksum": "sha256:wallpaper123...",
+              "size": 1867776
+            },
+            "linux_arm64": {
+              "url": "https://github.com/jmylchreest/tinct-plugin-wallpaper/releases/download/v1.5.0/wallpaper-setter_linux_arm64.tar.gz",
+              "checksum": "sha256:wallpaper456...",
+              "size": 1785856
+            }
+          }
+        }
+      ]
+    }
+  }
+}

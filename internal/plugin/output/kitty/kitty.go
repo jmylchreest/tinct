@@ -124,7 +124,7 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 
 	// Log if using custom template
 	if p.verbose && fromCustom {
-		fmt.Fprintf(os.Stderr, "  └─ Using custom template for tinct.conf.tmpl\n")
+		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.conf.tmpl\n")
 	}
 
 	tmpl, err := template.New("theme").Parse(string(tmplContent))

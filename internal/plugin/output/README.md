@@ -2,6 +2,88 @@
 
 Output plugins generate configuration files from extracted colour palettes. They use Go's `text/template` package with embedded template files for easy customization.
 
+##  Plugin Standard
+
+**All output plugins MUST follow the comprehensive standard defined in [PLUGIN-STANDARD.md](./PLUGIN-STANDARD.md).**
+
+This standard document defines:
+-  File naming conventions (two-file vs single-file patterns)
+-  Required interface implementations
+-  Template structure and requirements
+-  Testing requirements (>80% coverage)
+-  Semantic color naming standards
+-  Documentation requirements
+-  Complete checklist for new plugins
+
+**Quick Reference:**
+- Use `tinct-colours.{ext}` + `tinct.{ext}` for apps supporting variables/imports
+- Use `tinct.{ext}` only for apps without variable support
+- Follow semantic color names: `background`, `foreground`, `accent1`, `danger`, etc.
+- Embed templates with `go:embed *.tmpl`
+- Implement all required interface methods
+- Write comprehensive tests
+
+See existing plugins for reference implementations:
+- **Two-file pattern:** `waybar/`, `hyprland/`
+- **Single-file pattern:** `kitty/`
+
+## File Naming Convention
+
+All output plugins follow a consistent naming standard for generated files:
+
+### Standard Pattern
+
+**For applications that support color variables/includes:**
+- `tinct-colours.conf` (or `.css`, `.toml`, etc.) - Color variable definitions
+- `tinct.conf` - Example configuration that sources/includes the color variables
+
+**For applications that don't support variables:**
+- `tinct.conf` - Complete configuration with colors embedded directly
+
+### Examples
+
+**Hyprland** (supports variables):
+```
+~/.config/hypr/tinct-colours.conf  # Color variables: $background = rgb(...)
+~/.config/hypr/tinct.conf          # Example config using: $background
+```
+
+**Waybar** (supports CSS variables):
+```
+~/.config/waybar/tinct-colours.css  # @define-color background #1a1b26;
+~/.config/waybar/tinct.css          # Uses: @background
+```
+
+**Kitty** (no variable support):
+```
+~/.config/kitty/tinct.conf  # Complete config with colors embedded
+```
+
+### Implementation Checklist
+
+When creating a new plugin, determine:
+1. Does the application support color variables/constants?
+   - Check documentation for variable syntax (CSS `@define-color`, shell variables, etc.)
+   - Test if variables can be defined in one file and used in another
+2. Does the application support include/source directives?
+   - Most do: `include`, `source`, `@import`, etc.
+
+**If YES to both:**
+- Generate two files: `tinct-colours.{ext}` and `tinct.{ext}`
+- Put color definitions in `tinct-colours.{ext}`
+- Put example usage in `tinct.{ext}`
+
+**If NO (no variables or includes):**
+- Generate single file: `tinct.{ext}`
+- Embed all colors directly in the configuration
+
+### Benefits
+
+- **Consistent**: Users know what to expect across all plugins
+- **Predictable**: Easy to find generated files
+- **Flexible**: Split when useful, single when not
+- **Clear**: File purpose obvious from name
+
 ## Architecture
 
 ### Plugin Structure
@@ -14,26 +96,26 @@ Each plugin lives in its own directory with:
 Example structure:
 ```
 internal/plugin/output/
-├── plugin.go              # Base plugin interface
-├── tailwind/
-│   ├── tailwind.go        # Plugin implementation
-│   ├── globals.css.tmpl   # CSS template
-│   ├── tailwind.config.js.tmpl  # Config template
-│   └── tailwind_test.go   # Tests
-└── alacritty/
-    ├── alacritty.go
-    ├── alacritty.toml.tmpl
-    └── alacritty_test.go
+ plugin.go              # Base plugin interface
+ tailwind/
+    tailwind.go        # Plugin implementation
+    globals.css.tmpl   # CSS template
+    tailwind.config.js.tmpl  # Config template
+    tailwind_test.go   # Tests
+ alacritty/
+     alacritty.go
+     alacritty.toml.tmpl
+     alacritty_test.go
 ```
 
 ### Benefits
 
-✅ **Separation of Concerns**: Templates separate from Go code  
-✅ **Easy to Edit**: Modify templates without touching Go  
-✅ **Version Control**: Templates tracked separately  
-✅ **No Runtime Dependencies**: Templates embedded at compile time  
-✅ **User Customizable**: Can load templates from disk (future feature)  
-✅ **Fast Development**: New plugins = new template + small Go wrapper  
+ **Separation of Concerns**: Templates separate from Go code  
+ **Easy to Edit**: Modify templates without touching Go  
+ **Version Control**: Templates tracked separately  
+ **No Runtime Dependencies**: Templates embedded at compile time  
+ **User Customizable**: Can load templates from disk (future feature)  
+ **Fast Development**: New plugins = new template + small Go wrapper  
 
 ## Creating a New Plugin
 
@@ -361,8 +443,8 @@ danger = "#ff0000"  # fallback
 ### 2. Use Semantic Color Roles
 
 Prefer semantic roles over generic colors:
-- ✅ `{{ .Danger.Hex }}` - Clear purpose
-- ❌ `{{ .Red.Hex }}` - Ambiguous
+-  `{{ .Danger.Hex }}` - Clear purpose
+-  `{{ .Red.Hex }}` - Ambiguous
 
 ### 3. Provide Sensible Defaults
 
@@ -442,20 +524,26 @@ func init() {
 ## Examples
 
 See existing plugins for reference:
-- `tailwind/` - CSS variables with HSL format
+- `waybar/` - Two-file pattern with GTK @define-color format
+- `hyprland/` - Two-file pattern with Hyprland variables
+- `kitty/` - Single-file pattern (no variable support)
 - More coming soon!
 
 ## Contributing
 
 When adding a new plugin:
 
-1. Create directory: `internal/plugin/output/yourplugin/`
-2. Add template file: `yourplugin.tmpl`
-3. Implement plugin: `yourplugin.go`
-4. Add tests: `yourplugin_test.go`
-5. Update this README with your plugin
-6. Submit PR with example output
+1. **Read the standard:** Review [PLUGIN-STANDARD.md](./PLUGIN-STANDARD.md) thoroughly
+2. **Create directory:** `internal/plugin/output/yourplugin/`
+3. **Add template file(s):** `tinct-colours.{ext}.tmpl` and/or `tinct.{ext}.tmpl`
+4. **Implement plugin:** `yourplugin.go` (implement all required interfaces)
+5. **Add tests:** `yourplugin_test.go` (>80% coverage)
+6. **Use checklist:** Complete the checklist in PLUGIN-STANDARD.md
+7. **Update README:** Add your plugin to examples section
+8. **Submit PR:** Include example output and test results
+
+** All plugins must comply with the standard or PRs will be rejected.**
 
 ---
 
-**Made with 🎨 and Go 1.25+**
+**Made with  and Go 1.25+**
