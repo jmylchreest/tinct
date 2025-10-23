@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
@@ -17,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
+	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
 	"github.com/spf13/cobra"
 )
 
@@ -87,6 +89,7 @@ func (m *Manager) registerBuiltinPlugins() {
 
 	// Register output plugins
 	m.outputRegistry.Register(hyprland.New())
+	m.outputRegistry.Register(kitty.New())
 }
 
 // InputRegistry returns the input plugin registry.
@@ -572,6 +575,82 @@ func (p *ExternalOutputPlugin) Validate() error {
 // DefaultOutputDir returns the default output directory (not used for external plugins).
 func (p *ExternalOutputPlugin) DefaultOutputDir() string {
 	return "" // External plugins handle their own output
+}
+
+// PreExecute calls the external plugin with --pre-execute flag.
+// Implements the output.PreExecuteHook interface.
+func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+	// Create a context with timeout
+	execCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Execute plugin with --pre-execute flag
+	cmd := exec.CommandContext(execCtx, p.path, "--pre-execute")
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+
+	// Exit code 0 = continue, 1 = skip, 2+ = error
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		exitCode := exitErr.ExitCode()
+
+		if exitCode == 1 {
+			// Plugin wants to be skipped
+			reason := strings.TrimSpace(stdout.String())
+			if reason == "" {
+				reason = "plugin requested skip"
+			}
+			return true, reason, nil
+		}
+
+		// Other non-zero exit codes are errors
+		errMsg := strings.TrimSpace(stderr.String())
+		if errMsg == "" {
+			errMsg = fmt.Sprintf("exit code %d", exitCode)
+		}
+		return false, "", fmt.Errorf("pre-execute failed: %s", errMsg)
+	}
+
+	// Command succeeded (exit 0) or plugin doesn't support pre-execute
+	return false, "", nil
+}
+
+// PostExecute calls the external plugin with --post-execute flag.
+// Implements the output.PostExecuteHook interface.
+func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+	// Create a context with timeout
+	execCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Pass written files as JSON via stdin
+	filesJSON, err := json.Marshal(map[string]interface{}{
+		"written_files": writtenFiles,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal files: %w", err)
+	}
+
+	// Execute plugin with --post-execute flag
+	cmd := exec.CommandContext(execCtx, p.path, "--post-execute")
+	cmd.Stdin = bytes.NewReader(filesJSON)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	if err != nil {
+		errMsg := strings.TrimSpace(stderr.String())
+		if errMsg == "" {
+			errMsg = err.Error()
+		}
+		return fmt.Errorf("post-execute failed: %s", errMsg)
+	}
+
+	return nil
 }
 
 // GetExternalPluginInfo queries an external plugin for its metadata.

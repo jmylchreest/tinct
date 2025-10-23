@@ -3,25 +3,46 @@ package hyprland
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/spf13/cobra"
 )
 
+// verboseLogger implements the template.Logger interface for verbose output.
+type verboseLogger struct {
+	out io.Writer
+}
+
+func (l *verboseLogger) Printf(format string, v ...interface{}) {
+	fmt.Fprintf(l.out, format+"\n", v...)
+}
+
 //go:embed *.tmpl
 var templates embed.FS
+
+// GetEmbeddedTemplates returns the embedded template filesystem.
+// This is used by the template management commands.
+func GetEmbeddedTemplates() embed.FS {
+	return templates
+}
 
 // Plugin implements the output.Plugin interface for Hyprland.
 type Plugin struct {
 	outputDir    string
 	generateStub bool
 	stubPath     string
+	reloadConfig bool
+	verbose      bool
 }
 
 // New creates a new Hyprland output plugin with default settings.
@@ -30,6 +51,7 @@ func New() *Plugin {
 		outputDir:    "",
 		generateStub: true,
 		stubPath:     "",
+		verbose:      false,
 	}
 }
 
@@ -45,9 +67,16 @@ func (p *Plugin) Description() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "hyprland.output-dir", "", "Output directory (default: ~/.config/hypr/themes)")
+	cmd.Flags().StringVar(&p.outputDir, "hyprland.output-dir", "", "Output directory (default: ~/.config/hypr)")
 	cmd.Flags().BoolVar(&p.generateStub, "hyprland.generate-stub", true, "Generate example config stub")
 	cmd.Flags().StringVar(&p.stubPath, "hyprland.stub-path", "", "Custom path for stub file")
+	cmd.Flags().BoolVar(&p.reloadConfig, "hyprland.reload", false, "Reload hyprland config after generation (runs hyprctl reload)")
+}
+
+// SetVerbose enables or disables verbose logging for the plugin.
+// Implements the output.VerbosePlugin interface.
+func (p *Plugin) SetVerbose(verbose bool) {
+	p.verbose = verbose
 }
 
 // Validate checks if the plugin configuration is valid.
@@ -65,9 +94,9 @@ func (p *Plugin) DefaultOutputDir() string {
 	// Expand ~ to home directory
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/hypr/themes"
+		return ".config/hypr"
 	}
-	return filepath.Join(home, ".config", "hypr", "themes")
+	return filepath.Join(home, ".config", "hypr")
 }
 
 // Generate creates the theme file and optional stub configuration.
@@ -107,9 +136,19 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 
 // generateTheme creates the main theme configuration file with colour variables.
 func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, error) {
-	tmplContent, err := templates.ReadFile("tinct-colours.conf.tmpl")
+	// Load template with custom override support
+	loader := tmplloader.New("hyprland", templates)
+	if p.verbose {
+		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
+	}
+	tmplContent, fromCustom, err := loader.Load("tinct-colours.conf.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
+	}
+
+	// Log if using custom template
+	if p.verbose && fromCustom {
+		fmt.Fprintf(os.Stderr, "  └─ Using custom template for tinct-colours.conf.tmpl\n")
 	}
 
 	tmpl, err := template.New("theme").Parse(string(tmplContent))
@@ -129,9 +168,19 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 
 // generateStubConfig creates an example configuration file showing how to use the theme.
 func (p *Plugin) generateStubConfig() ([]byte, error) {
-	tmplContent, err := templates.ReadFile("tinct.conf.tmpl")
+	// Load template with custom override support
+	loader := tmplloader.New("hyprland", templates)
+	if p.verbose {
+		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
+	}
+	tmplContent, fromCustom, err := loader.Load("tinct.conf.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read example template: %w", err)
+	}
+
+	// Log if using custom template
+	if p.verbose && fromCustom {
+		fmt.Fprintf(os.Stderr, "  └─ Using custom template for tinct.conf.tmpl\n")
 	}
 
 	tmpl, err := template.New("example").Parse(string(tmplContent))
@@ -212,4 +261,45 @@ func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData 
 // stripHash removes the # prefix from a hex colour string.
 func stripHash(hex string) string {
 	return strings.TrimPrefix(hex, "#")
+}
+
+// PreExecute checks if hyprland is available before generating the theme.
+// Implements the output.PreExecuteHook interface.
+func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+	// Check if hyprctl executable exists on PATH (hyprland's control utility)
+	_, err = exec.LookPath("hyprctl")
+	if err != nil {
+		return true, "hyprctl executable not found on $PATH (hyprland may not be installed)", nil
+	}
+
+	// Check if hyprland is actually running by trying to get version
+	cmd := exec.CommandContext(ctx, "hyprctl", "version")
+	if err := cmd.Run(); err != nil {
+		return true, "hyprland does not appear to be running", nil
+	}
+
+	// Check if config directory exists
+	configDir := p.DefaultOutputDir()
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		return true, fmt.Sprintf("hyprland themes directory not found: %s", configDir), nil
+	}
+
+	return false, "", nil
+}
+
+// PostExecute reloads hyprland configuration if requested.
+// Implements the output.PostExecuteHook interface.
+func (p *Plugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+	if !p.reloadConfig {
+		return nil
+	}
+
+	// Reload hyprland configuration using hyprctl
+	cmd := exec.CommandContext(ctx, "hyprctl", "reload")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to reload hyprland config: %w (output: %s)", err, string(output))
+	}
+
+	return nil
 }

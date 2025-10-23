@@ -62,10 +62,14 @@ const (
 	RoleForegroundMuted ColourRole = "foregroundMuted"
 
 	// Accent roles
-	RoleAccent1 ColourRole = "accent1"
-	RoleAccent2 ColourRole = "accent2"
-	RoleAccent3 ColourRole = "accent3"
-	RoleAccent4 ColourRole = "accent4"
+	RoleAccent1      ColourRole = "accent1"
+	RoleAccent1Muted ColourRole = "accent1Muted"
+	RoleAccent2      ColourRole = "accent2"
+	RoleAccent2Muted ColourRole = "accent2Muted"
+	RoleAccent3      ColourRole = "accent3"
+	RoleAccent3Muted ColourRole = "accent3Muted"
+	RoleAccent4      ColourRole = "accent4"
+	RoleAccent4Muted ColourRole = "accent4Muted"
 
 	// Semantic roles
 	RoleDanger       ColourRole = "danger"
@@ -296,13 +300,27 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	// Track which accent colors are used for semantic roles
 	usedForSemantic := make(map[string]bool) // Track by hex value
 
-	// Assign accent roles (up to 4)
-	accentRoles := []ColourRole{RoleAccent1, RoleAccent2, RoleAccent3, RoleAccent4}
-	for i, role := range accentRoles {
+	// Assign accent roles (up to 4) and their muted variants
+	accentRoles := []struct {
+		primary ColourRole
+		muted   ColourRole
+	}{
+		{RoleAccent1, RoleAccent1Muted},
+		{RoleAccent2, RoleAccent2Muted},
+		{RoleAccent3, RoleAccent3Muted},
+		{RoleAccent4, RoleAccent4Muted},
+	}
+	for i, roles := range accentRoles {
 		if i < len(accents) {
 			accent := accents[i]
-			accent.Role = role
-			result.Set(role, accent)
+			accent.Role = roles.primary
+			result.Set(roles.primary, accent)
+
+			// Create muted variant for this accent
+			accentMuted := createMutedVariant(accent, config.MutedLuminanceAdjust, themeType, false)
+			accentMuted.Role = roles.muted
+			accentMuted.IsGenerated = true
+			result.Set(roles.muted, accentMuted)
 		}
 	}
 
@@ -661,24 +679,29 @@ func generateFallbackSemanticColour(role ColourRole, themeType ThemeType, hasBg 
 //	13+ = remaining colours sorted by luminance
 func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, additionalColors []CategorisedColour) []CategorisedColour {
 	// Fixed index assignments by role
+	// Muted variants are indexed right after their primary colours
 	roleIndexMap := map[ColourRole]int{
 		RoleBackground:      0,
 		RoleForeground:      1,
 		RoleBackgroundMuted: 2,
 		RoleForegroundMuted: 3,
 		RoleAccent1:         4,
-		RoleAccent2:         5,
-		RoleAccent3:         6,
-		RoleAccent4:         7,
-		RoleDanger:          8,
-		RoleWarning:         9,
-		RoleSuccess:         10,
-		RoleInfo:            11,
-		RoleNotification:    12,
+		RoleAccent1Muted:    5,
+		RoleAccent2:         6,
+		RoleAccent2Muted:    7,
+		RoleAccent3:         8,
+		RoleAccent3Muted:    9,
+		RoleAccent4:         10,
+		RoleAccent4Muted:    11,
+		RoleDanger:          12,
+		RoleWarning:         13,
+		RoleSuccess:         14,
+		RoleInfo:            15,
+		RoleNotification:    16,
 	}
 
 	// Create array with fixed size for known roles, plus extra for additional colours
-	maxFixedIndex := 12
+	maxFixedIndex := 16
 	allColours := make([]CategorisedColour, 0, len(palette.Colours))
 
 	// Temporary slice to hold colours for fixed positions
@@ -686,8 +709,8 @@ func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, add
 	additionalColours := make([]CategorisedColour, 0)
 
 	// Separate colours into fixed positions and additional
-	for _, cc := range palette.Colours {
-		if idx, hasFixedIndex := roleIndexMap[cc.Role]; hasFixedIndex {
+	for role, cc := range palette.Colours {
+		if idx, hasFixedIndex := roleIndexMap[role]; hasFixedIndex {
 			cc.Index = idx
 			fixedColours[idx] = cc
 		} else {

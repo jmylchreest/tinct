@@ -282,6 +282,30 @@ Output:
 tinct version dev (go1.25.1, linux/amd64)
 ```
 
+### Built-in Output Plugins
+
+Tinct includes built-in plugins for generating theme configurations:
+
+- **hyprland**: Hyprland window manager colour themes
+  - Generates `~/.config/hypr/tinct-colours.conf`
+  - Creates example stub configuration showing usage
+  - Includes semantic colours and indexed palette
+
+- **kitty**: Kitty terminal colour themes  
+  - Generates `~/.config/kitty/tinct.conf`
+  - Configures foreground, background, cursor, tabs, borders
+  - Includes full 16-colour ANSI palette
+
+To use a plugin, include the generated file in your configuration:
+
+```bash
+# Kitty example - add to ~/.config/kitty/kitty.conf
+include ~/.config/kitty/tinct.conf
+
+# Hyprland example - add to ~/.config/hypr/hyprland.conf  
+source = ~/.config/hypr/tinct-colours.conf
+```
+
 ### Plugin Management
 
 Tinct features a powerful plugin system for managing input and output plugins. Plugins can be discovered from repositories, installed, and managed with a lock file for reproducibility.
@@ -417,6 +441,44 @@ export TINCT_ENABLED_PLUGINS="output:hyprland,input:image"
 export TINCT_DISABLED_PLUGINS="output:notify"
 ```
 
+#### Custom Templates
+
+Customize how output plugins generate configuration files by overriding their embedded templates:
+
+```bash
+# List available templates
+tinct plugins templates list
+
+# Extract templates for customization
+tinct plugins templates dump -o hyprland,kitty
+
+# Extract specific plugin templates
+tinct plugins templates dump -o hyprland
+
+# Overwrite existing custom templates
+tinct plugins templates dump -o hyprland --force
+```
+
+Custom templates are stored in `~/.config/tinct/templates/{plugin-name}/` and automatically override the embedded versions. This allows you to:
+- Customize output format and structure
+- Add custom comments or documentation
+- Modify variable names or color assignments
+- Integrate with specific application configurations
+
+**Example: Customizing Hyprland colors**
+```bash
+# Extract the template
+tinct plugins templates dump -o hyprland
+
+# Edit it
+$EDITOR ~/.config/tinct/templates/hyprland/tinct-colours.conf.tmpl
+
+# Generate output (uses your custom template)
+tinct generate --input image -p wallpaper.jpg --outputs hyprland
+```
+
+See [Custom Templates Documentation](docs/CUSTOM-TEMPLATES.md) for detailed usage and examples.
+
 For comprehensive plugin development guides, see [contrib/README.md](contrib/README.md).
 
 **Repository Hosting:**
@@ -424,6 +486,36 @@ For comprehensive plugin development guides, see [contrib/README.md](contrib/REA
 - [Repository Template](docs/repository-template/) - Template structure for creating your own plugin repository
 
 ## 🎨 Features in Detail
+
+### Plugin Hooks
+
+Tinct's output plugins support optional pre-execution and post-execution hooks for advanced functionality:
+
+**Pre-Execution Hooks:**
+- Check if required executables exist on `$PATH`
+- Verify configuration directories exist
+- Validate environment prerequisites
+- Skip plugin execution gracefully if conditions aren't met
+
+**Post-Execution Hooks:**
+- Reload application configuration after theme generation
+- Send signals to running processes
+- Restart services
+- Notify users of changes
+
+**Example Usage:**
+
+```bash
+# Generate kitty theme and reload kitty instances
+tinct generate -i image -p wallpaper.jpg --outputs kitty --kitty.reload
+
+# Generate hyprland theme and reload hyprland
+tinct generate -i image -p wallpaper.jpg --outputs hyprland --hyprland.reload
+
+# Pre-hooks automatically skip plugins when prerequisites aren't met
+tinct generate -i image -p wallpaper.jpg --outputs kitty --verbose
+# Output: ⊘ Skipping kitty: kitty executable not found on $PATH
+```
 
 ### Colour Categorisation
 
@@ -437,9 +529,15 @@ Tinct intelligently categorises extracted colours by their role in a colour sche
 
 #### Accent Roles
 - **accent-1**: Most vibrant colour (highest saturation)
+- **accent-1-muted**: Muted variant of accent-1 for inactive/secondary states
 - **accent-2**: Second most vibrant colour
+- **accent-2-muted**: Muted variant of accent-2 for inactive/secondary states
 - **accent-3**: Third most vibrant colour
+- **accent-3-muted**: Muted variant of accent-3 for inactive/secondary states
 - **accent-4**: Fourth most vibrant colour
+- **accent-4-muted**: Muted variant of accent-4 for inactive/secondary states
+
+Each accent has an automatically generated muted variant positioned immediately after it in the indexed palette (e.g., colour4=accent1, colour5=accent1Muted). These muted variants are perfect for inactive UI elements like disabled buttons, inactive tabs, or secondary borders.
 
 #### Semantic Roles (enhanced for visibility)
 - **danger**: Red hues (0°) - errors, destructive actions
@@ -585,9 +683,10 @@ tinct/
 - [ ] Colour harmony analysis
 
 ### Phase 3: Plugin System
-- [ ] Output plugins (Alacritty, Kitty, i3, etc.)
+- [x] Output plugins (Hyprland ✅, Kitty ✅)
+- [ ] More output plugins (Alacritty, i3, etc.)
 - [ ] Source plugins (wallpaper fetchers)
-- [ ] External plugin support
+- [x] External plugin support ✅
 
 ### Phase 4: AI Integration
 - [ ] AI wallpaper generation (Stable Diffusion, DALL-E)

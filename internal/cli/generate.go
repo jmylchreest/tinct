@@ -2,11 +2,14 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
@@ -66,7 +69,7 @@ Examples:
   # With custom output options
   tinct generate --input image -p wall.jpg \
     --outputs hyprland \
-    --hyprland.output-dir ~/.config/hypr/themes
+    --hyprland.output-dir ~/.config/hypr/custom
 
   # Preview before generating
   tinct generate --input image -p wall.jpg --preview --dry-run
@@ -297,13 +300,78 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no output plugins selected")
 	}
 
-	// Execute output plugins
-	successCount := 0
+	// Run global pre-hook script if it exists
+	if err := runGlobalHookScript(ctx, "pre-generate", generateVerbose, generateDryRun); err != nil {
+		if generateVerbose {
+			fmt.Fprintf(os.Stderr, "⚠ Global pre-hook failed: %v\n", err)
+		}
+	}
+
+	// Phase 1: Run all pre-execute hooks and validate plugins
+	type pluginExecution struct {
+		plugin       output.Plugin
+		skip         bool
+		skipReason   string
+		writtenFiles []string
+	}
+	executions := make([]pluginExecution, 0, len(outputPlugins))
+
 	for _, plugin := range outputPlugins {
+		exec := pluginExecution{plugin: plugin}
+
+		// Set verbose mode if plugin supports it
+		if verbosePlugin, ok := plugin.(output.VerbosePlugin); ok {
+			verbosePlugin.SetVerbose(generateVerbose)
+		}
+
+		// Validate plugin
 		if err := plugin.Validate(); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠ Skipping %s: %v\n", plugin.Name(), err)
+			if generateVerbose {
+				fmt.Fprintf(os.Stderr, "⚠ Skipping %s: %v\n", plugin.Name(), err)
+			}
+			exec.skip = true
+			exec.skipReason = fmt.Sprintf("validation failed: %v", err)
+			executions = append(executions, exec)
 			continue
 		}
+
+		// Run PreExecute hook if plugin implements it
+		if preHook, ok := plugin.(output.PreExecuteHook); ok {
+			hookCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			skip, reason, err := preHook.PreExecute(hookCtx)
+			cancel()
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "✗ %s pre-execution check failed: %v\n", plugin.Name(), err)
+				exec.skip = true
+				exec.skipReason = fmt.Sprintf("pre-hook error: %v", err)
+				executions = append(executions, exec)
+				continue
+			}
+
+			if skip {
+				if generateVerbose {
+					fmt.Fprintf(os.Stderr, "⊘ Skipping %s: %s\n", plugin.Name(), reason)
+				}
+				exec.skip = true
+				exec.skipReason = reason
+				executions = append(executions, exec)
+				continue
+			}
+		}
+
+		executions = append(executions, exec)
+	}
+
+	// Phase 2: Generate and write files for non-skipped plugins
+	successCount := 0
+	for i := range executions {
+		exec := &executions[i]
+		if exec.skip {
+			continue
+		}
+
+		plugin := exec.plugin
 
 		if generateVerbose {
 			fmt.Fprintf(os.Stderr, "\n✓ Output plugin: %s\n", plugin.Name())
@@ -314,11 +382,15 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		files, err := plugin.Generate(palette)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "✗ %s failed: %v\n", plugin.Name(), err)
+			exec.skip = true
+			exec.skipReason = fmt.Sprintf("generation failed: %v", err)
 			continue
 		}
 
 		// Write files
 		outputDir := plugin.DefaultOutputDir()
+		exec.writtenFiles = make([]string, 0, len(files))
+
 		for filename, content := range files {
 			// Check if this is external plugin output (virtual file)
 			if strings.HasSuffix(filename, "-output.txt") && outputDir == "" {
@@ -334,14 +406,49 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 					fmt.Printf("  Would write: %s (%d bytes)\n", fullPath, len(content))
 				} else {
 					if err := writeFile(fullPath, content); err != nil {
-						return fmt.Errorf("failed to write %s: %w", fullPath, err)
+						fmt.Fprintf(os.Stderr, "✗ Failed to write %s: %v\n", fullPath, err)
+						exec.skip = true
+						exec.skipReason = fmt.Sprintf("write failed: %v", err)
+						continue
 					}
 					fmt.Printf("  ├─ %s (%d bytes)\n", fullPath, len(content))
+					exec.writtenFiles = append(exec.writtenFiles, fullPath)
 				}
 			}
 		}
 
-		successCount++
+		if !exec.skip {
+			successCount++
+		}
+	}
+
+	// Phase 3: Run all post-execute hooks for successful plugins
+	if !generateDryRun {
+		for _, exec := range executions {
+			if exec.skip || len(exec.writtenFiles) == 0 {
+				continue
+			}
+
+			plugin := exec.plugin
+			if postHook, ok := plugin.(output.PostExecuteHook); ok {
+				hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+				err := postHook.PostExecute(hookCtx, exec.writtenFiles)
+				cancel()
+
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "  ⚠ %s post-hook failed: %v\n", plugin.Name(), err)
+				} else if generateVerbose {
+					fmt.Fprintf(os.Stderr, "  ✓ %s post-hook completed\n", plugin.Name())
+				}
+			}
+		}
+
+		// Run global post-hook script if it exists
+		if err := runGlobalHookScript(ctx, "post-generate", generateVerbose, generateDryRun); err != nil {
+			if generateVerbose {
+				fmt.Fprintf(os.Stderr, "⚠ Global post-hook failed: %v\n", err)
+			}
+		}
 	}
 
 	// Summary
@@ -355,6 +462,71 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// runGlobalHookScript executes a global hook script if it exists.
+// Looks for scripts at ~/.config/tinct/hooks/{hook-name}.sh
+func runGlobalHookScript(ctx context.Context, hookName string, verbose bool, dryRun bool) error {
+	if dryRun {
+		return nil // Don't run hooks in dry-run mode
+	}
+
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return nil // Silently skip if we can't get config dir
+	}
+
+	hookPath := filepath.Join(configDir, "tinct", "hooks", fmt.Sprintf("%s.sh", hookName))
+
+	// Check if hook exists and is executable
+	info, err := os.Stat(hookPath)
+	if os.IsNotExist(err) {
+		return nil // No hook, that's fine
+	}
+	if err != nil {
+		return err
+	}
+
+	// Check if executable
+	if info.Mode()&0111 == 0 {
+		if verbose {
+			fmt.Fprintf(os.Stderr, "⚠ Hook script exists but is not executable: %s\n", hookPath)
+		}
+		return nil
+	}
+
+	if verbose {
+		fmt.Fprintf(os.Stderr, "→ Running global %s hook: %s\n", hookName, hookPath)
+	}
+
+	// Execute the script
+	hookCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(hookCtx, hookPath)
+	cmd.Env = append(os.Environ(),
+		"TINCT_HOOK="+hookName,
+		"TINCT_VERSION="+getVersion(),
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		if len(output) > 0 {
+			return fmt.Errorf("%w: %s", err, string(output))
+		}
+		return err
+	}
+
+	if verbose && len(output) > 0 {
+		fmt.Fprintf(os.Stderr, "  %s\n", string(output))
+	}
+
+	return nil
+}
+
+// getVersion returns the current version (placeholder for actual version)
+func getVersion() string {
+	return "dev" // TODO: Replace with actual version from version package
 }
 
 // buildGenerateHelp dynamically builds the help text with enabled plugins.

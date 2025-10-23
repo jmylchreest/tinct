@@ -2,6 +2,8 @@
 package output
 
 import (
+	"context"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/spf13/cobra"
 )
@@ -27,6 +29,51 @@ type Plugin interface {
 
 	// DefaultOutputDir returns the default output directory for this plugin.
 	DefaultOutputDir() string
+}
+
+// PreExecuteHook is an optional interface that plugins can implement to perform
+// checks before generation. If the hook returns an error or skip=true, the plugin
+// will be skipped without generating output.
+//
+// Common use cases:
+//   - Check if required executables exist on $PATH
+//   - Verify configuration directories exist
+//   - Validate environment prerequisites
+type PreExecuteHook interface {
+	// PreExecute runs before Generate(). Returns:
+	//   - skip: if true, plugin is skipped (not an error, just bypassed)
+	//   - reason: human-readable explanation for skipping
+	//   - error: actual error that should stop execution
+	PreExecute(ctx context.Context) (skip bool, reason string, err error)
+}
+
+// PostExecuteHook is an optional interface that plugins can implement to perform
+// actions after successful file generation.
+//
+// Common use cases:
+//   - Reload application configuration
+//   - Send signals to running processes
+//   - Restart services
+//   - Notify users of changes
+type PostExecuteHook interface {
+	// PostExecute runs after successful Generate() and file writing.
+	// The files map contains the paths that were written.
+	// Errors are logged but don't fail the overall operation.
+	PostExecute(ctx context.Context, writtenFiles []string) error
+}
+
+// VerbosePlugin is an optional interface that plugins can implement to receive
+// verbose logging settings from the CLI.
+type VerbosePlugin interface {
+	// SetVerbose enables or disables verbose logging for the plugin.
+	SetVerbose(verbose bool)
+}
+
+// ExecutionContext provides context for hook execution.
+type ExecutionContext struct {
+	DryRun    bool   // Whether this is a dry-run
+	Verbose   bool   // Whether verbose output is enabled
+	OutputDir string // The output directory being used
 }
 
 // Registry holds all registered output plugins.
