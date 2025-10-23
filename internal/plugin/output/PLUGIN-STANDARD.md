@@ -21,15 +21,15 @@ All output plugins **MUST** follow this naming standard for generated files:
 
 ### Two-File Pattern (Preferred)
 
-**Use when the application supports:**
+**Use when the application supports:
 - Color variables/constants (CSS variables, shell variables, etc.)
 - Include/source/import directives
 
-**Files generated:**
+**Files generated:
 1. `tinct-colours.{ext}` - Color variable definitions only
 2. `tinct.{ext}` - Example configuration that uses the color variables
 
-**Benefits:**
+**Benefits:
 - Users can modify example config without touching color definitions
 - Color file can be imported into multiple configuration files
 - Clear separation of concerns
@@ -37,11 +37,11 @@ All output plugins **MUST** follow this naming standard for generated files:
 
 ### Single-File Pattern
 
-**Use when the application:**
+**Use when the application:
 - Does NOT support variables, OR
 - Does NOT support includes/imports
 
-**File generated:**
+**File generated:
 - `tinct.{ext}` - Complete configuration with colors embedded directly
 
 ### Naming Examples
@@ -231,7 +231,7 @@ tmplContent, fromCustom, err := loader.Load("tinct-colours.ext.tmpl")
 4. Color definitions using semantic names
 5. Usage documentation in comments
 
-**Example structure:**
+**Example structure:
 
 ```
 # File header with description
@@ -373,7 +373,7 @@ Plugin files **MUST** include:
 3. Method documentation for public methods
 4. Comments explaining non-obvious logic
 
-**Example:**
+**Example:
 
 ```go
 // Package waybar provides an output plugin for Waybar status bar color themes.
@@ -487,4 +487,4 @@ If you're unsure about any standard requirement:
 
 ---
 
-**Made with  and consistency in mind**
+**Made with  and consistency in mind

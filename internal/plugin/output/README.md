@@ -4,7 +4,7 @@ Output plugins generate configuration files from extracted colour palettes. They
 
 ##  Plugin Standard
 
-**All output plugins MUST follow the comprehensive standard defined in [PLUGIN-STANDARD.md](./PLUGIN-STANDARD.md).**
+**All output plugins MUST follow the comprehensive standard defined in [PLUGIN-STANDARD.md](./PLUGIN-STANDARD.md).
 
 This standard document defines:
 -  File naming conventions (two-file vs single-file patterns)
@@ -15,7 +15,7 @@ This standard document defines:
 -  Documentation requirements
 -  Complete checklist for new plugins
 
-**Quick Reference:**
+**Quick Reference:
 - Use `tinct-colours.{ext}` + `tinct.{ext}` for apps supporting variables/imports
 - Use `tinct.{ext}` only for apps without variable support
 - Follow semantic color names: `background`, `foreground`, `accent1`, `danger`, etc.
@@ -33,11 +33,11 @@ All output plugins follow a consistent naming standard for generated files:
 
 ### Standard Pattern
 
-**For applications that support color variables/includes:**
+**For applications that support color variables/includes:
 - `tinct-colours.conf` (or `.css`, `.toml`, etc.) - Color variable definitions
 - `tinct.conf` - Example configuration that sources/includes the color variables
 
-**For applications that don't support variables:**
+**For applications that don't support variables:
 - `tinct.conf` - Complete configuration with colors embedded directly
 
 ### Examples
@@ -68,12 +68,12 @@ When creating a new plugin, determine:
 2. Does the application support include/source directives?
    - Most do: `include`, `source`, `@import`, etc.
 
-**If YES to both:**
+**If YES to both:
 - Generate two files: `tinct-colours.{ext}` and `tinct.{ext}`
 - Put color definitions in `tinct-colours.{ext}`
 - Put example usage in `tinct.{ext}`
 
-**If NO (no variables or includes):**
+**If NO (no variables or includes):
 - Generate single file: `tinct.{ext}`
 - Embed all colors directly in the configuration
 
@@ -542,8 +542,8 @@ When adding a new plugin:
 7. **Update README:** Add your plugin to examples section
 8. **Submit PR:** Include example output and test results
 
-** All plugins must comply with the standard or PRs will be rejected.**
+** All plugins must comply with the standard or PRs will be rejected.
 
 ---
 
-**Made with  and Go 1.25+**
+Made with Go 1.25+

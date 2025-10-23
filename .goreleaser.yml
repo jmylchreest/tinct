@@ -387,7 +387,7 @@ announce:
   discord:
     enabled: true
     message_template: |
-       **Tinct {{.Tag}}** has been released!
+      **Tinct {{.Tag}}** has been released!
 
       {{.ReleaseNotes}}
 
