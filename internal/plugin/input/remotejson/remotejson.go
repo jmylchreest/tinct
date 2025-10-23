@@ -277,8 +277,22 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 	var paletteColors []colour.RGB
 	var roleHints map[colour.ColourRole]int
 
+	// First, add ALL colors to the palette
+	colorNameToIndex := make(map[string]int)
+	for name, hex := range colors {
+		rgb, err := parseHex(hex)
+		if err != nil {
+			if verbose {
+				fmt.Printf("   Skipping invalid color '%s': %v\n", name, err)
+			}
+			continue
+		}
+		colorNameToIndex[name] = len(paletteColors)
+		paletteColors = append(paletteColors, rgb)
+	}
+
+	// Then, if mapping is provided, create role hints for the mapped colors
 	if len(p.mapping) > 0 {
-		// Use explicit mapping
 		if verbose {
 			fmt.Printf("→ Applying color mappings:\n")
 		}
@@ -286,22 +300,17 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 		roleHints = make(map[colour.ColourRole]int)
 
 		for sourceKey, targetRole := range p.mapping {
-			if hex, ok := colors[sourceKey]; ok {
-				rgb, err := parseHex(hex)
-				if err != nil {
-					return nil, fmt.Errorf("invalid color '%s': %w", hex, err)
-				}
-
+			if index, ok := colorNameToIndex[sourceKey]; ok {
 				// Parse the target role
 				role, err := parseColourRole(targetRole)
 				if err != nil {
 					return nil, fmt.Errorf("invalid role '%s': %w", targetRole, err)
 				}
 
-				roleHints[role] = len(paletteColors)
-				paletteColors = append(paletteColors, rgb)
+				roleHints[role] = index
 
 				if verbose {
+					hex := colors[sourceKey]
 					fmt.Printf("   %s (%s) → %s\n", sourceKey, hex, targetRole)
 				}
 			} else {
@@ -309,26 +318,6 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 					fmt.Printf("   Warning: color '%s' not found in source\n", sourceKey)
 				}
 			}
-		}
-	} else {
-		// Extract all colors
-		for name, hex := range colors {
-			rgb, err := parseHex(hex)
-			if err != nil {
-				if verbose {
-					fmt.Printf("   Skipping invalid color '%s': %v\n", name, err)
-				}
-				continue
-			}
-			paletteColors = append(paletteColors, rgb)
-
-			if verbose && len(paletteColors) <= 10 {
-				fmt.Printf("   %s: %s\n", name, hex)
-			}
-		}
-
-		if verbose && len(paletteColors) > 10 {
-			fmt.Printf("   ... and %d more\n", len(paletteColors)-10)
 		}
 	}
 
