@@ -3,9 +3,7 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/spf13/cobra"
@@ -114,9 +112,7 @@ func runPluginSearch(cmd *cobra.Command, args []string) error {
 	// Display results
 	fmt.Printf("Found %d plugin(s):\n\n", len(results))
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tTYPE\tVERSION\tREPO\tDESCRIPTION")
-	fmt.Fprintln(w, "----\t----\t-------\t----\t-----------")
+	table := NewTable([]string{"NAME", "TYPE", "VERSION", "REPO", "DESCRIPTION"})
 
 	for _, result := range results {
 		version := ""
@@ -129,16 +125,16 @@ func runPluginSearch(cmd *cobra.Command, args []string) error {
 			description = description[:57] + "..."
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+		table.AddRow([]string{
 			result.Plugin.Name,
 			result.Plugin.Type,
 			version,
 			result.Repository,
 			description,
-		)
+		})
 	}
 
-	w.Flush()
+	fmt.Print(table.Render())
 
 	fmt.Println("\nUse 'tinct plugins info <name>' for more details.")
 	fmt.Println("Install with 'tinct plugins install <name>'")

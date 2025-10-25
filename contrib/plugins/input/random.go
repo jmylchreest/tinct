@@ -211,7 +211,7 @@ func main() {
 func generateRandomColors(n int, rng *mathrand.Rand) []RGB {
 	colors := make([]RGB, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		colors[i] = RGB{
 			R: uint8(rng.IntN(256)),
 			G: uint8(rng.IntN(256)),

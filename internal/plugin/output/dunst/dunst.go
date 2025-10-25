@@ -1,5 +1,5 @@
-// Package kitty provides an output plugin for Kitty terminal colour themes.
-package kitty
+// Package dunst provides an output plugin for Dunst notification daemon colour themes.
+package dunst
 
 import (
 	"bytes"
@@ -35,14 +35,13 @@ func GetEmbeddedTemplates() embed.FS {
 	return templates
 }
 
-// Plugin implements the output.Plugin interface for Kitty terminal.
+// Plugin implements the output.Plugin interface for Dunst.
 type Plugin struct {
-	outputDir    string
-	reloadConfig bool
-	verbose      bool
+	outputDir string
+	verbose   bool
 }
 
-// New creates a new Kitty output plugin with default settings.
+// New creates a new Dunst output plugin with default settings.
 func New() *Plugin {
 	return &Plugin{
 		outputDir: "",
@@ -52,18 +51,17 @@ func New() *Plugin {
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "kitty"
+	return "dunst"
 }
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Kitty terminal colour theme configuration"
+	return "Generate Dunst notification daemon colour theme configuration"
 }
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "kitty.output-dir", "", "Output directory (default: ~/.config/kitty)")
-	cmd.Flags().BoolVar(&p.reloadConfig, "kitty.reload", false, "Reload kitty config after generation (sends SIGUSR1)")
+	cmd.Flags().StringVar(&p.outputDir, "dunst.output-dir", "", "Output directory (default: ~/.config/dunst)")
 }
 
 // SetVerbose enables or disables verbose logging for the plugin.
@@ -85,9 +83,9 @@ func (p *Plugin) DefaultOutputDir() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/kitty"
+		return ".config/dunst"
 	}
-	return filepath.Join(home, ".config", "kitty")
+	return filepath.Join(home, ".config", "dunst")
 }
 
 // Generate creates the theme file.
@@ -105,7 +103,7 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
 
-	files["tinct.conf"] = themeContent
+	files["tinct.dunstrc"] = themeContent
 
 	return files, nil
 }
@@ -113,18 +111,18 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, error) {
 	// Load template with custom override support
-	loader := tmplloader.New("kitty", templates)
+	loader := tmplloader.New("dunst", templates)
 	if p.verbose {
 		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
 	}
-	tmplContent, fromCustom, err := loader.Load("tinct.conf.tmpl")
+	tmplContent, fromCustom, err := loader.Load("tinct.dunstrc.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
 	// Log if using custom template
 	if p.verbose && fromCustom {
-		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.conf.tmpl\n")
+		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.dunstrc.tmpl\n")
 	}
 
 	tmpl, err := template.New("theme").Parse(string(tmplContent))
@@ -151,43 +149,97 @@ type ThemeData struct {
 	Foreground      string
 	ForegroundMuted string
 	Accent1         string
-	Accent1Muted    string
 	Accent2         string
-	Accent2Muted    string
 	Accent3         string
-	Accent3Muted    string
 	Accent4         string
-	Accent4Muted    string
 	Danger          string
 	Warning         string
 	Success         string
 	Info            string
-	Notification    string
 }
 
-// prepareThemeData converts a categorised palette to Kitty theme data.
-// All colours are exposed directly with their semantic names for clarity.
+// prepareThemeData converts a categorised palette to Dunst theme data.
 func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData {
 	return ThemeData{
 		SourceTheme:     palette.ThemeType.String(),
-		Background:      p.getColour(palette, colour.RoleBackground, "#11121d"),
-		BackgroundMuted: p.getColour(palette, colour.RoleBackgroundMuted, "#1a1b26"),
-		Foreground:      p.getColour(palette, colour.RoleForeground, "#dddddd"),
-		ForegroundMuted: p.getColour(palette, colour.RoleForegroundMuted, "#999999"),
-		Accent1:         p.getColour(palette, colour.RoleAccent1, "#9fa8cd"),
-		Accent1Muted:    p.getColour(palette, colour.RoleAccent1Muted, "#6b728d"),
-		Accent2:         p.getColour(palette, colour.RoleAccent2, "#7aa2f7"),
-		Accent2Muted:    p.getColour(palette, colour.RoleAccent2Muted, "#565f89"),
-		Accent3:         p.getColour(palette, colour.RoleAccent3, "#bb9af7"),
-		Accent3Muted:    p.getColour(palette, colour.RoleAccent3Muted, "#9d7cd8"),
-		Accent4:         p.getColour(palette, colour.RoleAccent4, "#7dcfff"),
-		Accent4Muted:    p.getColour(palette, colour.RoleAccent4Muted, "#2ac3de"),
+		Background:      p.getColour(palette, colour.RoleBackground, "#1a1b26"),
+		BackgroundMuted: p.getColour(palette, colour.RoleBackgroundMuted, "#16161e"),
+		Foreground:      p.getColour(palette, colour.RoleForeground, "#c0caf5"),
+		ForegroundMuted: p.getColour(palette, colour.RoleForegroundMuted, "#a9b1d6"),
+		Accent1:         p.getColour(palette, colour.RoleAccent1, "#7aa2f7"),
+		Accent2:         p.getColour(palette, colour.RoleAccent2, "#bb9af7"),
+		Accent3:         p.getColour(palette, colour.RoleAccent3, "#7dcfff"),
+		Accent4:         p.getColour(palette, colour.RoleAccent4, "#9ece6a"),
 		Danger:          p.getColour(palette, colour.RoleDanger, "#f7768e"),
 		Warning:         p.getColour(palette, colour.RoleWarning, "#e0af68"),
 		Success:         p.getColour(palette, colour.RoleSuccess, "#9ece6a"),
 		Info:            p.getColour(palette, colour.RoleInfo, "#7aa2f7"),
-		Notification:    p.getColour(palette, colour.RoleNotification, "#bb9af7"),
 	}
+}
+
+// Helper methods for ThemeData to add alpha channel
+
+// DangerWithAlpha returns danger color with specified alpha
+func (td ThemeData) DangerWithAlpha(alpha string) string {
+	return hexWithAlpha(td.Danger, alpha)
+}
+
+// WarningWithAlpha returns warning color with specified alpha
+func (td ThemeData) WarningWithAlpha(alpha string) string {
+	return hexWithAlpha(td.Warning, alpha)
+}
+
+// SuccessWithAlpha returns success color with specified alpha
+func (td ThemeData) SuccessWithAlpha(alpha string) string {
+	return hexWithAlpha(td.Success, alpha)
+}
+
+// InfoWithAlpha returns info color with specified alpha
+func (td ThemeData) InfoWithAlpha(alpha string) string {
+	return hexWithAlpha(td.Info, alpha)
+}
+
+// BackgroundWithAlpha returns background color with specified alpha
+func (td ThemeData) BackgroundWithAlpha(alpha string) string {
+	return hexWithAlpha(td.Background, alpha)
+}
+
+// ForegroundWithAlpha returns foreground color with specified alpha
+func (td ThemeData) ForegroundWithAlpha(alpha string) string {
+	return hexWithAlpha(td.Foreground, alpha)
+}
+
+// Accent1WithAlpha returns accent1 color with specified alpha
+func (td ThemeData) Accent1WithAlpha(alpha string) string {
+	return hexWithAlpha(td.Accent1, alpha)
+}
+
+// Accent2WithAlpha returns accent2 color with specified alpha
+func (td ThemeData) Accent2WithAlpha(alpha string) string {
+	return hexWithAlpha(td.Accent2, alpha)
+}
+
+// Accent3WithAlpha returns accent3 color with specified alpha
+func (td ThemeData) Accent3WithAlpha(alpha string) string {
+	return hexWithAlpha(td.Accent3, alpha)
+}
+
+// Accent4WithAlpha returns accent4 color with specified alpha
+func (td ThemeData) Accent4WithAlpha(alpha string) string {
+	return hexWithAlpha(td.Accent4, alpha)
+}
+
+// hexWithAlpha adds alpha channel to hex color
+// Dunst uses #RRGGBBAA format
+func hexWithAlpha(hex string, alpha string) string {
+	if len(hex) == 7 && hex[0] == '#' {
+		return hex + alpha
+	}
+	if len(hex) == 6 {
+		return "#" + hex + alpha
+	}
+	// If already has alpha or other format, return as-is
+	return hex
 }
 
 // getColour retrieves a colour by role with a fallback.
@@ -198,44 +250,23 @@ func (p *Plugin) getColour(palette *colour.CategorisedPalette, role colour.Colou
 	return fallback
 }
 
-// PreExecute checks if kitty is available before generating the theme.
+// PreExecute checks if dunst is available and config directory exists.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if kitty executable exists on PATH
-	_, err = exec.LookPath("kitty")
+	// Check if dunst executable exists on PATH
+	_, err = exec.LookPath("dunst")
 	if err != nil {
-		return true, "kitty executable not found on $PATH", nil
+		return true, "dunst executable not found on $PATH", nil
 	}
 
-	// Check if config directory exists
+	// Check if config directory exists (create it if not)
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf("kitty config directory not found: %s", configDir), nil
+		// For dunst, we can create the directory since it's straightforward
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			return true, fmt.Sprintf("dunst config directory does not exist and cannot be created: %s", configDir), nil
+		}
 	}
 
 	return false, "", nil
-}
-
-// PostExecute reloads kitty configuration if requested.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, writtenFiles []string) error {
-	if !p.reloadConfig {
-		return nil
-	}
-
-	// Send SIGUSR1 to all running kitty instances to reload config
-	// This is the standard way to reload kitty configuration
-	cmd := exec.CommandContext(ctx, "killall", "-SIGUSR1", "kitty")
-	if err := cmd.Run(); err != nil {
-		// Check if the error is because no kitty process was found
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			// killall returns exit code 1 if no processes matched
-			if exitErr.ExitCode() == 1 {
-				return fmt.Errorf("no running kitty instances found to reload")
-			}
-		}
-		return fmt.Errorf("failed to reload kitty config: %w", err)
-	}
-
-	return nil
 }

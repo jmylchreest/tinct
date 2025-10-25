@@ -131,7 +131,7 @@ func (p *Plugin) fetch(ctx context.Context) ([]byte, error) {
 
 // parseJSON parses JSON content and extracts colors.
 func (p *Plugin) parseJSON(content []byte, verbose bool) (map[string]string, error) {
-	var data interface{}
+	var data any
 	if err := json.Unmarshal(content, &data); err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (p *Plugin) parseJSON(content []byte, verbose bool) (map[string]string, err
 
 // applyQuery applies a simplified JSONPath-like query to the data.
 // Supports: $.path.to.field or just path.to.field
-func (p *Plugin) applyQuery(data interface{}, query string) (interface{}, error) {
+func (p *Plugin) applyQuery(data any, query string) (any, error) {
 	// Remove leading $. if present
 	query = strings.TrimPrefix(query, "$.")
 	query = strings.TrimPrefix(query, "$")
@@ -177,7 +177,7 @@ func (p *Plugin) applyQuery(data interface{}, query string) (interface{}, error)
 		}
 
 		switch v := current.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			val, ok := v[segment]
 			if !ok {
 				return nil, fmt.Errorf("path not found: %s", segment)
@@ -192,9 +192,9 @@ func (p *Plugin) applyQuery(data interface{}, query string) (interface{}, error)
 }
 
 // extractColors recursively extracts color values from JSON data.
-func (p *Plugin) extractColors(data interface{}, prefix string, colors map[string]string) {
+func (p *Plugin) extractColors(data any, prefix string, colors map[string]string) {
 	switch v := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		// Check if this object looks like a color object (has hex/rgb properties)
 		if hexVal, hasHex := v["hex"].(string); hasHex && isColor(hexVal) {
 			// This is a color object (e.g., Catppuccin format: {"hex": "#1e1e2e", "rgb": {...}})
@@ -229,7 +229,7 @@ func (p *Plugin) extractColors(data interface{}, prefix string, colors map[strin
 				p.extractColors(value, fullKey, colors)
 			}
 		}
-	case []interface{}:
+	case []any:
 		for i, item := range v {
 			p.extractColors(item, fmt.Sprintf("%s[%d]", prefix, i), colors)
 		}

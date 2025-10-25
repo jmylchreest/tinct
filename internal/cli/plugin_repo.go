@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"text/tabwriter"
+	"strconv"
 	"time"
 
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
@@ -169,9 +169,7 @@ func runPluginRepoList(cmd *cobra.Command, args []string) error {
 	fmt.Println("Configured Repositories:")
 	fmt.Println()
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSTATUS\tPRIORITY\tURL")
-	fmt.Fprintln(w, "----\t------\t--------\t---")
+	table := NewTable([]string{"NAME", "STATUS", "PRIORITY", "URL"})
 
 	for _, repo := range repos {
 		status := "enabled"
@@ -179,15 +177,15 @@ func runPluginRepoList(cmd *cobra.Command, args []string) error {
 			status = "disabled"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%d\t%s\n",
+		table.AddRow([]string{
 			repo.Name,
 			status,
-			repo.Priority,
+			strconv.Itoa(repo.Priority),
 			repo.URL,
-		)
+		})
 	}
 
-	w.Flush()
+	fmt.Print(table.Render())
 	return nil
 }
 

@@ -4,6 +4,7 @@ package colour
 import (
 	"fmt"
 	"image"
+	"slices"
 )
 
 // Extractor defines the interface for color extraction algorithms.
@@ -39,12 +40,7 @@ func ValidAlgorithms() []Algorithm {
 
 // IsValidAlgorithm checks if the given algorithm name is valid.
 func IsValidAlgorithm(alg Algorithm) bool {
-	for _, valid := range ValidAlgorithms() {
-		if alg == valid {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ValidAlgorithms(), alg)
 }
 
 // NewExtractor creates a new Extractor based on the specified algorithm.

@@ -235,27 +235,23 @@ func formatPaletteFile(categorised *colour.CategorisedPalette) string {
 }
 
 // formatHexFromCategorised formats a categorised palette as hex colour codes.
+// Color blocks are always shown.
 func formatHexFromCategorised(categorised *colour.CategorisedPalette, showPreview bool) string {
 	output := ""
 	for _, color := range categorised.AllColours {
-		if showPreview {
-			output += colour.FormatColourWithPreview(color.RGB, 8) + "\n"
-		} else {
-			output += color.Hex + "\n"
-		}
+		// Always show color preview blocks
+		output += colour.FormatColourWithPreview(color.RGB, 8) + "\n"
 	}
 	return output
 }
 
 // formatRGBFromCategorised formats a categorised palette as RGB values.
+// Color blocks are always shown.
 func formatRGBFromCategorised(categorised *colour.CategorisedPalette, showPreview bool) string {
 	output := ""
 	for _, color := range categorised.AllColours {
-		if showPreview {
-			output += colour.FormatColourWithPreview(color.RGB, 8) + "  " + color.RGB.String() + "\n"
-		} else {
-			output += color.RGB.String() + "\n"
-		}
+		// Always show color preview blocks
+		output += colour.FormatColourWithPreview(color.RGB, 8) + "  " + color.RGB.String() + "\n"
 	}
 	return output
 }

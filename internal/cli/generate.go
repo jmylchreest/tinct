@@ -378,7 +378,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		if generateVerbose {
 			// Add blank line before first output plugin for separation from preview
 			if firstOutputPlugin {
-				fmt.Fprintf(os.Stderr, "\n")
+				fmt.Fprintf(os.Stderr, "→ Running output plugins...\n")
 				firstOutputPlugin = false
 			}
 			fmt.Fprintf(os.Stderr, " Output plugin: %s\n", plugin.Name())

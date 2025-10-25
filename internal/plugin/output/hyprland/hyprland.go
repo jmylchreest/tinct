@@ -23,7 +23,7 @@ type verboseLogger struct {
 	out io.Writer
 }
 
-func (l *verboseLogger) Printf(format string, v ...interface{}) {
+func (l *verboseLogger) Printf(format string, v ...any) {
 	fmt.Fprintf(l.out, format+"\n", v...)
 }
 

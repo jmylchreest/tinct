@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"maps"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,9 +21,14 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
+	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
+	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
+	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
+	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
 	"github.com/spf13/cobra"
 )
 
@@ -93,9 +100,14 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.inputRegistry.Register(remotecss.New())
 
 	// Register output plugins
+	m.outputRegistry.Register(dunst.New())
+	m.outputRegistry.Register(fuzzel.New())
 	m.outputRegistry.Register(hyprland.New())
+	m.outputRegistry.Register(hyprlock.New())
 	m.outputRegistry.Register(kitty.New())
+	m.outputRegistry.Register(swayosd.New())
 	m.outputRegistry.Register(waybar.New())
+	m.outputRegistry.Register(wofi.New())
 }
 
 // InputRegistry returns the input plugin registry.
@@ -137,10 +149,8 @@ func (m *Manager) isEnabled(pluginType, name string) bool {
 	fullName := fmt.Sprintf("%s:%s", pluginType, name)
 
 	// Check if "all" is explicitly disabled (takes precedence over everything)
-	for _, disabled := range m.config.DisabledPlugins {
-		if disabled == "all" {
-			return false
-		}
+	if slices.Contains(m.config.DisabledPlugins, "all") {
+		return false
 	}
 
 	// Check if explicitly disabled
@@ -151,10 +161,8 @@ func (m *Manager) isEnabled(pluginType, name string) bool {
 	}
 
 	// Check if "all" is enabled (enables all plugins)
-	for _, enabled := range m.config.EnabledPlugins {
-		if enabled == "all" {
-			return true
-		}
+	if slices.Contains(m.config.EnabledPlugins, "all") {
+		return true
 	}
 
 	// If whitelist mode (EnabledPlugins set), only listed plugins are enabled
@@ -281,10 +289,8 @@ func (m *Manager) SetDisabled(pluginType, name string) {
 	}
 
 	// Add to disabled list if not already there
-	for _, disabled := range m.config.DisabledPlugins {
-		if disabled == fullName {
-			return
-		}
+	if slices.Contains(m.config.DisabledPlugins, fullName) {
+		return
 	}
 	m.config.DisabledPlugins = append(m.config.DisabledPlugins, fullName)
 }
@@ -302,10 +308,8 @@ func (m *Manager) SetEnabled(pluginType, name string) {
 	}
 
 	// Add to enabled list if not already there
-	for _, enabled := range m.config.EnabledPlugins {
-		if enabled == fullName {
-			return
-		}
+	if slices.Contains(m.config.EnabledPlugins, fullName) {
+		return
 	}
 	m.config.EnabledPlugins = append(m.config.EnabledPlugins, fullName)
 }
@@ -370,12 +374,8 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 
 	// Merge plugin args from opts with plugin's own args
 	mergedArgs := make(map[string]any)
-	for k, v := range p.args {
-		mergedArgs[k] = v
-	}
-	for k, v := range opts.PluginArgs {
-		mergedArgs[k] = v
-	}
+	maps.Copy(mergedArgs, p.args)
+	maps.Copy(mergedArgs, opts.PluginArgs)
 
 	extended := ExtendedInputOptions{
 		Verbose:         opts.Verbose,
@@ -632,7 +632,7 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 	defer cancel()
 
 	// Pass written files as JSON via stdin
-	filesJSON, err := json.Marshal(map[string]interface{}{
+	filesJSON, err := json.Marshal(map[string]any{
 		"written_files": writtenFiles,
 	})
 	if err != nil {

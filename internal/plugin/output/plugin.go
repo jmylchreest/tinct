@@ -3,6 +3,7 @@ package output
 
 import (
 	"context"
+	"maps"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/spf13/cobra"
@@ -112,8 +113,6 @@ func (r *Registry) List() []string {
 func (r *Registry) All() map[string]Plugin {
 	// Return a copy to prevent external modification
 	plugins := make(map[string]Plugin, len(r.plugins))
-	for name, plugin := range r.plugins {
-		plugins[name] = plugin
-	}
+	maps.Copy(plugins, r.plugins)
 	return plugins
 }

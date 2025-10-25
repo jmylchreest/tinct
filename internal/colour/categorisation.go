@@ -77,6 +77,43 @@ const (
 	RoleSuccess      ColourRole = "success"
 	RoleInfo         ColourRole = "info"
 	RoleNotification ColourRole = "notification"
+
+	// Positional roles for ambient lighting
+	// Core 8 positions (corners + mid-edges)
+	RolePositionTopLeft     ColourRole = "positionTopLeft"
+	RolePositionTop         ColourRole = "positionTop"
+	RolePositionTopRight    ColourRole = "positionTopRight"
+	RolePositionRight       ColourRole = "positionRight"
+	RolePositionBottomRight ColourRole = "positionBottomRight"
+	RolePositionBottom      ColourRole = "positionBottom"
+	RolePositionBottomLeft  ColourRole = "positionBottomLeft"
+	RolePositionLeft        ColourRole = "positionLeft"
+
+	// Extended positions for 12+ region configurations
+	RolePositionTopLeftInner     ColourRole = "positionTopLeftInner"
+	RolePositionTopCenter        ColourRole = "positionTopCenter"
+	RolePositionTopRightInner    ColourRole = "positionTopRightInner"
+	RolePositionRightTop         ColourRole = "positionRightTop"
+	RolePositionRightBottom      ColourRole = "positionRightBottom"
+	RolePositionBottomRightInner ColourRole = "positionBottomRightInner"
+	RolePositionBottomCenter     ColourRole = "positionBottomCenter"
+	RolePositionBottomLeftInner  ColourRole = "positionBottomLeftInner"
+	RolePositionLeftBottom       ColourRole = "positionLeftBottom"
+	RolePositionLeftTop          ColourRole = "positionLeftTop"
+
+	// Ultra-extended positions for 16+ region configurations
+	RolePositionTopLeftOuter      ColourRole = "positionTopLeftOuter"
+	RolePositionTopLeftCenter     ColourRole = "positionTopLeftCenter"
+	RolePositionTopRightCenter    ColourRole = "positionTopRightCenter"
+	RolePositionTopRightOuter     ColourRole = "positionTopRightOuter"
+	RolePositionRightTopOuter     ColourRole = "positionRightTopOuter"
+	RolePositionRightBottomOuter  ColourRole = "positionRightBottomOuter"
+	RolePositionBottomRightOuter  ColourRole = "positionBottomRightOuter"
+	RolePositionBottomRightCenter ColourRole = "positionBottomRightCenter"
+	RolePositionBottomLeftCenter  ColourRole = "positionBottomLeftCenter"
+	RolePositionBottomLeftOuter   ColourRole = "positionBottomLeftOuter"
+	RolePositionLeftBottomOuter   ColourRole = "positionLeftBottomOuter"
+	RolePositionLeftTopOuter      ColourRole = "positionLeftTopOuter"
 )
 
 // CategorisedColour represents a colour with its assigned role and metadata.
@@ -1101,7 +1138,9 @@ func (cp *CategorisedPalette) String() string {
 	return cp.StringWithPreview(false)
 }
 
-// StringWithPreview returns a string representation with optional ANSI colour previews.
+// StringWithPreview returns a string representation with optional table display.
+// When showPreview is true, displays a detailed table with all colors and properties.
+// Color blocks are always shown in the table.
 func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	var result string
 
@@ -1113,21 +1152,25 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 			themeInfo += fmt.Sprintf(" | Contrast: %.2f:1", contrast)
 		}
 	}
-	result += themeInfo + "\n\n"
+	result += themeInfo + "\n"
 
-	// Tabular format showing all colours
-	result += "All Colours (sorted by luminance):\n"
-	if showPreview {
-		result += fmt.Sprintf("  %-10s %-18s %-10s %-10s %-10s %-10s %-8s %-10s\n",
-			"Preview", "Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source")
-		result += fmt.Sprintf("  %s\n", strings.Repeat("-", 92))
-	} else {
-		result += fmt.Sprintf("  %-18s %-10s %-10s %-10s %-10s %-8s %-10s\n",
-			"Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source")
-		result += fmt.Sprintf("  %s\n", strings.Repeat("-", 78))
+	// Only show table if preview is enabled
+	if !showPreview {
+		return result
 	}
 
-	// Show all colours from AllColours (now includes both extracted and generated, sorted by luminance)
+	result += "\n"
+
+	// Tabular format showing all colours with proper alignment
+	result += "All Colours (sorted by luminance):\n"
+
+	// Build table data
+	var rows [][]string
+
+	// Header row
+	header := []string{"Preview", "Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source"}
+
+	// Data rows
 	for _, cc := range cp.AllColours {
 		roleName := string(cc.Role)
 		if roleName == "" {
@@ -1144,15 +1187,74 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 			weightStr = fmt.Sprintf("%.1f%%", cc.Weight*100)
 		}
 
-		if showPreview {
-			preview := ColourPreview(cc.RGB, 8)
-			result += fmt.Sprintf("  %s   %-18s %-10s %-10s %-10.2f %-10.2f %-8s %-10s\n",
-				preview, roleName, indexStr, cc.Hex, cc.Luminance, cc.Saturation, weightStr, source)
-		} else {
-			result += fmt.Sprintf("  %-18s %-10s %-10s %-10.2f %-10.2f %-8s %-10s\n",
-				roleName, indexStr, cc.Hex, cc.Luminance, cc.Saturation, weightStr, source)
+		// Always show color preview blocks
+		preview := ColourPreview(cc.RGB, 8)
+
+		rows = append(rows, []string{
+			preview,
+			roleName,
+			indexStr,
+			cc.Hex,
+			fmt.Sprintf("%.2f", cc.Luminance),
+			fmt.Sprintf("%.2f", cc.Saturation),
+			weightStr,
+			source,
+		})
+	}
+
+	// Calculate column widths
+	colWidths := make([]int, len(header))
+	for i, h := range header {
+		colWidths[i] = len(h)
+	}
+	for _, row := range rows {
+		for i, cell := range row {
+			// For preview column, count visible width (8 for the color block)
+			cellLen := len(cell)
+			if i == 0 {
+				cellLen = 8 // Color preview is always 8 visible characters
+			}
+			if cellLen > colWidths[i] {
+				colWidths[i] = cellLen
+			}
 		}
 	}
 
+	// Format header
+	var headerParts []string
+	for i, h := range header {
+		headerParts = append(headerParts, padRight(h, colWidths[i]))
+	}
+	result += "  " + strings.Join(headerParts, "  ") + "\n"
+
+	// Format separator
+	var sepParts []string
+	for _, w := range colWidths {
+		sepParts = append(sepParts, strings.Repeat("-", w))
+	}
+	result += "  " + strings.Join(sepParts, "  ") + "\n"
+
+	// Format data rows
+	for _, row := range rows {
+		var rowParts []string
+		for i, cell := range row {
+			if i == 0 {
+				// Preview column: don't pad (ANSI codes mess up padding)
+				rowParts = append(rowParts, cell+strings.Repeat(" ", colWidths[i]-8))
+			} else {
+				rowParts = append(rowParts, padRight(cell, colWidths[i]))
+			}
+		}
+		result += "  " + strings.Join(rowParts, "  ") + "\n"
+	}
+
 	return result
+}
+
+// padRight pads a string with spaces on the right to reach the desired width
+func padRight(s string, width int) string {
+	if len(s) >= width {
+		return s
+	}
+	return s + strings.Repeat(" ", width-len(s))
 }

@@ -1,66 +1,37 @@
 package kitty
 
 import (
-	"image/color"
 	"strings"
 	"testing"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/testing"
 )
 
-func TestKittyPlugin_Name(t *testing.T) {
+// TestKittyPlugin runs all standard plugin tests using shared utilities.
+func TestKittyPlugin(t *testing.T) {
 	plugin := New()
-	if plugin.Name() != "kitty" {
-		t.Errorf("Name() = %s, want kitty", plugin.Name())
+
+	config := plugintesting.TestConfig{
+		ExpectedName:       "kitty",
+		ExpectedFiles:      []string{"tinct.conf"},
+		ExpectedBinaryName: "kitty",
 	}
+
+	plugintesting.RunAllTests(t, plugin, config)
 }
 
-func TestKittyPlugin_Description(t *testing.T) {
+// TestKittyPlugin_ContentValidation tests kitty-specific content requirements.
+func TestKittyPlugin_ContentValidation(t *testing.T) {
+	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
-	desc := plugin.Description()
-	if desc == "" {
-		t.Error("Description() should not be empty")
-	}
-}
 
-func TestKittyPlugin_DefaultOutputDir(t *testing.T) {
-	plugin := New()
-	dir := plugin.DefaultOutputDir()
-	if dir == "" {
-		t.Error("DefaultOutputDir() should not be empty")
-	}
-	if !strings.Contains(dir, "kitty") {
-		t.Errorf("DefaultOutputDir() = %s, should contain 'kitty'", dir)
-	}
-}
-
-func TestKittyPlugin_Validate(t *testing.T) {
-	plugin := New()
-	if err := plugin.Validate(); err != nil {
-		t.Errorf("Validate() error = %v, want nil", err)
-	}
-}
-
-func TestKittyPlugin_Generate(t *testing.T) {
-	// Create a test palette
-	palette := createTestPalette(colour.ThemeDark)
-
-	plugin := New()
 	files, err := plugin.Generate(palette)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	if len(files) != 1 {
-		t.Fatalf("Generate() returned %d files, want 1", len(files))
-	}
-
-	content, ok := files["tinct.conf"]
-	if !ok {
-		t.Fatal("Generate() did not return tinct.conf")
-	}
-
-	contentStr := string(content)
+	content := string(files["tinct.conf"])
 
 	// Check for required sections
 	requiredStrings := []string{
@@ -77,25 +48,36 @@ func TestKittyPlugin_Generate(t *testing.T) {
 	}
 
 	for _, required := range requiredStrings {
-		if !strings.Contains(contentStr, required) {
+		if !strings.Contains(content, required) {
 			t.Errorf("Generated content missing required string: %s", required)
 		}
 	}
 
 	// Check that theme type is present
-	if !strings.Contains(contentStr, "Detected theme: dark") {
+	if !strings.Contains(content, "Detected theme: dark") {
 		t.Error("Generated content missing theme type")
 	}
 }
 
-func TestKittyPlugin_GenerateNilPalette(t *testing.T) {
+// TestKittyPlugin_GenerateWithLightTheme tests light theme generation.
+func TestKittyPlugin_GenerateWithLightTheme(t *testing.T) {
+	palette := plugintesting.CreateTestPalette(colour.ThemeLight)
 	plugin := New()
-	_, err := plugin.Generate(nil)
-	if err == nil {
-		t.Error("Generate() with nil palette should return error")
+
+	files, err := plugin.Generate(palette)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	content := string(files["tinct.conf"])
+
+	// Check that theme type is present
+	if !strings.Contains(content, "Detected theme: light") {
+		t.Error("Generated content missing light theme type")
 	}
 }
 
+// TestKittyPlugin_CustomOutputDir tests custom output directory handling.
 func TestKittyPlugin_CustomOutputDir(t *testing.T) {
 	plugin := New()
 	plugin.outputDir = "/custom/path"
@@ -106,20 +88,24 @@ func TestKittyPlugin_CustomOutputDir(t *testing.T) {
 	}
 }
 
-// Helper function to create a test palette
-func createTestPalette(themeType colour.ThemeType) *colour.CategorisedPalette {
-	colors := []color.Color{
-		color.RGBA{R: 30, G: 30, B: 46, A: 255},    // Dark background
-		color.RGBA{R: 205, G: 214, B: 244, A: 255}, // Light foreground
-		color.RGBA{R: 137, G: 180, B: 250, A: 255}, // Blue accent
-		color.RGBA{R: 243, G: 139, B: 168, A: 255}, // Red/danger
-		color.RGBA{R: 166, G: 227, B: 161, A: 255}, // Green/success
-		color.RGBA{R: 250, G: 179, B: 135, A: 255}, // Orange/warning
+// TestKittyPlugin_GetEmbeddedTemplates tests embedded template access.
+func TestKittyPlugin_GetEmbeddedTemplates(t *testing.T) {
+	fs := GetEmbeddedTemplates()
+
+	entries, err := fs.ReadDir(".")
+	if err != nil {
+		t.Fatalf("ReadDir() error = %v", err)
 	}
 
-	palette := &colour.Palette{Colors: colors}
-	config := colour.DefaultCategorisationConfig()
-	config.ThemeType = themeType
+	found := false
+	for _, entry := range entries {
+		if entry.Name() == "tinct.conf.tmpl" {
+			found = true
+			break
+		}
+	}
 
-	return colour.Categorise(palette, config)
+	if !found {
+		t.Error("Template file tinct.conf.tmpl not found in embedded filesystem")
+	}
 }

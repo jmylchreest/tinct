@@ -1,0 +1,137 @@
+package fuzzel
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output/plugintest"
+)
+
+// TestFuzzelPlugin runs all standard plugin tests using shared utilities.
+func TestFuzzelPlugin(t *testing.T) {
+	plugin := New()
+
+	config := plugintest.TestConfig{
+		ExpectedName:       "fuzzel",
+		ExpectedFiles:      []string{"tinct.ini"},
+		ExpectedBinaryName: "fuzzel",
+	}
+
+	plugintest.RunAllTests(t, plugin, config)
+}
+
+// TestFuzzelPlugin_RGBAConversion tests fuzzel-specific RGBA conversion.
+func TestFuzzelPlugin_RGBAConversion(t *testing.T) {
+	tests := []struct {
+		name     string
+		hex      string
+		alpha    string
+		expected string
+	}{
+		{
+			name:     "Standard hex with hash",
+			hex:      "#1a1b26",
+			alpha:    "ff",
+			expected: "1a1b26ff",
+		},
+		{
+			name:     "Hex without hash",
+			hex:      "c0caf5",
+			alpha:    "ee",
+			expected: "c0caf5ee",
+		},
+		{
+			name:     "Transparent background",
+			hex:      "#1a1b26",
+			alpha:    "ee",
+			expected: "1a1b26ee",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := hexToRGBA(tt.hex, tt.alpha)
+			if result != tt.expected {
+				t.Errorf("hexToRGBA(%s, %s) = %s, want %s", tt.hex, tt.alpha, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestFuzzelPlugin_ContentValidation tests fuzzel-specific content requirements.
+func TestFuzzelPlugin_ContentValidation(t *testing.T) {
+	palette := plugintest.CreateTestPalette(colour.ThemeDark)
+	plugin := New()
+
+	files, err := plugin.Generate(palette)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	content := string(files["tinct.ini"])
+
+	// Fuzzel-specific validations
+	requiredStrings := []string{
+		"[colors]",
+		"background=",
+		"text=",
+		"prompt=",
+		"selection=",
+	}
+
+	for _, required := range requiredStrings {
+		if !strings.Contains(content, required) {
+			t.Errorf("Generated content missing required string: %s", required)
+		}
+	}
+
+	// Verify RGBA format (8 hex chars without #)
+	if !strings.Contains(content, "background=") {
+		t.Error("Missing background color")
+	}
+}
+
+// TestFuzzelPlugin_ThemeDataMethods tests all RGBA helper methods.
+func TestFuzzelPlugin_ThemeDataMethods(t *testing.T) {
+	data := ThemeData{
+		Background: "#1a1b26",
+		Foreground: "#c0caf5",
+		Accent1:    "#7aa2f7",
+	}
+
+	tests := []struct {
+		name     string
+		method   func(string) string
+		alpha    string
+		contains string
+	}{
+		{
+			name:     "BackgroundRGBA",
+			method:   data.BackgroundRGBA,
+			alpha:    "ee",
+			contains: "1a1b26ee",
+		},
+		{
+			name:     "ForegroundRGBA",
+			method:   data.ForegroundRGBA,
+			alpha:    "ff",
+			contains: "c0caf5ff",
+		},
+		{
+			name:     "Accent1RGBA",
+			method:   data.Accent1RGBA,
+			alpha:    "ff",
+			contains: "7aa2f7ff",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.method(tt.alpha)
+			if !strings.Contains(result, tt.contains) {
+				t.Errorf("%s(%s) = %s, should contain %s", tt.name, tt.alpha, result, tt.contains)
+			}
+		})
+	}
+}

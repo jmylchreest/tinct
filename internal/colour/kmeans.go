@@ -114,10 +114,7 @@ func samplePixels(img image.Image) []color.Color {
 
 	// Large image, use grid sampling
 	// Calculate step size to get approximately maxSamples
-	step := int(math.Sqrt(float64(totalPixels) / float64(maxSamples)))
-	if step < 1 {
-		step = 1
-	}
+	step := max(int(math.Sqrt(float64(totalPixels)/float64(maxSamples))), 1)
 
 	pixels := make([]color.Color, 0, maxSamples)
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += step {
@@ -296,7 +293,7 @@ func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []i
 
 	// Calculate averages
 	centroids := make([]point3D, k)
-	for i := 0; i < k; i++ {
+	for i := range k {
 		if counts[i] > 0 {
 			centroids[i] = point3D{
 				R: sums[i].R / float64(counts[i]),

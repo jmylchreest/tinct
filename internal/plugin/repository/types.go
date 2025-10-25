@@ -10,7 +10,7 @@ type Manifest struct {
 	Description  string             `json:"description"`
 	URL          string             `json:"url"`
 	MaintainedBy string             `json:"maintained_by,omitempty"`
-	LastUpdated  time.Time          `json:"last_updated,omitempty"`
+	LastUpdated  time.Time          `json:"last_updated"`
 	Plugins      map[string]*Plugin `json:"plugins"`
 }
 
@@ -29,7 +29,7 @@ type Plugin struct {
 // Version represents a specific version of a plugin
 type Version struct {
 	Version       string               `json:"version"`
-	Released      time.Time            `json:"released,omitempty"`
+	Released      time.Time            `json:"released"`
 	Compatibility string               `json:"compatibility,omitempty"` // e.g., ">=1.0.0"
 	ChangelogURL  string               `json:"changelog_url,omitempty"`
 	Downloads     map[string]*Download `json:"downloads"`

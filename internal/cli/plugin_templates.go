@@ -7,10 +7,15 @@ import (
 	"strings"
 
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
+	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
+	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
+	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
+	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
 	"github.com/spf13/cobra"
 )
 
@@ -208,8 +213,8 @@ func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
 			// Check if it's an "already exists" error
 			if !templateForce && strings.Contains(err.Error(), "already exists") {
 				// Split multiple errors and show each skipped file
-				errorParts := strings.Split(err.Error(), "; ")
-				for _, errPart := range errorParts {
+				errorParts := strings.SplitSeq(err.Error(), "; ")
+				for errPart := range errorParts {
 					if strings.Contains(errPart, "already exists") {
 						// Extract just the filename from the path
 						if idx := strings.Index(errPart, "already exists: "); idx != -1 {
@@ -252,13 +257,23 @@ func getAvailableOutputPlugins() map[string]output.Plugin {
 	plugins := make(map[string]output.Plugin)
 
 	// Register built-in output plugins
+	dunstPlugin := dunst.New()
+	fuzzelPlugin := fuzzel.New()
 	hyprlandPlugin := hyprland.New()
+	hyprlockPlugin := hyprlock.New()
 	kittyPlugin := kitty.New()
+	swayosdPlugin := swayosd.New()
 	waybarPlugin := waybar.New()
+	wofiPlugin := wofi.New()
 
+	plugins[dunstPlugin.Name()] = dunstPlugin
+	plugins[fuzzelPlugin.Name()] = fuzzelPlugin
 	plugins[hyprlandPlugin.Name()] = hyprlandPlugin
+	plugins[hyprlockPlugin.Name()] = hyprlockPlugin
 	plugins[kittyPlugin.Name()] = kittyPlugin
+	plugins[swayosdPlugin.Name()] = swayosdPlugin
 	plugins[waybarPlugin.Name()] = waybarPlugin
+	plugins[wofiPlugin.Name()] = wofiPlugin
 
 	// TODO: Add support for external plugins when that system is implemented
 
@@ -267,16 +282,34 @@ func getAvailableOutputPlugins() map[string]output.Plugin {
 
 // getPluginTemplateLoader returns a template loader for the given plugin
 // Returns nil if the plugin doesn't support templates
-func getPluginTemplateLoader(pluginName string, plugin output.Plugin) (*template.Loader, interface{}) {
+func getPluginTemplateLoader(pluginName string, plugin output.Plugin) (*template.Loader, any) {
 	// We need to access the embedded FS from each plugin
 	// This is a bit of a workaround since the FS is not exposed in the Plugin interface
 
 	switch pluginName {
+	case "dunst":
+		// Access dunst's embedded templates
+		if dp, ok := plugin.(*dunst.Plugin); ok {
+			loader := template.New(pluginName, dunst.GetEmbeddedTemplates())
+			return loader, dp
+		}
+	case "fuzzel":
+		// Access fuzzel's embedded templates
+		if fp, ok := plugin.(*fuzzel.Plugin); ok {
+			loader := template.New(pluginName, fuzzel.GetEmbeddedTemplates())
+			return loader, fp
+		}
 	case "hyprland":
 		// Access hyprland's embedded templates
 		if hp, ok := plugin.(*hyprland.Plugin); ok {
 			loader := template.New(pluginName, hyprland.GetEmbeddedTemplates())
 			return loader, hp
+		}
+	case "hyprlock":
+		// Access hyprlock's embedded templates
+		if hlp, ok := plugin.(*hyprlock.Plugin); ok {
+			loader := template.New(pluginName, hyprlock.GetEmbeddedTemplates())
+			return loader, hlp
 		}
 	case "kitty":
 		// Access kitty's embedded templates
@@ -284,11 +317,23 @@ func getPluginTemplateLoader(pluginName string, plugin output.Plugin) (*template
 			loader := template.New(pluginName, kitty.GetEmbeddedTemplates())
 			return loader, kp
 		}
+	case "swayosd":
+		// Access swayosd's embedded templates
+		if sp, ok := plugin.(*swayosd.Plugin); ok {
+			loader := template.New(pluginName, swayosd.GetEmbeddedTemplates())
+			return loader, sp
+		}
 	case "waybar":
 		// Access waybar's embedded templates
 		if wp, ok := plugin.(*waybar.Plugin); ok {
 			loader := template.New(pluginName, waybar.GetEmbeddedTemplates())
 			return loader, wp
+		}
+	case "wofi":
+		// Access wofi's embedded templates
+		if wfp, ok := plugin.(*wofi.Plugin); ok {
+			loader := template.New(pluginName, wofi.GetEmbeddedTemplates())
+			return loader, wfp
 		}
 	}
 

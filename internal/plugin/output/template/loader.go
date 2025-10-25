@@ -23,7 +23,7 @@ type Loader struct {
 
 // Logger is a simple interface for logging messages.
 type Logger interface {
-	Printf(format string, v ...interface{})
+	Printf(format string, v ...any)
 }
 
 // New creates a new template loader for the specified plugin.
