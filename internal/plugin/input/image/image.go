@@ -55,12 +55,12 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Extract colour palette from an image file (optionally includes edge/corner regions for ambient lighting)"
+	return "Extract colour palette from an image file or HTTP(S) URL (optionally includes edge/corner regions for ambient lighting)"
 }
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&p.path, "image.path", "p", "", "Path to image file (required)")
+	cmd.Flags().StringVarP(&p.path, "image.path", "p", "", "Path to image file or HTTP(S) URL (required)")
 	cmd.Flags().StringVarP(&p.algorithm, "image.algorithm", "a", "kmeans", "Extraction algorithm (kmeans)")
 	cmd.Flags().IntVarP(&p.colours, "image.colours", "c", 16, "Number of colours to extract (1-256)")
 
@@ -74,10 +74,10 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 // Validate checks if the plugin has all required inputs configured.
 func (p *Plugin) Validate() error {
 	if p.path == "" {
-		return fmt.Errorf("image path is required (use --image.path or -p)")
+		return fmt.Errorf("image path or URL is required (use --image.path or -p)")
 	}
 	if err := image.ValidateImagePath(p.path); err != nil {
-		return fmt.Errorf("invalid image path: %w", err)
+		return fmt.Errorf("invalid image path or URL: %w", err)
 	}
 
 	// Validate colours
@@ -106,8 +106,8 @@ func (p *Plugin) Validate() error {
 // Generate creates a raw colour palette by extracting colours from the image.
 // Returns only the extracted colors - categorization happens separately.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
-	// Load the image
-	loader := image.NewFileLoader()
+	// Load the image using SmartLoader (handles both files and URLs)
+	loader := image.NewSmartLoader()
 	img, err := loader.Load(p.path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load image: %w", err)

@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
-	"io"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
+	httputil "github.com/jmylchreest/tinct/internal/util/http"
 	"github.com/spf13/cobra"
 )
 
@@ -102,31 +101,9 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 
 // fetch retrieves content from the remote URL.
 func (p *Plugin) fetch(ctx context.Context) ([]byte, error) {
-	client := &http.Client{
+	return httputil.Fetch(ctx, p.url, httputil.FetchOptions{
 		Timeout: p.timeout,
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", p.url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	})
 }
 
 // parseJSON parses JSON content and extracts colors.

@@ -57,10 +57,9 @@ builds:
 
     ldflags:
       - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-      - -X main.builtBy=goreleaser
+      - -X github.com/jmylchreest/tinct/internal/version.Version={{.Version}}
+      - -X github.com/jmylchreest/tinct/internal/version.Commit={{.Commit}}
+      - -X github.com/jmylchreest/tinct/internal/version.Date={{.Date}}
 
     # Ensure we use Go 1.25+
     mod_timestamp: "{{ .CommitTimestamp }}"
