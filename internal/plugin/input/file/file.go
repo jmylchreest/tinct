@@ -168,7 +168,7 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Colo
 
 		// Check if it's role=hex format or just hex
 		if strings.Contains(line, "=") {
-			// Parse role=hex
+			// Parse role=hex or colourN=hex
 			parts := strings.SplitN(line, "=", 2)
 			if len(parts) != 2 {
 				return nil, nil, fmt.Errorf("line %d: invalid format, expected 'role=hex' or just 'hex'", lineNum+1)
@@ -177,18 +177,29 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Colo
 			roleName := strings.TrimSpace(parts[0])
 			hex := strings.TrimSpace(parts[1])
 
-			role, err := parseColourRole(roleName)
-			if err != nil {
-				return nil, nil, fmt.Errorf("line %d: %w", lineNum+1, err)
-			}
+			// Check if it's an indexed color (colourN or colorN)
+			if strings.HasPrefix(strings.ToLower(roleName), "colour") || strings.HasPrefix(strings.ToLower(roleName), "color") {
+				// Indexed color - just add the hex without role hint
+				rgb, err := parseHex(hex)
+				if err != nil {
+					return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
+				}
+				colors = append(colors, rgbToColor(rgb))
+			} else {
+				// Role-based color
+				role, err := parseColourRole(roleName)
+				if err != nil {
+					return nil, nil, fmt.Errorf("line %d: %w", lineNum+1, err)
+				}
 
-			rgb, err := parseHex(hex)
-			if err != nil {
-				return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
-			}
+				rgb, err := parseHex(hex)
+				if err != nil {
+					return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
+				}
 
-			roleHints[role] = len(colors)
-			colors = append(colors, rgbToColor(rgb))
+				roleHints[role] = len(colors)
+				colors = append(colors, rgbToColor(rgb))
+			}
 		} else {
 			// Just a hex color
 			hex := line
@@ -247,19 +258,60 @@ func parseColourRole(name string) (colour.ColourRole, error) {
 	name = strings.ReplaceAll(name, "-", "")
 
 	roleMap := map[string]colour.ColourRole{
+		// Core semantic roles
 		"background":      colour.RoleBackground,
 		"backgroundmuted": colour.RoleBackgroundMuted,
 		"foreground":      colour.RoleForeground,
 		"foregroundmuted": colour.RoleForegroundMuted,
 		"accent1":         colour.RoleAccent1,
+		"accent1muted":    colour.RoleAccent1Muted,
 		"accent2":         colour.RoleAccent2,
+		"accent2muted":    colour.RoleAccent2Muted,
 		"accent3":         colour.RoleAccent3,
+		"accent3muted":    colour.RoleAccent3Muted,
 		"accent4":         colour.RoleAccent4,
+		"accent4muted":    colour.RoleAccent4Muted,
 		"danger":          colour.RoleDanger,
 		"warning":         colour.RoleWarning,
 		"success":         colour.RoleSuccess,
 		"info":            colour.RoleInfo,
 		"notification":    colour.RoleNotification,
+
+		// Position hints (edge/corner regions for ambient lighting)
+		"positiontopleft":     colour.RolePositionTopLeft,
+		"positiontop":         colour.RolePositionTop,
+		"positiontopright":    colour.RolePositionTopRight,
+		"positionright":       colour.RolePositionRight,
+		"positionbottomright": colour.RolePositionBottomRight,
+		"positionbottom":      colour.RolePositionBottom,
+		"positionbottomleft":  colour.RolePositionBottomLeft,
+		"positionleft":        colour.RolePositionLeft,
+
+		// Position hints (12-region grid)
+		"positiontopleftinner":     colour.RolePositionTopLeftInner,
+		"positiontopcenter":        colour.RolePositionTopCenter,
+		"positiontoprightinner":    colour.RolePositionTopRightInner,
+		"positionrighttop":         colour.RolePositionRightTop,
+		"positionrightbottom":      colour.RolePositionRightBottom,
+		"positionbottomrightinner": colour.RolePositionBottomRightInner,
+		"positionbottomcenter":     colour.RolePositionBottomCenter,
+		"positionbottomleftinner":  colour.RolePositionBottomLeftInner,
+		"positionleftbottom":       colour.RolePositionLeftBottom,
+		"positionlefttop":          colour.RolePositionLeftTop,
+
+		// Position hints (16-region grid)
+		"positiontopleftouter":      colour.RolePositionTopLeftOuter,
+		"positiontopleftcenter":     colour.RolePositionTopLeftCenter,
+		"positiontoprightcenter":    colour.RolePositionTopRightCenter,
+		"positiontoprightouter":     colour.RolePositionTopRightOuter,
+		"positionrighttopoputer":    colour.RolePositionRightTopOuter,
+		"positionrightbottomouter":  colour.RolePositionRightBottomOuter,
+		"positionbottomrightouter":  colour.RolePositionBottomRightOuter,
+		"positionbottomrightcenter": colour.RolePositionBottomRightCenter,
+		"positionbottomleftcenter":  colour.RolePositionBottomLeftCenter,
+		"positionbottomleftouter":   colour.RolePositionBottomLeftOuter,
+		"positionleftbottomouter":   colour.RolePositionLeftBottomOuter,
+		"positionlefttopoputer":     colour.RolePositionLeftTopOuter,
 	}
 
 	role, ok := roleMap[name]

@@ -4,6 +4,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
@@ -13,6 +14,7 @@ import (
 
 var (
 	// Extract command flags
+	extractInputPlugin string
 	extractFormat      string
 	extractOutput      string
 	extractShowPreview bool
@@ -21,39 +23,43 @@ var (
 // extractCmd represents the extract command
 var extractCmd = &cobra.Command{
 	Use:   "extract",
-	Short: "Extract colour palette from an image",
-	Long: `Extract a colour palette from an image using various algorithms.
+	Short: "Extract colour palette from various sources",
+	Long: `Extract a colour palette from various sources and output in multiple formats.
 
-The extract command analyses an image and generates a colour palette
-that can be used for theming applications. Output formats include a
-simple text format compatible with the file input plugin, as well as
-hex, RGB, JSON, and categorised formats.
+The extract command generates a colour palette from images, files, or remote sources.
+Output formats include a simple text format with role and position hints compatible
+with the file input plugin, as well as hex, RGB, JSON, and categorised formats.
 
-Supported image formats: JPEG, PNG, GIF, WebP
+The extract command supports all the same input options as generate (ambient extraction,
+colour overrides, etc.) but outputs the full palette with all hints instead of theme files.
 
 Examples:
-  # Extract colours in palette format (default, file input plugin compatible)
-  tinct extract -p wallpaper.jpg
+  # Extract from image in palette format (default, includes all role/position hints)
+  tinct extract -i image -p wallpaper.jpg
 
-  # Extract with preview
-  tinct extract -p wallpaper.jpg --preview
+  # Extract from image with ambient edge extraction
+  tinct extract -i image -p wallpaper.jpg --image.extractAmbience
 
-  # Extract and save to file for later use with generate
-  tinct extract -p wallpaper.jpg -o my-palette.txt
+  # Extract 32 colours with preview
+  tinct extract -i image -p wallpaper.jpg -c 32 --preview
 
-  # Extract as JSON
-  tinct extract -p wallpaper.jpg --format json
+  # Extract from HTTP(S) URL and save to file
+  tinct extract -i image -p https://example.com/image.jpg -o my-palette.txt
 
-  # Extract 24 colours in RGB format with preview
-  tinct extract -p wallpaper.jpg -c 24 -f rgb --preview
+  # Extract from remote JSON source
+  tinct extract -i remote-json --remote-json.url https://example.com/palette.json
 
-  # Extract and show categorised output
-  tinct extract -p wallpaper.jpg --format categorised --preview
+  # Extract as JSON with full metadata
+  tinct extract -i image -p wallpaper.jpg --format json
+
+  # Extract and show categorised output with preview
+  tinct extract -i image -p wallpaper.jpg --format categorised --preview
 
   # Extract for dark theme
-  tinct extract -p wallpaper.jpg --image.theme dark
+  tinct extract -i image -p wallpaper.jpg --theme dark
 
-Note: All role names use camelCase (e.g., backgroundMuted, accent1)`,
+Note: All role names use camelCase (e.g., backgroundMuted, accent1)
+      Position hints use camelCase (e.g., positionTopLeft, positionBottom)`,
 	Args: cobra.NoArgs,
 	RunE: runExtract,
 }
@@ -61,6 +67,11 @@ Note: All role names use camelCase (e.g., backgroundMuted, accent1)`,
 func init() {
 	// Note: Plugin manager is initialised in root.go and flags are registered there
 	// Define extract-specific flags
+
+	// Input plugin selection (required)
+	extractCmd.Flags().StringVarP(&extractInputPlugin, "input", "i", "image", "Input plugin (image, file, remote-css, remote-json)")
+	extractCmd.MarkFlagRequired("input")
+
 	extractCmd.Flags().StringVarP(&extractFormat, "format", "f", "palette", "output format (palette, hex, rgb, json, categorised)")
 	extractCmd.Flags().StringVarP(&extractOutput, "output", "o", "", "output file (default: stdout)")
 	extractCmd.Flags().BoolVar(&extractShowPreview, "preview", false, "show colour previews in terminal")
@@ -81,25 +92,25 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		sharedPluginManager.UpdateConfig(config)
 	}
 
-	// Get image plugin from shared manager
-	imagePlugin, ok := sharedPluginManager.GetInputPlugin("image")
+	// Get input plugin from shared manager
+	inputPlugin, ok := sharedPluginManager.GetInputPlugin(extractInputPlugin)
 	if !ok {
-		return fmt.Errorf("image plugin not found")
-	}
-
-	// Check if plugin is enabled
-	if !sharedPluginManager.IsInputEnabled(imagePlugin) {
-		return fmt.Errorf("image plugin is currently disabled")
+		availablePlugins := make([]string, 0)
+		for pluginName := range sharedPluginManager.AllInputPlugins() {
+			availablePlugins = append(availablePlugins, pluginName)
+		}
+		return fmt.Errorf("unknown input plugin: %s (available: %s)", extractInputPlugin, strings.Join(availablePlugins, ", "))
 	}
 
 	// Validate input plugin
-	if err := imagePlugin.Validate(); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+	if err := inputPlugin.Validate(); err != nil {
+		return fmt.Errorf("input plugin validation failed: %w", err)
 	}
 
-	// Generate categorised palette using image plugin
+	// Generate palette using input plugin
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Extracting colours from image...\n")
+		fmt.Fprintf(os.Stderr, " Input plugin: %s\n", inputPlugin.Name())
+		fmt.Fprintf(os.Stderr, "   %s\n", inputPlugin.Description())
 	}
 
 	// Prepare options for input plugin
@@ -111,7 +122,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	}
 
 	// Generate raw palette from input plugin
-	palette, err := imagePlugin.Generate(ctx, inputOpts)
+	palette, err := inputPlugin.Generate(ctx, inputOpts)
 	if err != nil {
 		return fmt.Errorf("failed to extract colours: %w", err)
 	}
@@ -129,7 +140,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		themeType = colour.ThemeLight
 	case "auto":
 		// Check if plugin provides a theme hint (optional)
-		if hinter, ok := imagePlugin.(input.ThemeHinter); ok {
+		if hinter, ok := inputPlugin.(input.ThemeHinter); ok {
 			hint := hinter.ThemeHint()
 			if verbose && hint != "" && hint != "auto" {
 				fmt.Fprintf(os.Stderr, "Plugin suggests theme: %s\n", hint)
@@ -190,33 +201,25 @@ func runExtract(cmd *cobra.Command, args []string) error {
 }
 
 // formatPaletteFile formats a categorised palette as a simple text file
-// compatible with the file input plugin (role=hex format).
+// with all role and position hints, compatible with the file input plugin.
+// Colors with role/position hints are listed first, then indexed colors (colourN).
 func formatPaletteFile(categorised *colour.CategorisedPalette) string {
 	output := "# Tinct colour palette\n"
-	output += "# Generated from image extraction\n"
-	output += "# Format: role=hex\n"
+	output += "# Generated from extraction\n"
+	output += "# Format: role=hex or colourN=hex\n"
 	output += "# Use with: tinct generate --input file --file.path <this-file>\n\n"
 
-	// Map of roles to output in order
-	roles := []colour.ColourRole{
-		colour.RoleBackground,
-		colour.RoleBackgroundMuted,
-		colour.RoleForeground,
-		colour.RoleForegroundMuted,
-		colour.RoleAccent1,
-		colour.RoleAccent2,
-		colour.RoleAccent3,
-		colour.RoleAccent4,
-		colour.RoleDanger,
-		colour.RoleWarning,
-		colour.RoleSuccess,
-		colour.RoleInfo,
-		colour.RoleNotification,
+	// First pass: output all colors with role/position hints
+	for _, color := range categorised.AllColours {
+		if color.Role != "" {
+			output += fmt.Sprintf("%s=%s\n", color.Role, color.Hex)
+		}
 	}
 
-	for _, role := range roles {
-		if color, ok := categorised.Get(role); ok {
-			output += fmt.Sprintf("%s=%s\n", role, color.Hex)
+	// Second pass: output indexed colors without role hints
+	for _, color := range categorised.AllColours {
+		if color.Role == "" {
+			output += fmt.Sprintf("colour%d=%s\n", color.Index, color.Hex)
 		}
 	}
 
