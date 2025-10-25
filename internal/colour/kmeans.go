@@ -143,7 +143,7 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []floa
 		}
 	}
 
-	// Initialize centroids using k-means++ algorithm
+	// Initialise centroids using k-means++ algorithm
 	centroids := e.initializeCentroidsKMeansPlusPlus(points, k)
 
 	// Track cluster assignments
@@ -199,7 +199,7 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []floa
 	return centroids, weights
 }
 
-// initializeCentroidsKMeansPlusPlus initializes centroids using k-means++ algorithm.
+// initializeCentroidsKMeansPlusPlus initialises centroids using k-means++ algorithm.
 // This provides better initial centroids than random selection.
 func (e *KMeansExtractor) initializeCentroidsKMeansPlusPlus(points []point3D, k int) []point3D {
 	if len(points) == 0 || k == 0 {
@@ -301,7 +301,7 @@ func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []i
 				B: sums[i].B / float64(counts[i]),
 			}
 		} else {
-			// Empty cluster - reinitialize randomly
+			// Empty cluster - reinitialise randomly
 			centroids[i] = points[rand.Intn(len(points))]
 		}
 	}

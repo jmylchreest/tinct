@@ -957,7 +957,7 @@ func savePluginLock(path string, lock *PluginLock) error {
 // createManagerFromLock creates a plugin manager from a lock file
 func createManagerFromLock(lock *PluginLock) *manager.Manager {
 	if lock == nil {
-		return manager.NewFromEnv()
+		return manager.NewBuilder().WithEnvConfig().Build()
 	}
 
 	config := manager.Config{
@@ -965,7 +965,7 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 		DisabledPlugins: lock.DisabledPlugins,
 	}
 
-	mgr := manager.New(config)
+	mgr := manager.NewBuilder().WithConfig(config).Build()
 
 	// Register external plugins using their actual names
 	if lock.ExternalPlugins != nil {

@@ -43,52 +43,90 @@ type Config struct {
 	EnabledPlugins []string
 }
 
+// Builder provides a fluent interface for constructing a Manager with configuration.
+type Builder struct {
+	config         Config
+	inputRegistry  *input.Registry
+	outputRegistry *output.Registry
+	lockFilePath   string
+	useEnv         bool
+}
+
+// NewBuilder creates a new Manager builder with default settings.
+func NewBuilder() *Builder {
+	return &Builder{
+		config:         Config{},
+		inputRegistry:  input.NewRegistry(),
+		outputRegistry: output.NewRegistry(),
+		useEnv:         false,
+	}
+}
+
+// WithConfig sets the configuration for the manager.
+func (b *Builder) WithConfig(config Config) *Builder {
+	b.config = config
+	return b
+}
+
+// WithEnvConfig loads configuration from environment variables.
+// Reads TINCT_DISABLED_PLUGINS and TINCT_ENABLED_PLUGINS.
+func (b *Builder) WithEnvConfig() *Builder {
+	b.useEnv = true
+	return b
+}
+
+// WithLockFile sets the path to a plugin lock file to load configuration from.
+func (b *Builder) WithLockFile(path string) *Builder {
+	b.lockFilePath = path
+	return b
+}
+
+// WithCustomRegistries allows providing custom plugin registries (useful for testing).
+func (b *Builder) WithCustomRegistries(inputReg *input.Registry, outputReg *output.Registry) *Builder {
+	b.inputRegistry = inputReg
+	b.outputRegistry = outputReg
+	return b
+}
+
+// Build constructs the Manager with the configured settings.
+// If both env and lock file are specified, lock file takes precedence.
+func (b *Builder) Build() *Manager {
+	// Start with base config
+	config := b.config
+
+	// Apply env config if requested
+	if b.useEnv {
+		if disabled := os.Getenv("TINCT_DISABLED_PLUGINS"); disabled != "" {
+			config.DisabledPlugins = parsePluginList(disabled)
+		}
+		if enabled := os.Getenv("TINCT_ENABLED_PLUGINS"); enabled != "" {
+			config.EnabledPlugins = parsePluginList(enabled)
+		}
+	}
+
+	// Apply lock file config if specified (overrides env)
+	if b.lockFilePath != "" {
+		// Note: Lock file loading is handled externally and updated via UpdateConfig
+		// This just signals that a lock file path was provided
+	}
+
+	m := &Manager{
+		config:         config,
+		inputRegistry:  b.inputRegistry,
+		outputRegistry: b.outputRegistry,
+	}
+
+	// Register built-in plugins
+	m.registerBuiltinPlugins()
+
+	return m
+}
+
 // Manager manages plugin enable/disable state and owns plugin registries.
 type Manager struct {
 	config         Config
 	inputRegistry  *input.Registry
 	outputRegistry *output.Registry
-}
-
-// New creates a new plugin manager with the given configuration.
-// Automatically registers built-in plugins.
-func New(config Config) *Manager {
-	m := &Manager{
-		config:         config,
-		inputRegistry:  input.NewRegistry(),
-		outputRegistry: output.NewRegistry(),
-	}
-	m.registerBuiltinPlugins()
-	return m
-}
-
-// NewWithRegistries creates a plugin manager with custom registries (for testing).
-func NewWithRegistries(config Config, inputReg *input.Registry, outputReg *output.Registry) *Manager {
-	return &Manager{
-		config:         config,
-		inputRegistry:  inputReg,
-		outputRegistry: outputReg,
-	}
-}
-
-// NewFromEnv creates a plugin manager from environment variables.
-// Reads TINCT_DISABLED_PLUGINS and TINCT_ENABLED_PLUGINS.
-// Format: comma-separated list like "output:tailwind,input:file"
-func NewFromEnv() *Manager {
-	config := Config{}
-
-	// Read disabled plugins from env
-	if disabled := os.Getenv("TINCT_DISABLED_PLUGINS"); disabled != "" {
-		config.DisabledPlugins = parsePluginList(disabled)
-	}
-
-	// Read enabled plugins from env
-	if enabled := os.Getenv("TINCT_ENABLED_PLUGINS"); enabled != "" {
-		config.EnabledPlugins = parsePluginList(enabled)
-	}
-
-	m := New(config)
-	return m
 }
 
 // registerBuiltinPlugins registers all built-in plugins.

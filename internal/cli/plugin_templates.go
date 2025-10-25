@@ -275,8 +275,6 @@ func getAvailableOutputPlugins() map[string]output.Plugin {
 	plugins[waybarPlugin.Name()] = waybarPlugin
 	plugins[wofiPlugin.Name()] = wofiPlugin
 
-	// TODO: Add support for external plugins when that system is implemented
-
 	return plugins
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -12,6 +13,9 @@ import (
 var (
 	// Global theme flag
 	globalTheme string
+
+	// Shared plugin manager instance used by all commands
+	sharedPluginManager *manager.Manager
 
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd = &cobra.Command{
@@ -36,6 +40,15 @@ func Execute() {
 }
 
 func init() {
+	// Initialise shared plugin manager using builder pattern
+	// Start with environment config, will be updated from lock file at runtime if present
+	sharedPluginManager = manager.NewBuilder().
+		WithEnvConfig().
+		Build()
+
+	// Register plugin flags with all commands that need them
+	registerPluginFlags()
+
 	// Global flags
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress non-error output")
@@ -49,6 +62,20 @@ func init() {
 	rootCmd.AddCommand(extractCmd)
 	rootCmd.AddCommand(generateCmd)
 	rootCmd.AddCommand(pluginsCmd)
+}
+
+// registerPluginFlags registers plugin-specific flags with commands that use them.
+func registerPluginFlags() {
+	// Register input plugin flags
+	for _, plugin := range sharedPluginManager.AllInputPlugins() {
+		plugin.RegisterFlags(extractCmd)
+		plugin.RegisterFlags(generateCmd)
+	}
+
+	// Register output plugin flags
+	for _, plugin := range sharedPluginManager.AllOutputPlugins() {
+		plugin.RegisterFlags(generateCmd)
+	}
 }
 
 // versionCmd represents the version command

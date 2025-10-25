@@ -1,4 +1,4 @@
-// Package color provides colour extraction and palette generation functionality.
+// Package color provides color extraction and palette generation functionality.
 package colour
 
 import (
@@ -1251,7 +1251,8 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	return result
 }
 
-// padRight pads a string with spaces on the right to reach the desired width
+// padRight pads a string with spaces on the right to reach the desired width.
+// If the string is already longer than or equal to the width, it is returned unchanged.
 func padRight(s string, width int) string {
 	if len(s) >= width {
 		return s

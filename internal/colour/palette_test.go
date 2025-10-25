@@ -138,7 +138,7 @@ func TestRGBHex(t *testing.T) {
 			want: "#000000",
 		},
 		{
-			name: "gray",
+			name: "grey",
 			rgb:  RGB{R: 128, G: 128, B: 128},
 			want: "#808080",
 		},

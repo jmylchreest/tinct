@@ -175,7 +175,7 @@ func cornerRect(x0, y0, w, h, sw, sh int, corner string) image.Rectangle {
 
 // edgeRect is a helper function to create a rectangle at a position along an edge.
 // The fraction parameter (0.0-1.0) determines the position along the edge.
-// For example, fraction=0.5 places the rectangle at the center of the edge.
+// For example, fraction=0.5 places the rectangle at the centre of the edge.
 // This allows flexible positioning for 8, 12, and 16 region configurations.
 // Parameters: x0, y0 = bounds origin, w, h = dimensions, sw, sh = sample size,
 //

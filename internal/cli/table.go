@@ -90,6 +90,7 @@ func (t *Table) Render() string {
 }
 
 // padRight pads a string with spaces on the right to reach the desired width.
+// If the string is already longer than or equal to the width, it is returned unchanged.
 func padRight(s string, width int) string {
 	if len(s) >= width {
 		return s

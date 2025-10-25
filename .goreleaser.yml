@@ -319,7 +319,7 @@ nfpms:
         - changelog-file-missing-in-native-package
 
     rpm:
-      summary: Color palette generator with system-wide theming
+      summary: Colour palette generator with system-wide theming
       group: Applications/System
 
 # GitHub release

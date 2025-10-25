@@ -16,9 +16,6 @@ var (
 	extractFormat      string
 	extractOutput      string
 	extractShowPreview bool
-
-	// Plugin manager for extract command
-	extractPluginManager *manager.Manager
 )
 
 // extractCmd represents the extract command
@@ -62,14 +59,7 @@ Note: All role names use camelCase (e.g., backgroundMuted, accent1)`,
 }
 
 func init() {
-	// Initialize plugin manager from environment (will be overridden by lock file at runtime)
-	extractPluginManager = manager.NewFromEnv()
-
-	// Register image plugin flags from manager
-	if imagePlugin, ok := extractPluginManager.GetInputPlugin("image"); ok {
-		imagePlugin.RegisterFlags(extractCmd)
-	}
-
+	// Note: Plugin manager is initialised in root.go and flags are registered there
 	// Define extract-specific flags
 	extractCmd.Flags().StringVarP(&extractFormat, "format", "f", "palette", "output format (palette, hex, rgb, json, categorised)")
 	extractCmd.Flags().StringVarP(&extractOutput, "output", "o", "", "output file (default: stdout)")
@@ -82,24 +72,23 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
 	// Reload plugin manager config from lock file if available (overrides env)
-	// Don't recreate the manager to preserve flag bindings
 	lock, _, err := loadPluginLock()
 	if err == nil && lock != nil {
 		config := manager.Config{
 			EnabledPlugins:  lock.EnabledPlugins,
 			DisabledPlugins: lock.DisabledPlugins,
 		}
-		extractPluginManager.UpdateConfig(config)
+		sharedPluginManager.UpdateConfig(config)
 	}
 
-	// Get image plugin from manager
-	imagePlugin, ok := extractPluginManager.GetInputPlugin("image")
+	// Get image plugin from shared manager
+	imagePlugin, ok := sharedPluginManager.GetInputPlugin("image")
 	if !ok {
 		return fmt.Errorf("image plugin not found")
 	}
 
 	// Check if plugin is enabled
-	if !extractPluginManager.IsInputEnabled(imagePlugin) {
+	if !sharedPluginManager.IsInputEnabled(imagePlugin) {
 		return fmt.Errorf("image plugin is currently disabled")
 	}
 
@@ -235,23 +224,29 @@ func formatPaletteFile(categorised *colour.CategorisedPalette) string {
 }
 
 // formatHexFromCategorised formats a categorised palette as hex colour codes.
-// Color blocks are always shown.
+// If showPreview is true, color blocks are displayed before each hex value.
 func formatHexFromCategorised(categorised *colour.CategorisedPalette, showPreview bool) string {
 	output := ""
 	for _, color := range categorised.AllColours {
-		// Always show color preview blocks
-		output += colour.FormatColourWithPreview(color.RGB, 8) + "\n"
+		if showPreview {
+			output += colour.FormatColourWithPreview(color.RGB, 8) + "\n"
+		} else {
+			output += color.Hex + "\n"
+		}
 	}
 	return output
 }
 
 // formatRGBFromCategorised formats a categorised palette as RGB values.
-// Color blocks are always shown.
+// If showPreview is true, color blocks are displayed before each RGB value.
 func formatRGBFromCategorised(categorised *colour.CategorisedPalette, showPreview bool) string {
 	output := ""
 	for _, color := range categorised.AllColours {
-		// Always show color preview blocks
-		output += colour.FormatColourWithPreview(color.RGB, 8) + "  " + color.RGB.String() + "\n"
+		if showPreview {
+			output += colour.FormatColourWithPreview(color.RGB, 8) + "  " + color.RGB.String() + "\n"
+		} else {
+			output += color.RGB.String() + "\n"
+		}
 	}
 	return output
 }

@@ -12,6 +12,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	// RegionWeightFactor determines how much weight region colors receive
+	// relative to main palette colors. Region colors get 10% of the total weight
+	// to avoid over-representing edge/corner colors in the final palette.
+	RegionWeightFactor = 0.1
+
+	// MainColorWeightRatio is the proportion of total weight allocated to
+	// main palette colors when region extraction is enabled (90%).
+	MainColorWeightRatio = 0.9
+)
+
 // Plugin implements the input.Plugin interface for image-based colour extraction.
 type Plugin struct {
 	path      string
@@ -144,12 +155,11 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		numMainColors := len(palette.Colors)
 		numRegionColors := len(regionPalette.Colors)
 
-		// Calculate weight reduction factor for region colors (10% of average palette color weight)
-		regionWeightReduction := 0.1
+		// Calculate weight for region colors using the configured factor
 		if palette.Weights != nil {
 			// Calculate average weight per palette color
 			avgPaletteWeight := 1.0 / float64(numMainColors)
-			regionWeightPerColor := avgPaletteWeight * regionWeightReduction / float64(numRegionColors)
+			regionWeightPerColor := avgPaletteWeight * RegionWeightFactor / float64(numRegionColors)
 
 			// Create region weights
 			regionWeights := make([]float64, numRegionColors)
@@ -173,8 +183,8 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 			// No weights in main palette, create them
 			// Main colors get equal weight, region colors get reduced weight
 			totalColors := numMainColors + numRegionColors
-			mainWeight := 0.9 / float64(numMainColors)     // 90% of total weight
-			regionWeight := 0.1 / float64(numRegionColors) // 10% of total weight
+			mainWeight := MainColorWeightRatio / float64(numMainColors)
+			regionWeight := RegionWeightFactor / float64(numRegionColors)
 
 			weights := make([]float64, totalColors)
 			for i := range numMainColors {

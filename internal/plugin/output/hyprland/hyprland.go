@@ -6,26 +6,17 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/util"
 	"github.com/spf13/cobra"
 )
-
-// verboseLogger implements the template.Logger interface for verbose output.
-type verboseLogger struct {
-	out io.Writer
-}
-
-func (l *verboseLogger) Printf(format string, v ...any) {
-	fmt.Fprintf(l.out, format+"\n", v...)
-}
 
 //go:embed *.tmpl
 var templates embed.FS
@@ -139,7 +130,7 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 	// Load template with custom override support
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
-		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
+		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
 	}
 	tmplContent, fromCustom, err := loader.Load("tinct-colours.conf.tmpl")
 	if err != nil {
@@ -171,7 +162,7 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 	// Load template with custom override support
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
-		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
+		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
 	}
 	tmplContent, fromCustom, err := loader.Load("tinct.conf.tmpl")
 	if err != nil {
@@ -240,7 +231,7 @@ func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData 
 		if color, ok := palette.Get(role); ok {
 			data.Colours = append(data.Colours, ColourVariable{
 				Name:     name,
-				RGBHex:   stripHash(color.Hex),
+				RGBHex:   util.StripHash(color.Hex),
 				RGBDecim: fmt.Sprintf("%d,%d,%d", color.RGB.R, color.RGB.G, color.RGB.B),
 			})
 		}
@@ -250,17 +241,12 @@ func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData 
 	for _, color := range palette.AllColours {
 		data.Indexed = append(data.Indexed, ColourVariable{
 			Name:     fmt.Sprintf("colour%d", color.Index),
-			RGBHex:   stripHash(color.Hex),
+			RGBHex:   util.StripHash(color.Hex),
 			RGBDecim: fmt.Sprintf("%d,%d,%d", color.RGB.R, color.RGB.G, color.RGB.B),
 		})
 	}
 
 	return data
-}
-
-// stripHash removes the # prefix from a hex colour string.
-func stripHash(hex string) string {
-	return strings.TrimPrefix(hex, "#")
 }
 
 // PreExecute checks if hyprland is available before generating the theme.

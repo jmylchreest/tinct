@@ -25,14 +25,14 @@ func NewPalette(colors []color.Color) *Palette {
 
 // NewPaletteWithWeights creates a new Palette with colors and their relative weights.
 // Weights represent the frequency/volume of each color (e.g., from k-means cluster sizes).
-// Weights should be normalized (sum to 1.0) but will be normalized if not.
+// Weights should be normalised (sum to 1.0) but will be normalised if not.
 func NewPaletteWithWeights(colors []color.Color, weights []float64) *Palette {
 	if len(weights) != len(colors) {
 		// Fallback to equal weights if mismatch
 		return NewPalette(colors)
 	}
 
-	// Normalize weights to sum to 1.0
+	// Normalise weights to sum to 1.0
 	sum := 0.0
 	for _, w := range weights {
 		sum += w

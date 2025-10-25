@@ -122,7 +122,7 @@ func getRepoManager() (*repository.Manager, error) {
 	var err error
 	repoManager, err = repository.NewManager(repoConfigPath, repoCachePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize repository manager: %w", err)
+		return nil, fmt.Errorf("failed to initialise repository manager: %w", err)
 	}
 
 	return repoManager, nil

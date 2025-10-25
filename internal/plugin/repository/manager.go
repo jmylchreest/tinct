@@ -31,7 +31,7 @@ func NewManager(configPath, cachePath string) (*Manager, error) {
 		},
 	}
 
-	// Load or initialize config
+	// Load or initialise config
 	if err := m.loadConfig(); err != nil {
 		// If file doesn't exist, create default config
 		if os.IsNotExist(err) {
@@ -418,7 +418,7 @@ func (m *Manager) loadConfig() error {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	// Initialize cache if nil
+	// Initialise cache if nil
 	if config.Cache == nil {
 		config.Cache = &CacheConfig{
 			TTL:        3600,

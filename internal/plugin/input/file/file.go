@@ -239,8 +239,9 @@ func (p *Plugin) parseOverrides(overrides []string) ([]color.Color, map[colour.C
 }
 
 // parseColourRole parses a role name string into a ColourRole constant.
+// Accepts both British English (colour) and American English (color) spelling.
 func parseColourRole(name string) (colour.ColourRole, error) {
-	// Normalize the name - convert to lowercase and replace underscores/hyphens
+	// Normalise the name - convert to lowercase and replace underscores/hyphens
 	name = strings.ToLower(name)
 	name = strings.ReplaceAll(name, "_", "")
 	name = strings.ReplaceAll(name, "-", "")

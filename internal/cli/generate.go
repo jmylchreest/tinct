@@ -15,13 +15,11 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/spf13/cobra"
 )
 
 var (
-	// Global plugin manager
-	pluginManager *manager.Manager
-
 	// Generate command flags
 	generateInputPlugin string
 	generateOutputs     []string
@@ -36,59 +34,12 @@ var (
 var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate configuration files from a colour palette",
-	Long: `Generate configuration files for various applications from a colour palette.
-
-The palette can be created from an image, loaded from a file, or built from
-command-line colour specifications. Generated files are written to their
-default locations or a custom output directory.
-
-Input Plugins:
-  image  - Extract colours from an image file
-  file   - Load palette from file or build from colour specifications
-
-Output Plugins:
-  (dynamically listed based on enabled plugins)
-
-Examples:
-  # From image - generate all outputs
-  tinct generate --input image -p wallpaper.jpg
-
-  # From palette file - specific output
-  tinct generate --input file -p theme.json --outputs hyprland
-
-  # Pure manual - build from colour specs
-  tinct generate --input file \
-    --colour background=#1e1e2e \
-    --colour foreground=#cdd6f4 \
-    --colour accent1=#f38ba8
-
-  # File with overrides
-  tinct generate --input file -p base.json \
-    --colour accent1=#ff0000
-
-  # With custom output options
-  tinct generate --input image -p wall.jpg \
-    --outputs hyprland \
-    --hyprland.output-dir ~/.config/hypr/custom
-
-  # Preview before generating
-  tinct generate --input image -p wall.jpg --preview --dry-run
-
-  # With theme preference
-  tinct generate --input image -p wall.jpg --theme dark
-
-  # Pass args to specific plugins (JSON format)
-  tinct generate --input image -p wall.jpg \
-    --plugin-args myinput='{"seed":42,"count":20}' \
-    --plugin-args myplugin='{"format":"extended"}'
-
-Note: All role names use camelCase (e.g., backgroundMuted, accent1)`,
-	RunE: runGenerate,
+	Long:  "", // Set dynamically in Help()
+	RunE:  runGenerate,
 }
 
 func init() {
-	// Initialize plugin manager from environment (will be overridden by lock file at runtime)
-	pluginManager = manager.NewFromEnv()
+	// Note: Plugin manager is initialised in root.go and flags are registered there
 
 	// Input plugin selection (required)
 	generateCmd.Flags().StringVarP(&generateInputPlugin, "input", "i", "", "Input plugin (required: image, file)")
@@ -104,31 +55,25 @@ func init() {
 	generateCmd.Flags().BoolVarP(&generateVerbose, "verbose", "v", false, "Verbose output")
 	generateCmd.Flags().StringToStringVar(&generatePluginArgs, "plugin-args", nil, "Plugin-specific arguments (key=value format, repeatable for multiple plugins)")
 
-	// Register plugin flags
-	for _, plugin := range pluginManager.AllInputPlugins() {
-		plugin.RegisterFlags(generateCmd)
-	}
-	for _, plugin := range pluginManager.AllOutputPlugins() {
-		plugin.RegisterFlags(generateCmd)
-	}
-
-	// Update help text with enabled plugins
-	generateCmd.Long = buildGenerateHelp()
+	// Override Help method to generate dynamic help text
+	generateCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		cmd.Long = buildGenerateHelp()
+		cmd.Parent().HelpFunc()(cmd, args)
+	})
 }
 
 // runGenerate executes the generate command.
 func runGenerate(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	// Reload plugin manager config from lock file if available (overrides env)
-	// Don't recreate the manager to preserve flag bindings
+	// Reload shared plugin manager config from lock file if available (overrides env)
 	lock, _, err := loadPluginLock()
 	if err == nil && lock != nil {
 		config := manager.Config{
 			EnabledPlugins:  lock.EnabledPlugins,
 			DisabledPlugins: lock.DisabledPlugins,
 		}
-		pluginManager.UpdateConfig(config)
+		sharedPluginManager.UpdateConfig(config)
 
 		// Register external plugins from lock file
 		if lock.ExternalPlugins != nil {
@@ -146,13 +91,13 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 					desc = fmt.Sprintf("External plugin (source: %s)", meta.Source)
 				}
 
-				if err := pluginManager.RegisterExternalPlugin(pluginName, meta.Type, meta.Path, desc); err != nil {
+				if err := sharedPluginManager.RegisterExternalPlugin(pluginName, meta.Type, meta.Path, desc); err != nil {
 					if generateVerbose {
 						fmt.Fprintf(os.Stderr, " Failed to register external plugin '%s': %v\n", pluginName, err)
 					}
 				} else {
 					// Set dry-run mode on external plugin
-					if err := setPluginDryRun(pluginManager, pluginName, meta.Type, generateDryRun); err != nil {
+					if err := setPluginDryRun(sharedPluginManager, pluginName, meta.Type, generateDryRun); err != nil {
 						if generateVerbose {
 							fmt.Fprintf(os.Stderr, " Failed to set dry-run for plugin '%s': %v\n", pluginName, err)
 						}
@@ -160,7 +105,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 					// Set plugin args if provided
 					if argsJSON, ok := generatePluginArgs[pluginName]; ok {
-						if err := setPluginArgs(pluginManager, pluginName, meta.Type, argsJSON); err != nil {
+						if err := setPluginArgs(sharedPluginManager, pluginName, meta.Type, argsJSON); err != nil {
 							if generateVerbose {
 								fmt.Fprintf(os.Stderr, " Failed to set args for plugin '%s': %v\n", pluginName, err)
 							}
@@ -172,10 +117,10 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get input plugin
-	plugin, ok := pluginManager.GetInputPlugin(generateInputPlugin)
+	plugin, ok := sharedPluginManager.GetInputPlugin(generateInputPlugin)
 	if !ok {
 		availablePlugins := make([]string, 0)
-		for pluginName := range pluginManager.AllInputPlugins() {
+		for pluginName := range sharedPluginManager.AllInputPlugins() {
 			availablePlugins = append(availablePlugins, pluginName)
 		}
 		return fmt.Errorf("unknown input plugin: %s (available: %s)", generateInputPlugin, strings.Join(availablePlugins, ", "))
@@ -278,16 +223,16 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	var outputPlugins []output.Plugin
 	if len(generateOutputs) == 1 && generateOutputs[0] == "all" {
 		// Run all enabled plugins (filtered by manager)
-		for _, plugin := range pluginManager.FilterOutputPlugins() {
+		for _, plugin := range sharedPluginManager.FilterOutputPlugins() {
 			outputPlugins = append(outputPlugins, plugin)
 		}
 	} else {
 		// Run specific plugins - when plugins are specified on CLI, they are enabled for this execution
 		for _, name := range generateOutputs {
-			plugin, ok := pluginManager.GetOutputPlugin(name)
+			plugin, ok := sharedPluginManager.GetOutputPlugin(name)
 			if !ok {
 				availablePlugins := make([]string, 0)
-				for pluginName := range pluginManager.AllOutputPlugins() {
+				for pluginName := range sharedPluginManager.AllOutputPlugins() {
 					availablePlugins = append(availablePlugins, pluginName)
 				}
 				return fmt.Errorf("unknown output plugin: %s (available: %s)", name, strings.Join(availablePlugins, ", "))
@@ -566,9 +511,9 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose bool, dry
 	return nil
 }
 
-// getVersion returns the current version (placeholder for actual version)
+// getVersion returns the current version
 func getVersion() string {
-	return "dev" // TODO: Replace with actual version from version package
+	return version.Short()
 }
 
 // buildGenerateHelp dynamically builds the help text with enabled plugins.
@@ -588,9 +533,9 @@ Input Plugins:
 Output Plugins:
 `
 
-	// List enabled plugins (filtered by manager)
+	// List enabled plugins (filtered by shared manager)
 	enabledPlugins := []string{}
-	for _, plugin := range pluginManager.FilterOutputPlugins() {
+	for _, plugin := range sharedPluginManager.FilterOutputPlugins() {
 		enabledPlugins = append(enabledPlugins, fmt.Sprintf("  %-12s - %s", plugin.Name(), plugin.Description()))
 	}
 

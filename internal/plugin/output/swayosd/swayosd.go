@@ -6,7 +6,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,18 +13,11 @@ import (
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/util"
 	"github.com/spf13/cobra"
 )
-
-// verboseLogger implements the template.Logger interface for verbose output.
-type verboseLogger struct {
-	out io.Writer
-}
-
-func (l *verboseLogger) Printf(format string, v ...any) {
-	fmt.Fprintf(l.out, format+"\n", v...)
-}
 
 //go:embed *.tmpl
 var templates embed.FS
@@ -114,7 +106,7 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 	// Load template with custom override support
 	loader := tmplloader.New("swayosd", templates)
 	if p.verbose {
-		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
+		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
 	}
 	tmplContent, fromCustom, err := loader.Load("style.css.tmpl")
 	if err != nil {
@@ -157,24 +149,26 @@ type ThemeData struct {
 	Warning         string
 	Success         string
 	Info            string
+	Notification    string
 }
 
 // prepareThemeData converts a categorised palette to SwayOSD theme data.
 func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData {
 	return ThemeData{
 		SourceTheme:     palette.ThemeType.String(),
-		Background:      p.getColour(palette, colour.RoleBackground, "#1a1b26"),
-		BackgroundMuted: p.getColour(palette, colour.RoleBackgroundMuted, "#16161e"),
-		Foreground:      p.getColour(palette, colour.RoleForeground, "#c0caf5"),
-		ForegroundMuted: p.getColour(palette, colour.RoleForegroundMuted, "#a9b1d6"),
-		Accent1:         p.getColour(palette, colour.RoleAccent1, "#7aa2f7"),
-		Accent2:         p.getColour(palette, colour.RoleAccent2, "#bb9af7"),
-		Accent3:         p.getColour(palette, colour.RoleAccent3, "#7dcfff"),
-		Accent4:         p.getColour(palette, colour.RoleAccent4, "#9ece6a"),
-		Danger:          p.getColour(palette, colour.RoleDanger, "#f7768e"),
-		Warning:         p.getColour(palette, colour.RoleWarning, "#e0af68"),
-		Success:         p.getColour(palette, colour.RoleSuccess, "#9ece6a"),
-		Info:            p.getColour(palette, colour.RoleInfo, "#7aa2f7"),
+		Background:      util.GetColour(palette, colour.RoleBackground, "#1e1e2e"),
+		BackgroundMuted: util.GetColour(palette, colour.RoleBackgroundMuted, "#313244"),
+		Foreground:      util.GetColour(palette, colour.RoleForeground, "#cdd6f4"),
+		ForegroundMuted: util.GetColour(palette, colour.RoleForegroundMuted, "#a6adc8"),
+		Accent1:         util.GetColour(palette, colour.RoleAccent1, "#89b4fa"),
+		Accent2:         util.GetColour(palette, colour.RoleAccent2, "#f38ba8"),
+		Accent3:         util.GetColour(palette, colour.RoleAccent3, "#a6e3a1"),
+		Accent4:         util.GetColour(palette, colour.RoleAccent4, "#f9e2af"),
+		Danger:          util.GetColour(palette, colour.RoleDanger, "#f38ba8"),
+		Warning:         util.GetColour(palette, colour.RoleWarning, "#f9e2af"),
+		Success:         util.GetColour(palette, colour.RoleSuccess, "#a6e3a1"),
+		Info:            util.GetColour(palette, colour.RoleInfo, "#89b4fa"),
+		Notification:    util.GetColour(palette, colour.RoleNotification, "#cba6f7"),
 	}
 }
 
@@ -344,14 +338,6 @@ func hexToDec(hex string) int {
 	var result int
 	fmt.Sscanf(hex, "%x", &result)
 	return result
-}
-
-// getColour retrieves a colour by role with a fallback.
-func (p *Plugin) getColour(palette *colour.CategorisedPalette, role colour.ColourRole, fallback string) string {
-	if c, ok := palette.Get(role); ok {
-		return c.Hex
-	}
-	return fallback
 }
 
 // PreExecute checks if swayosd is available and config directory exists.

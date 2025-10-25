@@ -1,4 +1,4 @@
-// Package waybar provides an output plugin for Waybar status bar color themes.
+// Package waybar provides an output plugin for Waybar status bar colour themes.
 package waybar
 
 import (
@@ -6,7 +6,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,18 +13,10 @@ import (
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/spf13/cobra"
 )
-
-// verboseLogger implements the template.Logger interface for verbose output.
-type verboseLogger struct {
-	out io.Writer
-}
-
-func (l *verboseLogger) Printf(format string, v ...any) {
-	fmt.Fprintf(l.out, format+"\n", v...)
-}
 
 //go:embed *.tmpl
 var templates embed.FS
@@ -129,7 +120,7 @@ func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, err
 	// Load template with custom override support
 	loader := tmplloader.New("waybar", templates)
 	if p.verbose {
-		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
+		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
 	}
 	tmplContent, fromCustom, err := loader.Load("tinct-colours.css.tmpl")
 	if err != nil {
@@ -161,7 +152,7 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 	// Load template with custom override support
 	loader := tmplloader.New("waybar", templates)
 	if p.verbose {
-		loader.WithVerbose(true, &verboseLogger{out: os.Stderr})
+		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
 	}
 	tmplContent, fromCustom, err := loader.Load("tinct.css.tmpl")
 	if err != nil {
