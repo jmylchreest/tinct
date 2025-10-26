@@ -184,20 +184,20 @@ This ensures that:
 ```bash
 # Verbose mode shows all hooks
 $ tinct generate -i image -p wallpaper.jpg --outputs kitty --verbose
-→ Running global pre-generate hook: /home/user/.config/tinct/hooks/pre-generate.sh
+Running global pre-generate hook: /home/user/.config/tinct/hooks/pre-generate.sh
    Starting theme generation...
-⊘ Skipping kitty: kitty executable not found on $PATH
-→ Running global post-generate hook: /home/user/.config/tinct/hooks/post-generate.sh
+Skipping kitty: kitty executable not found on $PATH
+Running global post-generate hook: /home/user/.config/tinct/hooks/post-generate.sh
    Theme generation complete!
 
 # Post-hook success (verbose mode)
 $ tinct generate -i image -p wallpaper.jpg --outputs kitty --kitty.reload --verbose
-→ Running global pre-generate hook: /home/user/.config/tinct/hooks/pre-generate.sh
+Running global pre-generate hook: /home/user/.config/tinct/hooks/pre-generate.sh
  Output plugin: kitty
    Generate Kitty terminal colour theme configuration
    /home/user/.config/kitty/tinct.conf (2190 bytes)
    kitty post-hook completed
-→ Running global post-generate hook: /home/user/.config/tinct/hooks/post-generate.sh
+Running global post-generate hook: /home/user/.config/tinct/hooks/post-generate.sh
 
 # Post-hook failure (always shown)
 $ tinct generate -i image -p wallpaper.jpg --outputs kitty --kitty.reload
@@ -412,7 +412,7 @@ func TestPlugin_PostExecute_Disabled(t *testing.T) {
 ```bash
 # Test pre-hook skipping
 $ tinct generate -i image -p test.jpg --outputs myapp --myapp.output-dir /nonexistent --verbose
-⊘ Skipping myapp: config directory not found: /nonexistent
+Skipping myapp: config directory not found: /nonexistent
 
 # Test post-hook execution
 $ tinct generate -i image -p test.jpg --outputs myapp --myapp.reload

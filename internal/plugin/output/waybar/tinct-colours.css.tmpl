@@ -13,8 +13,9 @@
  * ============================================================================ */
 
 {{- range allRoles . }}
-{{- $color := get $ . }}
-{{- $varName := . | replace "_" "-" }}
+{{- $roleName := printf "%s" . }}
+{{- $color := get $ $roleName }}
+{{- $varName := replace $roleName "_" "-" }}
 @define-color {{ $varName }} {{ $color | hex }};
 {{- end }}
 

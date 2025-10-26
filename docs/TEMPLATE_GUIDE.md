@@ -563,7 +563,7 @@ External plugins receive a JSON palette with this structure:
 
 ### Key Fields
 
-- **`colours`**: Map of role name → color object
+- **`colours`**: Map of role name to color object
 - **`rgba`**: **NEW** - Always includes alpha channel (0-255)
 - **`rgb`**: Legacy field (backwards compatible, no alpha)
 - **`hex`**: Always `#RRGGBB` format (no alpha)

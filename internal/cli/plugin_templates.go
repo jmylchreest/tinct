@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/jmylchreest/tinct/internal/plugin/output"
@@ -16,6 +17,7 @@ var (
 	templateOutputPlugins []string
 	templateForce         bool
 	templateVerbose       bool
+	templateLocation      string
 )
 
 // pluginTemplatesCmd represents the plugins templates command
@@ -53,11 +55,14 @@ This allows you to customize the templates used for generating output files.
 By default, all available plugins will have their templates dumped.
 
 Use -o/--output-plugins to specify which plugins to dump.
+Use -l/--location to specify a custom output directory.
 
 Examples:
   tinct plugins templates dump
   tinct plugins templates dump -o hyprland,kitty
-  tinct plugins templates dump -o hyprland --force`,
+  tinct plugins templates dump -o hyprland --force
+  tinct plugins templates dump -l ./templates
+  tinct plugins templates dump -l ~/my-themes/templates -o hyprland,kitty`,
 	RunE: runPluginTemplatesDump,
 }
 
@@ -73,6 +78,7 @@ func init() {
 	pluginTemplatesDumpCmd.Flags().StringSliceVarP(&templateOutputPlugins, "output-plugins", "o", []string{}, "comma-separated list of output plugins (default: all)")
 	pluginTemplatesDumpCmd.Flags().BoolVarP(&templateForce, "force", "f", false, "overwrite existing custom templates")
 	pluginTemplatesDumpCmd.Flags().BoolVarP(&templateVerbose, "verbose", "v", false, "show verbose output")
+	pluginTemplatesDumpCmd.Flags().StringVarP(&templateLocation, "location", "l", "", "custom location to dump templates (default: ~/.config/tinct/templates)")
 
 	// List flags
 	pluginTemplatesListCmd.Flags().StringSliceVarP(&templateOutputPlugins, "output-plugins", "o", []string{}, "comma-separated list of output plugins to list (default: all)")
@@ -169,9 +175,24 @@ func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no matching plugins found")
 	}
 
+	// Expand the custom location if provided
+	customBase := templateLocation
+	if customBase != "" {
+		// Expand tilde to home directory if present
+		if strings.HasPrefix(customBase, "~/") {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return fmt.Errorf("failed to get home directory: %w", err)
+			}
+			customBase = filepath.Join(home, customBase[2:])
+		}
+		fmt.Printf("Dumping templates to custom location: %s\n", customBase)
+		fmt.Println()
+	}
+
 	totalDumped := 0
 	for pluginName, plugin := range plugins {
-		loader := getPluginTemplateLoader(pluginName, plugin)
+		loader := getPluginTemplateLoaderWithBase(pluginName, plugin, customBase)
 		if loader == nil {
 			if templateVerbose {
 				fmt.Printf("Skipping %s: no templates\n", pluginName)
@@ -248,6 +269,12 @@ func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
 // getPluginTemplateLoader returns a template loader for the given plugin.
 // Returns nil if the plugin doesn't support templates (i.e., doesn't implement TemplateProvider).
 func getPluginTemplateLoader(pluginName string, plugin output.Plugin) *template.Loader {
+	return getPluginTemplateLoaderWithBase(pluginName, plugin, "")
+}
+
+// getPluginTemplateLoaderWithBase returns a template loader for the given plugin with an optional custom base directory.
+// Returns nil if the plugin doesn't support templates (i.e., doesn't implement TemplateProvider).
+func getPluginTemplateLoaderWithBase(pluginName string, plugin output.Plugin, customBase string) *template.Loader {
 	// Check if the plugin implements the TemplateProvider interface
 	templateProvider, ok := plugin.(output.TemplateProvider)
 	if !ok {
@@ -266,6 +293,13 @@ func getPluginTemplateLoader(pluginName string, plugin output.Plugin) *template.
 		return nil
 	}
 
-	// Create and return the loader
-	return template.New(pluginName, embedFS)
+	// Create the loader
+	loader := template.New(pluginName, embedFS)
+
+	// Apply custom base if provided
+	if customBase != "" {
+		loader = loader.WithCustomBase(customBase)
+	}
+
+	return loader
 }

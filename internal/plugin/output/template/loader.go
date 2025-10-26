@@ -42,6 +42,13 @@ func New(pluginName string, embedFS embed.FS) *Loader {
 	}
 }
 
+// WithCustomBase sets a custom base directory for template storage.
+// This is useful for dumping templates to a non-default location.
+func (l *Loader) WithCustomBase(customBase string) *Loader {
+	l.customBase = customBase
+	return l
+}
+
 // WithVerbose enables verbose logging for template operations.
 func (l *Loader) WithVerbose(verbose bool, logger Logger) *Loader {
 	l.verbose = verbose

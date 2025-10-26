@@ -12,10 +12,11 @@
 # ============================================================================
 
 {{- range allRoles . }}
-{{- $color := get $ . }}
-# {{ . }}
-${{ . }}RGB = rgb({{ $color | hex | trimPrefix "#" }})
-${{ . }}RGBDec = {{ $color | rgbDecimal }}
+{{- $roleName := printf "%s" . }}
+{{- $color := get $ $roleName }}
+# {{ $roleName }}
+${{ $roleName }}RGB = rgb({{ $color | hex | trimPrefix "#" }})
+${{ $roleName }}RGBDec = {{ $color | rgbDecimal }}
 {{- end }}
 
 # ============================================================================

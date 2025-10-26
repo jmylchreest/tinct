@@ -198,7 +198,7 @@ frame_color = "#7aa2f7cc"   # Semi-transparent (80% opacity)
 Extract the default template for customization:
 
 ```bash
-tinct plugins templates dump --plugin dunst --output-dir ~/.config/tinct/templates/dunst
+tinct plugins templates dump -o dunst -l ~/.config/tinct/templates/dunst
 ```
 
 This creates `~/.config/tinct/templates/dunst/tinct.dunstrc.tmpl` which you can modify.
@@ -388,11 +388,11 @@ which dunst
 Dunst's `.include` directive requires a path:
 
 ```ini
-# ✓ Correct
+# Correct
 .include ~/.config/dunst/tinct.dunstrc
 .include /home/username/.config/dunst/tinct.dunstrc
 
-# ✗ Incorrect (use source instead)
+# Incorrect (use source instead)
 source = tinct.dunstrc
 ```
 
@@ -401,11 +401,11 @@ source = tinct.dunstrc
 Ensure you're using the correct format:
 
 ```ini
-# ✓ Correct - quoted hex colors
+# Correct - quoted hex colors
 background = "#1a1b26"
 frame_color = "#7aa2f7cc"
 
-# ✗ Incorrect - unquoted (may work but not recommended)
+# Incorrect - unquoted (may work but not recommended)
 background = #1a1b26
 ```
 

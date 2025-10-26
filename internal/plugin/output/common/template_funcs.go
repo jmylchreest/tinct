@@ -3,6 +3,7 @@ package common
 
 import (
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
@@ -42,6 +43,13 @@ func TemplateFuncs() template.FuncMap {
 		"allRoles":  allRolesFunc,
 		"allColors": allColorsFunc,
 		"count":     countFunc,
+
+		// String manipulation
+		"trimPrefix": strings.TrimPrefix,
+		"trimSuffix": strings.TrimSuffix,
+		"replace":    strings.ReplaceAll,
+		"toLower":    strings.ToLower,
+		"toUpper":    strings.ToUpper,
 	}
 }
 

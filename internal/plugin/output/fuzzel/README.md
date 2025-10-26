@@ -168,7 +168,7 @@ border=7aa2f7ff
 Extract the default template for customization:
 
 ```bash
-tinct plugins templates dump --plugin fuzzel --output-dir ~/.config/tinct/templates/fuzzel
+tinct plugins templates dump -o fuzzel -l ~/.config/tinct/templates/fuzzel
 ```
 
 This creates `~/.config/tinct/templates/fuzzel/tinct.ini.tmpl` which you can modify.
@@ -265,11 +265,11 @@ which fuzzel
 Fuzzel's `include` directive requires absolute paths or `~/` prefix:
 
 ```ini
-# ✓ Correct
+# Correct
 include=~/.config/fuzzel/tinct.ini
 include=/home/username/.config/fuzzel/tinct.ini
 
-# ✗ Incorrect
+# Incorrect
 include=tinct.ini
 include=./tinct.ini
 ```
@@ -282,6 +282,6 @@ include=./tinct.ini
 
 ## See Also
 
-- [Rofi Plugin](../rofi/README.md) - Alternative application launcher
+- [Rofi Plugin](../rofi/README.md) - Alternative application launcher (Coming Soon)
 - [Wofi Plugin](../wofi/README.md) - Another Wayland launcher
 - [Plugin Development Guide](../../../../docs/PLUGIN-STANDARD.md)

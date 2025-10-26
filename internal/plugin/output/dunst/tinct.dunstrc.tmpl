@@ -6,7 +6,7 @@
 #
 # Or copy the urgency sections to your existing dunstrc
 #
-# Detected theme: {{ .SourceTheme }}
+# Detected theme: {{ themeType . }}
 
 # ============================================================================
 # Urgency: Low
@@ -15,16 +15,16 @@
 
 [urgency_low]
     # Background color
-    background = "{{ .Background }}"
+    background = "{{ (get . "background") | hex }}"
 
     # Text color
-    foreground = "{{ .ForegroundMuted }}"
+    foreground = "{{ (get . "foregroundMuted") | hex }}"
 
     # Frame/border color
-    frame_color = "{{ .InfoWithAlpha "cc" }}"
+    frame_color = "{{ withAlpha (get . "info") 0.8 | hex }}"
 
     # Highlight color (for progress bars)
-    highlight = "{{ .Info }}"
+    highlight = "{{ (get . "info") | hex }}"
 
     # Timeout in seconds (0 = default from global config)
     timeout = 10
@@ -36,16 +36,16 @@
 
 [urgency_normal]
     # Background color
-    background = "{{ .Background }}"
+    background = "{{ (get . "background") | hex }}"
 
     # Text color
-    foreground = "{{ .Foreground }}"
+    foreground = "{{ (get . "foreground") | hex }}"
 
     # Frame/border color
-    frame_color = "{{ .Accent1 }}"
+    frame_color = "{{ (get . "accent1") | hex }}"
 
     # Highlight color (for progress bars)
-    highlight = "{{ .Accent1 }}"
+    highlight = "{{ (get . "accent1") | hex }}"
 
     # Timeout in seconds (0 = default from global config)
     timeout = 10
@@ -57,16 +57,16 @@
 
 [urgency_critical]
     # Background color
-    background = "{{ .DangerWithAlpha "ee" }}"
+    background = "{{ withAlpha (get . "danger") 0.93 | hex }}"
 
     # Text color (inverted for visibility)
-    foreground = "{{ .Background }}"
+    foreground = "{{ (get . "background") | hex }}"
 
     # Frame/border color
-    frame_color = "{{ .Danger }}"
+    frame_color = "{{ (get . "danger") | hex }}"
 
     # Highlight color (for progress bars)
-    highlight = "{{ .Warning }}"
+    highlight = "{{ (get . "warning") | hex }}"
 
     # Timeout in seconds (0 = never timeout)
     timeout = 0
@@ -78,47 +78,47 @@
 
 # [volume]
 #     summary = "Volume*"
-#     background = "{{ .Background }}"
-#     foreground = "{{ .Foreground }}"
-#     frame_color = "{{ .Accent3 }}"
-#     highlight = "{{ .Accent3 }}"
+#     background = "{{ (get . "background") | hex }}"
+#     foreground = "{{ (get . "foreground") | hex }}"
+#     frame_color = "{{ (get . "accent3") | hex }}"
+#     highlight = "{{ (get . "accent3") | hex }}"
 #     timeout = 2
 
 # [brightness]
 #     summary = "Brightness*"
-#     background = "{{ .Background }}"
-#     foreground = "{{ .Foreground }}"
-#     frame_color = "{{ .Warning }}"
-#     highlight = "{{ .Warning }}"
+#     background = "{{ (get . "background") | hex }}"
+#     foreground = "{{ (get . "foreground") | hex }}"
+#     frame_color = "{{ (get . "warning") | hex }}"
+#     highlight = "{{ (get . "warning") | hex }}"
 #     timeout = 2
 
 # [battery_low]
 #     summary = "*Battery*"
 #     urgency = critical
-#     background = "{{ .Danger }}"
-#     foreground = "{{ .Background }}"
-#     frame_color = "{{ .Danger }}"
+#     background = "{{ (get . "danger") | hex }}"
+#     foreground = "{{ (get . "background") | hex }}"
+#     frame_color = "{{ (get . "danger") | hex }}"
 #     timeout = 0
 
 # [network]
 #     appname = "NetworkManager"
-#     background = "{{ .Background }}"
-#     foreground = "{{ .Foreground }}"
-#     frame_color = "{{ .Accent2 }}"
-#     highlight = "{{ .Accent2 }}"
+#     background = "{{ (get . "background") | hex }}"
+#     foreground = "{{ (get . "foreground") | hex }}"
+#     frame_color = "{{ (get . "accent2") | hex }}"
+#     highlight = "{{ (get . "accent2") | hex }}"
 
 # ============================================================================
 # Color Reference (for customization)
 # ============================================================================
-# Background:      {{ .Background }}
-# Foreground:      {{ .Foreground }}
-# BackgroundMuted: {{ .BackgroundMuted }}
-# ForegroundMuted: {{ .ForegroundMuted }}
-# Accent1:         {{ .Accent1 }}
-# Accent2:         {{ .Accent2 }}
-# Accent3:         {{ .Accent3 }}
-# Accent4:         {{ .Accent4 }}
-# Danger:          {{ .Danger }}
-# Warning:         {{ .Warning }}
-# Success:         {{ .Success }}
-# Info:            {{ .Info }}
+# Background:      {{ (get . "background") | hex }}
+# Foreground:      {{ (get . "foreground") | hex }}
+# BackgroundMuted: {{ (get . "backgroundMuted") | hex }}
+# ForegroundMuted: {{ (get . "foregroundMuted") | hex }}
+# Accent1:         {{ (get . "accent1") | hex }}
+# Accent2:         {{ (get . "accent2") | hex }}
+# Accent3:         {{ (get . "accent3") | hex }}
+# Accent4:         {{ (get . "accent4") | hex }}
+# Danger:          {{ (get . "danger") | hex }}
+# Warning:         {{ (get . "warning") | hex }}
+# Success:         {{ (get . "success") | hex }}
+# Info:            {{ (get . "info") | hex }}

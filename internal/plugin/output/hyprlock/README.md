@@ -268,7 +268,7 @@ label {
 Extract the default template for customization:
 
 ```bash
-tinct plugins templates dump --plugin hyprlock --output-dir ~/.config/tinct/templates/hyprlock
+tinct plugins templates dump -o hyprlock -l ~/.config/tinct/templates/hyprlock
 ```
 
 This creates `~/.config/tinct/templates/hyprlock/tinct.conf.tmpl` which you can modify.
@@ -367,11 +367,11 @@ sudo make install
 Ensure you're using an absolute path or `~/` prefix:
 
 ```conf
-# ✓ Correct
+# Correct
 source = ~/.config/hypr/tinct-hyprlock.conf
 source = /home/username/.config/hypr/tinct-hyprlock.conf
 
-# ✗ Incorrect
+# Incorrect
 source = tinct-hyprlock.conf
 source = ./tinct-hyprlock.conf
 ```

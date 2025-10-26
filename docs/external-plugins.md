@@ -2,7 +2,7 @@
 
 Complete guide for developing and using external plugins with Tinct.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
@@ -681,7 +681,7 @@ tinct plugins info wallhaven
 # Version:     1.0.0
 # Path:        ~/.config/tinct/plugins/tinct-source-wallhaven
 # API Key:     WALLHAVEN_API_KEY (optional)
-# Supported:   ✓
+# Supported:   Yes
 ```
 
 ## Configuration
@@ -960,4 +960,4 @@ Find more examples at:
 
 ---
 
-**Happy plugin development! 🔌**
+**Happy plugin development!**

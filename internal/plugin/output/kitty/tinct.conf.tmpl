@@ -46,7 +46,7 @@ active_tab_background {{ (get . "accent1") | hex }}
 
 # Inactive tab - accent1Muted (colour5)
 inactive_tab_foreground {{ (get . "foreground") | hex }}
-inactive_tab_background {{ (get . "accent1Muted") | hex }}
+inactive_tab_background {{ if has . "accent1Muted" }}{{ (get . "accent1Muted") | hex }}{{ else }}{{ (get . "backgroundMuted") | hex }}{{ end }}
 
 # ============================================================================
 # Border Colours
@@ -79,13 +79,9 @@ mark1_background {{ (get . "accent1") | hex }}
 {{- $bgMuted := get . "backgroundMuted" }}
 {{- $fgMuted := get . "foregroundMuted" }}
 {{- $accent1 := get . "accent1" }}
-{{- $accent1Muted := get . "accent1Muted" }}
 {{- $accent2 := get . "accent2" }}
-{{- $accent2Muted := get . "accent2Muted" }}
 {{- $accent3 := get . "accent3" }}
-{{- $accent3Muted := get . "accent3Muted" }}
 {{- $accent4 := get . "accent4" }}
-{{- $accent4Muted := get . "accent4Muted" }}
 {{- $danger := get . "danger" }}
 {{- $warning := get . "warning" }}
 {{- $success := get . "success" }}

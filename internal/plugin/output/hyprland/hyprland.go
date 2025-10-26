@@ -197,25 +197,16 @@ func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.Pa
 	return colour.NewPaletteHelper(palette)
 }
 
-// PreExecute checks if hyprland is available before generating the theme.
+// PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if hyprctl executable exists on PATH (hyprland's control utility)
-	_, err = exec.LookPath("hyprctl")
-	if err != nil {
-		return true, "hyprctl executable not found on $PATH (hyprland may not be installed)", nil
-	}
-
-	// Check if hyprland is actually running by trying to get version
-	cmd := exec.CommandContext(ctx, "hyprctl", "version")
-	if err := cmd.Run(); err != nil {
-		return true, "hyprland does not appear to be running", nil
-	}
-
-	// Check if config directory exists
+	// Check if config directory exists - create it if needed
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf("hyprland themes directory not found: %s", configDir), nil
+		// Try to create the directory
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			return true, fmt.Sprintf("hyprland config directory does not exist and cannot be created: %s", configDir), nil
+		}
 	}
 
 	return false, "", nil

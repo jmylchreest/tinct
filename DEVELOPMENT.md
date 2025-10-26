@@ -239,17 +239,17 @@ Tinct follows a plugin-based architecture with the following components:
 ### High-Level Flow
 
 ```
-Source Plugins (optional) → Input (Image/Colors) → Color Extraction → Palette Generation → Output Plugins → Hooks
-      ↓                                                    ↓
+Source Plugins (optional) -> Input (Image/Colors) -> Color Extraction -> Palette Generation -> Output Plugins -> Hooks
+      |                                                    |
   (AI Gen, Fetch)                                   Configuration
 ```
 
 **Flow Variations:**
 
-1. **Direct Image Input**: `Image → Extract → Generate → Output Plugins`
-2. **AI Wallpaper Generation**: `AI Source Plugin → Generate Image → Extract → Generate → Output Plugins`
-3. **Wallpaper Fetching**: `Fetch Source Plugin → Download → Extract → Generate → Output Plugins`
-4. **Color Codes**: `Color Codes → Generate → Output Plugins`
+1. **Direct Image Input**: `Image -> Extract -> Generate -> Output Plugins`
+2. **AI Wallpaper Generation**: `AI Source Plugin -> Generate Image -> Extract -> Generate -> Output Plugins`
+3. **Wallpaper Fetching**: `Fetch Source Plugin -> Download -> Extract -> Generate -> Output Plugins`
+4. **Color Codes**: `Color Codes -> Generate -> Output Plugins`
 
 ### Key Architectural Goals
 
