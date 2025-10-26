@@ -28,9 +28,8 @@ func GetEmbeddedTemplates() embed.FS {
 
 // Plugin implements the output.Plugin interface for Kitty terminal.
 type Plugin struct {
-	outputDir    string
-	reloadConfig bool
-	verbose      bool
+	outputDir string
+	verbose   bool
 }
 
 // New creates a new Kitty output plugin with default settings.
@@ -53,8 +52,7 @@ func (p *Plugin) Description() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "kitty.output-dir", "", "Output directory (default: ~/.config/kitty)")
-	cmd.Flags().BoolVar(&p.reloadConfig, "kitty.reload", false, "Reload kitty config after generation (sends SIGUSR1)")
+	cmd.Flags().StringVar(&p.outputDir, "kitty.output-dir", "", "Output directory (default: ~/.config/kitty/themes)")
 }
 
 // SetVerbose enables or disables verbose logging for the plugin.
@@ -82,9 +80,9 @@ func (p *Plugin) DefaultOutputDir() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/kitty"
+		return ".config/kitty/themes"
 	}
-	return filepath.Join(home, ".config", "kitty")
+	return filepath.Join(home, ".config", "kitty", "themes")
 }
 
 // Generate creates the theme file.
@@ -154,34 +152,38 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 		return true, "kitty executable not found on $PATH", nil
 	}
 
-	// Check if config directory exists
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf("kitty config directory not found: %s", configDir), nil
+	// Check if themes directory exists, create if it doesn't
+	themesDir := p.DefaultOutputDir()
+	if _, err := os.Stat(themesDir); os.IsNotExist(err) {
+		// Try to create the themes directory
+		if err := os.MkdirAll(themesDir, 0755); err != nil {
+			return true, fmt.Sprintf("failed to create kitty themes directory: %s", themesDir), nil
+		}
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Created kitty themes directory: %s\n", themesDir)
+		}
 	}
 
 	return false, "", nil
 }
 
-// PostExecute reloads kitty configuration if requested.
+// PostExecute applies the theme to all running kitty instances.
 // Implements the output.PostExecuteHook interface.
 func (p *Plugin) PostExecute(ctx context.Context, writtenFiles []string) error {
-	if !p.reloadConfig {
+	// Apply the theme to all running kitty instances using kitten themes command
+	// This is the recommended way per https://sw.kovidgoyal.net/kitty/kittens/themes/
+	cmd := exec.CommandContext(ctx, "kitten", "themes", "--reload-in=all", "tinct")
+	if err := cmd.Run(); err != nil {
+		// Don't treat this as a fatal error - theme file was still generated successfully
+		// This can fail if no kitty instances are running or kitten is not in PATH
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Note: Could not auto-apply theme (no running kitty instances or kitten not in $PATH)\n")
+		}
 		return nil
 	}
 
-	// Send SIGUSR1 to all running kitty instances to reload config
-	// This is the standard way to reload kitty configuration
-	cmd := exec.CommandContext(ctx, "killall", "-SIGUSR1", "kitty")
-	if err := cmd.Run(); err != nil {
-		// Check if the error is because no kitty process was found
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			// killall returns exit code 1 if no processes matched
-			if exitErr.ExitCode() == 1 {
-				return fmt.Errorf("no running kitty instances found to reload")
-			}
-		}
-		return fmt.Errorf("failed to reload kitty config: %w", err)
+	if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Theme applied to all kitty instances\n")
 	}
 
 	return nil
