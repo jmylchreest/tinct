@@ -1,0 +1,97 @@
+{{- $ph := .PaletteHelper }}
+{{- $bg := get $ph "background" }}
+{{- $fg := get $ph "foreground" }}
+{{- $bgMuted := get $ph "backgroundMuted" }}
+{{- $fgMuted := get $ph "foregroundMuted" }}
+{{- $bgSubtle := getSafe $ph "backgroundSubtle" }}
+{{- $fgSubtle := getSafe $ph "foregroundSubtle" }}
+{{- $accent1 := get $ph "accent1" }}
+{{- $accent2 := get $ph "accent2" }}
+{{- $accent3 := get $ph "accent3" }}
+{{- $danger := get $ph "danger" }}
+{{- $warning := get $ph "warning" }}
+{{- $success := get $ph "success" }}
+{{- $info := get $ph "info" }}
+
+{{- $surface1 := getSafe $ph "surface1" }}
+{{- $surface2 := getSafe $ph "surface2" }}
+{{- $surface3 := getSafe $ph "surface3" }}
+
+// Tinct Theme for Zellij
+// Generated automatically by Tinct
+// https://github.com/jmylchreest/tinct
+
+themes {
+    {{ .ThemeName }} {
+        // Base colours
+        fg "{{ $fg | hex }}"
+        bg "{{ $bg | hex }}"
+{{- if $bgSubtle }}
+        black "{{ $bgSubtle | hex }}"
+{{- else }}
+        black "{{ $bgMuted | hex }}"
+{{- end }}
+
+        // ANSI colours using perceptual matching
+        red "{{ ansi $ph "red" | hex }}"
+        green "{{ ansi $ph "green" | hex }}"
+        yellow "{{ ansi $ph "yellow" | hex }}"
+        blue "{{ ansi $ph "blue" | hex }}"
+        magenta "{{ ansi $ph "magenta" | hex }}"
+        cyan "{{ ansi $ph "cyan" | hex }}"
+        white "{{ ansi $ph "white" | hex }}"
+
+        // Bright ANSI colours
+        orange "{{ ansi $ph "brightyellow" | hex }}"
+
+        // UI elements
+        // Tab bar
+        tab-active {
+            fg "{{ $bg | hex }}"
+            bg "{{ $accent1 | hex }}"
+        }
+
+        // Pane frames
+        pane-active {
+            fg "{{ $accent1 | hex }}"
+            bg "{{ $bg | hex }}"
+        }
+
+        pane-normal {
+            fg "{{ $fgMuted | hex }}"
+            bg "{{ $bg | hex }}"
+        }
+
+        // Status bar
+        status-bar {
+            fg "{{ $fg | hex }}"
+{{- if $surface1 }}
+            bg "{{ $surface1 | hex }}"
+{{- else }}
+            bg "{{ $bgMuted | hex }}"
+{{- end }}
+        }
+
+        // Notifications
+        notification {
+            fg "{{ $bg | hex }}"
+            bg "{{ $warning | hex }}"
+        }
+
+        // Search
+        search {
+            fg "{{ $bg | hex }}"
+            bg "{{ $accent1 | hex }}"
+        }
+
+        // Command palette
+        command {
+            fg "{{ $fg | hex }}"
+{{- if $surface2 }}
+            bg "{{ $surface2 | hex }}"
+{{- else }}
+            bg "{{ $bgMuted | hex }}"
+{{- end }}
+        }
+    }
+}

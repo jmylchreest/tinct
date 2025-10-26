@@ -2,20 +2,13 @@
 package cli
 
 import (
+	"embed"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
-	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
-	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
-	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
-	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
-	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
-	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
 	"github.com/spf13/cobra"
 )
 
@@ -86,8 +79,8 @@ func init() {
 }
 
 func runPluginTemplatesList(cmd *cobra.Command, args []string) error {
-	// Get available output plugins
-	plugins := getAvailableOutputPlugins()
+	// Get all registered output plugins from the manager
+	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
 		fmt.Println("No output plugins available")
 		return nil
@@ -116,7 +109,7 @@ func runPluginTemplatesList(cmd *cobra.Command, args []string) error {
 
 	hasCustomTemplates := false
 	for pluginName, plugin := range plugins {
-		loader, _ := getPluginTemplateLoader(pluginName, plugin)
+		loader := getPluginTemplateLoader(pluginName, plugin)
 		if loader == nil {
 			fmt.Printf("Plugin: %s (no templates)\n", pluginName)
 			fmt.Println()
@@ -153,8 +146,8 @@ func runPluginTemplatesList(cmd *cobra.Command, args []string) error {
 }
 
 func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
-	// Get available output plugins
-	plugins := getAvailableOutputPlugins()
+	// Get all registered output plugins from the manager
+	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
 		return fmt.Errorf("no output plugins available")
 	}
@@ -178,7 +171,7 @@ func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
 
 	totalDumped := 0
 	for pluginName, plugin := range plugins {
-		loader, _ := getPluginTemplateLoader(pluginName, plugin)
+		loader := getPluginTemplateLoader(pluginName, plugin)
 		if loader == nil {
 			if templateVerbose {
 				fmt.Printf("Skipping %s: no templates\n", pluginName)
@@ -252,88 +245,27 @@ func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getAvailableOutputPlugins returns a map of all available output plugins
-func getAvailableOutputPlugins() map[string]output.Plugin {
-	plugins := make(map[string]output.Plugin)
-
-	// Register built-in output plugins
-	dunstPlugin := dunst.New()
-	fuzzelPlugin := fuzzel.New()
-	hyprlandPlugin := hyprland.New()
-	hyprlockPlugin := hyprlock.New()
-	kittyPlugin := kitty.New()
-	swayosdPlugin := swayosd.New()
-	waybarPlugin := waybar.New()
-	wofiPlugin := wofi.New()
-
-	plugins[dunstPlugin.Name()] = dunstPlugin
-	plugins[fuzzelPlugin.Name()] = fuzzelPlugin
-	plugins[hyprlandPlugin.Name()] = hyprlandPlugin
-	plugins[hyprlockPlugin.Name()] = hyprlockPlugin
-	plugins[kittyPlugin.Name()] = kittyPlugin
-	plugins[swayosdPlugin.Name()] = swayosdPlugin
-	plugins[waybarPlugin.Name()] = waybarPlugin
-	plugins[wofiPlugin.Name()] = wofiPlugin
-
-	return plugins
-}
-
-// getPluginTemplateLoader returns a template loader for the given plugin
-// Returns nil if the plugin doesn't support templates
-func getPluginTemplateLoader(pluginName string, plugin output.Plugin) (*template.Loader, any) {
-	// We need to access the embedded FS from each plugin
-	// This is a bit of a workaround since the FS is not exposed in the Plugin interface
-
-	switch pluginName {
-	case "dunst":
-		// Access dunst's embedded templates
-		if dp, ok := plugin.(*dunst.Plugin); ok {
-			loader := template.New(pluginName, dunst.GetEmbeddedTemplates())
-			return loader, dp
-		}
-	case "fuzzel":
-		// Access fuzzel's embedded templates
-		if fp, ok := plugin.(*fuzzel.Plugin); ok {
-			loader := template.New(pluginName, fuzzel.GetEmbeddedTemplates())
-			return loader, fp
-		}
-	case "hyprland":
-		// Access hyprland's embedded templates
-		if hp, ok := plugin.(*hyprland.Plugin); ok {
-			loader := template.New(pluginName, hyprland.GetEmbeddedTemplates())
-			return loader, hp
-		}
-	case "hyprlock":
-		// Access hyprlock's embedded templates
-		if hlp, ok := plugin.(*hyprlock.Plugin); ok {
-			loader := template.New(pluginName, hyprlock.GetEmbeddedTemplates())
-			return loader, hlp
-		}
-	case "kitty":
-		// Access kitty's embedded templates
-		if kp, ok := plugin.(*kitty.Plugin); ok {
-			loader := template.New(pluginName, kitty.GetEmbeddedTemplates())
-			return loader, kp
-		}
-	case "swayosd":
-		// Access swayosd's embedded templates
-		if sp, ok := plugin.(*swayosd.Plugin); ok {
-			loader := template.New(pluginName, swayosd.GetEmbeddedTemplates())
-			return loader, sp
-		}
-	case "waybar":
-		// Access waybar's embedded templates
-		if wp, ok := plugin.(*waybar.Plugin); ok {
-			loader := template.New(pluginName, waybar.GetEmbeddedTemplates())
-			return loader, wp
-		}
-	case "wofi":
-		// Access wofi's embedded templates
-		if wfp, ok := plugin.(*wofi.Plugin); ok {
-			loader := template.New(pluginName, wofi.GetEmbeddedTemplates())
-			return loader, wfp
-		}
+// getPluginTemplateLoader returns a template loader for the given plugin.
+// Returns nil if the plugin doesn't support templates (i.e., doesn't implement TemplateProvider).
+func getPluginTemplateLoader(pluginName string, plugin output.Plugin) *template.Loader {
+	// Check if the plugin implements the TemplateProvider interface
+	templateProvider, ok := plugin.(output.TemplateProvider)
+	if !ok {
+		return nil
 	}
 
-	return nil, nil
+	// Get the embedded filesystem
+	embeddedFS := templateProvider.GetEmbeddedFS()
+	if embeddedFS == nil {
+		return nil
+	}
+
+	// Type assert to embed.FS
+	embedFS, ok := embeddedFS.(embed.FS)
+	if !ok {
+		return nil
+	}
+
+	// Create and return the loader
+	return template.New(pluginName, embedFS)
 }

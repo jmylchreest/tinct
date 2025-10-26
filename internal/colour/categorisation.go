@@ -466,80 +466,28 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	return result
 }
 
-// buildSortedAllColours creates the final sorted array of all colours with consistent indices.
-// Indices are assigned by role first (fixed positions), then additional colours sorted by luminance.
-// Index mapping:
-//
-//	0 = background
-//	1 = foreground
-//	2 = backgroundMuted
-//	3 = foregroundMuted
-//	4-7 = accent1-4
-//	8-11 = accent1Muted-accent4Muted
-//	12-16 = danger, warning, success, info, notification
-//	17+ = remaining colours sorted by luminance
+// buildSortedAllColours creates the final sorted array of all colours.
+// All colours are sorted by luminance (dark→light for dark themes, light→dark for light themes).
+// Indices are assigned sequentially based on sort order (0, 1, 2, ...).
+// The index field is purely positional metadata with no semantic meaning.
 func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, additionalColors []CategorisedColour) []CategorisedColour {
-	// Fixed index assignments by role
-	roleIndexMap := map[ColourRole]int{
-		RoleBackground:      0,
-		RoleForeground:      1,
-		RoleBackgroundMuted: 2,
-		RoleForegroundMuted: 3,
-		RoleAccent1:         4,
-		RoleAccent2:         5,
-		RoleAccent3:         6,
-		RoleAccent4:         7,
-		RoleAccent1Muted:    8,
-		RoleAccent2Muted:    9,
-		RoleAccent3Muted:    10,
-		RoleAccent4Muted:    11,
-		RoleDanger:          12,
-		RoleWarning:         13,
-		RoleSuccess:         14,
-		RoleInfo:            15,
-		RoleNotification:    16,
-	}
+	// Collect all colours from the palette
+	allColours := make([]CategorisedColour, 0, len(palette.Colours)+len(additionalColors))
 
-	maxFixedIndex := 16 // 0-16 for fixed roles (17 total)
-	allColours := make([]CategorisedColour, 0, len(palette.Colours))
-
-	// Temporary slice to hold colours for fixed positions
-	fixedColours := make(map[int]CategorisedColour)
-	additionalColours := make([]CategorisedColour, 0)
-
-	// Separate colours into fixed positions and additional
-	for role, cc := range palette.Colours {
-		if idx, hasFixedIndex := roleIndexMap[role]; hasFixedIndex {
-			cc.Index = idx
-			fixedColours[idx] = cc
-		} else {
-			additionalColours = append(additionalColours, cc)
-		}
+	for _, cc := range palette.Colours {
+		allColours = append(allColours, cc)
 	}
 
 	// Add any extra colors that weren't assigned to semantic roles
-	additionalColours = append(additionalColours, additionalColors...)
+	allColours = append(allColours, additionalColors...)
 
-	// Sort additional colours by luminance
-	sortByLuminance(additionalColours, themeType)
+	// Sort all colours by luminance (theme-aware)
+	sortByLuminance(allColours, themeType)
 
-	// Assign indices to additional colours starting after fixed roles
-	nextIndex := maxFixedIndex + 1
-	for i := range additionalColours {
-		additionalColours[i].Index = nextIndex
-		nextIndex++
+	// Assign sequential indices based on sorted position
+	for i := range allColours {
+		allColours[i].Index = i
 	}
-
-	// Build final array in index order
-	// First add fixed position colours
-	for i := 0; i <= maxFixedIndex; i++ {
-		if cc, exists := fixedColours[i]; exists {
-			allColours = append(allColours, cc)
-		}
-	}
-
-	// Then add additional colours
-	allColours = append(allColours, additionalColours...)
 
 	return allColours
 }

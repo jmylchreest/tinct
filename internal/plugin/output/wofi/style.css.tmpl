@@ -7,7 +7,7 @@
  * Reference colors in your config with:
  *   color=~/.config/wofi/tinct-colors
  *
- * Detected theme: {{ .SourceTheme }}
+ * Detected theme: {{ themeType . }}
  */
 
 /* ============================================================================
@@ -143,16 +143,19 @@
 /* ============================================================================
  * Color Reference (for quick editing)
  * ============================================================================
- * Background:      {{ .Background }}       (--wofi-color0)
- * BackgroundMuted: {{ .BackgroundMuted }} (--wofi-color1)
- * Foreground:      {{ .Foreground }}       (--wofi-color2)
- * ForegroundMuted: {{ .ForegroundMuted }} (--wofi-color3)
- * Accent1:         {{ .Accent1 }}          (--wofi-color4)
- * Accent2:         {{ .Accent2 }}          (--wofi-color5)
- * Accent3:         {{ .Accent3 }}          (--wofi-color6)
- * Accent4:         {{ .Accent4 }}          (--wofi-color7)
- * Danger:          {{ .Danger }}           (--wofi-color8)
- * Warning:         {{ .Warning }}          (--wofi-color9)
- * Success:         {{ .Success }}          (--wofi-color10)
- * Info:            {{ .Info }}             (--wofi-color11)
+ * All {{ len (allColors .) }} colors are available as --wofi-color<n> where n is the index
+ *
+ * Semantic color mappings (use template functions to get exact indices):
+ * - Background colors: background, backgroundMuted, surface, surfaceVariant
+ * - Foreground colors: foreground, foregroundMuted, onSurface, onSurfaceVariant
+ * - Accent colors: accent1-4 and their muted variants
+ * - On-accent colors: onAccent1-4 for text on accent backgrounds
+ * - Semantic colors: danger, warning, success, info, notification
+ * - On-semantic colors: onDanger, onWarning, onSuccess, onInfo
+ * - Border colors: border, borderMuted, outline, outlineVariant
+ * - Container elevation: surfaceContainerLowest through surfaceContainerHighest
+ * - Inverse colors: inverseSurface, inverseOnSurface, inversePrimary
+ * - Scrim/shadow: scrim, shadow (have alpha baked in)
+ *
+ * See docs/TEMPLATE_GUIDE.md for complete list of all 49 semantic roles
  */

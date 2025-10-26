@@ -63,6 +63,12 @@ func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
 }
 
+// GetEmbeddedFS returns the embedded template filesystem.
+// Implements the output.TemplateProvider interface.
+func (p *Plugin) GetEmbeddedFS() interface{} {
+	return templates
+}
+
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
 	return nil

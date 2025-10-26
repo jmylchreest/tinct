@@ -14,7 +14,6 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/jmylchreest/tinct/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -60,6 +59,12 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 // Implements the output.VerbosePlugin interface.
 func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
+}
+
+// GetEmbeddedFS returns the embedded template filesystem.
+// Implements the output.TemplateProvider interface.
+func (p *Plugin) GetEmbeddedFS() interface{} {
+	return templates
 }
 
 // Validate checks if the plugin configuration is valid.
@@ -122,7 +127,7 @@ func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, err
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct-colors\n")
 	}
 
-	tmpl, err := template.New("colors").Parse(string(tmplContent))
+	tmpl, err := template.New("colors").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse colors template: %w", err)
 	}
@@ -152,7 +157,7 @@ func (p *Plugin) generateStyle(palette *colour.CategorisedPalette) ([]byte, erro
 		fmt.Fprintf(os.Stderr, "   Using custom template for style.css.tmpl\n")
 	}
 
-	tmpl, err := template.New("style").Parse(string(tmplContent))
+	tmpl, err := template.New("style").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse style template: %w", err)
 	}
@@ -167,43 +172,9 @@ func (p *Plugin) generateStyle(palette *colour.CategorisedPalette) ([]byte, erro
 	return buf.Bytes(), nil
 }
 
-// ThemeData holds data for the theme template.
-// All colours are exposed directly with their semantic names.
-type ThemeData struct {
-	SourceTheme     string
-	Background      string
-	BackgroundMuted string
-	Foreground      string
-	ForegroundMuted string
-	Accent1         string
-	Accent2         string
-	Accent3         string
-	Accent4         string
-	Danger          string
-	Warning         string
-	Success         string
-	Info            string
-	Notification    string
-}
-
-// prepareThemeData converts a categorised palette to Wofi theme data.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData {
-	return ThemeData{
-		SourceTheme:     palette.ThemeType.String(),
-		Background:      util.GetColour(palette, colour.RoleBackground, "#11121d"),
-		BackgroundMuted: util.GetColour(palette, colour.RoleBackgroundMuted, "#1a1b26"),
-		Foreground:      util.GetColour(palette, colour.RoleForeground, "#dddddd"),
-		ForegroundMuted: util.GetColour(palette, colour.RoleForegroundMuted, "#999999"),
-		Accent1:         util.GetColour(palette, colour.RoleAccent1, "#9fa8cd"),
-		Accent2:         util.GetColour(palette, colour.RoleAccent2, "#7aa2f7"),
-		Accent3:         util.GetColour(palette, colour.RoleAccent3, "#bb9af7"),
-		Accent4:         util.GetColour(palette, colour.RoleAccent4, "#7dcfff"),
-		Danger:          util.GetColour(palette, colour.RoleDanger, "#f7768e"),
-		Warning:         util.GetColour(palette, colour.RoleWarning, "#e0af68"),
-		Success:         util.GetColour(palette, colour.RoleSuccess, "#9ece6a"),
-		Info:            util.GetColour(palette, colour.RoleInfo, "#7aa2f7"),
-		Notification:    util.GetColour(palette, colour.RoleNotification, "#bb9af7"),
-	}
+// prepareThemeData converts a categorised palette to PaletteHelper for template access.
+func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
+	return colour.NewPaletteHelper(palette)
 }
 
 // PreExecute checks if wofi is available and config directory exists.

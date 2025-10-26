@@ -91,19 +91,21 @@ mark1_background {{ (get . "accent1") | hex }}
 {{- $success := get . "success" }}
 {{- $info := get . "info" }}
 
-color0  {{ $bg | hex }}         # background
-color1  {{ $fg | hex }}         # foreground
-color2  {{ $bgMuted | hex }}    # backgroundMuted
-color3  {{ $fgMuted | hex }}    # foregroundMuted
-color4  {{ $accent1 | hex }}    # accent1
-color5  {{ $accent1Muted | hex }} # accent1Muted
-color6  {{ $accent2 | hex }}    # accent2
-color7  {{ $accent2Muted | hex }} # accent2Muted
-color8  {{ $accent3 | hex }}    # accent3
-color9  {{ $accent3Muted | hex }} # accent3Muted
-color10 {{ $accent4 | hex }}    # accent4
-color11 {{ $accent4Muted | hex }} # accent4Muted
-color12 {{ $danger | hex }}     # danger
-color13 {{ $warning | hex }}    # warning
-color14 {{ $success | hex }}    # success
-color15 {{ $info | hex }}       # info
+# ANSI terminal colors (0-15)
+# Using ANSI color name matching for better semantic mapping
+color0  {{ ansi . "black" | hex }}        # black (background)
+color1  {{ ansi . "red" | hex }}          # red (danger/error)
+color2  {{ ansi . "green" | hex }}        # green (success)
+color3  {{ ansi . "yellow" | hex }}       # yellow (warning)
+color4  {{ ansi . "blue" | hex }}         # blue (accent/info)
+color5  {{ ansi . "magenta" | hex }}      # magenta (accent3)
+color6  {{ ansi . "cyan" | hex }}         # cyan (accent2)
+color7  {{ ansi . "white" | hex }}        # white (foreground)
+color8  {{ ansi . "brightblack" | hex }}  # bright black (backgroundMuted)
+color9  {{ ansi . "brightred" | hex }}    # bright red (danger variant)
+color10 {{ ansi . "brightgreen" | hex }}  # bright green (success variant)
+color11 {{ ansi . "brightyellow" | hex }} # bright yellow (warning variant)
+color12 {{ ansi . "brightblue" | hex }}   # bright blue (accent1 variant)
+color13 {{ ansi . "brightmagenta" | hex }} # bright magenta (accent3 variant)
+color14 {{ ansi . "brightcyan" | hex }}   # bright cyan (accent2 variant)
+color15 {{ ansi . "brightwhite" | hex }}  # bright white (foreground bright)

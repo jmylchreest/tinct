@@ -14,7 +14,6 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/jmylchreest/tinct/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -60,6 +59,12 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 // Implements the output.VerbosePlugin interface.
 func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
+}
+
+// GetEmbeddedFS returns the embedded template filesystem.
+// Implements the output.TemplateProvider interface.
+func (p *Plugin) GetEmbeddedFS() interface{} {
+	return templates
 }
 
 // Validate checks if the plugin configuration is valid.
@@ -117,7 +122,7 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.dunstrc.tmpl\n")
 	}
 
-	tmpl, err := template.New("theme").Parse(string(tmplContent))
+	tmpl, err := template.New("theme").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}
@@ -132,108 +137,9 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 	return buf.Bytes(), nil
 }
 
-// ThemeData holds data for the theme template.
-// All colours are exposed directly with their semantic names.
-type ThemeData struct {
-	SourceTheme     string
-	Background      string
-	BackgroundMuted string
-	Foreground      string
-	ForegroundMuted string
-	Accent1         string
-	Accent2         string
-	Accent3         string
-	Accent4         string
-	Danger          string
-	Warning         string
-	Success         string
-	Info            string
-	Notification    string
-}
-
-// prepareThemeData converts a categorised palette to Dunst theme data.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData {
-	return ThemeData{
-		SourceTheme:     palette.ThemeType.String(),
-		Background:      util.GetColour(palette, colour.RoleBackground, "#1e1e2e"),
-		BackgroundMuted: util.GetColour(palette, colour.RoleBackgroundMuted, "#181825"),
-		Foreground:      util.GetColour(palette, colour.RoleForeground, "#cdd6f4"),
-		ForegroundMuted: util.GetColour(palette, colour.RoleForegroundMuted, "#a6adc8"),
-		Accent1:         util.GetColour(palette, colour.RoleAccent1, "#89b4fa"),
-		Accent2:         util.GetColour(palette, colour.RoleAccent2, "#f5c2e7"),
-		Accent3:         util.GetColour(palette, colour.RoleAccent3, "#cba6f7"),
-		Accent4:         util.GetColour(palette, colour.RoleAccent4, "#94e2d5"),
-		Danger:          util.GetColour(palette, colour.RoleDanger, "#f38ba8"),
-		Warning:         util.GetColour(palette, colour.RoleWarning, "#f9e2af"),
-		Success:         util.GetColour(palette, colour.RoleSuccess, "#a6e3a1"),
-		Info:            util.GetColour(palette, colour.RoleInfo, "#89b4fa"),
-		Notification:    util.GetColour(palette, colour.RoleNotification, "#cba6f7"),
-	}
-}
-
-// Helper methods for ThemeData to add alpha channel
-
-// DangerWithAlpha returns danger color with specified alpha
-func (td ThemeData) DangerWithAlpha(alpha string) string {
-	return hexWithAlpha(td.Danger, alpha)
-}
-
-// WarningWithAlpha returns warning color with specified alpha
-func (td ThemeData) WarningWithAlpha(alpha string) string {
-	return hexWithAlpha(td.Warning, alpha)
-}
-
-// SuccessWithAlpha returns success color with specified alpha
-func (td ThemeData) SuccessWithAlpha(alpha string) string {
-	return hexWithAlpha(td.Success, alpha)
-}
-
-// InfoWithAlpha returns info color with specified alpha
-func (td ThemeData) InfoWithAlpha(alpha string) string {
-	return hexWithAlpha(td.Info, alpha)
-}
-
-// BackgroundWithAlpha returns background color with specified alpha
-func (td ThemeData) BackgroundWithAlpha(alpha string) string {
-	return hexWithAlpha(td.Background, alpha)
-}
-
-// ForegroundWithAlpha returns foreground color with specified alpha
-func (td ThemeData) ForegroundWithAlpha(alpha string) string {
-	return hexWithAlpha(td.Foreground, alpha)
-}
-
-// Accent1WithAlpha returns accent1 color with specified alpha
-func (td ThemeData) Accent1WithAlpha(alpha string) string {
-	return hexWithAlpha(td.Accent1, alpha)
-}
-
-// Accent2WithAlpha returns accent2 color with specified alpha
-func (td ThemeData) Accent2WithAlpha(alpha string) string {
-	return hexWithAlpha(td.Accent2, alpha)
-}
-
-// Accent3WithAlpha returns accent3 color with specified alpha
-func (td ThemeData) Accent3WithAlpha(alpha string) string {
-	return hexWithAlpha(td.Accent3, alpha)
-}
-
-// Accent4WithAlpha returns accent4 color with specified alpha
-func (td ThemeData) Accent4WithAlpha(alpha string) string {
-	return hexWithAlpha(td.Accent4, alpha)
-}
-
-// hexWithAlpha adds alpha channel to hex color
-// Dunst uses #RRGGBBAA format
-func hexWithAlpha(hex string, alpha string) string {
-	if len(hex) == 7 && hex[0] == '#' {
-		return hex + alpha
-	}
-	if len(hex) == 6 {
-		return "#" + hex + alpha
-	}
-	// If already has alpha or other format, return as-is
-	return hex
+// prepareThemeData converts a categorised palette to PaletteHelper for template access.
+func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
+	return colour.NewPaletteHelper(palette)
 }
 
 // PreExecute checks if dunst is available and config directory exists.

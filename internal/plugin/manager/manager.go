@@ -26,9 +26,11 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
+	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
+	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
 	"github.com/spf13/cobra"
 )
 
@@ -143,9 +145,11 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(hyprlock.New())
 	m.outputRegistry.Register(kitty.New())
+	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(swayosd.New())
 	m.outputRegistry.Register(waybar.New())
 	m.outputRegistry.Register(wofi.New())
+	m.outputRegistry.Register(zellij.New())
 }
 
 // InputRegistry returns the input plugin registry.

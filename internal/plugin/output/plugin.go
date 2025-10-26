@@ -70,6 +70,14 @@ type VerbosePlugin interface {
 	SetVerbose(verbose bool)
 }
 
+// TemplateProvider is an optional interface that plugins can implement to expose
+// their embedded template filesystem for template management commands.
+type TemplateProvider interface {
+	// GetEmbeddedFS returns the embedded filesystem containing template files.
+	// This should return the same embed.FS used by the plugin's generateTheme method.
+	GetEmbeddedFS() interface{}
+}
+
 // ExecutionContext provides context for hook execution.
 type ExecutionContext struct {
 	DryRun    bool   // Whether this is a dry-run

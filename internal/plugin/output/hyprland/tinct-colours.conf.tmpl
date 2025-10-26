@@ -5,16 +5,17 @@
 # Source this file in your hyprland.conf with:
 #   source = ~/.config/hypr/tinct-colours.conf
 #
-# Detected theme: {{ .SourceTheme }}
+# Detected theme: {{ themeType . }}
 
 # ============================================================================
-# Theme Colours ({{ .SourceTheme }} theme)
+# Theme Colours ({{ themeType . }} theme)
 # ============================================================================
 
-{{- range .Colours }}
-# {{ .Name }}
-${{ .Name }}RGB = rgb({{ .RGBHex }})
-${{ .Name }}RGBDec = {{ .RGBDecim }}
+{{- range allRoles . }}
+{{- $color := get $ . }}
+# {{ . }}
+${{ . }}RGB = rgb({{ $color | hex | trimPrefix "#" }})
+${{ . }}RGBDec = {{ $color | rgbDecimal }}
 {{- end }}
 
 # ============================================================================
@@ -22,7 +23,7 @@ ${{ .Name }}RGBDec = {{ .RGBDecim }}
 # ============================================================================
 # All extracted colours, sorted by luminance
 
-{{- range .Indexed }}
-${{ .Name }}RGB = rgb({{ .RGBHex }})
-${{ .Name }}RGBDec = {{ .RGBDecim }}
+{{- range $i, $color := allColors . }}
+$colour{{ $i }}RGB = rgb({{ $color | hex | trimPrefix "#" }})
+$colour{{ $i }}RGBDec = {{ $color | rgbDecimal }}
 {{- end }}

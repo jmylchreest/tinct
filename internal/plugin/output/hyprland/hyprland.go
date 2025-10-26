@@ -14,7 +14,6 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/jmylchreest/tinct/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -68,6 +67,12 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 // Implements the output.VerbosePlugin interface.
 func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
+}
+
+// GetEmbeddedFS returns the embedded template filesystem.
+// Implements the output.TemplateProvider interface.
+func (p *Plugin) GetEmbeddedFS() interface{} {
+	return templates
 }
 
 // Validate checks if the plugin configuration is valid.
@@ -142,7 +147,7 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct-colours.conf.tmpl\n")
 	}
 
-	tmpl, err := template.New("theme").Parse(string(tmplContent))
+	tmpl, err := template.New("theme").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}
@@ -187,66 +192,9 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// ThemeData holds data for the theme template.
-type ThemeData struct {
-	SourceTheme string           // "dark" or "light" - the source theme from extraction
-	Colours     []ColourVariable // Semantic theme colours
-	Indexed     []ColourVariable // Indexed colours (colour0, colour1, etc.)
-}
-
-// ColourVariable represents a colour variable in Hyprland format.
-type ColourVariable struct {
-	Name     string // e.g., "background", "accent1"
-	RGBHex   string // e.g., "f5e0dc" for rgb() function
-	RGBDecim string // e.g., "245,224,220" for rgba() function
-}
-
-// prepareThemeData converts a categorised palette to Hyprland theme data.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) ThemeData {
-	data := ThemeData{
-		SourceTheme: palette.ThemeType.String(),
-		Colours:     []ColourVariable{},
-		Indexed:     []ColourVariable{},
-	}
-
-	// Map semantic roles to variable names
-	roleMapping := map[colour.ColourRole]string{
-		colour.RoleBackground:      "background",
-		colour.RoleBackgroundMuted: "backgroundMuted",
-		colour.RoleForeground:      "foreground",
-		colour.RoleForegroundMuted: "foregroundMuted",
-		colour.RoleAccent1:         "accent1",
-		colour.RoleAccent2:         "accent2",
-		colour.RoleAccent3:         "accent3",
-		colour.RoleAccent4:         "accent4",
-		colour.RoleDanger:          "danger",
-		colour.RoleWarning:         "warning",
-		colour.RoleSuccess:         "success",
-		colour.RoleInfo:            "info",
-		colour.RoleNotification:    "notification",
-	}
-
-	// Generate semantic colour variables
-	for role, name := range roleMapping {
-		if color, ok := palette.Get(role); ok {
-			data.Colours = append(data.Colours, ColourVariable{
-				Name:     name,
-				RGBHex:   util.StripHash(color.Hex),
-				RGBDecim: fmt.Sprintf("%d,%d,%d", color.RGB.R, color.RGB.G, color.RGB.B),
-			})
-		}
-	}
-
-	// Add indexed colour variables (colour0, colour1, etc.)
-	for _, color := range palette.AllColours {
-		data.Indexed = append(data.Indexed, ColourVariable{
-			Name:     fmt.Sprintf("colour%d", color.Index),
-			RGBHex:   util.StripHash(color.Hex),
-			RGBDecim: fmt.Sprintf("%d,%d,%d", color.RGB.R, color.RGB.G, color.RGB.B),
-		})
-	}
-
-	return data
+// prepareThemeData converts a categorised palette to PaletteHelper for template access.
+func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
+	return colour.NewPaletteHelper(palette)
 }
 
 // PreExecute checks if hyprland is available before generating the theme.

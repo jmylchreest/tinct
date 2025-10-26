@@ -4,7 +4,7 @@
  * Place this file at ~/.config/swayosd/style.css
  * SwayOSD will automatically load it on startup
  *
- * Detected theme: {{ .SourceTheme }}
+ * Detected theme: {{ themeType . }}
  */
 
 window#osd {
@@ -13,7 +13,7 @@ window#osd {
     border: none;
 
     /* Background with transparency */
-    background: {{ .BackgroundRGBA "0.85" }};
+    background: {{ get . "background" | withAlpha 0.85 | rgba }};
 }
 
 window#osd #container {
@@ -23,7 +23,7 @@ window#osd #container {
 /* Text and icon colors */
 window#osd image,
 window#osd label {
-    color: {{ .ForegroundRGB }};
+    color: {{ get . "foreground" | rgba }};
 }
 
 /* Disabled states */
@@ -45,7 +45,7 @@ window#osd trough {
     min-height: inherit;
     border-radius: inherit;
     border: none;
-    background: {{ .ForegroundMutedRGBA "0.3" }};
+    background: {{ get . "foregroundMuted" | withAlpha 0.3 | rgba }};
 }
 
 /* Progress bar fill */
@@ -53,7 +53,7 @@ window#osd progress {
     min-height: inherit;
     border-radius: inherit;
     border: none;
-    background: {{ .Accent1RGB }};
+    background: {{ get . "accent1" | rgba }};
 }
 
 /* ============================================================================
@@ -64,39 +64,42 @@ window#osd progress {
 
 /* Volume OSD
 window#osd.volume progress {
-    background: {{ .Accent3RGB }};
+    background: {{ get . "accent3" | rgba }};
 }
 */
 
 /* Brightness OSD
 window#osd.brightness progress {
-    background: {{ .WarningRGB }};
+    background: {{ get . "warning" | rgba }};
 }
 */
 
 /* Caps Lock OSD
 window#osd.caps-lock {
-    background: {{ .WarningRGBA "0.85" }};
+    background: {{ get . "warning" | withAlpha 0.85 | rgba }};
 }
 window#osd.caps-lock image,
 window#osd.caps-lock label {
-    color: {{ .BackgroundRGB }};
+    color: {{ get . "background" | rgba }};
 }
 */
 
 /* ============================================================================
- * Color Reference (for customization)
+ * Available Colors (49 semantic roles)
  * ============================================================================
- * Background:      {{ .Background }}
- * Foreground:      {{ .Foreground }}
- * BackgroundMuted: {{ .BackgroundMuted }}
- * ForegroundMuted: {{ .ForegroundMuted }}
- * Accent1:         {{ .Accent1 }}
- * Accent2:         {{ .Accent2 }}
- * Accent3:         {{ .Accent3 }}
- * Accent4:         {{ .Accent4 }}
- * Danger:          {{ .Danger }}
- * Warning:         {{ .Warning }}
- * Success:         {{ .Success }}
- * Info:            {{ .Info }}
+ * See docs/TEMPLATE_GUIDE.md for complete documentation
+ *
+ * Core: background, backgroundMuted, foreground, foregroundMuted
+ * Accents: accent1-4 and accent1Muted-accent4Muted
+ * Semantic: danger, warning, success, info, notification
+ * Surface: surface, onSurface, outline, border
+ * Surface variants: surfaceVariant, onSurfaceVariant, borderMuted, outlineVariant
+ * On-colors: onAccent1-4, onDanger, onWarning, onSuccess, onInfo
+ * Inverse: inverseSurface, inverseOnSurface, inversePrimary
+ * Scrim/shadow: scrim, shadow (have alpha baked in)
+ * Containers: surfaceContainerLowest through surfaceContainerHighest
+ *
+ * Use with template functions:
+ *   {{ get . "accent1" | rgba }}              - Full opacity
+ *   {{ get . "background" | withAlpha 0.8 | rgba }}  - 80% opacity
  */

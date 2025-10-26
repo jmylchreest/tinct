@@ -67,6 +67,12 @@ func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
 }
 
+// GetEmbeddedFS returns the embedded template filesystem.
+// Implements the output.TemplateProvider interface.
+func (p *Plugin) GetEmbeddedFS() interface{} {
+	return templates
+}
+
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
 	// Nothing to validate - all fields have defaults
@@ -132,7 +138,7 @@ func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, err
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct-colours.css.tmpl\n")
 	}
 
-	tmpl, err := template.New("colors").Parse(string(tmplContent))
+	tmpl, err := template.New("colors").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse colors template: %w", err)
 	}
@@ -177,57 +183,9 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// ColorsData holds data for the colors template.
-type ColorsData struct {
-	SourceTheme string            // "dark" or "light"
-	Colors      []ColorDefinition // Semantic theme colors
-}
-
-// ColorDefinition represents a color definition in GTK CSS format.
-type ColorDefinition struct {
-	Name string // e.g., "background", "accent1"
-	Hex  string // e.g., "#1a1b26"
-}
-
-// prepareColorsData converts a categorised palette to Waybar colors data.
-func (p *Plugin) prepareColorsData(palette *colour.CategorisedPalette) ColorsData {
-	data := ColorsData{
-		SourceTheme: palette.ThemeType.String(),
-		Colors:      []ColorDefinition{},
-	}
-
-	// Map semantic roles to CSS variable names
-	roleMapping := map[colour.ColourRole]string{
-		colour.RoleBackground:      "background",
-		colour.RoleBackgroundMuted: "background-muted",
-		colour.RoleForeground:      "foreground",
-		colour.RoleForegroundMuted: "foreground-muted",
-		colour.RoleAccent1:         "accent1",
-		colour.RoleAccent1Muted:    "accent1-muted",
-		colour.RoleAccent2:         "accent2",
-		colour.RoleAccent2Muted:    "accent2-muted",
-		colour.RoleAccent3:         "accent3",
-		colour.RoleAccent3Muted:    "accent3-muted",
-		colour.RoleAccent4:         "accent4",
-		colour.RoleAccent4Muted:    "accent4-muted",
-		colour.RoleDanger:          "danger",
-		colour.RoleWarning:         "warning",
-		colour.RoleSuccess:         "success",
-		colour.RoleInfo:            "info",
-		colour.RoleNotification:    "notification",
-	}
-
-	// Generate semantic color definitions
-	for role, name := range roleMapping {
-		if color, ok := palette.Get(role); ok {
-			data.Colors = append(data.Colors, ColorDefinition{
-				Name: name,
-				Hex:  color.Hex,
-			})
-		}
-	}
-
-	return data
+// prepareColorsData converts a categorised palette to PaletteHelper for template access.
+func (p *Plugin) prepareColorsData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
+	return colour.NewPaletteHelper(palette)
 }
 
 // PreExecute checks if waybar is available before generating the theme.

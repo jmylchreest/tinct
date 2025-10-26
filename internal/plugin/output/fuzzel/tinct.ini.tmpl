@@ -6,54 +6,54 @@
 #
 # Or use as standalone config: fuzzel --config ~/.config/fuzzel/tinct.ini
 #
-# Detected theme: {{ .SourceTheme }}
+# Detected theme: {{ themeType . }}
 
 [colors]
 # Background color (with 93% opacity)
-background={{ .BackgroundRGBA "ee" }}
+background={{ get . "background" | withAlpha 0.93 | hexAlpha | trimPrefix "#" }}
 
 # Text (foreground) color of unselected entries
-text={{ .ForegroundRGBA "ff" }}
+text={{ get . "foreground" | hexAlpha | trimPrefix "#" }}
 
 # Prompt character(s) color
-prompt={{ .Accent1RGBA "ff" }}
+prompt={{ get . "accent1" | hexAlpha | trimPrefix "#" }}
 
 # Placeholder text color
-placeholder={{ .ForegroundMutedRGBA "cc" }}
+placeholder={{ get . "foregroundMuted" | withAlpha 0.80 | hexAlpha | trimPrefix "#" }}
 
 # Input text color
-input={{ .ForegroundRGBA "ff" }}
+input={{ get . "foreground" | hexAlpha | trimPrefix "#" }}
 
 # Matched substring color
-match={{ .Accent2RGBA "ff" }}
+match={{ get . "accent2" | hexAlpha | trimPrefix "#" }}
 
 # Selected entry background
-selection={{ .Accent1RGBA "ff" }}
+selection={{ get . "accent1" | hexAlpha | trimPrefix "#" }}
 
 # Selected entry text
-selection-text={{ .BackgroundRGBA "ff" }}
+selection-text={{ get . "onAccent1" | hexAlpha | trimPrefix "#" }}
 
 # Selected entry matched substring
-selection-match={{ .Accent2RGBA "ff" }}
+selection-match={{ get . "accent2" | hexAlpha | trimPrefix "#" }}
 
 # Match counter color
-counter={{ .InfoRGBA "ff" }}
+counter={{ get . "info" | hexAlpha | trimPrefix "#" }}
 
 # Border color
-border={{ .Accent1RGBA "ff" }}
+border={{ get . "accent1" | hexAlpha | trimPrefix "#" }}
 
 # ============================================================================
-# Semantic Color Reference (for customization)
+# Available Colors (49 semantic roles)
 # ============================================================================
-# Background:      {{ .Background }}
-# Foreground:      {{ .Foreground }}
-# BackgroundMuted: {{ .BackgroundMuted }}
-# ForegroundMuted: {{ .ForegroundMuted }}
-# Accent1:         {{ .Accent1 }}
-# Accent2:         {{ .Accent2 }}
-# Accent3:         {{ .Accent3 }}
-# Accent4:         {{ .Accent4 }}
-# Danger:          {{ .Danger }}
-# Warning:         {{ .Warning }}
-# Success:         {{ .Success }}
-# Info:            {{ .Info }}
+# See docs/TEMPLATE_GUIDE.md for complete documentation
+#
+# Core: background, backgroundMuted, foreground, foregroundMuted
+# Accents: accent1-4 and accent1Muted-accent4Muted
+# Semantic: danger, warning, success, info, notification
+# Surface: surface, onSurface, outline, border
+# On-colors: onAccent1-4, onDanger, onWarning, onSuccess, onInfo
+# Containers: surfaceContainerLowest through surfaceContainerHighest
+#
+# Fuzzel uses RRGGBBAA format (hex without #):
+#   {{ get . "accent1" | hexAlpha | trimPrefix "#" }}
+#   {{ get . "background" | withAlpha 0.8 | hexAlpha | trimPrefix "#" }}

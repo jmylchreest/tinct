@@ -5,15 +5,17 @@
  * Import this file in your waybar style.css with:
  *   @import "tinct-colours.css";
  *
- * Detected theme: {{ .SourceTheme }}
+ * Detected theme: {{ themeType . }}
  */
 
 /* ============================================================================
- * Theme Colours ({{ .SourceTheme }} theme)
+ * Theme Colours ({{ themeType . }} theme)
  * ============================================================================ */
 
-{{- range .Colors }}
-@define-color {{ .Name }} {{ .Hex }};
+{{- range allRoles . }}
+{{- $color := get $ . }}
+{{- $varName := . | replace "_" "-" }}
+@define-color {{ $varName }} {{ $color | hex }};
 {{- end }}
 
 /* ============================================================================
@@ -29,14 +31,49 @@
  *
  *   #workspaces button.active {
  *     background-color: @accent1;
- *     color: @background;
+ *     color: @on-accent1;
  *   }
  *
- * Available colours:
- *   @background, @background-muted     - Background colours
- *   @foreground, @foreground-muted     - Text colours
- *   @accent1, @accent2, @accent3, @accent4 - Accent colours
- *   @accent1-muted, @accent2-muted, @accent3-muted, @accent4-muted
- *   @danger, @warning, @success, @info, @notification - Status colours
+ *   .module {
+ *     background-color: alpha(@surface, 0.8);
+ *     border-color: @outline;
+ *   }
+ *
+ * Available colours (49 semantic roles):
+ *
+ * Core colours (4):
+ *   @background, @background-muted, @foreground, @foreground-muted
+ *
+ * Accent colours (8):
+ *   @accent1, @accent1-muted, @accent2, @accent2-muted
+ *   @accent3, @accent3-muted, @accent4, @accent4-muted
+ *
+ * Semantic colours (5):
+ *   @danger, @warning, @success, @info, @notification
+ *
+ * Surface colours - Priority 1 (4):
+ *   @surface, @on-surface, @outline, @border
+ *
+ * Surface variants - Priority 2 (4):
+ *   @surface-variant, @on-surface-variant, @border-muted, @outline-variant
+ *
+ * On-colors for accents - Priority 2 (4):
+ *   @on-accent1, @on-accent2, @on-accent3, @on-accent4
+ *
+ * On-colors for semantic - Priority 2 (4):
+ *   @on-danger, @on-warning, @on-success, @on-info
+ *
+ * Inverse colors - Priority 3 (3):
+ *   @inverse-surface, @inverse-on-surface, @inverse-primary
+ *
+ * Scrim and shadow - Priority 3 (2):
+ *   @scrim, @shadow (have alpha baked in)
+ *
+ * Container elevation - Priority 3 (5):
+ *   @surface-container-lowest, @surface-container-low, @surface-container,
+ *   @surface-container-high, @surface-container-highest
+ *
+ * Note: Use GTK's alpha() function for transparency:
+ *   background-color: alpha(@background, 0.8);
  *
  * ========================================================================== */

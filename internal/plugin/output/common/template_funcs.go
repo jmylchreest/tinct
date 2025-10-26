@@ -18,6 +18,10 @@ func TemplateFuncs() template.FuncMap {
 		"has":        hasRoleFunc,
 		"getByIndex": getByIndexFunc,
 
+		// ANSI color matching
+		"ansi":     ansiFunc,
+		"ansiSafe": ansiSafeFunc,
+
 		// Format conversion
 		"hex":        hexFunc,
 		"hexAlpha":   hexAlphaFunc,
@@ -134,4 +138,26 @@ func allColorsFunc(ph *colour.PaletteHelper) []colour.ColorValue {
 // countFunc returns the total number of colors in the palette.
 func countFunc(ph *colour.PaletteHelper) int {
 	return ph.Count()
+}
+
+// ansiFunc finds the closest color to a given ANSI color name.
+// Panics if color name is not found - use ansiSafe to check first.
+// Supported names: black, red, green, yellow, blue, magenta, cyan, white,
+// brightblack, brightred, etc., and aliases like color0-color15, gray, purple, etc.
+func ansiFunc(ph *colour.PaletteHelper, colorName string) colour.ColorValue {
+	cv, ok := ph.FindClosestANSIColor(colorName)
+	if !ok {
+		panic(fmt.Sprintf("ANSI color name %q not recognized", colorName))
+	}
+	return cv
+}
+
+// ansiSafeFunc finds the closest color to a given ANSI color name with error handling.
+// Returns error if color name is not recognized.
+func ansiSafeFunc(ph *colour.PaletteHelper, colorName string) (colour.ColorValue, error) {
+	cv, ok := ph.FindClosestANSIColor(colorName)
+	if !ok {
+		return colour.ColorValue{}, fmt.Errorf("ANSI color name %q not recognized", colorName)
+	}
+	return cv, nil
 }

@@ -1,5 +1,5 @@
-// Package swayosd provides an output plugin for SwayOSD on-screen display colour themes.
-package swayosd
+// Package zellij provides an output plugin for Zellij terminal multiplexer colour themes.
+package zellij
 
 import (
 	"bytes"
@@ -26,33 +26,36 @@ func GetEmbeddedTemplates() embed.FS {
 	return templates
 }
 
-// Plugin implements the output.Plugin interface for SwayOSD.
+// Plugin implements the output.Plugin interface for Zellij.
 type Plugin struct {
 	outputDir string
+	themeName string
 	verbose   bool
 }
 
-// New creates a new SwayOSD output plugin with default settings.
+// New creates a new Zellij output plugin with default settings.
 func New() *Plugin {
 	return &Plugin{
 		outputDir: "",
+		themeName: "tinct",
 		verbose:   false,
 	}
 }
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "swayosd"
+	return "zellij"
 }
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate SwayOSD on-screen display colour theme configuration"
+	return "Generate Zellij terminal multiplexer colour theme (KDL format)"
 }
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "swayosd.output-dir", "", "Output directory (default: ~/.config/swayosd)")
+	cmd.Flags().StringVar(&p.outputDir, "zellij.output-dir", "", "Output directory (default: ~/.config/zellij/themes)")
+	cmd.Flags().StringVar(&p.themeName, "zellij.theme-name", "tinct", "Theme name for the theme file")
 }
 
 // SetVerbose enables or disables verbose logging for the plugin.
@@ -69,6 +72,9 @@ func (p *Plugin) GetEmbeddedFS() interface{} {
 
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
+	if p.themeName == "" {
+		return fmt.Errorf("theme name cannot be empty")
+	}
 	return nil
 }
 
@@ -80,9 +86,9 @@ func (p *Plugin) DefaultOutputDir() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/swayosd"
+		return ".config/zellij/themes"
 	}
-	return filepath.Join(home, ".config", "swayosd")
+	return filepath.Join(home, ".config", "zellij", "themes")
 }
 
 // Generate creates the theme file.
@@ -100,7 +106,8 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
 
-	files["style.css"] = themeContent
+	filename := fmt.Sprintf("%s.kdl", p.themeName)
+	files[filename] = themeContent
 
 	return files, nil
 }
@@ -108,18 +115,18 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, error) {
 	// Load template with custom override support
-	loader := tmplloader.New("swayosd", templates)
+	loader := tmplloader.New("zellij", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
 	}
-	tmplContent, fromCustom, err := loader.Load("style.css.tmpl")
+	tmplContent, fromCustom, err := loader.Load("theme.kdl.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
 	// Log if using custom template
 	if p.verbose && fromCustom {
-		fmt.Fprintf(os.Stderr, "   Using custom template for style.css.tmpl\n")
+		fmt.Fprintf(os.Stderr, "   Using custom template for theme.kdl.tmpl\n")
 	}
 
 	tmpl, err := template.New("theme").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
@@ -137,28 +144,49 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 	return buf.Bytes(), nil
 }
 
-// prepareThemeData converts a categorised palette to PaletteHelper for template access.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
-	return colour.NewPaletteHelper(palette)
+// prepareThemeData converts a categorised palette to template data.
+// This provides DRY access to all colours with multiple format options.
+func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) map[string]any {
+	return map[string]any{
+		"PaletteHelper": colour.NewPaletteHelper(palette),
+		"ThemeName":     p.themeName,
+	}
 }
 
-// PreExecute checks if swayosd is available and config directory exists.
+// PreExecute checks if zellij config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if swayosd-server executable exists on PATH
-	_, err = exec.LookPath("swayosd-server")
+	// Check if zellij executable exists on PATH
+	_, err = exec.LookPath("zellij")
 	if err != nil {
-		return true, "swayosd-server executable not found on $PATH", nil
+		return true, "zellij executable not found on $PATH", nil
 	}
 
-	// Check if config directory exists (create it if not)
+	// Check if config directory exists, create if it doesn't
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// For swayosd, we can create the directory since it's straightforward
+		// Try to create the directory
 		if err := os.MkdirAll(configDir, 0755); err != nil {
-			return true, fmt.Sprintf("swayosd config directory does not exist and cannot be created: %s", configDir), nil
+			return true, fmt.Sprintf("zellij themes directory not found and could not be created: %s", configDir), nil
+		}
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Created zellij themes directory: %s\n", configDir)
 		}
 	}
 
 	return false, "", nil
+}
+
+// PostExecute provides instructions for enabling the theme.
+// Implements the output.PostExecuteHook interface.
+func (p *Plugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+	if p.verbose && len(writtenFiles) > 0 {
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "   To use this theme in Zellij, add to your config.kdl:\n")
+		fmt.Fprintf(os.Stderr, "   theme \"%s\"\n", p.themeName)
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "   Or set it temporarily with:\n")
+		fmt.Fprintf(os.Stderr, "   zellij options --theme %s\n", p.themeName)
+	}
+	return nil
 }
