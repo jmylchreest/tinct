@@ -30,6 +30,7 @@ func TemplateFuncs() template.FuncMap {
 		"rgb":        rgbFunc,
 		"rgba":       rgbaFunc,
 		"rgbDecimal": rgbDecimalFunc,
+		"rgbSpaces":  rgbSpacesFunc,
 
 		// Alpha manipulation
 		"withAlpha": withAlphaFunc,
@@ -111,6 +112,11 @@ func rgbaFunc(cv colour.ColorValue) string {
 // rgbDecimalFunc returns color in "r,g,b" decimal format (for Hyprland).
 func rgbDecimalFunc(cv colour.ColorValue) string {
 	return cv.RGBDecimal()
+}
+
+// rgbSpacesFunc returns color in "r g b" space-separated format (for Zellij KDL).
+func rgbSpacesFunc(cv colour.ColorValue) string {
+	return fmt.Sprintf("%d %d %d", cv.R(), cv.G(), cv.B())
 }
 
 // withAlphaFunc returns a copy of the color with custom alpha (0.0-1.0).
