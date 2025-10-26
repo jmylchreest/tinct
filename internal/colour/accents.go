@@ -179,10 +179,10 @@ func areAccentsTooSimilar(accents []CategorisedColour, bg CategorisedColour) boo
 //
 // Design Theory for Monochromatic Palettes:
 // - When extracted colors are too similar, generate accents with guaranteed contrast
-// - Accent1: Highest contrast with background (minimum 3:1)
-// - Accent2-4: Progressive steps between accent1 and background
-// - Each accent must have minimum 1.5:1 contrast with previous accent
-// - Maintains analogous hue to background (within ±30°)
+// - Introduces hue diversity using complementary/triadic color theory
+// - Accent1: Highest contrast with background, analogous hue (±30°)
+// - Accent2-4: Complementary and triadic hues for visual interest
+// - Each accent must have minimum 3:1 contrast with background
 // - Adjusts saturation based on theme (desaturated for dark themes)
 func generateSyntheticAccents(bg CategorisedColour, theme ThemeType, count int) []CategorisedColour {
 	if count <= 0 {
@@ -192,77 +192,69 @@ func generateSyntheticAccents(bg CategorisedColour, theme ThemeType, count int) 
 	h, s, l := rgbToHSL(bg.RGB)
 	accents := make([]CategorisedColour, 0, count)
 
-	// Determine target luminance for accent1 (highest contrast)
-	var accent1Lum float64
-	if theme == ThemeDark {
-		// Dark theme: accent1 should be much lighter than background
-		accent1Lum = math.Min(0.85, l+0.50) // Aim for 50% lighter
-	} else {
-		// Light theme: accent1 should be much darker than background
-		accent1Lum = math.Max(0.15, l-0.50) // Aim for 50% darker
+	// Define hue offsets for accent diversity
+	// Using color theory: analogous (±30°), complementary (180°), triadic (120°, 240°)
+	hueOffsets := []float64{
+		30,  // accent1: analogous (warm/cool shift)
+		180, // accent2: complementary (maximum contrast)
+		120, // accent3: triadic (harmonious diversity)
+		240, // accent4: triadic (harmonious diversity)
 	}
 
-	// Ensure minimum contrast ratio of 3:1 for accent1
-	var accent1RGB RGB
-	accent1Lum, accent1RGB = adjustLuminanceForContrast(h, s, accent1Lum, bg.Colour, MinAccentBgContrast, theme, 10)
-	accent1Color := RGBToColor(accent1RGB)
+	// Target saturation: slightly higher than background for accent visibility
+	// But reduce in dark themes to avoid visual vibration
+	targetSat := s
+	if targetSat < 0.5 {
+		targetSat = 0.6 // Boost saturation for muted backgrounds
+	}
+	if theme == ThemeDark && targetSat > 0.7 {
+		targetSat = 0.7 // Cap saturation in dark themes to reduce eye strain
+	}
 
-	// Create accent1
-	accents = append(accents, CategorisedColour{
-		Colour:      accent1Color,
-		Hex:         accent1RGB.Hex(),
-		RGB:         accent1RGB,
-		RGBA:        RGBToRGBA(accent1RGB),
-		Luminance:   accent1Lum,
-		IsLight:     accent1Lum > 0.5,
-		Hue:         h,
-		Saturation:  s,
-		IsGenerated: true,
-		Weight:      0,
-	})
+	// Determine base luminance for accents (need good contrast with background)
+	var baseLum float64
+	if theme == ThemeDark {
+		// Dark theme: accents should be lighter than background
+		baseLum = math.Min(0.75, l+0.40)
+	} else {
+		// Light theme: accents should be darker than background
+		baseLum = math.Max(0.25, l-0.40)
+	}
 
-	// Generate remaining accents as progressive steps
-	// Dark theme: accent1 (lightest) → accent4 (darkest, closest to bg)
-	// Light theme: accent1 (darkest) → accent4 (lightest, closest to bg)
-	for i := 1; i < count; i++ {
-		// Calculate interpolation factor (0.0 at accent1, 1.0 at background)
-		factor := float64(i) / float64(count)
+	// Generate accents with varied hues
+	for i := 0; i < count; i++ {
+		// Calculate hue with offset for diversity
+		offset := hueOffsets[i%len(hueOffsets)]
+		newHue := math.Mod(h+offset, 360.0)
 
-		// Interpolate luminance between accent1 and background
-		newLum := accent1Lum + (l-accent1Lum)*factor
-
-		// Ensure minimum contrast with previous accent
-		if i > 0 {
-			prevLum := accents[i-1].Luminance
-			lumDiff := math.Abs(newLum - prevLum)
-
-			// If too similar to previous accent, adjust
-			if lumDiff < 0.10 { // Minimum 10% luminance difference
-				if theme == ThemeDark {
-					newLum = prevLum - 0.10
-				} else {
-					newLum = prevLum + 0.10
-				}
-			}
+		// Vary luminance slightly across accents for visual progression
+		// accent1 = highest contrast, accent4 = closer to background
+		lumAdjust := float64(i) * 0.05
+		var accentLum float64
+		if theme == ThemeDark {
+			accentLum = baseLum - lumAdjust // Get progressively darker
+		} else {
+			accentLum = baseLum + lumAdjust // Get progressively lighter
 		}
+		accentLum = math.Max(0.15, math.Min(0.85, accentLum))
 
-		// Clamp luminance to valid range
-		newLum = math.Max(0.0, math.Min(1.0, newLum))
+		// Adjust saturation slightly for each accent
+		accentSat := targetSat * (0.95 + 0.1*float64(i)/float64(count))
+		accentSat = math.Max(0.4, math.Min(1.0, accentSat))
 
-		// Slightly vary saturation for visual interest (±10%)
-		newSat := s * (0.9 + 0.2*float64(i)/float64(count))
-		newSat = math.Max(0.0, math.Min(1.0, newSat))
+		// Generate RGB and ensure minimum contrast with background
+		var accentRGB RGB
+		accentLum, accentRGB = adjustLuminanceForContrast(newHue, accentSat, accentLum, bg.Colour, MinAccentBgContrast, theme, 10)
 
-		newRGB := HSLToRGB(h, newSat, newLum)
 		accents = append(accents, CategorisedColour{
-			Colour:      RGBToColor(newRGB),
-			Hex:         newRGB.Hex(),
-			RGB:         newRGB,
-			RGBA:        RGBToRGBA(newRGB),
-			Luminance:   newLum,
-			IsLight:     newLum > 0.5,
-			Hue:         h,
-			Saturation:  newSat,
+			Colour:      RGBToColor(accentRGB),
+			Hex:         accentRGB.Hex(),
+			RGB:         accentRGB,
+			RGBA:        RGBToRGBA(accentRGB),
+			Luminance:   accentLum,
+			IsLight:     accentLum > 0.5,
+			Hue:         newHue,
+			Saturation:  accentSat,
 			IsGenerated: true,
 			Weight:      0,
 		})
