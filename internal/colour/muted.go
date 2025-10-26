@@ -50,14 +50,18 @@ func createMutedVariant(cc CategorisedColour, adjustment float64, themeType Them
 
 	// Convert back to RGB
 	newRGB := HSLToRGB(h, newSat, newLum)
+	newColor := RGBToColor(newRGB)
+
+	// Calculate actual relative luminance (WCAG standard) from the RGB color
+	actualLuminance := Luminance(newColor)
 
 	return CategorisedColour{
-		Colour:     RGBToColor(newRGB),
+		Colour:     newColor,
 		Hex:        newRGB.Hex(),
 		RGB:        newRGB,
 		RGBA:       RGBToRGBA(newRGB),
-		Luminance:  newLum,
-		IsLight:    newLum > 0.5,
+		Luminance:  actualLuminance, // Use calculated relative luminance, not HSL lightness
+		IsLight:    actualLuminance > 0.5,
 		Hue:        h,
 		Saturation: newSat,
 	}

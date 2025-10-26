@@ -531,8 +531,8 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	// Build table data
 	var rows [][]string
 
-	// Header row
-	header := []string{"Preview", "Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source"}
+	// Header row (added empty first column for marker)
+	header := []string{"", "Preview", "Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source"}
 
 	// Data rows
 	for _, cc := range cp.AllColours {
@@ -554,7 +554,14 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 		// Always show color preview blocks
 		preview := ColourPreview(cc.RGB, 8)
 
+		// Mark the background role with ">"
+		marker := " "
+		if cc.Role == RoleBackground {
+			marker = ">"
+		}
+
 		rows = append(rows, []string{
+			marker,
 			preview,
 			roleName,
 			indexStr,
@@ -573,9 +580,9 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	}
 	for _, row := range rows {
 		for i, cell := range row {
-			// For preview column, count visible width (8 for the color block)
+			// For preview column (index 1), count visible width (8 for the color block)
 			cellLen := len(cell)
-			if i == 0 {
+			if i == 1 {
 				cellLen = 8 // Color preview is always 8 visible characters
 			}
 			if cellLen > colWidths[i] {
@@ -602,8 +609,8 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	for _, row := range rows {
 		var rowParts []string
 		for i, cell := range row {
-			if i == 0 {
-				// Preview column: don't pad (ANSI codes mess up padding)
+			if i == 1 {
+				// Preview column (index 1): don't pad (ANSI codes mess up padding)
 				rowParts = append(rowParts, cell+strings.Repeat(" ", colWidths[i]-8))
 			} else {
 				rowParts = append(rowParts, padRight(cell, colWidths[i]))
