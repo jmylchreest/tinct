@@ -4,89 +4,106 @@
 # Include this file in your kitty.conf with:
 #   include ~/.config/kitty/tinct.conf
 #
-# Detected theme: {{ .SourceTheme }}
+# Detected theme: {{ themeType . }}
 
 # ============================================================================
 # Basic Colours
 # ============================================================================
 
 # background (colour0)
-foreground {{ .Foreground }}
-background {{ .Background }}
+foreground {{ (get . "foreground") | hex }}
+background {{ (get . "background") | hex }}
 
 # Selection colours
-selection_foreground {{ .Background }}
-selection_background {{ .Accent1 }}
+selection_foreground {{ (get . "background") | hex }}
+selection_background {{ (get . "accent1") | hex }}
 
 # ============================================================================
 # Cursor Colours
 # ============================================================================
 
 # accent1 (colour4)
-cursor {{ .Accent1 }}
-cursor_text_color {{ .Background }}
+cursor {{ (get . "accent1") | hex }}
+cursor_text_color {{ (get . "background") | hex }}
 
 # ============================================================================
 # URL Colours
 # ============================================================================
 
 # info (colour15)
-url_color {{ .Info }}
+url_color {{ (get . "info") | hex }}
 
 # ============================================================================
 # Tab Bar Colours
 # ============================================================================
 
 # background (colour0)
-tab_bar_background {{ .Background }}
+tab_bar_background {{ (get . "background") | hex }}
 
 # Active tab - accent1 (colour4)
-active_tab_foreground {{ .Background }}
-active_tab_background {{ .Accent1 }}
+active_tab_foreground {{ (get . "background") | hex }}
+active_tab_background {{ (get . "accent1") | hex }}
 
 # Inactive tab - accent1Muted (colour5)
-inactive_tab_foreground {{ .Foreground }}
-inactive_tab_background {{ .Accent1Muted }}
+inactive_tab_foreground {{ (get . "foreground") | hex }}
+inactive_tab_background {{ (get . "accent1Muted") | hex }}
 
 # ============================================================================
 # Border Colours
 # ============================================================================
 
 # accent1 (colour4)
-active_border_color {{ .Accent1 }}
+active_border_color {{ (get . "accent1") | hex }}
 
-# accent2Muted (colour7)
-inactive_border_color {{ .Accent2Muted }}
+# border - NEW: uses generated border color
+inactive_border_color {{ if has . "border" }}{{ (get . "border") | hex }}{{ else }}{{ (get . "accent2Muted") | hex }}{{ end }}
 
 # warning (colour13)
-bell_border_color {{ .Warning }}
+bell_border_color {{ (get . "warning") | hex }}
 
 # ============================================================================
 # Mark Colours
 # ============================================================================
 
 # accent1 (colour4)
-mark1_foreground {{ .Background }}
-mark1_background {{ .Accent1 }}
+mark1_foreground {{ (get . "background") | hex }}
+mark1_background {{ (get . "accent1") | hex }}
 
 # ============================================================================
 # ANSI Colour Palette
 # ============================================================================
 # All colours are exposed with their semantic names for reference
 
-color0  {{ .Background }}       # background
-color1  {{ .Foreground }}       # foreground
-color2  {{ .BackgroundMuted }}  # backgroundMuted
-color3  {{ .ForegroundMuted }}  # foregroundMuted
-color4  {{ .Accent1 }}          # accent1
-color5  {{ .Accent1Muted }}     # accent1Muted
-color6  {{ .Accent2 }}          # accent2
-color7  {{ .Accent2Muted }}     # accent2Muted
-color8  {{ .Accent3 }}          # accent3
-color9  {{ .Accent3Muted }}     # accent3Muted
-color10 {{ .Accent4 }}          # accent4
-color11 {{ .Accent4Muted }}     # accent4Muted
-color12 {{ .Danger }}           # danger
-color13 {{ .Warning }}          # warning
-color14 {{ .Success }}          # success
-color15 {{ .Info }}             # info
+{{- $bg := get . "background" }}
+{{- $fg := get . "foreground" }}
+{{- $bgMuted := get . "backgroundMuted" }}
+{{- $fgMuted := get . "foregroundMuted" }}
+{{- $accent1 := get . "accent1" }}
+{{- $accent1Muted := get . "accent1Muted" }}
+{{- $accent2 := get . "accent2" }}
+{{- $accent2Muted := get . "accent2Muted" }}
+{{- $accent3 := get . "accent3" }}
+{{- $accent3Muted := get . "accent3Muted" }}
+{{- $accent4 := get . "accent4" }}
+{{- $accent4Muted := get . "accent4Muted" }}
+{{- $danger := get . "danger" }}
+{{- $warning := get . "warning" }}
+{{- $success := get . "success" }}
+{{- $info := get . "info" }}
+
+color0  {{ $bg | hex }}         # background
+color1  {{ $fg | hex }}         # foreground
+color2  {{ $bgMuted | hex }}    # backgroundMuted
+color3  {{ $fgMuted | hex }}    # foregroundMuted
+color4  {{ $accent1 | hex }}    # accent1
+color5  {{ $accent1Muted | hex }} # accent1Muted
+color6  {{ $accent2 | hex }}    # accent2
+color7  {{ $accent2Muted | hex }} # accent2Muted
+color8  {{ $accent3 | hex }}    # accent3
+color9  {{ $accent3Muted | hex }} # accent3Muted
+color10 {{ $accent4 | hex }}    # accent4
+color11 {{ $accent4Muted | hex }} # accent4Muted
+color12 {{ $danger | hex }}     # danger
+color13 {{ $warning | hex }}    # warning
+color14 {{ $success | hex }}    # success
+color15 {{ $info | hex }}       # info

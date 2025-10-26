@@ -241,6 +241,11 @@ func RGBToColor(rgb RGB) color.Color {
 	return color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
 }
 
+// RGBToRGBA converts an RGB struct to an RGBA struct with full opacity.
+func RGBToRGBA(rgb RGB) RGBA {
+	return RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
+}
+
 // adjustLuminanceForContrast iteratively adjusts luminance until minimum contrast is achieved.
 // Used by foreground, accent, and semantic color generation to ensure WCAG compliance.
 // stepSize defaults to 0.05 if set to 0.

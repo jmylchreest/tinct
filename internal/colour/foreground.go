@@ -89,6 +89,7 @@ func generateSyntheticForeground(bg CategorisedColour, theme ThemeType, config C
 		Colour:      RGBToColor(fgRGB),
 		Hex:         fgRGB.Hex(),
 		RGB:         fgRGB,
+		RGBA:        RGBToRGBA(fgRGB),
 		Luminance:   targetLum,
 		IsLight:     targetLum > 0.5,
 		Hue:         h,

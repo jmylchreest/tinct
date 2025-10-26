@@ -35,6 +35,46 @@ const (
 	RoleInfo         ColourRole = "info"
 	RoleNotification ColourRole = "notification"
 
+	// Surface and container roles (Priority 1 - Material Design 3)
+	RoleSurface   ColourRole = "surface"   // Base surface for cards, sheets, dialogs
+	RoleOnSurface ColourRole = "onSurface" // Text/icons on surface
+	RoleOutline   ColourRole = "outline"   // Borders, dividers, outlines
+	RoleBorder    ColourRole = "border"    // Primary border color
+
+	// Surface and border variants (Priority 2)
+	RoleSurfaceVariant   ColourRole = "surfaceVariant"   // Alternate surface color
+	RoleOnSurfaceVariant ColourRole = "onSurfaceVariant" // Text on surface variant
+	RoleBorderMuted      ColourRole = "borderMuted"      // Inactive/muted borders
+	RoleOutlineVariant   ColourRole = "outlineVariant"   // Secondary outline
+
+	// On-colors for accents (Priority 2)
+	RoleOnAccent1 ColourRole = "onAccent1" // Text on accent1 background
+	RoleOnAccent2 ColourRole = "onAccent2" // Text on accent2 background
+	RoleOnAccent3 ColourRole = "onAccent3" // Text on accent3 background
+	RoleOnAccent4 ColourRole = "onAccent4" // Text on accent4 background
+
+	// On-colors for semantic roles (Priority 2)
+	RoleOnDanger  ColourRole = "onDanger"  // Text on danger background
+	RoleOnWarning ColourRole = "onWarning" // Text on warning background
+	RoleOnSuccess ColourRole = "onSuccess" // Text on success background
+	RoleOnInfo    ColourRole = "onInfo"    // Text on info background
+
+	// Inverse colors for overlays (Priority 3)
+	RoleInverseSurface   ColourRole = "inverseSurface"   // Inverse surface (tooltip backgrounds)
+	RoleInverseOnSurface ColourRole = "inverseOnSurface" // Text on inverse surface
+	RoleInversePrimary   ColourRole = "inversePrimary"   // Inverse accent color
+
+	// Scrim and shadow with alpha (Priority 3)
+	RoleScrim  ColourRole = "scrim"  // Modal backdrop overlay (with alpha)
+	RoleShadow ColourRole = "shadow" // Elevation shadows (with alpha)
+
+	// Surface container elevation variants (Priority 3 - Material Design 3)
+	RoleSurfaceContainerLowest  ColourRole = "surfaceContainerLowest"  // Lowest elevation
+	RoleSurfaceContainerLow     ColourRole = "surfaceContainerLow"     // Low elevation
+	RoleSurfaceContainer        ColourRole = "surfaceContainer"        // Default container
+	RoleSurfaceContainerHigh    ColourRole = "surfaceContainerHigh"    // High elevation
+	RoleSurfaceContainerHighest ColourRole = "surfaceContainerHighest" // Highest elevation
+
 	// Positional roles for ambient lighting
 	// Core 8 positions (corners + mid-edges)
 	RolePositionTopLeft     ColourRole = "positionTopLeft"
@@ -77,8 +117,9 @@ const (
 type CategorisedColour struct {
 	Colour      color.Color `json:"-"`
 	Role        ColourRole  `json:"role"`
-	Hex         string      `json:"hex"`
-	RGB         RGB         `json:"rgb"`
+	Hex         string      `json:"hex"`  // #RRGGBB format (backwards compatible)
+	RGB         RGB         `json:"rgb"`  // RGB without alpha (backwards compatible)
+	RGBA        RGBA        `json:"rgba"` // RGBA with alpha channel (defaults to 255/opaque)
 	Luminance   float64     `json:"luminance"`
 	IsLight     bool        `json:"is_light"`
 	Hue         float64     `json:"hue,omitempty"`          // HSL hue (0-360)
@@ -194,12 +235,14 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	for i, c := range palette.Colors {
 		lum := Luminance(c)
 		rgb := ToRGB(c)
+		rgba := ToRGBA(c)
 		h, s, _ := rgbToHSL(rgb)
 
 		extracted[i] = CategorisedColour{
 			Colour:      c,
 			Hex:         rgb.Hex(),
 			RGB:         rgb,
+			RGBA:        rgba,
 			Luminance:   lum,
 			IsLight:     lum > 0.5,
 			Hue:         h,
@@ -396,6 +439,9 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 
 	// SEMANTIC COLOR ASSIGNMENT (semantic.go)
 	assignSemanticRolesWithHints(result, accents, usedForSemantic, hintsApplied)
+
+	// SURFACE & CONTAINER COLOR GENERATION (surface.go)
+	generateSurfaceColors(result, bg, fg, themeType, hintsApplied)
 
 	// Collect all remaining colors that weren't assigned to any role
 	additionalColors := make([]CategorisedColour, 0)

@@ -55,6 +55,7 @@ func createMutedVariant(cc CategorisedColour, adjustment float64, themeType Them
 		Colour:     RGBToColor(newRGB),
 		Hex:        newRGB.Hex(),
 		RGB:        newRGB,
+		RGBA:       RGBToRGBA(newRGB),
 		Luminance:  newLum,
 		IsLight:    newLum > 0.5,
 		Hue:        h,
