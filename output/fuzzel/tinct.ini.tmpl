@@ -10,7 +10,7 @@
 
 [colors]
 # Background color (with 93% opacity)
-background={{ withAlpha (get . "background") 0.93 | hexAlpha | trimPrefix "#" }}
+background={{ get . "background" | withAlpha 0.93 | hexAlpha | trimPrefix "#" }}
 
 # Text (foreground) color of unselected entries
 text={{ get . "foreground" | hexAlpha | trimPrefix "#" }}
@@ -19,7 +19,7 @@ text={{ get . "foreground" | hexAlpha | trimPrefix "#" }}
 prompt={{ get . "accent1" | hexAlpha | trimPrefix "#" }}
 
 # Placeholder text color
-placeholder={{ withAlpha (get . "foregroundMuted") 0.80 | hexAlpha | trimPrefix "#" }}
+placeholder={{ get . "foregroundMuted" | withAlpha 0.80 | hexAlpha | trimPrefix "#" }}
 
 # Input text color
 input={{ get . "foreground" | hexAlpha | trimPrefix "#" }}
@@ -56,4 +56,4 @@ border={{ get . "accent1" | hexAlpha | trimPrefix "#" }}
 #
 # Fuzzel uses RRGGBBAA format (hex without #):
 #   {{ get . "accent1" | hexAlpha | trimPrefix "#" }}
-#   {{ withAlpha (get . "background") 0.8 | hexAlpha | trimPrefix "#" }}
+#   {{ get . "background" | withAlpha 0.8 | hexAlpha | trimPrefix "#" }}

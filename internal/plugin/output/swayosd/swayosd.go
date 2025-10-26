@@ -145,10 +145,10 @@ func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.Pa
 // PreExecute checks if swayosd is available and config directory exists.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if swayosd-server executable exists on PATH
-	_, err = exec.LookPath("swayosd-server")
+	// Check if swayosd-client executable exists on PATH
+	_, err = exec.LookPath("swayosd-client")
 	if err != nil {
-		return true, "swayosd-server executable not found on $PATH", nil
+		return true, "swayosd-client executable not found on $PATH", nil
 	}
 
 	// Check if config directory exists (create it if not)

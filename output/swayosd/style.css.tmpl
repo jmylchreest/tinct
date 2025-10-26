@@ -13,7 +13,7 @@ window#osd {
     border: none;
 
     /* Background with transparency */
-    background: {{ withAlpha (get . "background") 0.85 | rgba }};
+    background: {{ get . "background" | withAlpha 0.85 | rgba }};
 }
 
 window#osd #container {
@@ -45,7 +45,7 @@ window#osd trough {
     min-height: inherit;
     border-radius: inherit;
     border: none;
-    background: {{ withAlpha (get . "foregroundMuted") 0.3 | rgba }};
+    background: {{ get . "foregroundMuted" | withAlpha 0.3 | rgba }};
 }
 
 /* Progress bar fill */
@@ -76,7 +76,7 @@ window#osd.brightness progress {
 
 /* Caps Lock OSD
 window#osd.caps-lock {
-    background: {{ withAlpha (get . "warning") 0.85 | rgba }};
+    background: {{ get . "warning" | withAlpha 0.85 | rgba }};
 }
 window#osd.caps-lock image,
 window#osd.caps-lock label {
@@ -101,5 +101,5 @@ window#osd.caps-lock label {
  *
  * Use with template functions:
  *   {{ get . "accent1" | rgba }}              - Full opacity
- *   {{ withAlpha (get . "background") 0.8 | rgba }}  - 80% opacity
+ *   {{ get . "background" | withAlpha 0.8 | rgba }}  - 80% opacity
  */

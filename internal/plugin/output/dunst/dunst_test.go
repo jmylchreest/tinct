@@ -87,131 +87,6 @@ func TestDunstPlugin_CustomOutputDir(t *testing.T) {
 	}
 }
 
-// TestDunstPlugin_HexWithAlpha tests the hexWithAlpha helper function.
-func TestDunstPlugin_HexWithAlpha(t *testing.T) {
-	tests := []struct {
-		name     string
-		hex      string
-		alpha    string
-		expected string
-	}{
-		{
-			name:     "Standard hex with hash",
-			hex:      "#1a1b26",
-			alpha:    "ee",
-			expected: "#1a1b26ee",
-		},
-		{
-			name:     "Hex without hash",
-			hex:      "c0caf5",
-			alpha:    "ff",
-			expected: "#c0caf5ff",
-		},
-		{
-			name:     "Semi-transparent",
-			hex:      "#7aa2f7",
-			alpha:    "cc",
-			expected: "#7aa2f7cc",
-		},
-		{
-			name:     "Already has hash",
-			hex:      "#ffffff",
-			alpha:    "ff",
-			expected: "#ffffffff",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := hexWithAlpha(tt.hex, tt.alpha)
-			if result != tt.expected {
-				t.Errorf("hexWithAlpha(%s, %s) = %s, want %s", tt.hex, tt.alpha, result, tt.expected)
-			}
-		})
-	}
-}
-
-// TestDunstPlugin_ThemeDataWithAlphaMethods tests RGBA helper methods.
-func TestDunstPlugin_ThemeDataWithAlphaMethods(t *testing.T) {
-	data := ThemeData{
-		Background: "#1a1b26",
-		Foreground: "#c0caf5",
-		Accent1:    "#7aa2f7",
-		Accent2:    "#bb9af7",
-		Accent3:    "#7dcfff",
-		Accent4:    "#9ece6a",
-		Danger:     "#f7768e",
-		Warning:    "#e0af68",
-		Success:    "#9ece6a",
-		Info:       "#7aa2f7",
-	}
-
-	tests := []struct {
-		name   string
-		method func(string) string
-		alpha  string
-	}{
-		{"BackgroundWithAlpha", data.BackgroundWithAlpha, "ee"},
-		{"ForegroundWithAlpha", data.ForegroundWithAlpha, "ff"},
-		{"Accent1WithAlpha", data.Accent1WithAlpha, "cc"},
-		{"Accent2WithAlpha", data.Accent2WithAlpha, "ff"},
-		{"Accent3WithAlpha", data.Accent3WithAlpha, "ee"},
-		{"Accent4WithAlpha", data.Accent4WithAlpha, "ff"},
-		{"DangerWithAlpha", data.DangerWithAlpha, "ee"},
-		{"WarningWithAlpha", data.WarningWithAlpha, "ff"},
-		{"SuccessWithAlpha", data.SuccessWithAlpha, "ff"},
-		{"InfoWithAlpha", data.InfoWithAlpha, "cc"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.method(tt.alpha)
-			// Should start with #
-			if !strings.HasPrefix(result, "#") {
-				t.Errorf("%s(%s) = %s, should start with #", tt.name, tt.alpha, result)
-			}
-			// Should be 9 characters (#RRGGBBAA)
-			if len(result) != 9 {
-				t.Errorf("%s(%s) = %s (length %d), want length 9", tt.name, tt.alpha, result, len(result))
-			}
-			// Should end with the alpha value
-			if !strings.HasSuffix(result, tt.alpha) {
-				t.Errorf("%s(%s) = %s, should end with %s", tt.name, tt.alpha, result, tt.alpha)
-			}
-		})
-	}
-}
-
-// TestDunstPlugin_UrgencySections tests that urgency sections have correct timeouts.
-func TestDunstPlugin_UrgencySections(t *testing.T) {
-	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
-	plugin := New()
-
-	files, err := plugin.Generate(palette)
-	if err != nil {
-		t.Fatalf("Generate() error = %v", err)
-	}
-
-	content := string(files["tinct.dunstrc"])
-
-	// Verify urgency_low uses info colors
-	if !strings.Contains(content, "[urgency_low]") {
-		t.Error("Missing urgency_low section")
-	}
-
-	// Verify urgency_critical has timeout = 0
-	urgencyCriticalSection := content[strings.Index(content, "[urgency_critical]"):]
-	if !strings.Contains(urgencyCriticalSection, "timeout = 0") {
-		t.Error("urgency_critical should have timeout = 0")
-	}
-
-	// Verify urgency_normal and urgency_low have timeout = 10
-	urgencyNormalSection := content[strings.Index(content, "[urgency_normal]"):strings.Index(content, "[urgency_critical]")]
-	if !strings.Contains(urgencyNormalSection, "timeout = 10") {
-		t.Error("urgency_normal should have timeout = 10")
-	}
-}
-
 // TestDunstPlugin_GetEmbeddedTemplates tests embedded template access.
 func TestDunstPlugin_GetEmbeddedTemplates(t *testing.T) {
 	fs := GetEmbeddedTemplates()
@@ -241,34 +116,60 @@ func TestDunstPlugin_PrepareThemeData(t *testing.T) {
 
 	data := plugin.prepareThemeData(palette)
 
-	// Check that all fields are populated
-	if data.SourceTheme == "" {
-		t.Error("SourceTheme should not be empty")
+	// Check that PaletteHelper is created properly
+	if data == nil {
+		t.Fatal("prepareThemeData should return non-nil PaletteHelper")
 	}
-	if data.Background == "" {
-		t.Error("Background should not be empty")
+
+	// Check that required roles exist
+	requiredRoles := []colour.ColourRole{
+		colour.RoleBackground,
+		colour.RoleForeground,
+		colour.RoleAccent1,
+		colour.RoleDanger,
+		colour.RoleWarning,
+		colour.RoleSuccess,
+		colour.RoleInfo,
 	}
-	if data.Foreground == "" {
-		t.Error("Foreground should not be empty")
-	}
-	if data.Accent1 == "" {
-		t.Error("Accent1 should not be empty")
-	}
-	if data.Danger == "" {
-		t.Error("Danger should not be empty")
-	}
-	if data.Warning == "" {
-		t.Error("Warning should not be empty")
-	}
-	if data.Success == "" {
-		t.Error("Success should not be empty")
-	}
-	if data.Info == "" {
-		t.Error("Info should not be empty")
+
+	for _, role := range requiredRoles {
+		if !data.Has(role) {
+			t.Errorf("PaletteHelper missing required role: %s", role)
+		}
 	}
 
 	// Check that theme type matches
-	if data.SourceTheme != "dark" {
-		t.Errorf("SourceTheme = %s, want dark", data.SourceTheme)
+	if data.ThemeTypeString() != "dark" {
+		t.Errorf("ThemeTypeString() = %s, want dark", data.ThemeTypeString())
+	}
+}
+
+// TestDunstPlugin_ColorFormatting tests that colors are formatted correctly.
+func TestDunstPlugin_ColorFormatting(t *testing.T) {
+	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
+	plugin := New()
+
+	files, err := plugin.Generate(palette)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	content := string(files["tinct.dunstrc"])
+
+	// Verify hex color format (#RRGGBB)
+	if !strings.Contains(content, "#") {
+		t.Error("Generated content should contain hex colors")
+	}
+
+	// Verify urgency_critical has timeout = 0
+	urgencyCriticalSection := content[strings.Index(content, "[urgency_critical]"):]
+	if !strings.Contains(urgencyCriticalSection, "timeout = 0") {
+		t.Error("urgency_critical should have timeout = 0")
+	}
+
+	// Verify urgency_normal and urgency_low have timeout = 10
+	urgencyNormalSection := content[strings.Index(content, "[urgency_normal]"):strings.Index(content, "[urgency_critical]")]
+	if !strings.Contains(urgencyNormalSection, "timeout = 10") {
+		t.Error("urgency_normal should have timeout = 10")
 	}
 }

@@ -3,8 +3,8 @@
 {{- $fg := get $ph "foreground" }}
 {{- $bgMuted := get $ph "backgroundMuted" }}
 {{- $fgMuted := get $ph "foregroundMuted" }}
-{{- $bgSubtle := $bgMuted }}
-{{- $fgSubtle := $fgMuted }}
+{{- $bgSubtle := getSafe $ph "backgroundSubtle" }}
+{{- $fgSubtle := getSafe $ph "foregroundSubtle" }}
 {{- $accent1 := get $ph "accent1" }}
 {{- $accent2 := get $ph "accent2" }}
 {{- $accent3 := get $ph "accent3" }}
@@ -13,19 +13,16 @@
 {{- $success := get $ph "success" }}
 {{- $info := get $ph "info" }}
 
-{{- $surface1 := $bgMuted }}
-{{- if has $ph "surfaceContainerLow" }}{{- $surface1 = get $ph "surfaceContainerLow" }}{{- end }}
-{{- $surface2 := $bgMuted }}
-{{- if has $ph "surfaceContainer" }}{{- $surface2 = get $ph "surfaceContainer" }}{{- end }}
-{{- $surface3 := $bgMuted }}
-{{- if has $ph "surfaceContainerHigh" }}{{- $surface3 = get $ph "surfaceContainerHigh" }}{{- end }}
+{{- $surface1 := getSafe $ph "surface1" }}
+{{- $surface2 := getSafe $ph "surface2" }}
+{{- $surface3 := getSafe $ph "surface3" }}
 
 // Tinct Theme for Zellij
 // Generated automatically by Tinct
 // https://github.com/jmylchreest/tinct
 
 themes {
-    tinct {
+    {{ .ThemeName }} {
         // Base colours
         fg "{{ $fg | hex }}"
         bg "{{ $bg | hex }}"

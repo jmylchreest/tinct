@@ -13,13 +13,40 @@ import (
 func TestHyprlandPlugin(t *testing.T) {
 	plugin := New()
 
+	// Run basic tests (Name, Description, Validate)
+	t.Run("Name", func(t *testing.T) {
+		if plugin.Name() != "hyprland" {
+			t.Errorf("Name() = %s, want hyprland", plugin.Name())
+		}
+	})
+
+	t.Run("Description", func(t *testing.T) {
+		if plugin.Description() == "" {
+			t.Error("Description() should not be empty")
+		}
+	})
+
+	t.Run("DefaultOutputDir", func(t *testing.T) {
+		dir := plugin.DefaultOutputDir()
+		if dir == "" {
+			t.Error("DefaultOutputDir() should not be empty")
+		}
+		// Hyprland uses .config/hypr which contains "hypr" not "hyprland"
+		if !strings.Contains(dir, "hypr") {
+			t.Errorf("DefaultOutputDir() = %s, should contain 'hypr'", dir)
+		}
+	})
+
 	config := plugintesting.TestConfig{
 		ExpectedName:       "hyprland",
-		ExpectedFiles:      []string{"tinct-colours.conf"},
+		ExpectedFiles:      []string{"tinct-colours.conf", "tinct.conf"},
 		ExpectedBinaryName: "Hyprland",
 	}
 
-	plugintesting.RunAllTests(t, plugin, config)
+	// Run generation and other tests
+	plugintesting.TestGeneration(t, plugin, config.ExpectedFiles)
+	plugintesting.TestPreExecuteHook(t, plugin, config.ExpectedBinaryName)
+	plugintesting.TestFlags(t, plugin, "hyprland")
 }
 
 // TestHyprlandPlugin_ContentValidation tests hyprland-specific content requirements.
