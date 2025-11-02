@@ -74,8 +74,16 @@ func (p *Plugin) setWallpaperHyprpaper(ctx context.Context, wallpaperPath string
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
-	// Preload the wallpaper
-	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "preload", absPath)
+	// Unload the wallpaper first if it's already loaded
+	// This is important for symlinks that may point to different files
+	// hyprpaper caches by path, so if ~/.wallpaper symlink changes,
+	// we need to unload the old cached image first
+	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "unload", absPath)
+	// Ignore errors - the wallpaper might not be loaded yet
+	cmd.Run()
+
+	// Preload the wallpaper (now gets the fresh image)
+	cmd = exec.CommandContext(ctx, "hyprctl", "hyprpaper", "preload", absPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to preload wallpaper: %w (output: %s)", err, string(output))
 	}
