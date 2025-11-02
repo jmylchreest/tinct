@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/spf13/cobra"
@@ -208,7 +209,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute reloads waybar configuration if requested.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
 	if !p.reloadConfig {
 		return nil
 	}

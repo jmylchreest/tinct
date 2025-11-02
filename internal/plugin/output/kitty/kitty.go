@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/spf13/cobra"
@@ -169,7 +170,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute applies the theme to all running kitty instances.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
 	// Apply the theme to all running kitty instances using kitten themes command
 	// This is the recommended way per https://sw.kovidgoyal.net/kitty/kittens/themes/
 	cmd := exec.CommandContext(ctx, "kitten", "themes", "--reload-in=all", "tinct")

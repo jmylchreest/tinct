@@ -171,6 +171,15 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "   Generated raw palette (%d colours)\n", len(rawPalette.Colors))
 	}
 
+	// Check if input plugin provides a wallpaper source
+	var wallpaperPath string
+	if provider, ok := inputPlugin.(input.WallpaperProvider); ok {
+		wallpaperPath = provider.WallpaperPath()
+		if generateVerbose && wallpaperPath != "" {
+			fmt.Fprintf(os.Stderr, "   Wallpaper source: %s\n", wallpaperPath)
+		}
+	}
+
 	// Determine theme type from global flag
 	themeType := colour.ThemeAuto
 	switch globalTheme {
@@ -418,8 +427,17 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 			plugin := exec.plugin
 			if postHook, ok := plugin.(output.PostExecuteHook); ok {
+				// Build execution context for the hook
+				execContext := output.ExecutionContext{
+					DryRun:        generateDryRun,
+					Verbose:       generateVerbose,
+					OutputDir:     plugin.DefaultOutputDir(),
+					WallpaperPath: wallpaperPath,
+					SetWallpaper:  globalSetWallpaper,
+				}
+
 				hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-				err := postHook.PostExecute(hookCtx, exec.writtenFiles)
+				err := postHook.PostExecute(hookCtx, execContext, exec.writtenFiles)
 				cancel()
 
 				if err != nil {

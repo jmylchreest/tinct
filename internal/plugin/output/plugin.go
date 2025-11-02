@@ -56,11 +56,13 @@ type PreExecuteHook interface {
 //   - Send signals to running processes
 //   - Restart services
 //   - Notify users of changes
+//   - Set wallpaper (when --set-wallpaper flag is used)
 type PostExecuteHook interface {
 	// PostExecute runs after successful Generate() and file writing.
-	// The files map contains the paths that were written.
+	// The execCtx contains execution context including wallpaper path if available.
+	// The writtenFiles contains the paths that were written.
 	// Errors are logged but don't fail the overall operation.
-	PostExecute(ctx context.Context, writtenFiles []string) error
+	PostExecute(ctx context.Context, execCtx ExecutionContext, writtenFiles []string) error
 }
 
 // VerbosePlugin is an optional interface that plugins can implement to receive
@@ -80,9 +82,11 @@ type TemplateProvider interface {
 
 // ExecutionContext provides context for hook execution.
 type ExecutionContext struct {
-	DryRun    bool   // Whether this is a dry-run
-	Verbose   bool   // Whether verbose output is enabled
-	OutputDir string // The output directory being used
+	DryRun        bool   // Whether this is a dry-run
+	Verbose       bool   // Whether verbose output is enabled
+	OutputDir     string // The output directory being used
+	WallpaperPath string // Optional path to source wallpaper (for --set-wallpaper flag)
+	SetWallpaper  bool   // Whether wallpaper should be set (from --set-wallpaper flag)
 }
 
 // Registry holds all registered output plugins.

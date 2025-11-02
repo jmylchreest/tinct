@@ -34,6 +34,9 @@ type Plugin struct {
 	regions         int    // Number of regions to extract (4, 8, 12, 16, 0=disabled)
 	samplePercent   int    // Percentage of edge to sample
 	sampleMethod    string // "average" or "dominant"
+
+	// Wallpaper support
+	loadedImagePath string // Stores the actual path to the loaded image (for wallpaper setting)
 }
 
 // New creates a new image input plugin with default settings.
@@ -103,6 +106,12 @@ func (p *Plugin) Validate() error {
 	return nil
 }
 
+// WallpaperPath returns the path to the source image for wallpaper setting.
+// Implements the input.WallpaperProvider interface.
+func (p *Plugin) WallpaperPath() string {
+	return p.loadedImagePath
+}
+
 // Generate creates a raw colour palette by extracting colours from the image.
 // Returns only the extracted colors - categorization happens separately.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
@@ -112,6 +121,11 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	if err != nil {
 		return nil, fmt.Errorf("failed to load image: %w", err)
 	}
+
+	// Store the loaded image path for wallpaper setting
+	// For local files, use the original path
+	// For URLs, we'll need to handle downloading/caching separately
+	p.loadedImagePath = p.path
 
 	// Extract palette using k-means
 	// Create the colour extractor

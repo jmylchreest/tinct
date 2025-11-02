@@ -24,6 +24,16 @@ type GenerateOptions struct {
 	PluginArgs map[string]any
 }
 
+// GenerateResult holds the result of input plugin generation.
+type GenerateResult struct {
+	// Palette is the generated colour palette
+	Palette *colour.Palette
+
+	// WallpaperPath is the optional path to the source wallpaper image
+	// This is used when --set-wallpaper flag is enabled
+	WallpaperPath string
+}
+
 // ThemeHinter is an optional interface that input plugins can implement
 // to provide hints about theme detection to the categorizer.
 // This is purely advisory - the categorizer makes the final decision.
@@ -31,6 +41,15 @@ type ThemeHinter interface {
 	// ThemeHint returns a suggested theme type based on the plugin's analysis.
 	// Returns one of: "auto", "dark", "light", or "" for no hint.
 	ThemeHint() string
+}
+
+// WallpaperProvider is an optional interface that input plugins can implement
+// to provide the source wallpaper path. This is used with the --set-wallpaper flag
+// to allow output plugins to set the wallpaper alongside the generated themes.
+type WallpaperProvider interface {
+	// WallpaperPath returns the path to the source wallpaper image.
+	// Returns empty string if no wallpaper is available.
+	WallpaperPath() string
 }
 
 // Plugin represents an input plugin that generates a colour palette.

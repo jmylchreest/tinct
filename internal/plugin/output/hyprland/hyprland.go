@@ -12,6 +12,7 @@ import (
 	"text/template"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/spf13/cobra"
@@ -212,9 +213,20 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 	return false, "", nil
 }
 
-// PostExecute reloads hyprland configuration if requested.
+// PostExecute reloads hyprland configuration if requested and sets wallpaper if enabled.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+	// Set wallpaper if requested and available
+	if execCtx.SetWallpaper && execCtx.WallpaperPath != "" {
+		if err := p.setWallpaper(ctx, execCtx); err != nil {
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   Failed to set wallpaper: %v\n", err)
+			}
+			// Don't fail the whole operation if wallpaper setting fails
+		}
+	}
+
+	// Reload hyprland configuration if requested
 	if !p.reloadConfig {
 		return nil
 	}
