@@ -1,0 +1,28 @@
+# Example wob base configuration
+# Copy this to ~/.config/wob/base.ini and customize as needed
+#
+# Colors in this file will be overridden by the tinct.ini theme
+# Use this file for dimensions, positioning, and timing settings
+
+[default]
+# Bar dimensions
+height = 50
+width = 400
+border_offset = 4
+border_size = 2
+bar_padding = 3
+
+# Position on screen
+anchor = top           # top, bottom, left, right, center
+margin = 20            # Distance from screen edge (pixels)
+
+# Timing
+timeout = 2000         # How long to display (milliseconds)
+
+# Default colors (will be overridden by theme)
+background_color = FF000000
+border_color = FFFFFFFF
+bar_color = FFFFFFFF
+
+# Optional: Overflow behavior
+# overflow_mode = nowrap  # nowrap, wrap, or hidden

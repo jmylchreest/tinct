@@ -89,35 +89,51 @@ mark1_background {{ (get . "accent1") | hex }}
 
 # ANSI terminal colors (0-15)
 # Using ANSI color name matching for better semantic mapping
+
 # color0: black (background)
 color0  {{ ansi . "black" | hex }}
+
 # color1: red (danger/error)
 color1  {{ ansi . "red" | hex }}
+
 # color2: green (success)
 color2  {{ ansi . "green" | hex }}
+
 # color3: yellow (warning)
 color3  {{ ansi . "yellow" | hex }}
+
 # color4: blue (accent/info)
 color4  {{ ansi . "blue" | hex }}
+
 # color5: magenta (accent3)
 color5  {{ ansi . "magenta" | hex }}
+
 # color6: cyan (accent2)
 color6  {{ ansi . "cyan" | hex }}
+
 # color7: white (foreground)
 color7  {{ ansi . "white" | hex }}
+
 # color8: bright black (backgroundMuted)
 color8  {{ ansi . "brightblack" | hex }}
+
 # color9: bright red (danger variant)
 color9  {{ ansi . "brightred" | hex }}
+
 # color10: bright green (success variant)
 color10 {{ ansi . "brightgreen" | hex }}
+
 # color11: bright yellow (warning variant)
 color11 {{ ansi . "brightyellow" | hex }}
+
 # color12: bright blue (accent1 variant)
 color12 {{ ansi . "brightblue" | hex }}
+
 # color13: bright magenta (accent3 variant)
 color13 {{ ansi . "brightmagenta" | hex }}
+
 # color14: bright cyan (accent2 variant)
 color14 {{ ansi . "brightcyan" | hex }}
+
 # color15: bright white (foreground bright)
 color15 {{ ansi . "brightwhite" | hex }}
