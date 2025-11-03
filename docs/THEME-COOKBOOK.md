@@ -59,72 +59,31 @@ tinct generate -i remote-json \
 
 ## Dracula
 
-[Dracula](https://draculatheme.com/) is a dark theme with vibrant colours.
+[Dracula](https://draculatheme.com/) is a dark theme with vibrant colours designed for reduced eye strain.
 
 ```bash
-# Create a Dracula palette file
-cat > /tmp/dracula.json << 'EOF'
-{
-  "background": "#282a36",
-  "foreground": "#f8f8f2",
-  "selection": "#44475a",
-  "comment": "#6272a4",
-  "red": "#ff5555",
-  "orange": "#ffb86c",
-  "yellow": "#f1fa8c",
-  "green": "#50fa7b",
-  "purple": "#bd93f9",
-  "cyan": "#8be9fd",
-  "pink": "#ff79c6"
-}
-EOF
-
-# Apply using remote-json
-tinct generate -i remote-json \
-  --remote-json.url "file:///tmp/dracula.json" \
-  --remote-json.map "background=background,foreground=foreground,red=danger,green=success,yellow=warning,cyan=info,pink=accent1,purple=accent2,orange=accent3" \
+# Apply Dracula using official CSS variables from community gist
+tinct generate -i remote-css \
+  --remote-css.url "https://gist.githubusercontent.com/alexanderbazo/a689dcb972b84ed17721d14fe0a9ee89/raw/dracula.css" \
+  --remote-css.map "Background=background,Foreground=foreground,Red=danger,Green=success,Yellow=warning,Cyan=info,Pink=accent1,Purple=accent2,Orange=accent3" \
   -o hyprland,kitty,waybar,dunst
 ```
 
+**Colour Palette:**
+- **Background colours**: Dark gray (`#282a36`) with lighter currentLine (`#44475a`)
+- **Text colours**: Off-white foreground (`#f8f8f2`) with muted blue comments (`#6272a4`)
+- **Accent colours**: Vibrant cyan, green, orange, pink, purple, red, and yellow
+
 ## Tokyo Night
 
-[Tokyo Night](https://github.com/enkia/tokyo-night-vscode-theme) is a dark theme inspired by Tokyo's night skyline.
+[Tokyo Night](https://github.com/tokyo-night/tokyo-night-vscode-theme) is a dark theme by Enkia celebrating the lights of Downtown Tokyo at night, optimized for extended coding sessions.
 
-### Tokyo Night Storm
-
-```bash
-cat > /tmp/tokyo-night-storm.json << 'EOF'
-{
-  "background": "#24283b",
-  "foreground": "#c0caf5",
-  "black": "#1d202f",
-  "red": "#f7768e",
-  "green": "#9ece6a",
-  "yellow": "#e0af68",
-  "blue": "#7aa2f7",
-  "magenta": "#bb9af7",
-  "cyan": "#7dcfff",
-  "white": "#a9b1d6",
-  "brightBlack": "#414868",
-  "brightRed": "#f7768e",
-  "brightGreen": "#9ece6a",
-  "brightYellow": "#e0af68",
-  "brightBlue": "#7aa2f7",
-  "brightMagenta": "#bb9af7",
-  "brightCyan": "#7dcfff",
-  "brightWhite": "#c0caf5"
-}
-EOF
-
-tinct generate -i remote-json \
-  --remote-json.url "file:///tmp/tokyo-night-storm.json" \
-  --remote-json.map "background=background,foreground=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2" \
-  -o hyprland,kitty,waybar,dunst,neovim
-```
+**Note**: The official Tokyo Night theme JSON files contain extensive semantic tokens. For Tinct, we'll use simplified mappings of the core colours. For the complete theme, you can create a local JSON with the extracted colours below.
 
 ### Tokyo Night (Classic)
 
 ```bash
+# Create local palette from official theme colours
 cat > /tmp/tokyo-night.json << 'EOF'
 {
   "background": "#1a1b26",
@@ -134,7 +93,8 @@ cat > /tmp/tokyo-night.json << 'EOF'
   "yellow": "#e0af68",
   "blue": "#7aa2f7",
   "magenta": "#bb9af7",
-  "cyan": "#7dcfff"
+  "cyan": "#7dcfff",
+  "comment": "#565f89"
 }
 EOF
 
@@ -144,45 +104,62 @@ tinct generate -i remote-json \
   -o hyprland,kitty,waybar,dunst,neovim
 ```
 
-## Nord
-
-[Nord](https://www.nordtheme.com/) is an arctic, north-bluish colour palette.
+### Tokyo Night Storm
 
 ```bash
-cat > /tmp/nord.json << 'EOF'
+# Storm variant with slightly lighter background
+cat > /tmp/tokyo-night-storm.json << 'EOF'
 {
-  "polarNight0": "#2e3440",
-  "polarNight1": "#3b4252",
-  "polarNight2": "#434c5e",
-  "polarNight3": "#4c566a",
-  "snowStorm0": "#d8dee9",
-  "snowStorm1": "#e5e9f0",
-  "snowStorm2": "#eceff4",
-  "frost0": "#8fbcbb",
-  "frost1": "#88c0d0",
-  "frost2": "#81a1c1",
-  "frost3": "#5e81ac",
-  "aurora0": "#bf616a",
-  "aurora1": "#d08770",
-  "aurora2": "#ebcb8b",
-  "aurora3": "#a3be8c",
-  "aurora4": "#b48ead"
+  "background": "#24283b",
+  "foreground": "#c0caf5",
+  "red": "#f7768e",
+  "green": "#9ece6a",
+  "yellow": "#e0af68",
+  "blue": "#7aa2f7",
+  "magenta": "#bb9af7",
+  "cyan": "#7dcfff",
+  "comment": "#565f89"
 }
 EOF
 
 tinct generate -i remote-json \
-  --remote-json.url "file:///tmp/nord.json" \
-  --remote-json.map "polarNight0=background,snowStorm2=foreground,aurora0=danger,aurora3=success,aurora2=warning,frost1=info,frost0=accent1,frost2=accent2,aurora4=accent3" \
+  --remote-json.url "file:///tmp/tokyo-night-storm.json" \
+  --remote-json.map "background=background,foreground=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2" \
+  -o hyprland,kitty,waybar,dunst,neovim
+```
+
+**Colour Reference** (from [official JSON](https://github.com/tokyo-night/tokyo-night-vscode-theme/blob/master/themes/tokyo-night-color-theme.json)):
+- Keywords: `#bb9af7` (purple), Strings: `#9ece6a` (green), Numbers: `#ff9e64` (orange)
+- Functions: `#7aa2f7` (blue), Variables: `#c0caf5` (light blue), Comments: `#565f89` (muted)
+
+## Nord
+
+[Nord](https://www.nordtheme.com/) is an arctic, north-bluish colour palette with 16 carefully selected colours organized into four thematic groups.
+
+```bash
+# Apply Nord using official CSS from GitHub
+tinct generate -i remote-css \
+  --remote-css.url "https://raw.githubusercontent.com/nordtheme/nord/develop/src/nord.css" \
+  --remote-css.map "nord0=background,nord6=foreground,nord11=danger,nord14=success,nord13=warning,nord8=info,nord7=accent1,nord9=accent2,nord15=accent3,nord10=accent4" \
   -o hyprland,kitty,waybar,dunst
 ```
 
+**Colour Mapping Explained:**
+- **Polar Night** (`nord0-3`): Dark backgrounds and UI elements → `nord0` as background
+- **Snow Storm** (`nord4-6`): Light text colours → `nord6` (brightest) as foreground
+- **Frost** (`nord7-10`): Bluish accent colours → mapped to primary accents and info
+- **Aurora** (`nord11-15`): Colourful semantic colours → mapped to danger/success/warning
+
 ## Gruvbox
 
-[Gruvbox](https://github.com/morhetz/gruvbox) is a retro groove colour scheme.
+[Gruvbox](https://github.com/morhetz/gruvbox) is a retro groove colour scheme with high-contrast pastel colours designed for eye comfort.
+
+**Note**: Gruvbox's canonical colour definitions are in the Vim colour scheme file. These colours are extracted from the [official repository](https://github.com/morhetz/gruvbox/blob/master/colors/gruvbox.vim).
 
 ### Gruvbox Dark
 
 ```bash
+# Create palette from official Gruvbox dark (medium) colours
 cat > /tmp/gruvbox-dark.json << 'EOF'
 {
   "bg0": "#282828",
@@ -199,7 +176,8 @@ cat > /tmp/gruvbox-dark.json << 'EOF'
   "blue": "#83a598",
   "purple": "#d3869b",
   "aqua": "#8ec07c",
-  "orange": "#fe8019"
+  "orange": "#fe8019",
+  "gray": "#928374"
 }
 EOF
 
@@ -212,6 +190,7 @@ tinct generate -i remote-json \
 ### Gruvbox Light
 
 ```bash
+# Create palette from official Gruvbox light (medium) colours
 cat > /tmp/gruvbox-light.json << 'EOF'
 {
   "bg0": "#fbf1c7",
@@ -228,7 +207,8 @@ cat > /tmp/gruvbox-light.json << 'EOF'
   "blue": "#458588",
   "purple": "#b16286",
   "aqua": "#689d6a",
-  "orange": "#d65d0e"
+  "orange": "#d65d0e",
+  "gray": "#928374"
 }
 EOF
 
@@ -238,13 +218,18 @@ tinct generate -i remote-json \
   -o hyprland,kitty,waybar,dunst
 ```
 
+**Colour Variants**: Gruvbox provides `hard`, `medium`, and `soft` variants with different background contrasts. The above uses `medium`. For `hard` use `#1d2021` (dark) or `#f9f5d7` (light) as `bg0`.
+
 ## Solarized
 
-[Solarized](https://ethanschoonover.com/solarized/) is a precision colour scheme for terminals and GUIs.
+[Solarized](https://ethanschoonover.com/solarized/) by Ethan Schoonover is a precision colour scheme with sixteen colours (eight monotones, eight accents) engineered with precise CIELAB lightness relationships.
+
+**Note**: Colours extracted from the [official specification](https://github.com/altercation/solarized). Solarized uses symmetric contrast across light and dark modes.
 
 ### Solarized Dark
 
 ```bash
+# Create palette from official Solarized specification
 cat > /tmp/solarized-dark.json << 'EOF'
 {
   "base03": "#002b36",
@@ -268,13 +253,14 @@ EOF
 
 tinct generate -i remote-json \
   --remote-json.url "file:///tmp/solarized-dark.json" \
-  --remote-json.map "base03=background,base0=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2,violet=accent3" \
+  --remote-json.map "base03=background,base0=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2,violet=accent3,orange=accent4" \
   -o hyprland,kitty,waybar,dunst
 ```
 
 ### Solarized Light
 
 ```bash
+# Create palette from official Solarized specification (same colours, different mapping)
 cat > /tmp/solarized-light.json << 'EOF'
 {
   "base03": "#002b36",
@@ -298,35 +284,52 @@ EOF
 
 tinct generate -i remote-json \
   --remote-json.url "file:///tmp/solarized-light.json" \
-  --remote-json.map "base3=background,base00=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2,violet=accent3" \
+  --remote-json.map "base3=background,base00=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2,violet=accent3,orange=accent4" \
   -o hyprland,kitty,waybar,dunst
 ```
 
+**Design Notes**: 
+- Dark mode uses `base03` (background) with `base0` (body text)
+- Light mode uses `base3` (background) with `base00` (body text)
+- The eight accent colours maintain consistent appearance across both modes
+
 ## One Dark
 
-[One Dark](https://github.com/atom/one-dark-syntax) is Atom's iconic dark theme.
+[One Dark](https://github.com/atom/one-dark-syntax) is Atom's iconic dark theme, included by default with the Atom editor.
+
+**Note**: Colours extracted from the [official Atom syntax theme](https://github.com/atom/one-dark-syntax/blob/master/styles/colors.less). The theme uses HSL values internally which have been converted to hex.
 
 ```bash
+# Create palette from official One Dark colours
 cat > /tmp/one-dark.json << 'EOF'
 {
   "background": "#282c34",
   "foreground": "#abb2bf",
-  "black": "#282c34",
+  "comment": "#5c6370",
   "red": "#e06c75",
   "green": "#98c379",
   "yellow": "#e5c07b",
   "blue": "#61afef",
-  "magenta": "#c678dd",
   "cyan": "#56b6c2",
-  "white": "#abb2bf"
+  "magenta": "#c678dd",
+  "orange": "#d19a66"
 }
 EOF
 
 tinct generate -i remote-json \
   --remote-json.url "file:///tmp/one-dark.json" \
-  --remote-json.map "background=background,foreground=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2" \
+  --remote-json.map "background=background,foreground=foreground,red=danger,green=success,yellow=warning,blue=info,magenta=accent1,cyan=accent2,orange=accent3" \
   -o hyprland,kitty,waybar,dunst,neovim
 ```
+
+**Colour Reference** (from [official source](https://github.com/atom/one-dark-syntax/blob/master/styles/colors.less)):
+- `mono-1` (#abb2bf): Default text colour
+- `hue-1` (#56b6c2): Cyan accent
+- `hue-2` (#61afef): Blue accent  
+- `hue-3` (#c678dd): Purple accent
+- `hue-4` (#98c379): Green accent
+- `hue-5` (#e06c75): Red accent
+- `hue-6` (#d19a66): Orange accent
 
 ## Real-World CSS Extraction
 

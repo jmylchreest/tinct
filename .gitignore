@@ -9,6 +9,7 @@ dist/
 
 # Contrib plugin binaries
 contrib/random
+contrib/plugins/output/wob/wob-tinct
 
 # Test binary, built with `go test -c`
 *.test

@@ -2,11 +2,11 @@
 
 This document provides an overview of the project configuration and setup for the Tinct colour palette generator.
 
-## 📋 Overview
+## Overview
 
 Tinct is built with **Go 1.25+** and uses modern Go features including generics, structured logging (slog), range over functions, and enhanced error handling. The project follows SOLID principles and idiomatic Go practices.
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 tinct/
@@ -34,7 +34,7 @@ tinct/
 └── SETUP.md                     # This file
 ```
 
-## 🔧 Configuration Files
+## Configuration Files
 
 ### .goreleaser.yml
 Automated release configuration supporting:
@@ -72,7 +72,7 @@ CI/CD pipeline with multiple jobs:
 - **Build**: Snapshot builds for all platforms
 - **Release**: Full release with GoReleaser (tag-triggered)
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -119,7 +119,7 @@ CI/CD pipeline with multiple jobs:
    ./tinct --help
    ```
 
-## 🏗️ Development Workflow
+## Development Workflow
 
 ### Day-to-Day Development
 
@@ -184,7 +184,7 @@ git push origin v1.0.0
 #    - Updates package managers (if configured)
 ```
 
-## 🔌 Plugin System Architecture
+## Plugin System Architecture
 
 Tinct uses a **dual plugin system**:
 
@@ -211,7 +211,7 @@ Source Plugin → Image → Color Extraction → Palette → Output Plugins
   (Optional)                                    (Configuration Files)
 ```
 
-## 🪝 Hook System
+## Hook System
 
 Hooks provide lifecycle management:
 
@@ -221,7 +221,7 @@ Hooks provide lifecycle management:
 
 See `DEVELOPMENT.md` for implementation details.
 
-## 📖 Documentation
+## Documentation
 
 - **[DEVELOPMENT.md](DEVELOPMENT.md)**: Comprehensive development guidelines
   - Go 1.25+ features and best practices
@@ -238,7 +238,7 @@ See `DEVELOPMENT.md` for implementation details.
   - Plugin list and custom plugin creation
   - Architecture overview
 
-## 🔑 Go 1.25+ Features Used
+## Go 1.25+ Features Used
 
 Tinct leverages modern Go capabilities:
 
@@ -252,7 +252,7 @@ Tinct leverages modern Go capabilities:
 
 **Reference**: [Go 1.25 Language Specification](https://go.dev/ref/spec)
 
-## 🛠️ Environment Variables
+## Environment Variables
 
 ### Development
 ```bash
@@ -279,7 +279,7 @@ NIX_GITHUB_TOKEN          # Optional: Nix packages
 CODECOV_TOKEN             # Optional: Code coverage
 ```
 
-## 🐳 Docker Usage
+## Docker Usage
 
 ### Build
 ```bash
@@ -299,7 +299,7 @@ docker run --rm -v $PWD/images:/images -v $PWD/output:/output \
 docker pull ghcr.io/jmylchreest/tinct:latest
 ```
 
-## 📦 Package Installation (Post-Release)
+## Package Installation (Post-Release)
 
 ### Homebrew (macOS/Linux)
 ```bash
@@ -330,7 +330,7 @@ sudo rpm -i tinct_*.rpm
 go install github.com/jmylchreest/tinct/cmd/tinct@latest
 ```
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 - **Unit Tests**: Test individual components
 - **Integration Tests**: Test plugin system and hooks
@@ -348,7 +348,7 @@ go tool cover -html=coverage.out                # HTML report
 go test -bench=. -benchmem ./...               # Benchmarks
 ```
 
-## 🔒 Security
+## Security
 
 - **Gosec**: Static security analysis
 - **Trivy**: Dependency vulnerability scanning
@@ -356,7 +356,7 @@ go test -bench=. -benchmem ./...               # Benchmarks
 - **SBOM**: Software Bill of Materials generation
 - **Dependabot**: Automated dependency updates (configure in GitHub)
 
-## 📝 Commit Convention
+## Commit Convention
 
 Use conventional commits for automatic changelog generation:
 
@@ -374,7 +374,7 @@ git commit -m "feat(plugin): add AI wallpaper generation support"
 git commit -m "fix(extract): handle edge case in k-means clustering"
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Read [DEVELOPMENT.md](DEVELOPMENT.md)
 2. Fork the repository
@@ -384,16 +384,16 @@ git commit -m "fix(extract): handle edge case in k-means clustering"
 6. Commit using conventional commits
 7. Push and create pull request
 
-## 📞 Support
+## Support
 
 - **Issues**: [GitHub Issues](https://github.com/jmylchreest/tinct/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/jmylchreest/tinct/discussions)
 - **Email**: John Mylchreest <jmylchreest@gmail.com>
 
-## 📄 License
+## License
 
 MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-**Happy theming! 🎨**
+**Happy theming!**
