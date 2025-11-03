@@ -386,7 +386,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 				if generateDryRun {
 					fmt.Printf("   Would write: %s (%d bytes)\n", fullPath, len(content))
 				} else {
-					if err := writeFile(fullPath, content); err != nil {
+					if err := writeFile(fullPath, content, generateVerbose); err != nil {
 						fmt.Fprintf(os.Stderr, " Failed to write %s: %v\n", fullPath, err)
 						exec.skip = true
 						exec.skipReason = fmt.Sprintf("write failed: %v", err)
@@ -408,23 +408,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// Phase 3: Run all post-execute hooks for successful plugins
 	if !generateDryRun {
-		// Check if any plugins have post-hooks to run
-		hasPostHooks := false
-		for _, exec := range executions {
-			if exec.skip || len(exec.writtenFiles) == 0 {
-				continue
-			}
-			if _, ok := exec.plugin.(output.PostExecuteHook); ok {
-				hasPostHooks = true
-				break
-			}
-		}
-
-		// Print separator if we have post-hooks to run
-		if hasPostHooks && generateVerbose {
-			fmt.Fprintf(os.Stderr, "→ Running post hooks...\n")
-		}
-
+		// Run post-hooks for each plugin
 		for _, exec := range executions {
 			if exec.skip || len(exec.writtenFiles) == 0 {
 				continue
@@ -440,14 +424,16 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 					WallpaperPath: wallpaperPath,
 				}
 
+				if generateVerbose {
+					fmt.Fprintf(os.Stderr, "→ Running %s post-hook...\n", plugin.Name())
+				}
+
 				hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 				err := postHook.PostExecute(hookCtx, execContext, exec.writtenFiles)
 				cancel()
 
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "   %s post-hook failed: %v\n", plugin.Name(), err)
-				} else if generateVerbose {
-					fmt.Fprintf(os.Stderr, "   %s post-hook completed\n", plugin.Name())
 				}
 			}
 		}
@@ -513,10 +499,19 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose bool, dry
 	defer cancel()
 
 	cmd := exec.CommandContext(hookCtx, hookPath)
-	cmd.Env = append(os.Environ(),
+
+	// Set environment variables for the hook script
+	env := append(os.Environ(),
 		"TINCT_HOOK="+hookName,
 		"TINCT_VERSION="+getVersion(),
 	)
+
+	// Only set TINCT_VERBOSE if verbose is true (script can check if var exists)
+	if verbose {
+		env = append(env, "TINCT_VERBOSE=true")
+	}
+
+	cmd.Env = env
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -526,7 +521,8 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose bool, dry
 		return err
 	}
 
-	if verbose && len(output) > 0 {
+	// Always show script output - the script itself decides what to output based on TINCT_VERBOSE
+	if len(output) > 0 {
 		fmt.Fprintf(os.Stderr, "  %s\n", string(output))
 	}
 
@@ -656,7 +652,7 @@ func setPluginDryRun(mgr *manager.Manager, pluginName, pluginType string, dryRun
 }
 
 // writeFile writes content to a file, creating directories as needed.
-func writeFile(path string, content []byte) error {
+func writeFile(path string, content []byte, verbose bool) error {
 	// Expand ~ to home directory
 	if strings.HasPrefix(path, "~/") {
 		home, err := os.UserHomeDir()
@@ -677,8 +673,10 @@ func writeFile(path string, content []byte) error {
 		backupPath := path + ".backup"
 		if err := os.Rename(path, backupPath); err != nil {
 			// If backup fails, continue anyway
-			fmt.Fprintf(os.Stderr, "    Could not create backup: %v\n", err)
-		} else {
+			if verbose {
+				fmt.Fprintf(os.Stderr, "    Could not create backup: %v\n", err)
+			}
+		} else if verbose {
 			fmt.Fprintf(os.Stderr, "   Created backup: %s\n", backupPath)
 		}
 	}
