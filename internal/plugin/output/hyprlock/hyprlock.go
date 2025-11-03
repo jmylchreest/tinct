@@ -28,8 +28,9 @@ func GetEmbeddedTemplates() embed.FS {
 
 // Plugin implements the output.Plugin interface for Hyprlock.
 type Plugin struct {
-	outputDir string
-	verbose   bool
+	outputDir     string
+	verbose       bool
+	wallpaperPath string // Optional wallpaper path from input plugin
 }
 
 // New creates a new Hyprlock output plugin with default settings.
@@ -59,6 +60,12 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 // Implements the output.VerbosePlugin interface.
 func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
+}
+
+// SetWallpaperContext sets the wallpaper path for template use.
+// Implements the output.WallpaperContextProvider interface.
+func (p *Plugin) SetWallpaperContext(wallpaperPath string) {
+	p.wallpaperPath = wallpaperPath
 }
 
 // GetEmbeddedFS returns the embedded template filesystem.
@@ -137,9 +144,18 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 	return buf.Bytes(), nil
 }
 
-// prepareThemeData converts a categorised palette to PaletteHelper for template access.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
-	return colour.NewPaletteHelper(palette)
+// themeData wraps palette data with additional context like wallpaper path.
+type themeData struct {
+	*colour.PaletteHelper
+	WallpaperPath string
+}
+
+// prepareThemeData converts a categorised palette to template data including wallpaper context.
+func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *themeData {
+	return &themeData{
+		PaletteHelper: colour.NewPaletteHelper(palette),
+		WallpaperPath: p.wallpaperPath,
+	}
 }
 
 // PreExecute checks if hyprlock is available and config directory exists.

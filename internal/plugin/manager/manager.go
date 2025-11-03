@@ -25,6 +25,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
+	"github.com/jmylchreest/tinct/internal/plugin/output/hyprpaper"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
@@ -144,6 +145,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(fuzzel.New())
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(hyprlock.New())
+	m.outputRegistry.Register(hyprpaper.New())
 	m.outputRegistry.Register(kitty.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(swayosd.New())

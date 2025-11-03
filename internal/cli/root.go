@@ -14,9 +14,6 @@ var (
 	// Global theme flag
 	globalTheme string
 
-	// Global wallpaper flag
-	globalSetWallpaper bool
-
 	// Shared plugin manager instance used by all commands
 	sharedPluginManager *manager.Manager
 
@@ -56,7 +53,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress non-error output")
 	rootCmd.PersistentFlags().StringVarP(&globalTheme, "theme", "t", "auto", "theme type (auto, dark, light)")
-	rootCmd.PersistentFlags().BoolVar(&globalSetWallpaper, "set-wallpaper", false, "set wallpaper if source image is provided (requires compatible wallpaper manager)")
 
 	// Set version template
 	rootCmd.SetVersionTemplate(version.String() + "\n")

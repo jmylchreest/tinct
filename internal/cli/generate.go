@@ -339,6 +339,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "   %s\n", plugin.Description())
 		}
 
+		// Set wallpaper context if plugin supports it
+		if wallpaperCtxProvider, ok := plugin.(output.WallpaperContextProvider); ok && wallpaperPath != "" {
+			wallpaperCtxProvider.SetWallpaperContext(wallpaperPath)
+		}
+
 		// Generate files
 		files, err := plugin.Generate(palette)
 		if err != nil {
@@ -433,7 +438,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 					Verbose:       generateVerbose,
 					OutputDir:     plugin.DefaultOutputDir(),
 					WallpaperPath: wallpaperPath,
-					SetWallpaper:  globalSetWallpaper,
 				}
 
 				hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
