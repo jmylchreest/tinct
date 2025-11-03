@@ -13,7 +13,37 @@ The Hyprlock plugin generates a color configuration file (`tinct-hyprlock.conf`)
 - Both RGB and RGBA color formats
 - Semantic color mapping
 - Pre-defined color variables for quick theming
+- Wallpaper path variable (when using image input plugin)
 - Usage examples in comments
+
+## Wallpaper Support
+
+When using the `image` input plugin, hyprlock receives the wallpaper path and includes it as a variable:
+
+```bash
+# Generate with wallpaper
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprlock,hyprpaper
+```
+
+The generated config includes:
+
+```conf
+$tinct_wallpaper = /home/user/Pictures/wallpaper.jpg
+```
+
+Use it in your hyprlock configuration:
+
+```conf
+source = ~/.config/hypr/tinct-hyprlock.conf
+
+background {
+    path = $tinct_wallpaper
+    color = $tinct_background
+    blur_passes = 3
+}
+```
+
+**Note:** When using non-image input sources (remote-json, remote-css, file), the `$tinct_wallpaper` variable is not included.
 
 ## Generated Files
 

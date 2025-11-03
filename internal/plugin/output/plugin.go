@@ -18,9 +18,9 @@ type Plugin interface {
 	// Description returns a human-readable description of the plugin.
 	Description() string
 
-	// Generate creates output file(s) from the given palette.
+	// Generate creates output file(s) from the given theme data.
 	// Returns map of filename -> content to support plugins that generate multiple files.
-	Generate(palette *colour.CategorisedPalette) (map[string][]byte, error)
+	Generate(themeData *colour.ThemeData) (map[string][]byte, error)
 
 	// RegisterFlags registers plugin-specific flags with cobra command.
 	RegisterFlags(cmd *cobra.Command)
@@ -78,15 +78,6 @@ type TemplateProvider interface {
 	// GetEmbeddedFS returns the embedded filesystem containing template files.
 	// This should return the same embed.FS used by the plugin's generateTheme method.
 	GetEmbeddedFS() interface{}
-}
-
-// WallpaperContextProvider is an optional interface that plugins can implement to receive
-// wallpaper context before Generate() is called. This allows plugins to include wallpaper
-// information in their generated templates.
-type WallpaperContextProvider interface {
-	// SetWallpaperContext provides the wallpaper path to the plugin before Generate() is called.
-	// The wallpaperPath will be an empty string if no wallpaper is available.
-	SetWallpaperContext(wallpaperPath string)
 }
 
 // ExecutionContext provides context for hook execution.

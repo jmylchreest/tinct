@@ -339,13 +339,11 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "   %s\n", plugin.Description())
 		}
 
-		// Set wallpaper context if plugin supports it
-		if wallpaperCtxProvider, ok := plugin.(output.WallpaperContextProvider); ok && wallpaperPath != "" {
-			wallpaperCtxProvider.SetWallpaperContext(wallpaperPath)
-		}
+		// Create theme data with wallpaper context
+		themeData := colour.NewThemeData(palette, wallpaperPath, "")
 
 		// Generate files
-		files, err := plugin.Generate(palette)
+		files, err := plugin.Generate(themeData)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " %s failed: %v\n", plugin.Name(), err)
 			exec.skip = true

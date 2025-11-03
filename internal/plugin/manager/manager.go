@@ -563,7 +563,9 @@ func (p *ExternalOutputPlugin) GetDryRun() bool {
 }
 
 // Generate executes the external plugin and returns its output.
-func (p *ExternalOutputPlugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte, error) {
+func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
+	// Extract palette from themeData for backward compatibility with external plugins
+	palette := themeData.PaletteHelper.Palette()
 	// Create extended payload with plugin args and dry-run flag
 	type ExtendedPalette struct {
 		Colours    map[colour.ColourRole]colour.CategorisedColour `json:"colours"`

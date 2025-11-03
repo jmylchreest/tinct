@@ -38,7 +38,43 @@ overlay {{ get . "scrim" | rgba }}
 
 ### Template Data
 
-Templates receive a `*colour.PaletteHelper` instance that provides access to all colors in the palette.
+All templates receive a `*colour.ThemeData` struct that embeds `*colour.PaletteHelper` and provides additional context fields.
+
+#### Standard ThemeData Structure
+
+```go
+type ThemeData struct {
+    *PaletteHelper    // Embedded - provides all color access methods
+    WallpaperPath string  // Path to wallpaper (if using image input)
+    ThemeName     string  // Optional theme name (used by some plugins)
+}
+```
+
+#### Basic Color Access
+
+Since `ThemeData` embeds `PaletteHelper`, access colors directly:
+
+```go
+{{ get . "background" | hex }}
+{{ get . "foreground" | hex }}
+{{ themeType . }}
+```
+
+#### Optional Context Fields
+
+Access additional fields when available:
+
+```go
+{{- if .WallpaperPath }}
+wallpaper {{ .WallpaperPath }}
+{{- end }}
+
+{{- if .ThemeName }}
+theme {{ .ThemeName }}
+{{- end }}
+```
+
+**All plugins now use this consistent pattern**, making template syntax uniform across all output plugins.
 
 ---
 

@@ -56,13 +56,17 @@ func TemplateFuncs() template.FuncMap {
 
 // getRoleFunc returns a color by role name (string).
 // Panics if role doesn't exist - use getSafe or has to check first.
-func getRoleFunc(ph *colour.PaletteHelper, roleName string) colour.ColorValue {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func getRoleFunc(data interface{}, roleName string) colour.ColorValue {
+	ph := extractPaletteHelper(data)
 	return ph.Get(colour.ColourRole(roleName))
 }
 
 // getSafeRoleFunc returns a color by role name with existence check.
 // Returns error if role doesn't exist (Go template convention).
-func getSafeRoleFunc(ph *colour.PaletteHelper, roleName string) (colour.ColorValue, error) {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func getSafeRoleFunc(data interface{}, roleName string) (colour.ColorValue, error) {
+	ph := extractPaletteHelper(data)
 	cv, ok := ph.GetSafe(colour.ColourRole(roleName))
 	if !ok {
 		return colour.ColorValue{}, fmt.Errorf("role %q not found", roleName)
@@ -71,17 +75,33 @@ func getSafeRoleFunc(ph *colour.PaletteHelper, roleName string) (colour.ColorVal
 }
 
 // hasRoleFunc checks if a role exists in the palette.
-func hasRoleFunc(ph *colour.PaletteHelper, roleName string) bool {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func hasRoleFunc(data interface{}, roleName string) bool {
+	ph := extractPaletteHelper(data)
 	return ph.Has(colour.ColourRole(roleName))
 }
 
 // getByIndexFunc returns a color by index in the AllColors array.
-func getByIndexFunc(ph *colour.PaletteHelper, index int) (colour.ColorValue, error) {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func getByIndexFunc(data interface{}, index int) (colour.ColorValue, error) {
+	ph := extractPaletteHelper(data)
 	cv, ok := ph.GetByIndex(index)
 	if !ok {
 		return colour.ColorValue{}, fmt.Errorf("index %d out of range (palette has %d colors)", index, ph.Count())
 	}
 	return cv, nil
+}
+
+// extractPaletteHelper extracts PaletteHelper from either *ThemeData or *PaletteHelper.
+func extractPaletteHelper(data interface{}) *colour.PaletteHelper {
+	switch v := data.(type) {
+	case *colour.ThemeData:
+		return v.PaletteHelper
+	case *colour.PaletteHelper:
+		return v
+	default:
+		panic(fmt.Sprintf("expected *colour.ThemeData or *colour.PaletteHelper, got %T", data))
+	}
 }
 
 // hexFunc returns color in #RRGGBB format.
@@ -135,22 +155,30 @@ func indexFunc(cv colour.ColorValue) int {
 }
 
 // themeTypeFunc returns the theme type string ("dark" or "light").
-func themeTypeFunc(ph *colour.PaletteHelper) string {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func themeTypeFunc(data interface{}) string {
+	ph := extractPaletteHelper(data)
 	return ph.ThemeTypeString()
 }
 
 // allRolesFunc returns all color roles in deterministic order.
-func allRolesFunc(ph *colour.PaletteHelper) []colour.ColourRole {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func allRolesFunc(data interface{}) []colour.ColourRole {
+	ph := extractPaletteHelper(data)
 	return ph.AllRoles()
 }
 
 // allColorsFunc returns all colors in index order.
-func allColorsFunc(ph *colour.PaletteHelper) []colour.ColorValue {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func allColorsFunc(data interface{}) []colour.ColorValue {
+	ph := extractPaletteHelper(data)
 	return ph.AllColors()
 }
 
 // countFunc returns the total number of colors in the palette.
-func countFunc(ph *colour.PaletteHelper) int {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func countFunc(data interface{}) int {
+	ph := extractPaletteHelper(data)
 	return ph.Count()
 }
 
@@ -158,7 +186,9 @@ func countFunc(ph *colour.PaletteHelper) int {
 // Panics if color name is not found - use ansiSafe to check first.
 // Supported names: black, red, green, yellow, blue, magenta, cyan, white,
 // brightblack, brightred, etc., and aliases like color0-color15, gray, purple, etc.
-func ansiFunc(ph *colour.PaletteHelper, colorName string) colour.ColorValue {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func ansiFunc(data interface{}, colorName string) colour.ColorValue {
+	ph := extractPaletteHelper(data)
 	cv, ok := ph.FindClosestANSIColor(colorName)
 	if !ok {
 		panic(fmt.Sprintf("ANSI color name %q not recognized", colorName))
@@ -168,7 +198,9 @@ func ansiFunc(ph *colour.PaletteHelper, colorName string) colour.ColorValue {
 
 // ansiSafeFunc finds the closest color to a given ANSI color name with error handling.
 // Returns error if color name is not recognized.
-func ansiSafeFunc(ph *colour.PaletteHelper, colorName string) (colour.ColorValue, error) {
+// Accepts both *ThemeData and *PaletteHelper for backward compatibility.
+func ansiSafeFunc(data interface{}, colorName string) (colour.ColorValue, error) {
+	ph := extractPaletteHelper(data)
 	cv, ok := ph.FindClosestANSIColor(colorName)
 	if !ok {
 		return colour.ColorValue{}, fmt.Errorf("ANSI color name %q not recognized", colorName)

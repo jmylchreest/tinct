@@ -10,29 +10,28 @@ end
 vim.o.termguicolors = true
 vim.g.colors_name = '{{ .ThemeName }}'
 
-{{- $ph := .PaletteHelper }}
-{{- $bg := get $ph "background" }}
-{{- $fg := get $ph "foreground" }}
-{{- $bgMuted := get $ph "backgroundMuted" }}
-{{- $fgMuted := get $ph "foregroundMuted" }}
+{{- $bg := get . "background" }}
+{{- $fg := get . "foreground" }}
+{{- $bgMuted := get . "backgroundMuted" }}
+{{- $fgMuted := get . "foregroundMuted" }}
 {{- $bgSubtle := $bgMuted }}
-{{- if has $ph "backgroundSubtle" }}{{- $bgSubtle = get $ph "backgroundSubtle" }}{{- end }}
+{{- if has . "backgroundSubtle" }}{{- $bgSubtle = get . "backgroundSubtle" }}{{- end }}
 {{- $fgSubtle := $fgMuted }}
-{{- if has $ph "foregroundSubtle" }}{{- $fgSubtle = get $ph "foregroundSubtle" }}{{- end }}
-{{- $accent1 := get $ph "accent1" }}
-{{- $accent2 := get $ph "accent2" }}
-{{- $accent3 := get $ph "accent3" }}
-{{- $danger := get $ph "danger" }}
-{{- $warning := get $ph "warning" }}
-{{- $success := get $ph "success" }}
-{{- $info := get $ph "info" }}
+{{- if has . "foregroundSubtle" }}{{- $fgSubtle = get . "foregroundSubtle" }}{{- end }}
+{{- $accent1 := get . "accent1" }}
+{{- $accent2 := get . "accent2" }}
+{{- $accent3 := get . "accent3" }}
+{{- $danger := get . "danger" }}
+{{- $warning := get . "warning" }}
+{{- $success := get . "success" }}
+{{- $info := get . "info" }}
 
-{{- $surface1 := getSafe $ph "surface1" }}
-{{- $surface2 := getSafe $ph "surface2" }}
-{{- $surface3 := getSafe $ph "surface3" }}
+{{- $surface1 := "" }}{{- if has . "surface1" }}{{- $surface1 = get . "surface1" }}{{- end }}
+{{- $surface2 := "" }}{{- if has . "surface2" }}{{- $surface2 = get . "surface2" }}{{- end }}
+{{- $surface3 := "" }}{{- if has . "surface3" }}{{- $surface3 = get . "surface3" }}{{- end }}
 
-{{- $primary := getSafe $ph "primary" }}
-{{- $secondary := getSafe $ph "secondary" }}
+{{- $primary := "" }}{{- if has . "primary" }}{{- $primary = get . "primary" }}{{- end }}
+{{- $secondary := "" }}{{- if has . "secondary" }}{{- $secondary = get . "secondary" }}{{- end }}
 
 -- Color Palette
 local colors = {
@@ -79,22 +78,22 @@ local colors = {
 {{- end }}
 
   -- ANSI colors for terminal
-  black = '{{ ansi $ph "black" | hex }}',
-  red = '{{ ansi $ph "red" | hex }}',
-  green = '{{ ansi $ph "green" | hex }}',
-  yellow = '{{ ansi $ph "yellow" | hex }}',
-  blue = '{{ ansi $ph "blue" | hex }}',
-  magenta = '{{ ansi $ph "magenta" | hex }}',
-  cyan = '{{ ansi $ph "cyan" | hex }}',
-  white = '{{ ansi $ph "white" | hex }}',
-  bright_black = '{{ ansi $ph "brightblack" | hex }}',
-  bright_red = '{{ ansi $ph "brightred" | hex }}',
-  bright_green = '{{ ansi $ph "brightgreen" | hex }}',
-  bright_yellow = '{{ ansi $ph "brightyellow" | hex }}',
-  bright_blue = '{{ ansi $ph "brightblue" | hex }}',
-  bright_magenta = '{{ ansi $ph "brightmagenta" | hex }}',
-  bright_cyan = '{{ ansi $ph "brightcyan" | hex }}',
-  bright_white = '{{ ansi $ph "brightwhite" | hex }}',
+  black = '{{ ansi . "black" | hex }}',
+  red = '{{ ansi . "red" | hex }}',
+  green = '{{ ansi . "green" | hex }}',
+  yellow = '{{ ansi . "yellow" | hex }}',
+  blue = '{{ ansi . "blue" | hex }}',
+  magenta = '{{ ansi . "magenta" | hex }}',
+  cyan = '{{ ansi . "cyan" | hex }}',
+  white = '{{ ansi . "white" | hex }}',
+  bright_black = '{{ ansi . "brightblack" | hex }}',
+  bright_red = '{{ ansi . "brightred" | hex }}',
+  bright_green = '{{ ansi . "brightgreen" | hex }}',
+  bright_yellow = '{{ ansi . "brightyellow" | hex }}',
+  bright_blue = '{{ ansi . "brightblue" | hex }}',
+  bright_magenta = '{{ ansi . "brightmagenta" | hex }}',
+  bright_cyan = '{{ ansi . "brightcyan" | hex }}',
+  bright_white = '{{ ansi . "brightwhite" | hex }}',
 }
 
 -- Helper function to set highlight groups

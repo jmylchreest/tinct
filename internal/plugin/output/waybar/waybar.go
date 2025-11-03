@@ -96,15 +96,15 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // Generate creates the theme files.
 // Returns map of filename -> content
-func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte, error) {
-	if palette == nil {
-		return nil, fmt.Errorf("palette cannot be nil")
+func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
+	if themeData == nil {
+		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
 	files := make(map[string][]byte)
 
 	// Generate colors file
-	colorsContent, err := p.generateColors(palette)
+	colorsContent, err := p.generateColors(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate colors: %w", err)
 	}
@@ -123,7 +123,7 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 }
 
 // generateColors creates the color definitions CSS file.
-func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support
 	loader := tmplloader.New("waybar", templates)
 	if p.verbose {
@@ -144,10 +144,8 @@ func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, err
 		return nil, fmt.Errorf("failed to parse colors template: %w", err)
 	}
 
-	data := p.prepareColorsData(palette)
-
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute colors template: %w", err)
 	}
 
@@ -184,10 +182,6 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// prepareColorsData converts a categorised palette to PaletteHelper for template access.
-func (p *Plugin) prepareColorsData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
-	return colour.NewPaletteHelper(palette)
-}
 
 // PreExecute checks if waybar is available before generating the theme.
 // Implements the output.PreExecuteHook interface.

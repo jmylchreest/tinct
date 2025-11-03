@@ -98,15 +98,15 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // Generate creates the theme file and optional stub configuration.
 // Returns map of filename -> content
-func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte, error) {
-	if palette == nil {
-		return nil, fmt.Errorf("palette cannot be nil")
+func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
+	if themeData == nil {
+		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
 	files := make(map[string][]byte)
 
 	// Generate main theme file
-	themeContent, err := p.generateTheme(palette)
+	themeContent, err := p.generateTheme(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
@@ -132,7 +132,7 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 }
 
 // generateTheme creates the main theme configuration file with colour variables.
-func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
@@ -153,10 +153,9 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}
 
-	data := p.prepareThemeData(palette)
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute theme template: %w", err)
 	}
 
@@ -193,10 +192,6 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// prepareThemeData converts a categorised palette to PaletteHelper for template access.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
-	return colour.NewPaletteHelper(palette)
-}
 
 // PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.

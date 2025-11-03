@@ -28,9 +28,8 @@ func GetEmbeddedTemplates() embed.FS {
 
 // Plugin implements the output.Plugin interface for Hyprlock.
 type Plugin struct {
-	outputDir     string
-	verbose       bool
-	wallpaperPath string // Optional wallpaper path from input plugin
+	outputDir string
+	verbose   bool
 }
 
 // New creates a new Hyprlock output plugin with default settings.
@@ -62,12 +61,6 @@ func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
 }
 
-// SetWallpaperContext sets the wallpaper path for template use.
-// Implements the output.WallpaperContextProvider interface.
-func (p *Plugin) SetWallpaperContext(wallpaperPath string) {
-	p.wallpaperPath = wallpaperPath
-}
-
 // GetEmbeddedFS returns the embedded template filesystem.
 // Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() interface{} {
@@ -94,15 +87,15 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // Generate creates the theme file.
 // Returns map of filename -> content
-func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte, error) {
-	if palette == nil {
-		return nil, fmt.Errorf("palette cannot be nil")
+func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
+	if themeData == nil {
+		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
 	files := make(map[string][]byte)
 
 	// Generate theme file
-	themeContent, err := p.generateTheme(palette)
+	themeContent, err := p.generateTheme(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
@@ -113,7 +106,7 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 }
 
 // generateTheme creates the theme configuration file.
-func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support
 	loader := tmplloader.New("hyprlock", templates)
 	if p.verbose {
@@ -134,28 +127,12 @@ func (p *Plugin) generateTheme(palette *colour.CategorisedPalette) ([]byte, erro
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}
 
-	data := p.prepareThemeData(palette)
-
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute theme template: %w", err)
 	}
 
 	return buf.Bytes(), nil
-}
-
-// themeData wraps palette data with additional context like wallpaper path.
-type themeData struct {
-	*colour.PaletteHelper
-	WallpaperPath string
-}
-
-// prepareThemeData converts a categorised palette to template data including wallpaper context.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *themeData {
-	return &themeData{
-		PaletteHelper: colour.NewPaletteHelper(palette),
-		WallpaperPath: p.wallpaperPath,
-	}
 }
 
 // PreExecute checks if hyprlock is available and config directory exists.

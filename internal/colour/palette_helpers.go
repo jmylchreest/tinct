@@ -241,6 +241,12 @@ func (ph *PaletteHelper) ThemeTypeString() string {
 	return ph.palette.ThemeType.String()
 }
 
+// Palette returns the underlying CategorisedPalette.
+// This is primarily used for backward compatibility with external plugins.
+func (ph *PaletteHelper) Palette() *CategorisedPalette {
+	return ph.palette
+}
+
 // parseHex parses a hex color string (#RRGGBB or RRGGBB) to RGB.
 // Returns black if parsing fails.
 func parseHex(hex string) RGB {

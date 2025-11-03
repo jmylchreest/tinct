@@ -30,9 +30,8 @@ func GetEmbeddedTemplates() embed.FS {
 
 // Plugin implements the output.Plugin interface for Hyprpaper.
 type Plugin struct {
-	outputDir     string
-	verbose       bool
-	wallpaperPath string // Optional wallpaper path from input plugin
+	outputDir string
+	verbose   bool
 }
 
 // New creates a new Hyprpaper output plugin with default settings.
@@ -64,12 +63,6 @@ func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
 }
 
-// SetWallpaperContext sets the wallpaper path for template use.
-// Implements the output.WallpaperContextProvider interface.
-func (p *Plugin) SetWallpaperContext(wallpaperPath string) {
-	p.wallpaperPath = wallpaperPath
-}
-
 // GetEmbeddedFS returns the embedded template filesystem.
 // Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() interface{} {
@@ -96,15 +89,15 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // Generate creates the configuration file.
 // Returns map of filename -> content
-func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte, error) {
-	if palette == nil {
-		return nil, fmt.Errorf("palette cannot be nil")
+func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
+	if themeData == nil {
+		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
 	files := make(map[string][]byte)
 
 	// Generate config file
-	configContent, err := p.generateConfig(palette)
+	configContent, err := p.generateConfig(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate config: %w", err)
 	}
@@ -115,7 +108,7 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 }
 
 // generateConfig creates the configuration file.
-func (p *Plugin) generateConfig(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) generateConfig(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support
 	loader := tmplloader.New("hyprpaper", templates)
 	if p.verbose {
@@ -136,45 +129,17 @@ func (p *Plugin) generateConfig(palette *colour.CategorisedPalette) ([]byte, err
 		return nil, fmt.Errorf("failed to parse config template: %w", err)
 	}
 
-	data := p.prepareTemplateData(palette)
-
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute config template: %w", err)
 	}
 
 	return buf.Bytes(), nil
 }
 
-// templateData wraps palette data with additional context like wallpaper path.
-type templateData struct {
-	*colour.PaletteHelper
-	WallpaperPath string
-}
-
-// prepareTemplateData converts a categorised palette to template data including wallpaper context.
-func (p *Plugin) prepareTemplateData(palette *colour.CategorisedPalette) *templateData {
-	return &templateData{
-		PaletteHelper: colour.NewPaletteHelper(palette),
-		WallpaperPath: p.wallpaperPath,
-	}
-}
-
-// PreExecute checks if hyprpaper is available (only if we need to set wallpaper).
+// PreExecute checks if the config directory exists.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Only check if hyprpaper is running if we have a wallpaper to set
-	// This allows generating config files without requiring hyprpaper to be running
-	if p.wallpaperPath != "" {
-		cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
-		if err := cmd.Run(); err != nil {
-			if p.verbose {
-				fmt.Fprintf(os.Stderr, "   Warning: hyprpaper not running, wallpaper will not be applied\n")
-			}
-			// Don't skip - still generate the config file, just won't apply wallpaper in PostExecute
-		}
-	}
-
 	// Check if config directory exists (create it if not)
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {

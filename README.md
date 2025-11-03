@@ -35,20 +35,18 @@ cd tinct && go build -o tinct ./cmd/tinct
 ### Basic Usage
 
 ```bash
-# Extract and preview colours
+# Extract and preview colors from image
 tinct extract --preview wallpaper.jpg
 
-# Generate themes for applications
-tinct generate -i image -p wallpaper.jpg -o hyprland,kitty,waybar
+# Generate themes from wallpaper (colors + wallpaper auto-applied)
+tinct generate -i image -p wallpaper.jpg -o hyprland,hyprpaper,hyprlock,kitty,waybar
 
 # Use a remote theme (Catppuccin Mocha)
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "$.mocha.colors" \
-  --remote-json.map base=background,text=foreground,red=danger,green=success \
-  -o hyprland,kitty
+  -o hyprland,kitty,waybar
 
-# Preview categorized palette
+# Preview categorized palette with role assignments
 tinct extract --categorise --preview wallpaper.jpg
 ```
 
@@ -63,12 +61,13 @@ tinct extract --categorise --preview wallpaper.jpg
 ### Output Plugins
 
 **Applications:**
-- **hyprland**: Hyprland window manager
+- **hyprland**: Hyprland window manager (color themes)
+- **hyprpaper**: Hyprpaper wallpaper manager (wallpaper config and auto-apply)
+- **hyprlock**: Hyprlock screen locker (colors and wallpaper)
 - **kitty**: Kitty terminal emulator
 - **waybar**: Waybar status bar
 - **dunst**: Dunst notification daemon
 - **fuzzel**: Fuzzel application launcher
-- **hyprlock**: Hyprlock screen locker
 - **swayosd**: SwayOSD on-screen display
 - **wofi**: Wofi application launcher
 - **neovim**: Neovim text editor (Lua colorschemes)
@@ -82,6 +81,165 @@ tinct extract --categorise --preview wallpaper.jpg
 See [PLUGINS-WISHLIST.md](PLUGINS-WISHLIST.md) for planned plugins and [External Plugins Guide](docs/external-plugins.md) for creating device controllers.
 
 **Note on Plugin Templates:** The current application plugin templates are based on online examples and personal configurations. They may benefit from refactoring for broader adoption. Contributions are significantly welcome, especially for plugins that make sense to be shipped and managed as part of Tinct. If you have expertise with any of these applications or want to add support for new ones, please see [Contributing](DEVELOPMENT.md).
+
+## Template Functions Reference
+
+Tinct uses Go templates for generating configuration files. Templates have access to the color palette and various helper functions.
+
+### Common Template Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `get . "role"` | Get color by role name | `{{ get . "background" \| hex }}` → `#1e1e2e` |
+| `has . "role"` | Check if role exists | `{{ if has . "border" }}...{{ end }}` |
+| `ansi . "color"` | Get closest ANSI color | `{{ ansi . "red" \| hex }}` |
+| `themeType .` | Get theme type | `{{ themeType . }}` → `dark` |
+| `.WallpaperPath` | Wallpaper path (if available) | `{{ .WallpaperPath }}` → `/path/to/wallpaper.jpg` |
+
+### Color Format Functions
+
+| Function | Output Format | Example |
+|----------|---------------|---------|
+| `hex` | `#RRGGBB` | `{{ get . "accent1" \| hex }}` → `#89b4fa` |
+| `rgb` | `R, G, B` | `{{ get . "accent1" \| rgb }}` → `137, 180, 250` |
+| `rgbDecimal` | `R G B` | `{{ get . "accent1" \| rgbDecimal }}` → `137 180 250` |
+| `rgbSpaces` | `R G B` (space-separated) | `{{ get . "accent1" \| rgbSpaces }}` → `137 180 250` |
+| `rgba` | `R, G, B, A` | `{{ get . "scrim" \| rgba }}` → `30, 30, 46, 0.9` |
+| `hsl` | `H, S%, L%` | `{{ get . "accent1" \| hsl }}` → `217, 92%, 76%` |
+
+### Alpha Channel Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `withAlpha color alpha` | Set alpha channel (0.0-1.0) | `{{ withAlpha (get . "background") 0.9 \| rgba }}` |
+
+### Iteration
+
+```go
+{{- range .AllColours }}
+color{{ .Index }} = {{ .Colour | hex }}
+{{- end }}
+```
+
+**Available Fields:** `.Index`, `.Colour`, `.Role`, `.Luminance`, `.Weight`
+
+See [Template Guide](docs/TEMPLATE_GUIDE.md) for complete documentation.
+
+## Plugin Interface Reference
+
+### Input Plugin Interface
+
+Input plugins extract colors from various sources and return a palette.
+
+| Method | Required | Description |
+|--------|----------|-------------|
+| `Name()` | ✓ | Plugin identifier (e.g., "image", "remote-json") |
+| `Description()` | ✓ | Human-readable description |
+| `Generate(ctx, opts)` | ✓ | Extract colors, return `*colour.Palette` |
+| `RegisterFlags(cmd)` | ✓ | Register CLI flags (e.g., `--image.path`) |
+| `Validate()` | ✓ | Check required inputs are provided |
+| `WallpaperPath()` | Optional | Return wallpaper file path (image plugin only) |
+| `ThemeHint()` | Optional | Suggest "dark" or "light" theme type |
+
+**Generate Method Returns:**
+
+```go
+type Palette struct {
+    Colors []colour.Color  // Extracted colors
+}
+```
+
+**Optional Interfaces:**
+
+| Interface | Method | Purpose |
+|-----------|--------|---------|
+| `WallpaperProvider` | `WallpaperPath() string` | Provide wallpaper path to output plugins |
+| `ThemeHinter` | `ThemeHint() string` | Suggest theme type ("dark", "light", "auto") |
+
+### Output Plugin Interface
+
+Output plugins generate configuration files from categorized colors.
+
+| Method | Required | Description |
+|--------|----------|-------------|
+| `Name()` | ✓ | Plugin identifier (e.g., "kitty", "hyprland") |
+| `Description()` | ✓ | Human-readable description |
+| `Generate(palette)` | ✓ | Generate config files, return `map[string][]byte` |
+| `RegisterFlags(cmd)` | ✓ | Register CLI flags (e.g., `--kitty.output-dir`) |
+| `Validate()` | ✓ | Check plugin configuration is valid |
+| `DefaultOutputDir()` | ✓ | Return default config directory path |
+| `SetVerbose(bool)` | Optional | Receive verbose flag setting |
+| `PreExecute(ctx)` | Optional | Run checks before generation |
+| `PostExecute(ctx, execCtx, files)` | Optional | Run actions after file write |
+| `SetWallpaperContext(path)` | Optional | Receive wallpaper path before generation |
+| `GetEmbeddedFS()` | Optional | Expose embedded templates for management |
+
+**Generate Method Returns:**
+
+```go
+map[string][]byte{
+    "tinct.conf":         []byte("..."),  // Config file content
+    "tinct-colours.conf": []byte("..."),  // Color definitions (optional)
+}
+```
+
+**Optional Interfaces:**
+
+| Interface | Method | Purpose | Example Usage |
+|-----------|--------|---------|---------------|
+| `VerbosePlugin` | `SetVerbose(bool)` | Receive verbose flag | Control output verbosity |
+| `PreExecuteHook` | `PreExecute(ctx) (skip, reason, err)` | Pre-generation checks | Verify app is installed |
+| `PostExecuteHook` | `PostExecute(ctx, execCtx, files) error` | Post-generation actions | Reload config, set wallpaper |
+| `WallpaperContextProvider` | `SetWallpaperContext(string)` | Receive wallpaper path | Include in templates |
+| `TemplateProvider` | `GetEmbeddedFS() interface{}` | Expose templates | Template management |
+
+**PostExecute ExecutionContext:**
+
+```go
+type ExecutionContext struct {
+    DryRun        bool   // Is this a dry-run?
+    Verbose       bool   // Verbose mode enabled?
+    OutputDir     string // Output directory path
+    WallpaperPath string // Wallpaper path (if available)
+}
+```
+
+### Plugin Implementation Patterns
+
+**Input Plugin Example:**
+```go
+type Plugin struct {
+    path string  // From --image.path flag
+}
+
+func (p *Plugin) Generate(ctx, opts) (*colour.Palette, error) {
+    // Extract colors from image
+    return &colour.Palette{Colors: extractedColors}, nil
+}
+
+func (p *Plugin) WallpaperPath() string {
+    return p.path  // Optional interface
+}
+```
+
+**Output Plugin Example:**
+```go
+type Plugin struct {
+    outputDir     string
+    verbose       bool
+    wallpaperPath string  // Optional, from SetWallpaperContext
+}
+
+func (p *Plugin) Generate(palette) (map[string][]byte, error) {
+    // Generate config using templates
+    return map[string][]byte{"tinct.conf": content}, nil
+}
+
+func (p *Plugin) PostExecute(ctx, execCtx, files) error {
+    // Reload app config, set wallpaper, etc.
+    return nil
+}
+```
 
 ## Plugin Management
 
@@ -114,26 +272,27 @@ export TINCT_ENABLED_PLUGINS="output:hyprland,output:kitty"
 
 ## Examples
 
-### Generate for Multiple Apps
+### Generate themes from wallpaper
 ```bash
-tinct generate -i image -p wallpaper.jpg -o hyprland,kitty,waybar,dunst
+# Extract colors and apply wallpaper
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland,hyprpaper,hyprlock,kitty,waybar
+
+# hyprpaper plugin automatically:
+# - Generates wallpaper config with preload/wallpaper directives
+# - Applies wallpaper immediately (if hyprpaper is running)
+# - Updates all monitors or preserves existing assignments
 ```
 
-### Use Custom Colours
+### Use custom colors (no wallpaper)
 ```bash
-# Create palette file
-cat > my-theme.txt << EOF
-background=#1e1e2e
-foreground=#cdd6f4
-accent1=#f38ba8
-danger=#f38ba8
-success=#a6e3a1
-warning=#f9e2af
-info=#89dceb
-EOF
+# Generate from color specification
+tinct generate -i remote-json \
+  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
+  -o hyprland,hyprlock,kitty,waybar
 
-# Apply to apps
-tinct generate -i file --file.path my-theme.txt -o hyprland,kitty
+# hyprpaper/hyprlock still work without wallpaper source
+# - Config files generated with helpful placeholders
+# - Wallpaper application skipped gracefully
 ```
 
 ### Ambient LED Lighting / External Devices

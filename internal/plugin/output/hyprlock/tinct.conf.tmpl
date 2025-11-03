@@ -6,7 +6,7 @@
 #
 # Or copy the color variables to your existing hyprlock.conf
 #
-# Detected theme: {{ themeType .PaletteHelper }}
+# Detected theme: {{ themeType . }}
 
 # ============================================================================
 # Tinct Wallpaper Variable
@@ -20,39 +20,39 @@ $tinct_wallpaper = {{ .WallpaperPath }}
 # Tinct Color Variables
 # ============================================================================
 
-$tinct_background = rgb({{ get .PaletteHelper "background" | rgbDecimal }})
-$tinct_background_muted = rgb({{ get .PaletteHelper "backgroundMuted" | rgbDecimal }})
-$tinct_foreground = rgb({{ get .PaletteHelper "foreground" | rgbDecimal }})
-$tinct_foreground_muted = rgb({{ get .PaletteHelper "foregroundMuted" | rgbDecimal }})
+$tinct_background = rgb({{ get . "background" | rgbDecimal }})
+$tinct_background_muted = rgb({{ get . "backgroundMuted" | rgbDecimal }})
+$tinct_foreground = rgb({{ get . "foreground" | rgbDecimal }})
+$tinct_foreground_muted = rgb({{ get . "foregroundMuted" | rgbDecimal }})
 
-$tinct_accent1 = rgb({{ get .PaletteHelper "accent1" | rgbDecimal }})
-$tinct_accent2 = rgb({{ get .PaletteHelper "accent2" | rgbDecimal }})
-$tinct_accent3 = rgb({{ get .PaletteHelper "accent3" | rgbDecimal }})
-$tinct_accent4 = rgb({{ get .PaletteHelper "accent4" | rgbDecimal }})
+$tinct_accent1 = rgb({{ get . "accent1" | rgbDecimal }})
+$tinct_accent2 = rgb({{ get . "accent2" | rgbDecimal }})
+$tinct_accent3 = rgb({{ get . "accent3" | rgbDecimal }})
+$tinct_accent4 = rgb({{ get . "accent4" | rgbDecimal }})
 
-$tinct_danger = rgb({{ get .PaletteHelper "danger" | rgbDecimal }})
-$tinct_warning = rgb({{ get .PaletteHelper "warning" | rgbDecimal }})
-$tinct_success = rgb({{ get .PaletteHelper "success" | rgbDecimal }})
-$tinct_info = rgb({{ get .PaletteHelper "info" | rgbDecimal }})
+$tinct_danger = rgb({{ get . "danger" | rgbDecimal }})
+$tinct_warning = rgb({{ get . "warning" | rgbDecimal }})
+$tinct_success = rgb({{ get . "success" | rgbDecimal }})
+$tinct_info = rgb({{ get . "info" | rgbDecimal }})
 
 # ============================================================================
 # RGBA Variants (with alpha channel)
 # ============================================================================
 
-$tinct_background_rgba = rgba({{ withAlpha (get .PaletteHelper "background") 0.93 | rgbDecimal }})
-$tinct_background_muted_rgba = rgba({{ withAlpha (get .PaletteHelper "backgroundMuted") 0.80 | rgbDecimal }})
-$tinct_foreground_rgba = rgba({{ get .PaletteHelper "foreground" | rgbDecimal }})
-$tinct_foreground_muted_rgba = rgba({{ withAlpha (get .PaletteHelper "foregroundMuted") 0.87 | rgbDecimal }})
+$tinct_background_rgba = rgba({{ withAlpha (get . "background") 0.93 | rgbDecimal }})
+$tinct_background_muted_rgba = rgba({{ withAlpha (get . "backgroundMuted") 0.80 | rgbDecimal }})
+$tinct_foreground_rgba = rgba({{ get . "foreground" | rgbDecimal }})
+$tinct_foreground_muted_rgba = rgba({{ withAlpha (get . "foregroundMuted") 0.87 | rgbDecimal }})
 
-$tinct_accent1_rgba = rgba({{ get .PaletteHelper "accent1" | rgbDecimal }})
-$tinct_accent2_rgba = rgba({{ get .PaletteHelper "accent2" | rgbDecimal }})
-$tinct_accent3_rgba = rgba({{ get .PaletteHelper "accent3" | rgbDecimal }})
-$tinct_accent4_rgba = rgba({{ get .PaletteHelper "accent4" | rgbDecimal }})
+$tinct_accent1_rgba = rgba({{ get . "accent1" | rgbDecimal }})
+$tinct_accent2_rgba = rgba({{ get . "accent2" | rgbDecimal }})
+$tinct_accent3_rgba = rgba({{ get . "accent3" | rgbDecimal }})
+$tinct_accent4_rgba = rgba({{ get . "accent4" | rgbDecimal }})
 
-$tinct_danger_rgba = rgba({{ get .PaletteHelper "danger" | rgbDecimal }})
-$tinct_warning_rgba = rgba({{ get .PaletteHelper "warning" | rgbDecimal }})
-$tinct_success_rgba = rgba({{ get .PaletteHelper "success" | rgbDecimal }})
-$tinct_info_rgba = rgba({{ get .PaletteHelper "info" | rgbDecimal }})
+$tinct_danger_rgba = rgba({{ get . "danger" | rgbDecimal }})
+$tinct_warning_rgba = rgba({{ get . "warning" | rgbDecimal }})
+$tinct_success_rgba = rgba({{ get . "success" | rgbDecimal }})
+$tinct_info_rgba = rgba({{ get . "info" | rgbDecimal }})
 
 # ============================================================================
 # Usage Examples (commented out - uncomment to use)
@@ -113,15 +113,15 @@ $tinct_info_rgba = rgba({{ get .PaletteHelper "info" | rgbDecimal }})
 # ============================================================================
 # Color Reference (for customization)
 # ============================================================================
-# Background:      {{ get .PaletteHelper "background" | hex }}
-# Foreground:      {{ get .PaletteHelper "foreground" | hex }}
-# BackgroundMuted: {{ get .PaletteHelper "backgroundMuted" | hex }}
-# ForegroundMuted: {{ get .PaletteHelper "foregroundMuted" | hex }}
-# Accent1:         {{ get .PaletteHelper "accent1" | hex }}
-# Accent2:         {{ get .PaletteHelper "accent2" | hex }}
-# Accent3:         {{ get .PaletteHelper "accent3" | hex }}
-# Accent4:         {{ get .PaletteHelper "accent4" | hex }}
-# Danger:          {{ get .PaletteHelper "danger" | hex }}
-# Warning:         {{ get .PaletteHelper "warning" | hex }}
-# Success:         {{ get .PaletteHelper "success" | hex }}
-# Info:            {{ get .PaletteHelper "info" | hex }}
+# Background:      {{ get . "background" | hex }}
+# Foreground:      {{ get . "foreground" | hex }}
+# BackgroundMuted: {{ get . "backgroundMuted" | hex }}
+# ForegroundMuted: {{ get . "foregroundMuted" | hex }}
+# Accent1:         {{ get . "accent1" | hex }}
+# Accent2:         {{ get . "accent2" | hex }}
+# Accent3:         {{ get . "accent3" | hex }}
+# Accent4:         {{ get . "accent4" | hex }}
+# Danger:          {{ get . "danger" | hex }}
+# Warning:         {{ get . "warning" | hex }}
+# Success:         {{ get . "success" | hex }}
+# Info:            {{ get . "info" | hex }}

@@ -87,22 +87,22 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // Generate creates the theme files.
 // Returns map of filename -> content
-func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte, error) {
-	if palette == nil {
-		return nil, fmt.Errorf("palette cannot be nil")
+func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
+	if themeData == nil {
+		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
 	files := make(map[string][]byte)
 
 	// Generate colors file
-	colorsContent, err := p.generateColors(palette)
+	colorsContent, err := p.generateColors(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate colors: %w", err)
 	}
 	files["tinct-colors"] = colorsContent
 
 	// Generate style file
-	styleContent, err := p.generateStyle(palette)
+	styleContent, err := p.generateStyle(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate style: %w", err)
 	}
@@ -112,7 +112,7 @@ func (p *Plugin) Generate(palette *colour.CategorisedPalette) (map[string][]byte
 }
 
 // generateColors creates the colors file.
-func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support
 	loader := tmplloader.New("wofi", templates)
 	if p.verbose {
@@ -132,10 +132,9 @@ func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, err
 		return nil, fmt.Errorf("failed to parse colors template: %w", err)
 	}
 
-	data := p.prepareThemeData(palette)
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute colors template: %w", err)
 	}
 
@@ -143,7 +142,7 @@ func (p *Plugin) generateColors(palette *colour.CategorisedPalette) ([]byte, err
 }
 
 // generateStyle creates the style CSS file.
-func (p *Plugin) generateStyle(palette *colour.CategorisedPalette) ([]byte, error) {
+func (p *Plugin) generateStyle(themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("wofi", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -162,19 +161,13 @@ func (p *Plugin) generateStyle(palette *colour.CategorisedPalette) ([]byte, erro
 		return nil, fmt.Errorf("failed to parse style template: %w", err)
 	}
 
-	data := p.prepareThemeData(palette)
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute style template: %w", err)
 	}
 
 	return buf.Bytes(), nil
-}
-
-// prepareThemeData converts a categorised palette to PaletteHelper for template access.
-func (p *Plugin) prepareThemeData(palette *colour.CategorisedPalette) *colour.PaletteHelper {
-	return colour.NewPaletteHelper(palette)
 }
 
 // PreExecute checks if wofi is available and config directory exists.
