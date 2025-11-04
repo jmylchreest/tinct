@@ -201,9 +201,10 @@ func convertRGBToHex(value string) string {
 	rgbRegex := regexp.MustCompile(`rgba?\s*\(\s*([0-9.]+)\s*,?\s*([0-9.]+)\s*,?\s*([0-9.]+)`)
 	matches := rgbRegex.FindStringSubmatch(value)
 	if len(matches) == 4 {
-		r, _ := strconv.ParseFloat(matches[1], 64)
-		g, _ := strconv.ParseFloat(matches[2], 64)
-		b, _ := strconv.ParseFloat(matches[3], 64)
+		// Regex guarantees these are valid floats, errors ignored
+		r, _ := strconv.ParseFloat(matches[1], 64) //nolint:errcheck
+		g, _ := strconv.ParseFloat(matches[2], 64) //nolint:errcheck
+		b, _ := strconv.ParseFloat(matches[3], 64) //nolint:errcheck
 		return fmt.Sprintf("#%02x%02x%02x",
 			clamp(int(r), 0, 255),
 			clamp(int(g), 0, 255),
@@ -217,9 +218,10 @@ func convertHSLToHex(value string) string {
 	hslRegex := regexp.MustCompile(`hsla?\s*\(\s*([0-9.]+)\s*,?\s*([0-9.]+)%?\s*,?\s*([0-9.]+)%?`)
 	matches := hslRegex.FindStringSubmatch(value)
 	if len(matches) == 4 {
-		h, _ := strconv.ParseFloat(matches[1], 64)
-		s, _ := strconv.ParseFloat(matches[2], 64)
-		l, _ := strconv.ParseFloat(matches[3], 64)
+		// Regex guarantees these are valid floats, errors ignored
+		h, _ := strconv.ParseFloat(matches[1], 64) //nolint:errcheck
+		s, _ := strconv.ParseFloat(matches[2], 64) //nolint:errcheck
+		l, _ := strconv.ParseFloat(matches[3], 64) //nolint:errcheck
 
 		// Handle percentage values.
 		if s > 1 {
@@ -241,9 +243,10 @@ func convertOKLCHToHex(value string) string {
 	oklchRegex := regexp.MustCompile(`oklch\s*\(\s*([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)`)
 	matches := oklchRegex.FindStringSubmatch(value)
 	if len(matches) == 4 {
-		l, _ := strconv.ParseFloat(matches[1], 64)
-		c, _ := strconv.ParseFloat(matches[2], 64)
-		h, _ := strconv.ParseFloat(matches[3], 64)
+		// Regex guarantees these are valid floats, errors ignored
+		l, _ := strconv.ParseFloat(matches[1], 64) //nolint:errcheck
+		c, _ := strconv.ParseFloat(matches[2], 64) //nolint:errcheck
+		h, _ := strconv.ParseFloat(matches[3], 64) //nolint:errcheck
 
 		rgb := oklchToRGB(l, c, h)
 		return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)
@@ -257,9 +260,10 @@ func convertOKLABToHex(value string) string {
 	oklabRegex := regexp.MustCompile(`oklab\s*\(\s*([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)`)
 	matches := oklabRegex.FindStringSubmatch(value)
 	if len(matches) == 4 {
-		l, _ := strconv.ParseFloat(matches[1], 64)
-		a, _ := strconv.ParseFloat(matches[2], 64)
-		b, _ := strconv.ParseFloat(matches[3], 64)
+		// Regex guarantees these are valid floats, errors ignored
+		l, _ := strconv.ParseFloat(matches[1], 64) //nolint:errcheck
+		a, _ := strconv.ParseFloat(matches[2], 64) //nolint:errcheck
+		b, _ := strconv.ParseFloat(matches[3], 64) //nolint:errcheck
 
 		rgb := oklabToRGB(l, a, b)
 		return fmt.Sprintf("#%02x%02x%02x", rgb.R, rgb.G, rgb.B)

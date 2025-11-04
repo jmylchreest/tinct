@@ -234,7 +234,10 @@ func init() {
 
 // runPluginList lists all available plugins.
 func runPluginList(cmd *cobra.Command, args []string) error {
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Load plugin lock and create manager.
 	lock, lockPath, err := loadPluginLock()
@@ -433,7 +436,10 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 // runPluginEnable enables a plugin.
 func runPluginEnable(cmd *cobra.Command, args []string) error {
 	pluginName := args[0]
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
@@ -507,7 +513,10 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 // runPluginDisable disables a plugin.
 func runPluginDisable(cmd *cobra.Command, args []string) error {
 	pluginName := args[0]
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
@@ -580,7 +589,10 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 
 // runPluginClear clears plugin configuration.
 func runPluginClear(cmd *cobra.Command, args []string) error {
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
@@ -645,7 +657,10 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 // runPluginAdd adds an external plugin.
 func runPluginAdd(cmd *cobra.Command, args []string) error {
 	source := args[0]
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
@@ -727,7 +742,10 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 // runPluginDelete removes an external plugin.
 func runPluginDelete(cmd *cobra.Command, args []string) error {
 	pluginName := args[0]
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Load plugin lock.
 	lock, lockPath, err := loadPluginLock()
@@ -749,7 +767,9 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 	if !pluginForce {
 		fmt.Printf("Are you sure you want to delete plugin '%s'? (y/N): ", pluginName)
 		var response string
-		fmt.Scanln(&response)
+		if _, err := fmt.Scanln(&response); err != nil {
+			return fmt.Errorf("failed to read user input: %w", err)
+		}
 		if strings.ToLower(response) != "y" {
 			fmt.Println("Deletion cancelled")
 			return nil
@@ -784,7 +804,10 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 
 // runPluginUpdate updates external plugins from lock file sources.
 func runPluginUpdate(cmd *cobra.Command, args []string) error {
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Load plugin lock.
 	lock, lockPath, err := loadPluginLock()

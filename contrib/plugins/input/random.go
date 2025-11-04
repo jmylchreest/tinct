@@ -190,7 +190,10 @@ func main() {
 		}
 
 		// Output empty array for dry-run
-		json.NewEncoder(os.Stdout).Encode([]RGB{})
+		if err := json.NewEncoder(os.Stdout).Encode([]RGB{}); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding output: %v\n", err)
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 

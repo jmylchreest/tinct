@@ -80,7 +80,10 @@ func init() {
 // runExtract executes the extract command.
 func runExtract(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	verbose, _ := cmd.Flags().GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
 
 	// Reload plugin manager config from lock file if available (overrides env).
 	lock, _, err := loadPluginLock()

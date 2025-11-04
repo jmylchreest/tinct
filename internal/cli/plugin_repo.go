@@ -269,7 +269,10 @@ func runPluginRepoInfo(cmd *cobra.Command, args []string) error {
 		if err := mgr.UpdateRepository(name); err != nil {
 			return fmt.Errorf("failed to load manifest: %w", err)
 		}
-		repo, _ = mgr.GetRepository(name)
+		repo, err = mgr.GetRepository(name)
+		if err != nil {
+			return fmt.Errorf("failed to get repository: %w", err)
+		}
 	}
 
 	fmt.Printf("Repository: %s\n", repo.Name)

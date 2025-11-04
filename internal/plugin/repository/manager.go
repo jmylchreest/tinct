@@ -376,7 +376,7 @@ func (m *Manager) ensureManifestLoaded(repo *Repository) error {
 
 	// Update cache.
 	m.config.Cache.LastUpdate[repo.Name] = time.Now().Unix()
-	_ = m.saveManifestCache(repo.Name, manifest) // Ignore cache save errors
+	_ = m.saveManifestCache(repo.Name, manifest) //nolint:errcheck // Ignore cache save errors
 
 	return nil
 }

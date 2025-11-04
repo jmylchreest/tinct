@@ -203,7 +203,7 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 
 	// First, unload all existing wallpapers to clear any cached images.
 	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "unload", "all")
-	cmd.Run() // Ignore errors - wallpapers might not be loaded
+	_ = cmd.Run() //nolint:errcheck // Explicitly ignore errors - wallpapers might not be loaded
 
 	// Preload the new wallpaper.
 	cmd = exec.CommandContext(ctx, "hyprctl", "hyprpaper", "preload", absPath)

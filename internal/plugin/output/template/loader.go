@@ -30,7 +30,10 @@ type Logger interface {
 // embedFS should be the embedded filesystem containing the plugin's default templates.
 // pluginName is used to locate custom templates in ~/.config/tinct/templates/{pluginName}/.
 func New(pluginName string, embedFS embed.FS) *Loader {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "" // Fallback to empty if home dir unavailable
+	}
 	customBase := filepath.Join(home, ".config", "tinct", "templates")
 
 	return &Loader{

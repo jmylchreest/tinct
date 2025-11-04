@@ -323,7 +323,9 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 	if !pluginYes {
 		fmt.Printf("\nRemove these plugins? [y/N]: ")
 		var response string
-		fmt.Scanln(&response)
+		if _, err := fmt.Scanln(&response); err != nil {
+			return fmt.Errorf("failed to read user input: %w", err)
+		}
 		if response != "y" && response != "Y" {
 			fmt.Println("Aborted.")
 			return nil
