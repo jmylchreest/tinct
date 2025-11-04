@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+
+	"github.com/jmylchreest/tinct/internal/security"
 )
 
 // Palette represents a collection of colors extracted from an image.
@@ -142,9 +144,9 @@ func ToRGB(c color.Color) RGB {
 	r, g, b, _ := c.RGBA()
 	// RGBA returns values in the range [0, 65535], convert to [0, 255]
 	return RGB{
-		R: uint8(r >> 8),
-		G: uint8(g >> 8),
-		B: uint8(b >> 8),
+		R: security.SafeUint8FromUint32(r >> 8),
+		G: security.SafeUint8FromUint32(g >> 8),
+		B: security.SafeUint8FromUint32(b >> 8),
 	}
 }
 
@@ -154,10 +156,10 @@ func ToRGBA(c color.Color) RGBA {
 	r, g, b, a := c.RGBA()
 	// RGBA returns values in the range [0, 65535], convert to [0, 255]
 	return RGBA{
-		R: uint8(r >> 8),
-		G: uint8(g >> 8),
-		B: uint8(b >> 8),
-		A: uint8(a >> 8),
+		R: security.SafeUint8FromUint32(r >> 8),
+		G: security.SafeUint8FromUint32(g >> 8),
+		B: security.SafeUint8FromUint32(b >> 8),
+		A: security.SafeUint8FromUint32(a >> 8),
 	}
 }
 

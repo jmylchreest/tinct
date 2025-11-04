@@ -18,6 +18,7 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
+	"github.com/jmylchreest/tinct/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -947,7 +948,7 @@ func savePluginLock(path string, lock *PluginLock) error {
 		return fmt.Errorf("failed to marshal plugin lock: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("failed to update lock file: %w", err)
 	}
 
@@ -1210,6 +1211,7 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 	destPath := filepath.Join(pluginDir, filename)
 
 	// Write file
+	// #nosec G306 -- Plugin executable needs exec permissions
 	if err := os.WriteFile(destPath, data, 0755); err != nil {
 		return "", fmt.Errorf("failed to write plugin file: %w", err)
 	}
@@ -1310,7 +1312,9 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			}
 			defer out.Close()
 
-			if _, err := io.Copy(out, tr); err != nil {
+			// Limit decompression size to prevent zip bombs (100MB limit for plugins)
+			limitedReader := security.NewLimitedReader(tr, 100*1024*1024)
+			if _, err := io.Copy(out, limitedReader); err != nil {
 				return "", fmt.Errorf("failed to extract plugin: %w", err)
 			}
 
@@ -1393,7 +1397,9 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(out, rc); err != nil {
+	// Limit decompression size to prevent zip bombs (100MB limit for plugins)
+	limitedReader := security.NewLimitedReader(rc, 100*1024*1024)
+	if _, err := io.Copy(out, limitedReader); err != nil {
 		return "", fmt.Errorf("failed to extract plugin: %w", err)
 	}
 
@@ -1416,6 +1422,11 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 		return "", fmt.Errorf("git is not installed or not in PATH")
 	}
 
+	// Validate the git URL for security
+	if err := security.ValidateGitURL(info.URL); err != nil {
+		return "", fmt.Errorf("invalid git URL: %w", err)
+	}
+
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Cloning from %s...\n", info.URL)
 	}
@@ -1427,8 +1438,9 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Clone the repository
-	cloneCmd := exec.Command("git", "clone", "--depth", "1", info.URL, tmpDir)
+	// Clone the repository using -- to separate options from arguments (prevents command injection)
+	// #nosec G204 -- URL is validated via security.ValidateGitURL above
+	cloneCmd := exec.Command("git", "clone", "--depth", "1", "--", info.URL, tmpDir)
 	if output, err := cloneCmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("failed to clone repository: %w\nOutput: %s", err, string(output))
 	}

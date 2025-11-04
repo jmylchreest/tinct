@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
+	"github.com/jmylchreest/tinct/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -457,7 +458,13 @@ func reinstallFromLegacySource(meta ExternalPluginMeta) error {
 
 // downloadAndInstallPlugin downloads and installs a plugin from URL
 func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
+	// Validate URL to prevent SSRF attacks
+	if err := security.ValidateHTTPURL(url); err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
 	// Download file
+	// #nosec G107 -- URL is validated via security.ValidateHTTPURL above
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
@@ -496,6 +503,7 @@ func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
 	destPath := filepath.Join(pluginDir, filename)
 
 	// Write file
+	// #nosec G306 -- Plugin executable needs exec permissions
 	if err := os.WriteFile(destPath, data, 0755); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}

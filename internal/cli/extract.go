@@ -187,7 +187,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		if verbose {
 			fmt.Fprintf(os.Stderr, "Writing output to: %s\n", extractOutput)
 		}
-		if err := os.WriteFile(extractOutput, []byte(output), 0644); err != nil {
+		if err := os.WriteFile(extractOutput, []byte(output), 0600); err != nil {
 			return fmt.Errorf("failed to write output file: %w", err)
 		}
 		if verbose {

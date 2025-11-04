@@ -214,6 +214,7 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 	// Set the wallpaper using the same assignments (monitors or wildcard)
 	successCount := 0
 	for _, monitor := range assignments {
+		// #nosec G204 -- hyprctl is a system command with validated absolute path for wallpaper
 		cmd = exec.CommandContext(ctx, "hyprctl", "hyprpaper", "wallpaper", monitor+","+absPath)
 		if err := cmd.Run(); err != nil {
 			if p.verbose {

@@ -173,6 +173,7 @@ func main() {
 	// Create a new random source with the seed
 	var seedArray [32]byte
 	binary.LittleEndian.PutUint64(seedArray[:8], seed)
+	// #nosec G404 -- Using math/rand intentionally for deterministic color generation, not cryptography
 	rng := mathrand.New(mathrand.NewChaCha8(seedArray))
 
 	// Number of colors to generate
@@ -213,8 +214,11 @@ func generateRandomColors(n int, rng *mathrand.Rand) []RGB {
 
 	for i := range n {
 		colors[i] = RGB{
+			// #nosec G115 -- rng.IntN(256) returns 0-255, safe for uint8
 			R: uint8(rng.IntN(256)),
+			// #nosec G115 -- rng.IntN(256) returns 0-255, safe for uint8
 			G: uint8(rng.IntN(256)),
+			// #nosec G115 -- rng.IntN(256) returns 0-255, safe for uint8
 			B: uint8(rng.IntN(256)),
 		}
 	}

@@ -209,6 +209,7 @@ func (e *KMeansExtractor) initializeCentroidsKMeansPlusPlus(points []point3D, k 
 	centroids := make([]point3D, 0, k)
 
 	// Choose first centroid randomly
+	// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
 	firstIdx := rand.Intn(len(points))
 	centroids = append(centroids, points[firstIdx])
 
@@ -247,6 +248,7 @@ func (e *KMeansExtractor) initializeCentroidsKMeansPlusPlus(points []point3D, k 
 			continue
 		}
 
+		// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
 		target := rand.Float64() * totalDistance
 		cumulative := 0.0
 		for i, dist := range distances {
@@ -302,6 +304,7 @@ func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []i
 			}
 		} else {
 			// Empty cluster - reinitialise randomly
+			// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
 			centroids[i] = points[rand.Intn(len(points))]
 		}
 	}

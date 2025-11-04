@@ -10,6 +10,7 @@ import (
 	"maps"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -287,6 +288,20 @@ func (m *Manager) UpdateConfig(config Config) {
 
 // RegisterExternalPlugin registers an external plugin with the manager.
 func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description string) error {
+	// Validate plugin path - must be absolute and should exist
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("plugin path must be absolute: %s", path)
+	}
+
+	// Check if the plugin file exists and is executable
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("plugin not found or not accessible: %w", err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("plugin path is a directory, not a file: %s", path)
+	}
+
 	switch pluginType {
 	case "output":
 		plugin := NewExternalOutputPlugin(name, description, path)
@@ -440,6 +455,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 	}
 
 	// Execute external plugin
+	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.CommandContext(ctx, p.path)
 	cmd.Stdin = bytes.NewReader(optsJSON)
 
@@ -590,6 +606,7 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 	}
 
 	// Execute external plugin
+	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.Command(p.path)
 	cmd.Stdin = bytes.NewReader(paletteJSON)
 
@@ -637,6 +654,7 @@ func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reaso
 	defer cancel()
 
 	// Execute plugin with --pre-execute flag
+	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.CommandContext(execCtx, p.path, "--pre-execute")
 
 	var stdout, stderr bytes.Buffer
@@ -686,6 +704,7 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 	}
 
 	// Execute plugin with --post-execute flag
+	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.CommandContext(execCtx, p.path, "--post-execute")
 	cmd.Stdin = bytes.NewReader(filesJSON)
 
@@ -707,6 +726,7 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 
 // GetExternalPluginInfo queries an external plugin for its metadata.
 func GetExternalPluginInfo(path string) (name, description string, err error) {
+	// #nosec G204 -- Path comes from validated plugin installation or user's explicit plugin add command
 	cmd := exec.Command(path, "--plugin-info")
 	output, err := cmd.Output()
 	if err != nil {
@@ -734,6 +754,7 @@ func ExecuteExternalPlugin(ctx context.Context, path string, palette *colour.Cat
 	}
 
 	// Execute external plugin
+	// #nosec G204 -- Path comes from validated plugin installation or user's explicit plugin add command
 	cmd := exec.CommandContext(ctx, path)
 	cmd.Stdin = bytes.NewReader(paletteJSON)
 

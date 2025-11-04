@@ -303,9 +303,9 @@ func hslToRGB(h, s, l float64) colour.RGB {
 	}
 
 	return colour.RGB{
-		R: uint8(clamp(int(r*255), 0, 255)),
-		G: uint8(clamp(int(g*255), 0, 255)),
-		B: uint8(clamp(int(b*255), 0, 255)),
+		R: uint8(clamp(int(r*255), 0, 255)), // #nosec G115 -- clamped to 0-255
+		G: uint8(clamp(int(g*255), 0, 255)), // #nosec G115 -- clamped to 0-255
+		B: uint8(clamp(int(b*255), 0, 255)), // #nosec G115 -- clamped to 0-255
 	}
 }
 
@@ -364,9 +364,9 @@ func oklabToRGB(l, a, b float64) colour.RGB {
 	b_ = linearToSRGB(b_)
 
 	return colour.RGB{
-		R: uint8(clamp(int(r*255+0.5), 0, 255)),
-		G: uint8(clamp(int(g*255+0.5), 0, 255)),
-		B: uint8(clamp(int(b_*255+0.5), 0, 255)),
+		R: uint8(clamp(int(r*255+0.5), 0, 255)),  // #nosec G115 -- clamped to 0-255
+		G: uint8(clamp(int(g*255+0.5), 0, 255)),  // #nosec G115 -- clamped to 0-255
+		B: uint8(clamp(int(b_*255+0.5), 0, 255)), // #nosec G115 -- clamped to 0-255
 	}
 }
 

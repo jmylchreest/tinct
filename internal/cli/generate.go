@@ -598,7 +598,7 @@ func savePalette(palette *colour.CategorisedPalette, path string) error {
 		}
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -680,7 +680,7 @@ func writeFile(path string, content []byte, verbose bool) error {
 	}
 
 	// Write the file
-	if err := os.WriteFile(path, content, 0644); err != nil {
+	if err := os.WriteFile(path, content, 0600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
