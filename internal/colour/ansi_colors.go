@@ -73,7 +73,7 @@ func (ph *PaletteHelper) FindClosestANSIColor(colorName string) (ColorValue, boo
 		}
 		// Check aliases.
 		for _, alias := range ansiColors[i].Aliases {
-			if strings.ToLower(alias) == normalizedName {
+			if strings.EqualFold(alias, normalizedName) {
 				targetColor = &ansiColors[i]
 				break
 			}
@@ -129,7 +129,7 @@ func GetANSIColorNames() []string {
 
 // ANSIColorInfo returns information about an ANSI color name.
 // Returns the canonical name, RGB values, and whether it's a bright variant.
-func ANSIColorInfo(colorName string) (name string, r, g, b uint8, isBright bool, found bool) {
+func ANSIColorInfo(colorName string) (name string, r, g, b uint8, isBright, found bool) {
 	normalizedName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(colorName, " ", ""), "-", ""))
 
 	for i := range ansiColors {
@@ -137,7 +137,7 @@ func ANSIColorInfo(colorName string) (name string, r, g, b uint8, isBright bool,
 			return ansiColors[i].Name, ansiColors[i].R, ansiColors[i].G, ansiColors[i].B, ansiColors[i].IsBright, true
 		}
 		for _, alias := range ansiColors[i].Aliases {
-			if strings.ToLower(alias) == normalizedName {
+			if strings.EqualFold(alias, normalizedName) {
 				return ansiColors[i].Name, ansiColors[i].R, ansiColors[i].G, ansiColors[i].B, ansiColors[i].IsBright, true
 			}
 		}

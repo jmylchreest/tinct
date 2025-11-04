@@ -290,10 +290,8 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 					hex := colors[sourceKey]
 					fmt.Printf("   %s (%s) → %s\n", sourceKey, hex, targetRole)
 				}
-			} else {
-				if verbose {
-					fmt.Printf("   Warning: color '%s' not found in source\n", sourceKey)
-				}
+			} else if verbose {
+				fmt.Printf("   Warning: color '%s' not found in source\n", sourceKey)
 			}
 		}
 	}

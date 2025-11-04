@@ -74,21 +74,21 @@ func luminanceFromRGB(rgb RGB) float64 {
 
 	// Simplified gamma correction.
 	if r <= 0.03928 {
-		r = r / 12.92
+		r /= 12.92
 	} else {
 		r = ((r + 0.055) / 1.055)
 		r = r * r * r * r * r * r * r // Approximate pow(r, 2.4)
 	}
 
 	if g <= 0.03928 {
-		g = g / 12.92
+		g /= 12.92
 	} else {
 		g = ((g + 0.055) / 1.055)
 		g = g * g * g * g * g * g * g
 	}
 
 	if b <= 0.03928 {
-		b = b / 12.92
+		b /= 12.92
 	} else {
 		b = ((b + 0.055) / 1.055)
 		b = b * b * b * b * b * b * b

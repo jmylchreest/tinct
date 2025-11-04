@@ -225,10 +225,10 @@ func convertHSLToHex(value string) string {
 
 		// Handle percentage values.
 		if s > 1 {
-			s = s / 100.0
+			s /= 100.0
 		}
 		if l > 1 {
-			l = l / 100.0
+			l /= 100.0
 		}
 
 		rgb := hslToRGB(h, s, l)
@@ -284,7 +284,7 @@ func clamp(val, min, max int) int {
 
 // hslToRGB converts HSL to RGB.
 func hslToRGB(h, s, l float64) colour.RGB {
-	h = h / 360.0
+	h /= 360.0
 
 	var r, g, b float64
 
@@ -427,10 +427,8 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 					hex := colors[sourceKey]
 					fmt.Printf("   %s (%s) → %s\n", sourceKey, hex, targetRole)
 				}
-			} else {
-				if verbose {
-					fmt.Printf("   Warning: color '%s' not found in source\n", sourceKey)
-				}
+			} else if verbose {
+				fmt.Printf("   Warning: color '%s' not found in source\n", sourceKey)
 			}
 		}
 	}

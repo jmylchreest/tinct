@@ -428,7 +428,7 @@ func reinstallFromLocal(meta ExternalPluginMeta) error {
 	}
 
 	// Make executable.
-	if err := os.Chmod(destPath, 0755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil {
 		return fmt.Errorf("failed to make executable: %w", err)
 	}
 
@@ -506,7 +506,7 @@ func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
 
 	// Write file.
 	// #nosec G306 -- Plugin executable needs exec permissions.
-	if err := os.WriteFile(destPath, data, 0755); err != nil {
+	if err := os.WriteFile(destPath, data, 0o755); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -575,7 +575,7 @@ func getPluginDirectory() (string, error) {
 	pluginDir := filepath.Join(dataDir, ".local", "share", "tinct", "plugins")
 
 	// Ensure directory exists.
-	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 

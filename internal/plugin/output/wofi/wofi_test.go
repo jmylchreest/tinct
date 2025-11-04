@@ -49,7 +49,7 @@ func TestWofiPlugin_ContentValidation(t *testing.T) {
 	}
 
 	// Check colors file contains color definitions.
-	if len(colorsFile) == 0 {
+	if colorsFile == "" {
 		t.Error("Colors file should not be empty")
 	}
 }
@@ -68,7 +68,7 @@ func TestWofiPlugin_GenerateWithLightTheme(t *testing.T) {
 	colorsFile := string(files["tinct-colors"])
 
 	// Check that colors file is generated.
-	if len(colorsFile) == 0 {
+	if colorsFile == "" {
 		t.Error("Colors file should not be empty for light theme")
 	}
 }

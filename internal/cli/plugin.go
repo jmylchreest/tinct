@@ -688,7 +688,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
@@ -770,7 +770,7 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		if _, err := fmt.Scanln(&response); err != nil {
 			return fmt.Errorf("failed to read user input: %w", err)
 		}
-		if strings.ToLower(response) != "y" {
+		if !strings.EqualFold(response, "y") {
 			fmt.Println("Deletion cancelled")
 			return nil
 		}
@@ -835,7 +835,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
@@ -971,7 +971,7 @@ func savePluginLock(path string, lock *PluginLock) error {
 		return fmt.Errorf("failed to marshal plugin lock: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to update lock file: %w", err)
 	}
 
@@ -1018,7 +1018,7 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 }
 
 // queryPluginMetadata queries a plugin for its name, description, type, and version.
-func queryPluginMetadata(pluginPath string) (name string, description string, pluginType string, version string) {
+func queryPluginMetadata(pluginPath string) (name, description, pluginType, version string) {
 	cmd := exec.Command(pluginPath, "--plugin-info")
 	output, err := cmd.Output()
 	if err != nil {
@@ -1181,7 +1181,7 @@ func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (st
 	}
 
 	// Make it executable.
-	if err := os.Chmod(destPath, 0755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil {
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 
@@ -1235,7 +1235,7 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 
 	// Write file.
 	// #nosec G306 -- Plugin executable needs exec permissions.
-	if err := os.WriteFile(destPath, data, 0755); err != nil {
+	if err := os.WriteFile(destPath, data, 0o755); err != nil {
 		return "", fmt.Errorf("failed to write plugin file: %w", err)
 	}
 
@@ -1286,7 +1286,7 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			}
 		} else {
 			// Auto-detect: prefer executable files.
-			if header.FileInfo().Mode()&0111 != 0 {
+			if header.FileInfo().Mode()&0o111 != 0 {
 				targetPath = header.Name
 				break
 			}
@@ -1342,7 +1342,7 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			}
 
 			// Make executable.
-			if err := os.Chmod(destPath, 0755); err != nil {
+			if err := os.Chmod(destPath, 0o755); err != nil {
 				return "", fmt.Errorf("failed to make plugin executable: %w", err)
 			}
 
@@ -1384,7 +1384,7 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 			}
 		} else {
 			// Auto-detect: prefer executable files.
-			if f.FileInfo().Mode()&0111 != 0 {
+			if f.FileInfo().Mode()&0o111 != 0 {
 				targetZipFile = f
 				break
 			}
@@ -1427,7 +1427,7 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 	}
 
 	// Make executable.
-	if err := os.Chmod(destPath, 0755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil {
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 
@@ -1513,7 +1513,7 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 	}
 
 	// Make it executable.
-	if err := os.Chmod(destPath, 0755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil {
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 

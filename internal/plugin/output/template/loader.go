@@ -145,12 +145,12 @@ func (l *Loader) DumpTemplate(filename string, force bool) error {
 
 	// Create directory if it doesn't exist.
 	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory %q: %w", outputDir, err)
 	}
 
 	// Write file.
-	if err := os.WriteFile(outputPath, content, 0644); err != nil {
+	if err := os.WriteFile(outputPath, content, 0o644); err != nil {
 		return fmt.Errorf("failed to write template to %q: %w", outputPath, err)
 	}
 

@@ -192,7 +192,8 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 
 			// Merge colors and weights.
 			palette.Colors = append(palette.Colors, regionPalette.Colors...)
-			palette.Weights = append(adjustedMainWeights, regionWeights...)
+			adjustedMainWeights = append(adjustedMainWeights, regionWeights...)
+			palette.Weights = adjustedMainWeights
 		} else {
 			// No weights in main palette, create them.
 			// Main colors get equal weight, region colors get reduced weight.

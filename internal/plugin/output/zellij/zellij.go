@@ -156,7 +156,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		// Try to create the directory.
-		if err := os.MkdirAll(configDir, 0755); err != nil {
+		if err := os.MkdirAll(configDir, 0o755); err != nil {
 			return true, fmt.Sprintf("zellij themes directory not found and could not be created: %s", configDir), nil
 		}
 		if p.verbose {

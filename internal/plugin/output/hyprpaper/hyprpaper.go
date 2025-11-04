@@ -143,7 +143,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 	// Check if config directory exists (create it if not).
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0755); err != nil {
+		if err := os.MkdirAll(configDir, 0o755); err != nil {
 			return true, fmt.Sprintf("hypr config directory does not exist and cannot be created: %s", configDir), nil
 		}
 	}

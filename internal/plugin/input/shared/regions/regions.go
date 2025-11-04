@@ -313,8 +313,6 @@ func (s *Sampler) extractColorFromRegion(img image.Image, rect image.Rectangle) 
 	switch s.Method {
 	case "dominant":
 		return s.extractDominantColor(img, rect)
-	case "average":
-		fallthrough
 	default:
 		return s.extractAverageColor(img, rect)
 	}

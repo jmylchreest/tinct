@@ -38,16 +38,16 @@ func TestLoader_Load(t *testing.T) {
 	t.Run("loads custom template when it exists", func(t *testing.T) {
 		// Create a custom template.
 		customDir := filepath.Join(tmpDir, "testplugin")
-		if err := os.MkdirAll(customDir, 0755); err != nil {
+		if err := os.MkdirAll(customDir, 0o755); err != nil {
 			t.Fatalf("failed to create custom dir: %v", err)
 		}
 
 		customContent := []byte("# This is a custom template\n")
 		customPath := filepath.Join(customDir, "testdata", "test.tmpl")
-		if err := os.MkdirAll(filepath.Dir(customPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(customPath), 0o755); err != nil {
 			t.Fatalf("failed to create custom template dir: %v", err)
 		}
-		if err := os.WriteFile(customPath, customContent, 0644); err != nil {
+		if err := os.WriteFile(customPath, customContent, 0o644); err != nil {
 			t.Fatalf("failed to write custom template: %v", err)
 		}
 
@@ -113,10 +113,10 @@ func TestLoader_HasCustomTemplate(t *testing.T) {
 
 	t.Run("returns true when custom template exists", func(t *testing.T) {
 		customPath := loader.CustomPath("test.tmpl")
-		if err := os.MkdirAll(filepath.Dir(customPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(customPath), 0o755); err != nil {
 			t.Fatalf("failed to create dir: %v", err)
 		}
-		if err := os.WriteFile(customPath, []byte("test"), 0644); err != nil {
+		if err := os.WriteFile(customPath, []byte("test"), 0o644); err != nil {
 			t.Fatalf("failed to write file: %v", err)
 		}
 
@@ -344,10 +344,10 @@ func TestLoader_GetInfo(t *testing.T) {
 	t.Run("info for custom template", func(t *testing.T) {
 		// Create a custom template.
 		customPath := loader.CustomPath("testdata/test.tmpl")
-		if err := os.MkdirAll(filepath.Dir(customPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(customPath), 0o755); err != nil {
 			t.Fatalf("failed to create dir: %v", err)
 		}
-		if err := os.WriteFile(customPath, []byte("test"), 0644); err != nil {
+		if err := os.WriteFile(customPath, []byte("test"), 0o644); err != nil {
 			t.Fatalf("failed to write file: %v", err)
 		}
 

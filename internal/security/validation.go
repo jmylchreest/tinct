@@ -56,7 +56,7 @@ func ValidateHTTPURL(urlStr string) error {
 	}
 
 	// Only allow HTTPS (not HTTP)
-	if strings.ToLower(parsed.Scheme) != "https" {
+	if !strings.EqualFold(parsed.Scheme, "https") {
 		return fmt.Errorf("only HTTPS URLs are allowed (got %s)", parsed.Scheme)
 	}
 

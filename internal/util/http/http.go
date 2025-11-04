@@ -41,7 +41,7 @@ func Fetch(ctx context.Context, url string, opts FetchOptions) ([]byte, error) {
 		Timeout: timeout,
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
