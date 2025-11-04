@@ -76,7 +76,7 @@ func (p *Plugin) GetEmbeddedFS() interface{} {
 
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
-	// Nothing to validate - all fields have defaults
+	// Nothing to validate - all fields have defaults.
 	return nil
 }
 
@@ -86,7 +86,7 @@ func (p *Plugin) DefaultOutputDir() string {
 		return p.outputDir
 	}
 
-	// Expand ~ to home directory
+	// Expand ~ to home directory.
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ".config/waybar"
@@ -95,7 +95,7 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // Generate creates the theme files.
-// Returns map of filename -> content
+// Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -103,14 +103,14 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate colors file
+	// Generate colors file.
 	colorsContent, err := p.generateColors(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate colors: %w", err)
 	}
 	files["tinct-colours.css"] = colorsContent
 
-	// Generate example CSS if requested
+	// Generate example CSS if requested.
 	if p.generateStub {
 		stubContent, err := p.generateStubCSS()
 		if err != nil {
@@ -124,7 +124,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateColors creates the color definitions CSS file.
 func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("waybar", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -134,7 +134,7 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read colors template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct-colours.css.tmpl\n")
 	}
@@ -154,7 +154,7 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 
 // generateStubCSS creates an example CSS file showing how to use the colors.
 func (p *Plugin) generateStubCSS() ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("waybar", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -164,7 +164,7 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 		return nil, fmt.Errorf("failed to read stub template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.css.tmpl\n")
 	}
@@ -186,13 +186,13 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 // PreExecute checks if waybar is available before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if waybar executable exists on PATH
+	// Check if waybar executable exists on PATH.
 	_, err = exec.LookPath("waybar")
 	if err != nil {
 		return true, "waybar executable not found on $PATH", nil
 	}
 
-	// Check if config directory exists
+	// Check if config directory exists.
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		return true, fmt.Sprintf("waybar config directory not found: %s", configDir), nil
@@ -208,11 +208,11 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		return nil
 	}
 
-	// Get waybar process PIDs
+	// Get waybar process PIDs.
 	cmd := exec.CommandContext(ctx, "pgrep", "-x", "waybar")
 	output, err := cmd.Output()
 	if err != nil {
-		// Check if the error is because no process was found
+		// Check if the error is because no process was found.
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			if exitErr.ExitCode() == 1 {
 				return fmt.Errorf("no running waybar instances found to reload")
@@ -226,7 +226,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		return fmt.Errorf("no running waybar instances found")
 	}
 
-	// Send SIGUSR2 to all waybar instances to reload config
+	// Send SIGUSR2 to all waybar instances to reload config.
 	for _, pid := range pids {
 		killCmd := exec.CommandContext(ctx, "kill", "-SIGUSR2", pid)
 		if err := killCmd.Run(); err != nil {

@@ -24,7 +24,7 @@ func NewTable(headers []string) *Table {
 // AddRow adds a row to the table.
 func (t *Table) AddRow(row []string) {
 	if len(row) != len(t.headers) {
-		// Pad or truncate to match header count
+		// Pad or truncate to match header count.
 		newRow := make([]string, len(t.headers))
 		copy(newRow, row)
 		for i := len(row); i < len(t.headers); i++ {
@@ -42,7 +42,7 @@ func (t *Table) Render() string {
 		return ""
 	}
 
-	// Calculate column widths
+	// Calculate column widths.
 	colWidths := make([]int, len(t.headers))
 	for i, h := range t.headers {
 		colWidths[i] = len(h)
@@ -58,7 +58,7 @@ func (t *Table) Render() string {
 
 	var result strings.Builder
 
-	// Format header
+	// Format header.
 	headerParts := make([]string, len(t.headers))
 	for i, h := range t.headers {
 		headerParts[i] = padRight(h, colWidths[i])
@@ -66,7 +66,7 @@ func (t *Table) Render() string {
 	result.WriteString(strings.Join(headerParts, strings.Repeat(" ", t.padding)))
 	result.WriteString("\n")
 
-	// Format separator
+	// Format separator.
 	sepParts := make([]string, len(t.headers))
 	for i, w := range colWidths {
 		sepParts[i] = strings.Repeat("-", w)
@@ -74,7 +74,7 @@ func (t *Table) Render() string {
 	result.WriteString(strings.Join(sepParts, strings.Repeat(" ", t.padding)))
 	result.WriteString("\n")
 
-	// Format data rows
+	// Format data rows.
 	for _, row := range t.rows {
 		rowParts := make([]string, len(t.headers))
 		for i, cell := range row {

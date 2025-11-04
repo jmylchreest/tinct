@@ -1,8 +1,8 @@
-// Package regions provides utilities for extracting colors from specific
+// Package regions provides utilities for extracting colors from specific.
 // regions of 2D images for ambient lighting applications.
 //
-// This package supports extracting colors from image edges and corners in
-// various configurations (4, 8, 12, or 16 regions) to control LED lights
+// This package supports extracting colors from image edges and corners in.
+// various configurations (4, 8, 12, or 16 regions) to control LED lights.
 // positioned around a monitor.
 package regions
 
@@ -33,27 +33,27 @@ const (
 
 // Position represents a specific sampling position around the image.
 type Position struct {
-	// Role is the semantic role for this position
+	// Role is the semantic role for this position.
 	Role colour.ColourRole
 
-	// Name is a human-readable name for this position
+	// Name is a human-readable name for this position.
 	Name string
 
-	// Rect is the sampling rectangle for this position
+	// Rect is the sampling rectangle for this position.
 	Rect image.Rectangle
 }
 
 // Sampler extracts colors from specific regions of an image.
 type Sampler struct {
-	// SamplePercent is the percentage of edge to sample (1-50)
-	// Lower values = smaller sample regions, higher precision
-	// Higher values = larger sample regions, better averaging
-	// Default: 10
+	// SamplePercent is the percentage of edge to sample (1-50).
+	// Lower values = smaller sample regions, higher precision.
+	// Higher values = larger sample regions, better averaging.
+	// Default: 10.
 	SamplePercent int
 
-	// Method determines how to extract color from each region
+	// Method determines how to extract color from each region.
 	// "average" = average all pixels (default)
-	// "dominant" = most frequent color
+	// "dominant" = most frequent color.
 	Method string
 }
 
@@ -68,15 +68,15 @@ func NewSampler() *Sampler {
 // Extract samples colors from the specified regions of an image.
 // Returns a palette with colors, weights (based on region size), and role hints mapped to positions.
 func (s *Sampler) Extract(img image.Image, config Configuration) (*colour.Palette, error) {
-	// Validate configuration
+	// Validate configuration.
 	if !isValidConfiguration(config) {
 		return nil, fmt.Errorf("invalid configuration: %d (valid: 4, 8, 12, 16)", config)
 	}
 
-	// Define sampling positions for this configuration
+	// Define sampling positions for this configuration.
 	positions := s.definePositions(img.Bounds(), config)
 
-	// Extract color from each position
+	// Extract color from each position.
 	colors := make([]color.Color, len(positions))
 	weights := make([]float64, len(positions))
 	roleHints := make(map[colour.ColourRole]int)
@@ -88,19 +88,19 @@ func (s *Sampler) Extract(img image.Image, config Configuration) (*colour.Palett
 		colors[i] = s.extractColorFromRegion(img, pos.Rect)
 		roleHints[pos.Role] = i
 
-		// Calculate pixel count for this region (for weight calculation)
+		// Calculate pixel count for this region (for weight calculation).
 		pixelCount := pos.Rect.Dx() * pos.Rect.Dy()
 		pixelCounts[i] = pixelCount
 		totalPixels += pixelCount
 	}
 
-	// Calculate weights based on region sizes
-	// Larger regions have more influence
+	// Calculate weights based on region sizes.
+	// Larger regions have more influence.
 	for i := range weights {
 		weights[i] = float64(pixelCounts[i]) / float64(totalPixels)
 	}
 
-	// Create palette with colors, weights, and role hints
+	// Create palette with colors, weights, and role hints.
 	palette := colour.NewPaletteWithWeights(colors, weights)
 	palette.RoleHints = roleHints
 
@@ -112,11 +112,11 @@ func (s *Sampler) definePositions(bounds image.Rectangle, config Configuration) 
 	width := bounds.Dx()
 	height := bounds.Dy()
 
-	// Calculate sample dimensions based on percentage
+	// Calculate sample dimensions based on percentage.
 	sampleWidth := width * s.SamplePercent / 100
 	sampleHeight := height * s.SamplePercent / 100
 
-	// Ensure minimum sample size
+	// Ensure minimum sample size.
 	if sampleWidth < 10 {
 		sampleWidth = 10
 	}
@@ -124,7 +124,7 @@ func (s *Sampler) definePositions(bounds image.Rectangle, config Configuration) 
 		sampleHeight = 10
 	}
 
-	// Ensure samples don't exceed half the dimension
+	// Ensure samples don't exceed half the dimension.
 	maxWidth := width / 2
 	maxHeight := height / 2
 	if sampleWidth > maxWidth {
@@ -144,7 +144,7 @@ func (s *Sampler) definePositions(bounds image.Rectangle, config Configuration) 
 	case Config16Regions:
 		return s.define16Regions(bounds, sampleWidth, sampleHeight)
 	default:
-		// Should never reach here due to validation
+		// Should never reach here due to validation.
 		return nil
 	}
 }
@@ -157,7 +157,7 @@ func makePosition(role colour.ColourRole, name string, rect image.Rectangle) Pos
 
 // cornerRect is a helper function to create a rectangle at one of the four corners.
 // This encapsulates the corner positioning logic used across all configuration methods.
-// Parameters: x0, y0 = bounds origin, w, h = dimensions, sw, sh = sample size
+// Parameters: x0, y0 = bounds origin, w, h = dimensions, sw, sh = sample size.
 func cornerRect(x0, y0, w, h, sw, sh int, corner string) image.Rectangle {
 	switch corner {
 	case "topLeft":
@@ -177,7 +177,7 @@ func cornerRect(x0, y0, w, h, sw, sh int, corner string) image.Rectangle {
 // The fraction parameter (0.0-1.0) determines the position along the edge.
 // For example, fraction=0.5 places the rectangle at the centre of the edge.
 // This allows flexible positioning for 8, 12, and 16 region configurations.
-// Parameters: x0, y0 = bounds origin, w, h = dimensions, sw, sh = sample size,
+// Parameters: x0, y0 = bounds origin, w, h = dimensions, sw, sh = sample size,.
 //
 //	edge = "top"|"bottom"|"left"|"right", fraction = position (0.0-1.0)
 func edgeRect(x0, y0, w, h, sw, sh int, edge string, fraction float64) image.Rectangle {
@@ -233,7 +233,7 @@ func (s *Sampler) define12Regions(bounds image.Rectangle, sw, sh int) []Position
 	w, h := bounds.Dx(), bounds.Dy()
 	x0, y0 := bounds.Min.X, bounds.Min.Y
 
-	// For 12 regions, use slightly smaller samples to avoid overlap
+	// For 12 regions, use slightly smaller samples to avoid overlap.
 	sw = sw * 8 / 10
 	sh = sh * 8 / 10
 	if sw < 10 {
@@ -244,23 +244,23 @@ func (s *Sampler) define12Regions(bounds image.Rectangle, sw, sh int) []Position
 	}
 
 	return []Position{
-		// Top edge: 4 positions
+		// Top edge: 4 positions.
 		makePosition(colour.RolePositionTopLeft, "Top-Left", cornerRect(x0, y0, w, h, sw, sh, "topLeft")),
 		makePosition(colour.RolePositionTopLeftInner, "Top-Left-Inner", edgeRect(x0, y0, w, h, sw, sh, "top", 1.0/3)),
 		makePosition(colour.RolePositionTopRightInner, "Top-Right-Inner", edgeRect(x0, y0, w, h, sw, sh, "top", 2.0/3)),
 		makePosition(colour.RolePositionTopRight, "Top-Right", cornerRect(x0, y0, w, h, sw, sh, "topRight")),
 
-		// Right edge: 2 positions
+		// Right edge: 2 positions.
 		makePosition(colour.RolePositionRightTop, "Right-Top", edgeRect(x0, y0, w, h, sw, sh, "right", 1.0/3)),
 		makePosition(colour.RolePositionRightBottom, "Right-Bottom", edgeRect(x0, y0, w, h, sw, sh, "right", 2.0/3)),
 
-		// Bottom edge: 4 positions
+		// Bottom edge: 4 positions.
 		makePosition(colour.RolePositionBottomRight, "Bottom-Right", cornerRect(x0, y0, w, h, sw, sh, "bottomRight")),
 		makePosition(colour.RolePositionBottomRightInner, "Bottom-Right-Inner", edgeRect(x0, y0, w, h, sw, sh, "bottom", 2.0/3)),
 		makePosition(colour.RolePositionBottomLeftInner, "Bottom-Left-Inner", edgeRect(x0, y0, w, h, sw, sh, "bottom", 1.0/3)),
 		makePosition(colour.RolePositionBottomLeft, "Bottom-Left", cornerRect(x0, y0, w, h, sw, sh, "bottomLeft")),
 
-		// Left edge: 2 positions
+		// Left edge: 2 positions.
 		makePosition(colour.RolePositionLeftBottom, "Left-Bottom", edgeRect(x0, y0, w, h, sw, sh, "left", 2.0/3)),
 		makePosition(colour.RolePositionLeftTop, "Left-Top", edgeRect(x0, y0, w, h, sw, sh, "left", 1.0/3)),
 	}
@@ -271,7 +271,7 @@ func (s *Sampler) define16Regions(bounds image.Rectangle, sw, sh int) []Position
 	w, h := bounds.Dx(), bounds.Dy()
 	x0, y0 := bounds.Min.X, bounds.Min.Y
 
-	// For 16 regions, use smaller samples to avoid overlap
+	// For 16 regions, use smaller samples to avoid overlap.
 	sw = sw * 6 / 10
 	sh = sh * 6 / 10
 	if sw < 10 {
@@ -282,26 +282,26 @@ func (s *Sampler) define16Regions(bounds image.Rectangle, sw, sh int) []Position
 	}
 
 	return []Position{
-		// Top edge: 5 positions
+		// Top edge: 5 positions.
 		makePosition(colour.RolePositionTopLeft, "Top-Left", cornerRect(x0, y0, w, h, sw, sh, "topLeft")),
 		makePosition(colour.RolePositionTopLeftCenter, "Top-Left-Center", edgeRect(x0, y0, w, h, sw, sh, "top", 0.25)),
 		makePosition(colour.RolePositionTopCenter, "Top-Center", edgeRect(x0, y0, w, h, sw, sh, "top", 0.5)),
 		makePosition(colour.RolePositionTopRightCenter, "Top-Right-Center", edgeRect(x0, y0, w, h, sw, sh, "top", 0.75)),
 		makePosition(colour.RolePositionTopRight, "Top-Right", cornerRect(x0, y0, w, h, sw, sh, "topRight")),
 
-		// Right edge: 3 positions
+		// Right edge: 3 positions.
 		makePosition(colour.RolePositionRightTopOuter, "Right-Top-Outer", edgeRect(x0, y0, w, h, sw, sh, "right", 0.25)),
 		makePosition(colour.RolePositionRightTop, "Right-Top", edgeRect(x0, y0, w, h, sw, sh, "right", 0.5)),
 		makePosition(colour.RolePositionRightBottomOuter, "Right-Bottom-Outer", edgeRect(x0, y0, w, h, sw, sh, "right", 0.75)),
 
-		// Bottom edge: 5 positions
+		// Bottom edge: 5 positions.
 		makePosition(colour.RolePositionBottomRight, "Bottom-Right", cornerRect(x0, y0, w, h, sw, sh, "bottomRight")),
 		makePosition(colour.RolePositionBottomRightCenter, "Bottom-Right-Center", edgeRect(x0, y0, w, h, sw, sh, "bottom", 0.75)),
 		makePosition(colour.RolePositionBottomCenter, "Bottom-Center", edgeRect(x0, y0, w, h, sw, sh, "bottom", 0.5)),
 		makePosition(colour.RolePositionBottomLeftCenter, "Bottom-Left-Center", edgeRect(x0, y0, w, h, sw, sh, "bottom", 0.25)),
 		makePosition(colour.RolePositionBottomLeft, "Bottom-Left", cornerRect(x0, y0, w, h, sw, sh, "bottomLeft")),
 
-		// Left edge: 3 positions
+		// Left edge: 3 positions.
 		makePosition(colour.RolePositionLeftBottomOuter, "Left-Bottom-Outer", edgeRect(x0, y0, w, h, sw, sh, "left", 0.75)),
 		makePosition(colour.RolePositionLeftBottom, "Left-Bottom", edgeRect(x0, y0, w, h, sw, sh, "left", 0.5)),
 		makePosition(colour.RolePositionLeftTopOuter, "Left-Top-Outer", edgeRect(x0, y0, w, h, sw, sh, "left", 0.25)),
@@ -325,11 +325,11 @@ func (s *Sampler) extractAverageColor(img image.Image, rect image.Rectangle) col
 	var totalR, totalG, totalB uint64
 	var count uint64
 
-	// Sample every pixel in the region
+	// Sample every pixel in the region.
 	for y := rect.Min.Y; y < rect.Max.Y; y++ {
 		for x := rect.Min.X; x < rect.Max.X; x++ {
 			r, g, b, _ := img.At(x, y).RGBA()
-			// RGBA() returns values in range [0, 65535], convert to [0, 255]
+			// RGBA() returns values in range [0, 65535], convert to [0, 255].
 			totalR += uint64(r >> 8)
 			totalG += uint64(g >> 8)
 			totalB += uint64(b >> 8)
@@ -341,7 +341,7 @@ func (s *Sampler) extractAverageColor(img image.Image, rect image.Rectangle) col
 		return color.RGBA{R: 0, G: 0, B: 0, A: 255}
 	}
 
-	// Calculate averages
+	// Calculate averages.
 	avgR := uint8(totalR / count)
 	avgG := uint8(totalG / count)
 	avgB := uint8(totalB / count)
@@ -352,24 +352,24 @@ func (s *Sampler) extractAverageColor(img image.Image, rect image.Rectangle) col
 // extractDominantColor finds the most frequent color in a region.
 // Colors are quantized to reduce the number of unique colors.
 func (s *Sampler) extractDominantColor(img image.Image, rect image.Rectangle) color.Color {
-	// Map to count color frequencies (quantized to reduce unique colors)
+	// Map to count color frequencies (quantized to reduce unique colors).
 	colorCounts := make(map[uint32]int)
 
 	for y := rect.Min.Y; y < rect.Max.Y; y++ {
 		for x := rect.Min.X; x < rect.Max.X; x++ {
 			r, g, b, _ := img.At(x, y).RGBA()
-			// Quantize to 5-bit (32 values) per channel to reduce unique colors
+			// Quantize to 5-bit (32 values) per channel to reduce unique colors.
 			r8 := uint8((r >> 8) & 0xF8)
 			g8 := uint8((g >> 8) & 0xF8)
 			b8 := uint8((b >> 8) & 0xF8)
 
-			// Pack into single uint32 for map key
+			// Pack into single uint32 for map key.
 			packed := uint32(r8)<<16 | uint32(g8)<<8 | uint32(b8)
 			colorCounts[packed]++
 		}
 	}
 
-	// Find most frequent color
+	// Find most frequent color.
 	var maxCount int
 	var dominantColor uint32
 	for c, count := range colorCounts {
@@ -379,7 +379,7 @@ func (s *Sampler) extractDominantColor(img image.Image, rect image.Rectangle) co
 		}
 	}
 
-	// Unpack the color
+	// Unpack the color.
 	r := uint8(dominantColor >> 16)
 	g := uint8((dominantColor >> 8) & 0xFF)
 	b := uint8(dominantColor & 0xFF)

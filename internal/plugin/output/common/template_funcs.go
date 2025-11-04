@@ -13,17 +13,17 @@ import (
 // These functions provide consistent color access and formatting across all templates.
 func TemplateFuncs() template.FuncMap {
 	return template.FuncMap{
-		// Color role access
+		// Color role access.
 		"get":        getRoleFunc,
 		"getSafe":    getSafeRoleFunc,
 		"has":        hasRoleFunc,
 		"getByIndex": getByIndexFunc,
 
-		// ANSI color matching
+		// ANSI color matching.
 		"ansi":     ansiFunc,
 		"ansiSafe": ansiSafeFunc,
 
-		// Format conversion
+		// Format conversion.
 		"hex":        hexFunc,
 		"hexAlpha":   hexAlphaFunc,
 		"hexNoHash":  hexNoHashFunc,
@@ -32,20 +32,20 @@ func TemplateFuncs() template.FuncMap {
 		"rgbDecimal": rgbDecimalFunc,
 		"rgbSpaces":  rgbSpacesFunc,
 
-		// Alpha manipulation
+		// Alpha manipulation.
 		"withAlpha": withAlphaFunc,
 
-		// Color metadata
+		// Color metadata.
 		"role":  roleFunc,
 		"index": indexFunc,
 
-		// Palette metadata
+		// Palette metadata.
 		"themeType": themeTypeFunc,
 		"allRoles":  allRolesFunc,
 		"allColors": allColorsFunc,
 		"count":     countFunc,
 
-		// String manipulation
+		// String manipulation.
 		"trimPrefix": strings.TrimPrefix,
 		"trimSuffix": strings.TrimSuffix,
 		"replace":    strings.ReplaceAll,
@@ -184,7 +184,7 @@ func countFunc(data interface{}) int {
 
 // ansiFunc finds the closest color to a given ANSI color name.
 // Panics if color name is not found - use ansiSafe to check first.
-// Supported names: black, red, green, yellow, blue, magenta, cyan, white,
+// Supported names: black, red, green, yellow, blue, magenta, cyan, white,.
 // brightblack, brightred, etc., and aliases like color0-color15, gray, purple, etc.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
 func ansiFunc(data interface{}, colorName string) colour.ColorValue {

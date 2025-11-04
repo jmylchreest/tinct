@@ -12,13 +12,13 @@ import (
 type ColourRole string
 
 const (
-	// Core roles
+	// Core roles.
 	RoleBackground      ColourRole = "background"
 	RoleBackgroundMuted ColourRole = "backgroundMuted"
 	RoleForeground      ColourRole = "foreground"
 	RoleForegroundMuted ColourRole = "foregroundMuted"
 
-	// Accent roles
+	// Accent roles.
 	RoleAccent1      ColourRole = "accent1"
 	RoleAccent1Muted ColourRole = "accent1Muted"
 	RoleAccent2      ColourRole = "accent2"
@@ -28,55 +28,55 @@ const (
 	RoleAccent4      ColourRole = "accent4"
 	RoleAccent4Muted ColourRole = "accent4Muted"
 
-	// Semantic roles
+	// Semantic roles.
 	RoleDanger       ColourRole = "danger"
 	RoleWarning      ColourRole = "warning"
 	RoleSuccess      ColourRole = "success"
 	RoleInfo         ColourRole = "info"
 	RoleNotification ColourRole = "notification"
 
-	// Surface and container roles (Priority 1 - Material Design 3)
+	// Surface and container roles (Priority 1 - Material Design 3).
 	RoleSurface   ColourRole = "surface"   // Base surface for cards, sheets, dialogs
 	RoleOnSurface ColourRole = "onSurface" // Text/icons on surface
 	RoleOutline   ColourRole = "outline"   // Borders, dividers, outlines
 	RoleBorder    ColourRole = "border"    // Primary border color
 
-	// Surface and border variants (Priority 2)
+	// Surface and border variants (Priority 2).
 	RoleSurfaceVariant   ColourRole = "surfaceVariant"   // Alternate surface color
 	RoleOnSurfaceVariant ColourRole = "onSurfaceVariant" // Text on surface variant
 	RoleBorderMuted      ColourRole = "borderMuted"      // Inactive/muted borders
 	RoleOutlineVariant   ColourRole = "outlineVariant"   // Secondary outline
 
-	// On-colors for accents (Priority 2)
+	// On-colors for accents (Priority 2).
 	RoleOnAccent1 ColourRole = "onAccent1" // Text on accent1 background
 	RoleOnAccent2 ColourRole = "onAccent2" // Text on accent2 background
 	RoleOnAccent3 ColourRole = "onAccent3" // Text on accent3 background
 	RoleOnAccent4 ColourRole = "onAccent4" // Text on accent4 background
 
-	// On-colors for semantic roles (Priority 2)
+	// On-colors for semantic roles (Priority 2).
 	RoleOnDanger  ColourRole = "onDanger"  // Text on danger background
 	RoleOnWarning ColourRole = "onWarning" // Text on warning background
 	RoleOnSuccess ColourRole = "onSuccess" // Text on success background
 	RoleOnInfo    ColourRole = "onInfo"    // Text on info background
 
-	// Inverse colors for overlays (Priority 3)
+	// Inverse colors for overlays (Priority 3).
 	RoleInverseSurface   ColourRole = "inverseSurface"   // Inverse surface (tooltip backgrounds)
 	RoleInverseOnSurface ColourRole = "inverseOnSurface" // Text on inverse surface
 	RoleInversePrimary   ColourRole = "inversePrimary"   // Inverse accent color
 
-	// Scrim and shadow with alpha (Priority 3)
+	// Scrim and shadow with alpha (Priority 3).
 	RoleScrim  ColourRole = "scrim"  // Modal backdrop overlay (with alpha)
 	RoleShadow ColourRole = "shadow" // Elevation shadows (with alpha)
 
-	// Surface container elevation variants (Priority 3 - Material Design 3)
+	// Surface container elevation variants (Priority 3 - Material Design 3).
 	RoleSurfaceContainerLowest  ColourRole = "surfaceContainerLowest"  // Lowest elevation
 	RoleSurfaceContainerLow     ColourRole = "surfaceContainerLow"     // Low elevation
 	RoleSurfaceContainer        ColourRole = "surfaceContainer"        // Default container
 	RoleSurfaceContainerHigh    ColourRole = "surfaceContainerHigh"    // High elevation
 	RoleSurfaceContainerHighest ColourRole = "surfaceContainerHighest" // Highest elevation
 
-	// Positional roles for ambient lighting
-	// Core 8 positions (corners + mid-edges)
+	// Positional roles for ambient lighting.
+	// Core 8 positions (corners + mid-edges).
 	RolePositionTopLeft     ColourRole = "positionTopLeft"
 	RolePositionTop         ColourRole = "positionTop"
 	RolePositionTopRight    ColourRole = "positionTopRight"
@@ -86,7 +86,7 @@ const (
 	RolePositionBottomLeft  ColourRole = "positionBottomLeft"
 	RolePositionLeft        ColourRole = "positionLeft"
 
-	// Extended positions for 12+ region configurations
+	// Extended positions for 12+ region configurations.
 	RolePositionTopLeftInner     ColourRole = "positionTopLeftInner"
 	RolePositionTopCenter        ColourRole = "positionTopCenter"
 	RolePositionTopRightInner    ColourRole = "positionTopRightInner"
@@ -98,7 +98,7 @@ const (
 	RolePositionLeftBottom       ColourRole = "positionLeftBottom"
 	RolePositionLeftTop          ColourRole = "positionLeftTop"
 
-	// Ultra-extended positions for 16+ region configurations
+	// Ultra-extended positions for 16+ region configurations.
 	RolePositionTopLeftOuter      ColourRole = "positionTopLeftOuter"
 	RolePositionTopLeftCenter     ColourRole = "positionTopLeftCenter"
 	RolePositionTopRightCenter    ColourRole = "positionTopRightCenter"
@@ -206,7 +206,7 @@ func (cp *CategorisedPalette) Set(role ColourRole, colour CategorisedColour) {
 
 // Categorise assigns roles to colours in a palette based on luminance, contrast, and hue.
 //
-// This is the main orchestrator that coordinates all categorization modules:
+// This is the main orchestrator that coordinates all categorization modules:.
 // - background.go: Selects background color (theme-aware)
 // - foreground.go: Selects foreground color (highest contrast for text)
 // - accents.go: Selects and sorts accent colors (analogous to background)
@@ -219,10 +219,10 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		return NewCategorisedPalette(ThemeAuto)
 	}
 
-	// Create categorised colours with metadata
+	// Create categorised colours with metadata.
 	extracted := make([]CategorisedColour, len(palette.Colors))
 
-	// Use equal weights if not provided
+	// Use equal weights if not provided.
 	weights := palette.Weights
 	if weights == nil || len(weights) != len(palette.Colors) {
 		weights = make([]float64, len(palette.Colors))
@@ -252,17 +252,17 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// Store all extracted colors for later inclusion
+	// Store all extracted colors for later inclusion.
 	allExtracted := make([]CategorisedColour, len(extracted))
 	copy(allExtracted, extracted)
 
-	// BACKGROUND SELECTION (background.go)
-	// Determines theme type and selects background color
+	// BACKGROUND SELECTION (background.go).
+	// Determines theme type and selects background color.
 	themeType := config.ThemeType
 	var bg CategorisedColour
 	var bgIdx int = -1
 
-	// Apply explicit role hints from input plugins (if provided)
+	// Apply explicit role hints from input plugins (if provided).
 	hintsApplied := make(map[ColourRole]bool)
 	if palette.RoleHints != nil {
 		for role, originalIndex := range palette.RoleHints {
@@ -270,7 +270,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 				hintedColor := allExtracted[originalIndex]
 				hintedColor.Role = role
 
-				// Store hinted background separately for later use
+				// Store hinted background separately for later use.
 				if role == RoleBackground {
 					bg = hintedColor
 					bgIdx = originalIndex
@@ -280,10 +280,10 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// If background not hinted, select it
+	// If background not hinted, select it.
 	if !hintsApplied[RoleBackground] {
 		bg, themeType = selectBackground(extracted, themeType)
-		// Find background index in extracted array
+		// Find background index in extracted array.
 		for i, cc := range extracted {
 			if cc.Hex == bg.Hex {
 				bgIdx = i
@@ -292,13 +292,13 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// Sort extracted colours by luminance for consistent ordering
+	// Sort extracted colours by luminance for consistent ordering.
 	sortByLuminance(extracted, themeType)
 
 	result := NewCategorisedPalette(themeType)
 	result.Set(RoleBackground, bg)
 
-	// Apply all other role hints
+	// Apply all other role hints.
 	if palette.RoleHints != nil {
 		for role, originalIndex := range palette.RoleHints {
 			if role == RoleBackground {
@@ -306,7 +306,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 			}
 			if originalIndex >= 0 && originalIndex < len(allExtracted) {
 				hintedColor := allExtracted[originalIndex]
-				// Find in sorted array
+				// Find in sorted array.
 				for _, cc := range extracted {
 					if cc.Hex == hintedColor.Hex {
 						cc.Role = role
@@ -319,7 +319,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// Create background-muted variant (use hint if provided)
+	// Create background-muted variant (use hint if provided).
 	if !hintsApplied[RoleBackgroundMuted] {
 		bgMuted := createMutedVariant(bg, config.MutedLuminanceAdjust, themeType, true)
 		bgMuted.Role = RoleBackgroundMuted
@@ -327,7 +327,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		result.Set(RoleBackgroundMuted, bgMuted)
 	}
 
-	// FOREGROUND SELECTION (foreground.go)
+	// FOREGROUND SELECTION (foreground.go).
 	var fg CategorisedColour
 	var fgIdx int = -1
 	if !hintsApplied[RoleForeground] {
@@ -337,16 +337,16 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 			fg.Role = RoleForeground
 			result.Set(RoleForeground, fg)
 		} else {
-			// No suitable foreground found in extracted colors (monochromatic palette)
-			// Generate synthetic foreground with guaranteed contrast
+			// No suitable foreground found in extracted colors (monochromatic palette).
+			// Generate synthetic foreground with guaranteed contrast.
 			fg = generateSyntheticForeground(bg, themeType, config)
 			fg.Role = RoleForeground
 			result.Set(RoleForeground, fg)
 		}
 	} else {
-		// Use the hinted foreground
+		// Use the hinted foreground.
 		fg, _ = result.Get(RoleForeground)
-		// Find the index in extracted for later exclusion
+		// Find the index in extracted for later exclusion.
 		for i, cc := range extracted {
 			if cc.Hex == fg.Hex {
 				fgIdx = i
@@ -355,8 +355,8 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// Create foreground-muted variant (use hint if provided)
-	// Check if foreground exists (either extracted or generated)
+	// Create foreground-muted variant (use hint if provided).
+	// Check if foreground exists (either extracted or generated).
 	if _, hasFg := result.Get(RoleForeground); hasFg && !hintsApplied[RoleForegroundMuted] {
 		fgMuted := createMutedVariant(fg, config.MutedLuminanceAdjust, themeType, false)
 		fgMuted.Role = RoleForegroundMuted
@@ -364,20 +364,20 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		result.Set(RoleForegroundMuted, fgMuted)
 	}
 
-	// ACCENT SELECTION (accents.go)
-	// Collect remaining colours for accents (excluding background, foreground, and hinted roles)
+	// ACCENT SELECTION (accents.go).
+	// Collect remaining colours for accents (excluding background, foreground, and hinted roles).
 	accents := make([]CategorisedColour, 0)
 	usedIndices := make(map[int]bool)
 
-	// Mark background index as used
+	// Mark background index as used.
 	if bgIdx >= 0 {
 		usedIndices[bgIdx] = true
 	}
-	// Mark foreground index as used
+	// Mark foreground index as used.
 	if fgIdx >= 0 {
 		usedIndices[fgIdx] = true
 	}
-	// Mark any hinted role indices as used
+	// Mark any hinted role indices as used.
 	if palette.RoleHints != nil {
 		for _, index := range palette.RoleHints {
 			usedIndices[index] = true
@@ -390,20 +390,20 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// Sort accents intelligently for better visual progression
+	// Sort accents intelligently for better visual progression.
 	sortAccentsForTheme(accents, bg, fg, themeType)
 
-	// Check if accents lack sufficient diversity (monochromatic palette)
-	// If so, generate synthetic accents with guaranteed contrast progression
-	// Also generate if we have fewer than 4 accents
+	// Check if accents lack sufficient diversity (monochromatic palette).
+	// If so, generate synthetic accents with guaranteed contrast progression.
+	// Also generate if we have fewer than 4 accents.
 	if len(accents) < 4 || areAccentsTooSimilar(accents, bg) {
 		accents = generateSyntheticAccents(bg, themeType, 4)
 	}
 
-	// Track which accent colors are used for semantic roles
+	// Track which accent colors are used for semantic roles.
 	usedForSemantic := make(map[string]bool) // Track by hex value
 
-	// Assign accent roles (up to 4) and their muted variants
+	// Assign accent roles (up to 4) and their muted variants.
 	accentRoles := []struct {
 		primary ColourRole
 		muted   ColourRole
@@ -415,7 +415,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	}
 	accentIndex := 0
 	for _, roles := range accentRoles {
-		// Skip if this accent role was explicitly hinted
+		// Skip if this accent role was explicitly hinted.
 		if hintsApplied[roles.primary] {
 			continue
 		}
@@ -425,7 +425,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 			accent.Role = roles.primary
 			result.Set(roles.primary, accent)
 
-			// Create muted variant for this accent (skip if hinted)
+			// Create muted variant for this accent (skip if hinted).
 			if !hintsApplied[roles.muted] {
 				accentMuted := createMutedVariant(accent, config.MutedLuminanceAdjust, themeType, false)
 				accentMuted.Role = roles.muted
@@ -437,16 +437,16 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		}
 	}
 
-	// SEMANTIC COLOR ASSIGNMENT (semantic.go)
+	// SEMANTIC COLOR ASSIGNMENT (semantic.go).
 	assignSemanticRolesWithHints(result, accents, usedForSemantic, hintsApplied)
 
-	// SURFACE & CONTAINER COLOR GENERATION (surface.go)
+	// SURFACE & CONTAINER COLOR GENERATION (surface.go).
 	generateSurfaceColors(result, bg, fg, themeType, hintsApplied)
 
-	// Collect all remaining colors that weren't assigned to any role
+	// Collect all remaining colors that weren't assigned to any role.
 	additionalColors := make([]CategorisedColour, 0)
 	for _, cc := range allExtracted {
-		// Check if this color was assigned to any role
+		// Check if this color was assigned to any role.
 		alreadyAssigned := false
 		for _, assigned := range result.Colours {
 			if assigned.Hex == cc.Hex {
@@ -455,12 +455,12 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 			}
 		}
 		if !alreadyAssigned {
-			// This color wasn't assigned to any semantic role - preserve it
+			// This color wasn't assigned to any semantic role - preserve it.
 			additionalColors = append(additionalColors, cc)
 		}
 	}
 
-	// Build final AllColours array with consistent indices
+	// Build final AllColours array with consistent indices.
 	result.AllColours = buildSortedAllColours(result, themeType, additionalColors)
 
 	return result
@@ -471,20 +471,20 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 // Indices are assigned sequentially based on sort order (0, 1, 2, ...).
 // The index field is purely positional metadata with no semantic meaning.
 func buildSortedAllColours(palette *CategorisedPalette, themeType ThemeType, additionalColors []CategorisedColour) []CategorisedColour {
-	// Collect all colours from the palette
+	// Collect all colours from the palette.
 	allColours := make([]CategorisedColour, 0, len(palette.Colours)+len(additionalColors))
 
 	for _, cc := range palette.Colours {
 		allColours = append(allColours, cc)
 	}
 
-	// Add any extra colors that weren't assigned to semantic roles
+	// Add any extra colors that weren't assigned to semantic roles.
 	allColours = append(allColours, additionalColors...)
 
-	// Sort all colours by luminance (theme-aware)
+	// Sort all colours by luminance (theme-aware).
 	sortByLuminance(allColours, themeType)
 
-	// Assign sequential indices based on sorted position
+	// Assign sequential indices based on sorted position.
 	for i := range allColours {
 		allColours[i].Index = i
 	}
@@ -508,7 +508,7 @@ func (cp *CategorisedPalette) String() string {
 func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	var result string
 
-	// Show theme type and contrast ratio on one line
+	// Show theme type and contrast ratio on one line.
 	themeInfo := fmt.Sprintf("Theme Type: %s", cp.ThemeType.String())
 	if bg, bgOk := cp.Get(RoleBackground); bgOk {
 		if fg, fgOk := cp.Get(RoleForeground); fgOk {
@@ -518,23 +518,23 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	}
 	result += themeInfo + "\n"
 
-	// Only show table if preview is enabled
+	// Only show table if preview is enabled.
 	if !showPreview {
 		return result
 	}
 
 	result += "\n"
 
-	// Tabular format showing all colours with proper alignment
+	// Tabular format showing all colours with proper alignment.
 	result += "All Colours (sorted by luminance):\n"
 
-	// Build table data
+	// Build table data.
 	var rows [][]string
 
-	// Header row (added empty first column for marker)
+	// Header row (added empty first column for marker).
 	header := []string{"", "Preview", "Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source"}
 
-	// Data rows
+	// Data rows.
 	for _, cc := range cp.AllColours {
 		roleName := string(cc.Role)
 		if roleName == "" {
@@ -551,10 +551,10 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 			weightStr = fmt.Sprintf("%.1f%%", cc.Weight*100)
 		}
 
-		// Always show color preview blocks
+		// Always show color preview blocks.
 		preview := ColourPreview(cc.RGB, 8)
 
-		// Mark the background role with ">"
+		// Mark the background role with ">".
 		marker := " "
 		if cc.Role == RoleBackground {
 			marker = ">"
@@ -573,14 +573,14 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 		})
 	}
 
-	// Calculate column widths
+	// Calculate column widths.
 	colWidths := make([]int, len(header))
 	for i, h := range header {
 		colWidths[i] = len(h)
 	}
 	for _, row := range rows {
 		for i, cell := range row {
-			// For preview column (index 1), count visible width (8 for the color block)
+			// For preview column (index 1), count visible width (8 for the color block).
 			cellLen := len(cell)
 			if i == 1 {
 				cellLen = 8 // Color preview is always 8 visible characters
@@ -591,26 +591,26 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 		}
 	}
 
-	// Format header
+	// Format header.
 	var headerParts []string
 	for i, h := range header {
 		headerParts = append(headerParts, padRight(h, colWidths[i]))
 	}
 	result += "  " + strings.Join(headerParts, "  ") + "\n"
 
-	// Format separator
+	// Format separator.
 	var sepParts []string
 	for _, w := range colWidths {
 		sepParts = append(sepParts, strings.Repeat("-", w))
 	}
 	result += "  " + strings.Join(sepParts, "  ") + "\n"
 
-	// Format data rows
+	// Format data rows.
 	for _, row := range rows {
 		var rowParts []string
 		for i, cell := range row {
 			if i == 1 {
-				// Preview column (index 1): don't pad (ANSI codes mess up padding)
+				// Preview column (index 1): don't pad (ANSI codes mess up padding).
 				rowParts = append(rowParts, cell+strings.Repeat(" ", colWidths[i]-8))
 			} else {
 				rowParts = append(rowParts, padRight(cell, colWidths[i]))

@@ -34,7 +34,7 @@ const (
 func ValidAlgorithms() []Algorithm {
 	return []Algorithm{
 		AlgorithmKMeans,
-		// Future algorithms will be added here
+		// Future algorithms will be added here.
 	}
 }
 

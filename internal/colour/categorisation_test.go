@@ -52,7 +52,7 @@ func TestSemanticColourEnhancement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a background color based on theme
+			// Create a background color based on theme.
 			var bgColor color.Color
 			if tt.themeType == ThemeDark {
 				bgColor = color.RGBA{R: 20, G: 20, B: 30, A: 255} // Dark background
@@ -66,7 +66,7 @@ func TestSemanticColourEnhancement(t *testing.T) {
 				Luminance: Luminance(bgColor),
 			}
 
-			// Create input color
+			// Create input color.
 			inputRGB := ToRGB(tt.inputColor)
 			h, s, _ := rgbToHSL(inputRGB)
 			inputCategorised := CategorisedColour{
@@ -77,22 +77,22 @@ func TestSemanticColourEnhancement(t *testing.T) {
 				Saturation: s,
 			}
 
-			// Enhance the color
+			// Enhance the color.
 			enhanced := enhanceSemanticColour(inputCategorised, tt.role, tt.themeType, true, bgCategorised)
 
-			// Check saturation is boosted
+			// Check saturation is boosted.
 			if enhanced.Saturation < tt.wantMinSat {
 				t.Errorf("Saturation too low: got %.2f, want >= %.2f", enhanced.Saturation, tt.wantMinSat)
 			}
 
-			// Check contrast with background
+			// Check contrast with background.
 			contrast := ContrastRatio(enhanced.Colour, bgColor)
 			if contrast < tt.wantMinContrast {
 				t.Errorf("Contrast too low: got %.2f:1, want >= %.2f:1", contrast, tt.wantMinContrast)
 			}
 
-			// Check lightness is within reasonable bounds for semantic colors
-			// Note: WCAG luminance can be lower than HSL lightness due to gamma correction
+			// Check lightness is within reasonable bounds for semantic colors.
+			// Note: WCAG luminance can be lower than HSL lightness due to gamma correction.
 			if enhanced.Luminance < 0.10 || enhanced.Luminance > 0.85 {
 				t.Errorf("Luminance out of reasonable bounds: got %.2f", enhanced.Luminance)
 			}
@@ -156,7 +156,7 @@ func TestGenerateFallbackSemanticColours(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a background color based on theme
+			// Create a background color based on theme.
 			var bgColor color.Color
 			if tt.themeType == ThemeDark {
 				bgColor = color.RGBA{R: 20, G: 20, B: 30, A: 255}
@@ -170,21 +170,21 @@ func TestGenerateFallbackSemanticColours(t *testing.T) {
 				Luminance: Luminance(bgColor),
 			}
 
-			// Generate fallback color
+			// Generate fallback color.
 			fallback := generateFallbackSemanticColour(tt.role, tt.themeType, true, bgCategorised)
 
-			// Check hue is correct
+			// Check hue is correct.
 			hueDiff := math.Abs(fallback.Hue - tt.wantHue)
 			if hueDiff > 5.0 { // Allow 5 degree tolerance
 				t.Errorf("Hue mismatch: got %.1f, want %.1f (±5)", fallback.Hue, tt.wantHue)
 			}
 
-			// Check saturation
+			// Check saturation.
 			if fallback.Saturation < tt.wantMinSat {
 				t.Errorf("Saturation too low: got %.2f, want >= %.2f", fallback.Saturation, tt.wantMinSat)
 			}
 
-			// Check contrast
+			// Check contrast.
 			contrast := ContrastRatio(fallback.Colour, bgColor)
 			if contrast < tt.wantMinContrast {
 				t.Errorf("Contrast too low: got %.2f:1, want >= %.2f:1", contrast, tt.wantMinContrast)
@@ -245,16 +245,16 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create palette
+			// Create palette.
 			palette := &Palette{Colors: tt.colors}
 
-			// Categorise with default config
+			// Categorise with default config.
 			config := DefaultCategorisationConfig()
 			config.ThemeType = tt.themeType
 
 			categorised := Categorise(palette, config)
 
-			// Check that all expected roles are present
+			// Check that all expected roles are present.
 			for _, role := range tt.wantRoles {
 				if _, ok := categorised.Get(role); !ok {
 					t.Errorf("Missing role: %s", role)
@@ -265,7 +265,7 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 				}
 			}
 
-			// Verify semantic colors have good saturation
+			// Verify semantic colors have good saturation.
 			semanticRoles := []ColourRole{
 				RoleDanger, RoleWarning, RoleSuccess, RoleInfo, RoleNotification,
 			}
@@ -276,7 +276,7 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 						t.Errorf("Semantic color %s has low saturation: %.2f", role, cc.Saturation)
 					}
 
-					// Check contrast with background
+					// Check contrast with background.
 					if bg, bgOk := categorised.Get(RoleBackground); bgOk {
 						contrast := ContrastRatio(cc.Colour, bg.Colour)
 						if contrast < 2.5 {
@@ -290,7 +290,7 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 }
 
 func TestSemanticColourDistinctness(t *testing.T) {
-	// Create a monochrome palette
+	// Create a monochrome palette.
 	colors := []color.Color{
 		color.RGBA{R: 20, G: 20, B: 30, A: 255},
 		color.RGBA{R: 220, G: 220, B: 230, A: 255},
@@ -302,7 +302,7 @@ func TestSemanticColourDistinctness(t *testing.T) {
 
 	categorised := Categorise(palette, config)
 
-	// Get all semantic colors
+	// Get all semantic colors.
 	semanticRoles := []ColourRole{
 		RoleDanger, RoleWarning, RoleSuccess, RoleInfo, RoleNotification,
 	}
@@ -314,7 +314,7 @@ func TestSemanticColourDistinctness(t *testing.T) {
 		}
 	}
 
-	// Check that semantic colors are distinct from each other
+	// Check that semantic colors are distinct from each other.
 	roles := make([]ColourRole, 0, len(semanticColors))
 	for role := range semanticColors {
 		roles = append(roles, role)
@@ -327,9 +327,9 @@ func TestSemanticColourDistinctness(t *testing.T) {
 			cc1 := semanticColors[role1]
 			cc2 := semanticColors[role2]
 
-			// Check hue difference
+			// Check hue difference.
 			hueDiff := math.Abs(cc1.Hue - cc2.Hue)
-			// Handle wrap-around (e.g., 350° vs 10°)
+			// Handle wrap-around (e.g., 350° vs 10°).
 			if hueDiff > 180 {
 				hueDiff = 360 - hueDiff
 			}
@@ -346,7 +346,7 @@ func TestSemanticColourDistinctness(t *testing.T) {
 }
 
 func TestSemanticHueRanges(t *testing.T) {
-	// Test that semantic hues are correctly defined
+	// Test that semantic hues are correctly defined.
 	expectedRanges := map[ColourRole]struct {
 		minHue float64
 		maxHue float64
@@ -365,10 +365,10 @@ func TestSemanticHueRanges(t *testing.T) {
 			continue
 		}
 
-		// Check if hue is within expected range
+		// Check if hue is within expected range.
 		inRange := false
 		if expected.minHue > expected.maxHue {
-			// Wraps around 360
+			// Wraps around 360.
 			inRange = hue >= expected.minHue || hue <= expected.maxHue
 		} else {
 			inRange = hue >= expected.minHue && hue <= expected.maxHue

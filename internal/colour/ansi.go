@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// ANSI escape codes for terminal colours
+// ANSI escape codes for terminal colours.
 const (
 	ansiReset    = "\033[0m"
 	ansiFgPrefix = "\033[38;2;"
@@ -23,10 +23,10 @@ func ColourPreview(c RGB, width int) string {
 		width = defaultWidth
 	}
 
-	// Build ANSI background colour escape sequence
+	// Build ANSI background colour escape sequence.
 	bgColour := fmt.Sprintf("%s%d;%d;%d%s", ansiBgPrefix, c.R, c.G, c.B, ansiSuffix)
 
-	// Create solid colour block using spaces with background colour
+	// Create solid colour block using spaces with background colour.
 	block := strings.Repeat(" ", width)
 
 	return bgColour + block + ansiReset
@@ -39,22 +39,22 @@ func ColourPreviewWithText(c RGB, text string, width int) string {
 		width = defaultWidth
 	}
 
-	// Determine foreground colour for good contrast
+	// Determine foreground colour for good contrast.
 	lum := luminanceFromRGB(c)
 	var fgR, fgG, fgB uint8
 	if lum > 0.5 {
-		// Light background, use dark text
+		// Light background, use dark text.
 		fgR, fgG, fgB = 0, 0, 0
 	} else {
-		// Dark background, use light text
+		// Dark background, use light text.
 		fgR, fgG, fgB = 255, 255, 255
 	}
 
-	// Build ANSI escape sequences
+	// Build ANSI escape sequences.
 	bgColour := fmt.Sprintf("%s%d;%d;%d%s", ansiBgPrefix, c.R, c.G, c.B, ansiSuffix)
 	fgColour := fmt.Sprintf("%s%d;%d;%d%s", ansiFgPrefix, fgR, fgG, fgB, ansiSuffix)
 
-	// Pad or truncate text to fit width
+	// Pad or truncate text to fit width.
 	displayText := text
 	if len(text) > width {
 		displayText = text[:width]
@@ -72,7 +72,7 @@ func luminanceFromRGB(rgb RGB) float64 {
 	g := float64(rgb.G) / 255.0
 	b := float64(rgb.B) / 255.0
 
-	// Simplified gamma correction
+	// Simplified gamma correction.
 	if r <= 0.03928 {
 		r = r / 12.92
 	} else {
@@ -112,8 +112,8 @@ func FormatColourWithLabel(rgb RGB, label string, width int) string {
 // SupportsANSIColours checks if the terminal likely supports ANSI colour codes.
 // This is a simple heuristic and may not be 100% accurate.
 func SupportsANSIColours() bool {
-	// Simple check - just return true for now
-	// In a more sophisticated version, we'd check TERM, COLORTERM env vars
+	// Simple check - just return true for now.
+	// In a more sophisticated version, we'd check TERM, COLORTERM env vars.
 	// and whether output is a TTY
 	return true
 }

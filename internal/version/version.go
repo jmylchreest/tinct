@@ -9,15 +9,15 @@ import (
 
 var (
 	// Version is the semantic version of the application.
-	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Version=x.y.z"
+	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Version=x.y.z".
 	Version = "dev"
 
 	// Commit is the git commit hash of the build.
-	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Commit=$(git rev-parse HEAD)"
+	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Commit=$(git rev-parse HEAD)".
 	Commit = "unknown"
 
 	// Date is the build date in RFC3339 format.
-	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)".
 	Date = "unknown"
 
 	// GoVersion is the Go version used to build the binary.

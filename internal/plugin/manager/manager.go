@@ -39,7 +39,7 @@ import (
 // Config holds plugin configuration.
 type Config struct {
 	// DisabledPlugins is a list of plugin names to disable.
-	// Format: "plugin_type:plugin_name" (e.g., "output:tailwind", "input:image")
+	// Format: "plugin_type:plugin_name" (e.g., "output:tailwind", "input:image").
 	DisabledPlugins []string
 
 	// EnabledPlugins is a list of plugin names to explicitly enable.
@@ -95,10 +95,10 @@ func (b *Builder) WithCustomRegistries(inputReg *input.Registry, outputReg *outp
 // Build constructs the Manager with the configured settings.
 // If both env and lock file are specified, lock file takes precedence.
 func (b *Builder) Build() *Manager {
-	// Start with base config
+	// Start with base config.
 	config := b.config
 
-	// Apply env config if requested
+	// Apply env config if requested.
 	if b.useEnv {
 		if disabled := os.Getenv("TINCT_DISABLED_PLUGINS"); disabled != "" {
 			config.DisabledPlugins = parsePluginList(disabled)
@@ -108,10 +108,10 @@ func (b *Builder) Build() *Manager {
 		}
 	}
 
-	// Apply lock file config if specified (overrides env)
+	// Apply lock file config if specified (overrides env).
 	if b.lockFilePath != "" {
-		// Note: Lock file loading is handled externally and updated via UpdateConfig
-		// This just signals that a lock file path was provided
+		// Note: Lock file loading is handled externally and updated via UpdateConfig.
+		// This just signals that a lock file path was provided.
 	}
 
 	m := &Manager{
@@ -120,7 +120,7 @@ func (b *Builder) Build() *Manager {
 		outputRegistry: b.outputRegistry,
 	}
 
-	// Register built-in plugins
+	// Register built-in plugins.
 	m.registerBuiltinPlugins()
 
 	return m
@@ -135,13 +135,13 @@ type Manager struct {
 
 // registerBuiltinPlugins registers all built-in plugins.
 func (m *Manager) registerBuiltinPlugins() {
-	// Register input plugins
+	// Register input plugins.
 	m.inputRegistry.Register(image.New())
 	m.inputRegistry.Register(file.New())
 	m.inputRegistry.Register(remotejson.New())
 	m.inputRegistry.Register(remotecss.New())
 
-	// Register output plugins
+	// Register output plugins.
 	m.outputRegistry.Register(dunst.New())
 	m.outputRegistry.Register(fuzzel.New())
 	m.outputRegistry.Register(hyprland.New())
@@ -193,24 +193,24 @@ func (m *Manager) IsOutputEnabled(plugin output.Plugin) bool {
 func (m *Manager) isEnabled(pluginType, name string) bool {
 	fullName := fmt.Sprintf("%s:%s", pluginType, name)
 
-	// Check if "all" is explicitly disabled (takes precedence over everything)
+	// Check if "all" is explicitly disabled (takes precedence over everything).
 	if slices.Contains(m.config.DisabledPlugins, "all") {
 		return false
 	}
 
-	// Check if explicitly disabled
+	// Check if explicitly disabled.
 	for _, disabled := range m.config.DisabledPlugins {
 		if disabled == fullName || disabled == name {
 			return false
 		}
 	}
 
-	// Check if "all" is enabled (enables all plugins)
+	// Check if "all" is enabled (enables all plugins).
 	if slices.Contains(m.config.EnabledPlugins, "all") {
 		return true
 	}
 
-	// If whitelist mode (EnabledPlugins set), only listed plugins are enabled
+	// If whitelist mode (EnabledPlugins set), only listed plugins are enabled.
 	if len(m.config.EnabledPlugins) > 0 {
 		for _, enabled := range m.config.EnabledPlugins {
 			if enabled == fullName || enabled == name {
@@ -220,9 +220,9 @@ func (m *Manager) isEnabled(pluginType, name string) bool {
 		return false
 	}
 
-	// When no config is present (no enabled/disabled lists), all plugins are disabled by default
-	// This makes the plugin's Enabled() method irrelevant for both internal and external plugins
-	// Plugins must be explicitly enabled via config, CLI flags, or environment variables
+	// When no config is present (no enabled/disabled lists), all plugins are disabled by default.
+	// This makes the plugin's Enabled() method irrelevant for both internal and external plugins.
+	// Plugins must be explicitly enabled via config, CLI flags, or environment variables.
 	return false
 }
 
@@ -288,12 +288,12 @@ func (m *Manager) UpdateConfig(config Config) {
 
 // RegisterExternalPlugin registers an external plugin with the manager.
 func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description string) error {
-	// Validate plugin path - must be absolute and should exist
+	// Validate plugin path - must be absolute and should exist.
 	if !filepath.IsAbs(path) {
 		return fmt.Errorf("plugin path must be absolute: %s", path)
 	}
 
-	// Check if the plugin file exists and is executable
+	// Check if the plugin file exists and is executable.
 	info, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("plugin not found or not accessible: %w", err)
@@ -317,7 +317,7 @@ func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description str
 }
 
 // parsePluginList parses a comma-separated list of plugin names.
-// Handles formats like "tailwind", "output:tailwind", "input:image,output:tailwind"
+// Handles formats like "tailwind", "output:tailwind", "input:image,output:tailwind".
 func parsePluginList(s string) []string {
 	parts := strings.Split(s, ",")
 	result := make([]string, 0, len(parts))
@@ -339,7 +339,7 @@ func (m *Manager) GetConfig() Config {
 func (m *Manager) SetDisabled(pluginType, name string) {
 	fullName := fmt.Sprintf("%s:%s", pluginType, name)
 
-	// Remove from enabled list if present
+	// Remove from enabled list if present.
 	for i, enabled := range m.config.EnabledPlugins {
 		if enabled == fullName || enabled == name {
 			m.config.EnabledPlugins = append(m.config.EnabledPlugins[:i], m.config.EnabledPlugins[i+1:]...)
@@ -347,7 +347,7 @@ func (m *Manager) SetDisabled(pluginType, name string) {
 		}
 	}
 
-	// Add to disabled list if not already there
+	// Add to disabled list if not already there.
 	if slices.Contains(m.config.DisabledPlugins, fullName) {
 		return
 	}
@@ -358,7 +358,7 @@ func (m *Manager) SetDisabled(pluginType, name string) {
 func (m *Manager) SetEnabled(pluginType, name string) {
 	fullName := fmt.Sprintf("%s:%s", pluginType, name)
 
-	// Remove from disabled list if present
+	// Remove from disabled list if present.
 	for i, disabled := range m.config.DisabledPlugins {
 		if disabled == fullName || disabled == name {
 			m.config.DisabledPlugins = append(m.config.DisabledPlugins[:i], m.config.DisabledPlugins[i+1:]...)
@@ -366,7 +366,7 @@ func (m *Manager) SetEnabled(pluginType, name string) {
 		}
 	}
 
-	// Add to enabled list if not already there
+	// Add to enabled list if not already there.
 	if slices.Contains(m.config.EnabledPlugins, fullName) {
 		return
 	}
@@ -423,7 +423,7 @@ func (p *ExternalInputPlugin) GetDryRun() bool {
 
 // Generate executes the external plugin and returns a palette.
 func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
-	// Create extended payload with plugin args and dry-run flag
+	// Create extended payload with plugin args and dry-run flag.
 	type ExtendedInputOptions struct {
 		Verbose         bool           `json:"verbose"`
 		DryRun          bool           `json:"dry_run"`
@@ -431,7 +431,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 		PluginArgs      map[string]any `json:"plugin_args,omitempty"`
 	}
 
-	// Merge plugin args from opts with plugin's own args
+	// Merge plugin args from opts with plugin's own args.
 	mergedArgs := make(map[string]any)
 	maps.Copy(mergedArgs, p.args)
 	maps.Copy(mergedArgs, opts.PluginArgs)
@@ -443,18 +443,18 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 		PluginArgs:      mergedArgs,
 	}
 
-	// Convert to JSON
+	// Convert to JSON.
 	optsJSON, err := json.Marshal(extended)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal options: %w", err)
 	}
 
-	// Debug: show what's being sent to plugin
+	// Debug: show what's being sent to plugin.
 	if opts.Verbose {
 		fmt.Fprintf(os.Stderr, "   Sending to plugin: %s\n", string(optsJSON))
 	}
 
-	// Execute external plugin
+	// Execute external plugin.
 	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.CommandContext(ctx, p.path)
 	cmd.Stdin = bytes.NewReader(optsJSON)
@@ -467,7 +467,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
 	}
 
-	// Parse the output - try simple color array first, then categorised format for backwards compatibility
+	// Parse the output - try simple color array first, then categorised format for backwards compatibility.
 	var rawColors []struct {
 		R uint8 `json:"r"`
 		G uint8 `json:"g"`
@@ -475,7 +475,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 	}
 
 	if err := json.Unmarshal(stdout.Bytes(), &rawColors); err == nil {
-		// Simple color array format
+		// Simple color array format.
 		colors := make([]color.Color, len(rawColors))
 		for i, rgb := range rawColors {
 			colors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
@@ -483,13 +483,13 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 		return colour.NewPalette(colors), nil
 	}
 
-	// Try categorised palette format (backwards compatibility)
+	// Try categorised palette format (backwards compatibility).
 	var categorised colour.CategorisedPalette
 	if err := json.Unmarshal(stdout.Bytes(), &categorised); err == nil {
-		// Extract colors from categorised palette
+		// Extract colors from categorised palette.
 		colors := make([]color.Color, 0)
 
-		// Get colors from AllColours if available
+		// Get colors from AllColours if available.
 		if len(categorised.AllColours) > 0 {
 			for _, cc := range categorised.AllColours {
 				colors = append(colors, color.RGBA{
@@ -500,7 +500,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 				})
 			}
 		} else {
-			// Fallback to colors from Colours map
+			// Fallback to colors from Colours map.
 			for _, cc := range categorised.Colours {
 				colors = append(colors, color.RGBA{
 					R: cc.RGB.R,
@@ -519,14 +519,14 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 
 // RegisterFlags is a no-op for external plugins (they don't have flags).
 func (p *ExternalInputPlugin) RegisterFlags(cmd *cobra.Command) {
-	// External plugins don't register flags in Tinct
-	// They handle their own arguments if needed
+	// External plugins don't register flags in Tinct.
+	// They handle their own arguments if needed.
 }
 
 // Validate checks if the plugin is valid.
 func (p *ExternalInputPlugin) Validate() error {
-	// Check if plugin file exists and is executable
-	// This is a basic check - the plugin might fail at runtime
+	// Check if plugin file exists and is executable.
+	// This is a basic check - the plugin might fail at runtime.
 	return nil
 }
 
@@ -580,9 +580,9 @@ func (p *ExternalOutputPlugin) GetDryRun() bool {
 
 // Generate executes the external plugin and returns its output.
 func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
-	// Extract palette from themeData for backward compatibility with external plugins
+	// Extract palette from themeData for backward compatibility with external plugins.
 	palette := themeData.PaletteHelper.Palette()
-	// Create extended payload with plugin args and dry-run flag
+	// Create extended payload with plugin args and dry-run flag.
 	type ExtendedPalette struct {
 		Colours    map[colour.ColourRole]colour.CategorisedColour `json:"colours"`
 		AllColours []colour.CategorisedColour                     `json:"all_colours"`
@@ -599,13 +599,13 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 		DryRun:     p.dryRun,
 	}
 
-	// Convert to JSON
+	// Convert to JSON.
 	paletteJSON, err := json.Marshal(extended)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal palette: %w", err)
 	}
 
-	// Execute external plugin
+	// Execute external plugin.
 	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.Command(p.path)
 	cmd.Stdin = bytes.NewReader(paletteJSON)
@@ -618,8 +618,8 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
 	}
 
-	// External plugins output to stdout, not files
-	// Return stdout as a virtual file for display purposes
+	// External plugins output to stdout, not files.
+	// Return stdout as a virtual file for display purposes.
 	result := make(map[string][]byte)
 	if stdout.Len() > 0 {
 		result[p.name+"-output.txt"] = stdout.Bytes()
@@ -630,14 +630,14 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 
 // RegisterFlags is a no-op for external plugins (they don't have flags).
 func (p *ExternalOutputPlugin) RegisterFlags(cmd *cobra.Command) {
-	// External plugins don't register flags in Tinct
-	// They handle their own arguments if needed
+	// External plugins don't register flags in Tinct.
+	// They handle their own arguments if needed.
 }
 
 // Validate checks if the plugin is valid.
 func (p *ExternalOutputPlugin) Validate() error {
-	// Check if plugin file exists and is executable
-	// This is a basic check - the plugin might fail at runtime
+	// Check if plugin file exists and is executable.
+	// This is a basic check - the plugin might fail at runtime.
 	return nil
 }
 
@@ -649,11 +649,11 @@ func (p *ExternalOutputPlugin) DefaultOutputDir() string {
 // PreExecute calls the external plugin with --pre-execute flag.
 // Implements the output.PreExecuteHook interface.
 func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Create a context with timeout
+	// Create a context with timeout.
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// Execute plugin with --pre-execute flag
+	// Execute plugin with --pre-execute flag.
 	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.CommandContext(execCtx, p.path, "--pre-execute")
 
@@ -663,12 +663,12 @@ func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reaso
 
 	err = cmd.Run()
 
-	// Exit code 0 = continue, 1 = skip, 2+ = error
+	// Exit code 0 = continue, 1 = skip, 2+ = error.
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		exitCode := exitErr.ExitCode()
 
 		if exitCode == 1 {
-			// Plugin wants to be skipped
+			// Plugin wants to be skipped.
 			reason := strings.TrimSpace(stdout.String())
 			if reason == "" {
 				reason = "plugin requested skip"
@@ -676,7 +676,7 @@ func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reaso
 			return true, reason, nil
 		}
 
-		// Other non-zero exit codes are errors
+		// Other non-zero exit codes are errors.
 		errMsg := strings.TrimSpace(stderr.String())
 		if errMsg == "" {
 			errMsg = fmt.Sprintf("exit code %d", exitCode)
@@ -684,18 +684,18 @@ func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reaso
 		return false, "", fmt.Errorf("pre-execute failed: %s", errMsg)
 	}
 
-	// Command succeeded (exit 0) or plugin doesn't support pre-execute
+	// Command succeeded (exit 0) or plugin doesn't support pre-execute.
 	return false, "", nil
 }
 
 // PostExecute calls the external plugin with --post-execute flag.
 // Implements the output.PostExecuteHook interface.
 func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
-	// Create a context with timeout
+	// Create a context with timeout.
 	execCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// Pass written files as JSON via stdin
+	// Pass written files as JSON via stdin.
 	filesJSON, err := json.Marshal(map[string]any{
 		"written_files": writtenFiles,
 	})
@@ -703,7 +703,7 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 		return fmt.Errorf("failed to marshal files: %w", err)
 	}
 
-	// Execute plugin with --post-execute flag
+	// Execute plugin with --post-execute flag.
 	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
 	cmd := exec.CommandContext(execCtx, p.path, "--post-execute")
 	cmd.Stdin = bytes.NewReader(filesJSON)
@@ -747,13 +747,13 @@ func GetExternalPluginInfo(path string) (name, description string, err error) {
 
 // ExecuteExternalPlugin runs an external plugin with the given palette.
 func ExecuteExternalPlugin(ctx context.Context, path string, palette *colour.CategorisedPalette) ([]byte, error) {
-	// Convert palette to JSON
+	// Convert palette to JSON.
 	paletteJSON, err := palette.ToJSON()
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal palette: %w", err)
 	}
 
-	// Execute external plugin
+	// Execute external plugin.
 	// #nosec G204 -- Path comes from validated plugin installation or user's explicit plugin add command
 	cmd := exec.CommandContext(ctx, path)
 	cmd.Stdin = bytes.NewReader(paletteJSON)

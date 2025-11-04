@@ -11,7 +11,7 @@ import (
 )
 
 // Loader handles loading templates with support for custom overrides.
-// It checks for custom templates in ~/.config/tinct/templates/{pluginName}/
+// It checks for custom templates in ~/.config/tinct/templates/{pluginName}/.
 // and falls back to embedded templates if custom ones don't exist.
 type Loader struct {
 	pluginName string
@@ -28,7 +28,7 @@ type Logger interface {
 
 // New creates a new template loader for the specified plugin.
 // embedFS should be the embedded filesystem containing the plugin's default templates.
-// pluginName is used to locate custom templates in ~/.config/tinct/templates/{pluginName}/
+// pluginName is used to locate custom templates in ~/.config/tinct/templates/{pluginName}/.
 func New(pluginName string, embedFS embed.FS) *Loader {
 	home, _ := os.UserHomeDir()
 	customBase := filepath.Join(home, ".config", "tinct", "templates")
@@ -57,10 +57,10 @@ func (l *Loader) WithVerbose(verbose bool, logger Logger) *Loader {
 }
 
 // Load reads a template file, checking for custom overrides first.
-// filename should be the template filename (e.g., "theme.conf.tmpl")
+// filename should be the template filename (e.g., "theme.conf.tmpl").
 // Returns the template content and whether it was loaded from a custom override.
 func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err error) {
-	// Try custom template first
+	// Try custom template first.
 	customPath := filepath.Join(l.customBase, l.pluginName, filename)
 
 	if content, err := os.ReadFile(customPath); err == nil {
@@ -70,7 +70,7 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 		return content, true, nil
 	}
 
-	// Fall back to embedded template
+	// Fall back to embedded template.
 	if l.verbose && l.logger != nil {
 		l.logger.Printf("   Using embedded template: %s", filename)
 	}
@@ -124,29 +124,29 @@ func (l *Loader) ListEmbeddedTemplates() ([]string, error) {
 // DumpTemplate writes an embedded template to the custom templates directory.
 // If force is false, it will not overwrite existing custom templates.
 func (l *Loader) DumpTemplate(filename string, force bool) error {
-	// Read embedded template
+	// Read embedded template.
 	content, err := l.embedFS.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("failed to read embedded template %q: %w", filename, err)
 	}
 
-	// Determine output path
+	// Determine output path.
 	outputPath := l.CustomPath(filename)
 
-	// Check if file already exists
+	// Check if file already exists.
 	if !force {
 		if _, err := os.Stat(outputPath); err == nil {
 			return fmt.Errorf("custom template already exists: %s (use --force to overwrite)", outputPath)
 		}
 	}
 
-	// Create directory if it doesn't exist
+	// Create directory if it doesn't exist.
 	outputDir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %q: %w", outputDir, err)
 	}
 
-	// Write file
+	// Write file.
 	if err := os.WriteFile(outputPath, content, 0644); err != nil {
 		return fmt.Errorf("failed to write template to %q: %w", outputPath, err)
 	}
@@ -156,7 +156,7 @@ func (l *Loader) DumpTemplate(filename string, force bool) error {
 
 // DumpAllTemplates writes all embedded templates to the custom templates directory.
 // Returns the list of successfully dumped templates and any errors encountered.
-// If force is false and some templates already exist, it will skip those but continue
+// If force is false and some templates already exist, it will skip those but continue.
 // processing remaining templates.
 func (l *Loader) DumpAllTemplates(force bool) ([]string, error) {
 	templates, err := l.ListEmbeddedTemplates()
@@ -169,18 +169,18 @@ func (l *Loader) DumpAllTemplates(force bool) ([]string, error) {
 
 	for _, tmpl := range templates {
 		if err := l.DumpTemplate(tmpl, force); err != nil {
-			// If it's an "already exists" error and force is false, collect the error but continue
+			// If it's an "already exists" error and force is false, collect the error but continue.
 			if !force && strings.Contains(err.Error(), "already exists") {
 				errors = append(errors, err.Error())
 				continue
 			}
-			// For other errors, return immediately
+			// For other errors, return immediately.
 			return dumped, err
 		}
 		dumped = append(dumped, l.CustomPath(tmpl))
 	}
 
-	// If we have collected errors (skipped files), return them as a combined error
+	// If we have collected errors (skipped files), return them as a combined error.
 	if len(errors) > 0 {
 		return dumped, fmt.Errorf("%s", strings.Join(errors, "; "))
 	}

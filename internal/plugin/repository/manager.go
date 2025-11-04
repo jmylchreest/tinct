@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Manager handles plugin repository operations
+// Manager handles plugin repository operations.
 type Manager struct {
 	configPath string
 	config     *RepositoryConfig
@@ -21,7 +21,7 @@ type Manager struct {
 	client     *http.Client
 }
 
-// NewManager creates a new repository manager
+// NewManager creates a new repository manager.
 func NewManager(configPath, cachePath string) (*Manager, error) {
 	m := &Manager{
 		configPath: configPath,
@@ -31,9 +31,9 @@ func NewManager(configPath, cachePath string) (*Manager, error) {
 		},
 	}
 
-	// Load or initialise config
+	// Load or initialise config.
 	if err := m.loadConfig(); err != nil {
-		// If file doesn't exist, create default config
+		// If file doesn't exist, create default config.
 		if os.IsNotExist(err) {
 			m.config = &RepositoryConfig{
 				Repositories: []*Repository{},
@@ -50,9 +50,9 @@ func NewManager(configPath, cachePath string) (*Manager, error) {
 	return m, nil
 }
 
-// AddRepository adds a new repository
+// AddRepository adds a new repository.
 func (m *Manager) AddRepository(name, url string, priority int) error {
-	// Check if repository already exists
+	// Check if repository already exists.
 	for _, repo := range m.config.Repositories {
 		if repo.Name == name {
 			return fmt.Errorf("repository %q already exists", name)
@@ -62,7 +62,7 @@ func (m *Manager) AddRepository(name, url string, priority int) error {
 		}
 	}
 
-	// Fetch manifest to validate
+	// Fetch manifest to validate.
 	manifest, err := m.fetchManifest(url)
 	if err != nil {
 		return fmt.Errorf("failed to fetch manifest: %w", err)
@@ -82,7 +82,7 @@ func (m *Manager) AddRepository(name, url string, priority int) error {
 	return m.saveConfig()
 }
 
-// RemoveRepository removes a repository by name
+// RemoveRepository removes a repository by name.
 func (m *Manager) RemoveRepository(name string) error {
 	found := false
 	filtered := make([]*Repository, 0)
@@ -101,7 +101,7 @@ func (m *Manager) RemoveRepository(name string) error {
 
 	m.config.Repositories = filtered
 
-	// Clean up cache
+	// Clean up cache.
 	delete(m.config.Cache.LastUpdate, name)
 	cachePath := m.getManifestCachePath(name)
 	_ = os.Remove(cachePath) // Ignore error
@@ -109,12 +109,12 @@ func (m *Manager) RemoveRepository(name string) error {
 	return m.saveConfig()
 }
 
-// ListRepositories returns all configured repositories
+// ListRepositories returns all configured repositories.
 func (m *Manager) ListRepositories() []*Repository {
 	return m.config.Repositories
 }
 
-// GetRepository returns a repository by name
+// GetRepository returns a repository by name.
 func (m *Manager) GetRepository(name string) (*Repository, error) {
 	for _, repo := range m.config.Repositories {
 		if repo.Name == name {
@@ -124,7 +124,7 @@ func (m *Manager) GetRepository(name string) (*Repository, error) {
 	return nil, fmt.Errorf("repository %q not found", name)
 }
 
-// UpdateRepository refreshes a repository's manifest
+// UpdateRepository refreshes a repository's manifest.
 func (m *Manager) UpdateRepository(name string) error {
 	repo, err := m.GetRepository(name)
 	if err != nil {
@@ -138,10 +138,10 @@ func (m *Manager) UpdateRepository(name string) error {
 
 	repo.Manifest = manifest
 
-	// Update cache timestamp
+	// Update cache timestamp.
 	m.config.Cache.LastUpdate[name] = time.Now().Unix()
 
-	// Save manifest to cache
+	// Save manifest to cache.
 	if err := m.saveManifestCache(name, manifest); err != nil {
 		return fmt.Errorf("failed to save cache: %w", err)
 	}
@@ -149,7 +149,7 @@ func (m *Manager) UpdateRepository(name string) error {
 	return m.saveConfig()
 }
 
-// UpdateAllRepositories refreshes all enabled repositories
+// UpdateAllRepositories refreshes all enabled repositories.
 func (m *Manager) UpdateAllRepositories() error {
 	var errors []error
 
@@ -170,7 +170,7 @@ func (m *Manager) UpdateAllRepositories() error {
 	return nil
 }
 
-// Search searches for plugins across all enabled repositories
+// Search searches for plugins across all enabled repositories.
 func (m *Manager) Search(filter SearchFilter) ([]*SearchResult, error) {
 	if err := m.ensureManifestsLoaded(); err != nil {
 		return nil, err
@@ -185,7 +185,7 @@ func (m *Manager) Search(filter SearchFilter) ([]*SearchResult, error) {
 
 		for _, plugin := range repo.Manifest.Plugins {
 			if m.matchesFilter(plugin, filter) {
-				// Get latest version
+				// Get latest version.
 				var latest *Version
 				if len(plugin.Versions) > 0 {
 					latest = &plugin.Versions[0]
@@ -203,7 +203,7 @@ func (m *Manager) Search(filter SearchFilter) ([]*SearchResult, error) {
 	return results, nil
 }
 
-// FindPlugin finds a specific plugin by name across all repositories
+// FindPlugin finds a specific plugin by name across all repositories.
 func (m *Manager) FindPlugin(name, version string) (*SearchResult, error) {
 	if err := m.ensureManifestsLoaded(); err != nil {
 		return nil, err
@@ -219,7 +219,7 @@ func (m *Manager) FindPlugin(name, version string) (*SearchResult, error) {
 			continue
 		}
 
-		// Find matching version
+		// Find matching version.
 		var targetVersion *Version
 		if version == "" || version == "latest" {
 			if len(plugin.Versions) > 0 {
@@ -248,7 +248,7 @@ func (m *Manager) FindPlugin(name, version string) (*SearchResult, error) {
 	return nil, fmt.Errorf("plugin %q not found", name)
 }
 
-// FindPluginInRepository finds a plugin in a specific repository
+// FindPluginInRepository finds a plugin in a specific repository.
 func (m *Manager) FindPluginInRepository(repoName, pluginName, version string) (*SearchResult, error) {
 	repo, err := m.GetRepository(repoName)
 	if err != nil {
@@ -264,7 +264,7 @@ func (m *Manager) FindPluginInRepository(repoName, pluginName, version string) (
 		return nil, fmt.Errorf("plugin %q not found in repository %q", pluginName, repoName)
 	}
 
-	// Find matching version
+	// Find matching version.
 	var targetVersion *Version
 	if version == "" || version == "latest" {
 		if len(plugin.Versions) > 0 {
@@ -290,9 +290,9 @@ func (m *Manager) FindPluginInRepository(repoName, pluginName, version string) (
 	}, nil
 }
 
-// matchesFilter checks if a plugin matches the search filter
+// matchesFilter checks if a plugin matches the search filter.
 func (m *Manager) matchesFilter(plugin *Plugin, filter SearchFilter) bool {
-	// Query match (name or description)
+	// Query match (name or description).
 	if filter.Query != "" {
 		query := strings.ToLower(filter.Query)
 		if !strings.Contains(strings.ToLower(plugin.Name), query) &&
@@ -301,17 +301,17 @@ func (m *Manager) matchesFilter(plugin *Plugin, filter SearchFilter) bool {
 		}
 	}
 
-	// Type filter
+	// Type filter.
 	if filter.Type != "" && plugin.Type != filter.Type {
 		return false
 	}
 
-	// Author filter
+	// Author filter.
 	if filter.Author != "" && !strings.EqualFold(plugin.Author, filter.Author) {
 		return false
 	}
 
-	// Tags filter
+	// Tags filter.
 	if len(filter.Tags) > 0 {
 		hasTag := false
 		for _, filterTag := range filter.Tags {
@@ -333,7 +333,7 @@ func (m *Manager) matchesFilter(plugin *Plugin, filter SearchFilter) bool {
 	return true
 }
 
-// ensureManifestsLoaded ensures all repository manifests are loaded
+// ensureManifestsLoaded ensures all repository manifests are loaded.
 func (m *Manager) ensureManifestsLoaded() error {
 	for _, repo := range m.config.Repositories {
 		if !repo.Enabled {
@@ -347,13 +347,13 @@ func (m *Manager) ensureManifestsLoaded() error {
 	return nil
 }
 
-// ensureManifestLoaded ensures a single repository manifest is loaded
+// ensureManifestLoaded ensures a single repository manifest is loaded.
 func (m *Manager) ensureManifestLoaded(repo *Repository) error {
 	if repo.Manifest != nil {
 		return nil
 	}
 
-	// Try to load from cache first
+	// Try to load from cache first.
 	lastUpdate, ok := m.config.Cache.LastUpdate[repo.Name]
 	cacheValid := ok && time.Now().Unix()-lastUpdate < int64(m.config.Cache.TTL)
 
@@ -363,10 +363,10 @@ func (m *Manager) ensureManifestLoaded(repo *Repository) error {
 			repo.Manifest = manifest
 			return nil
 		}
-		// Cache load failed, fetch fresh
+		// Cache load failed, fetch fresh.
 	}
 
-	// Fetch fresh manifest
+	// Fetch fresh manifest.
 	manifest, err := m.fetchManifest(repo.URL)
 	if err != nil {
 		return fmt.Errorf("failed to fetch manifest for %q: %w", repo.Name, err)
@@ -374,14 +374,14 @@ func (m *Manager) ensureManifestLoaded(repo *Repository) error {
 
 	repo.Manifest = manifest
 
-	// Update cache
+	// Update cache.
 	m.config.Cache.LastUpdate[repo.Name] = time.Now().Unix()
 	_ = m.saveManifestCache(repo.Name, manifest) // Ignore cache save errors
 
 	return nil
 }
 
-// fetchManifest fetches a manifest from a URL
+// fetchManifest fetches a manifest from a URL.
 func (m *Manager) fetchManifest(url string) (*Manifest, error) {
 	resp, err := m.client.Get(url)
 	if err != nil {
@@ -406,7 +406,7 @@ func (m *Manager) fetchManifest(url string) (*Manifest, error) {
 	return &manifest, nil
 }
 
-// loadConfig loads the repository configuration
+// loadConfig loads the repository configuration.
 func (m *Manager) loadConfig() error {
 	data, err := os.ReadFile(m.configPath)
 	if err != nil {
@@ -418,7 +418,7 @@ func (m *Manager) loadConfig() error {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	// Initialise cache if nil
+	// Initialise cache if nil.
 	if config.Cache == nil {
 		config.Cache = &CacheConfig{
 			TTL:        3600,
@@ -435,9 +435,9 @@ func (m *Manager) loadConfig() error {
 	return nil
 }
 
-// saveConfig saves the repository configuration
+// saveConfig saves the repository configuration.
 func (m *Manager) saveConfig() error {
-	// Ensure directory exists
+	// Ensure directory exists.
 	if err := os.MkdirAll(filepath.Dir(m.configPath), 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
@@ -454,14 +454,14 @@ func (m *Manager) saveConfig() error {
 	return nil
 }
 
-// getManifestCachePath returns the cache path for a repository manifest
+// getManifestCachePath returns the cache path for a repository manifest.
 func (m *Manager) getManifestCachePath(repoName string) string {
 	return filepath.Join(m.cachePath, fmt.Sprintf("%s.json", repoName))
 }
 
-// saveManifestCache saves a manifest to cache
+// saveManifestCache saves a manifest to cache.
 func (m *Manager) saveManifestCache(repoName string, manifest *Manifest) error {
-	// Ensure cache directory exists
+	// Ensure cache directory exists.
 	if err := os.MkdirAll(m.cachePath, 0755); err != nil {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
@@ -480,7 +480,7 @@ func (m *Manager) saveManifestCache(repoName string, manifest *Manifest) error {
 	return nil
 }
 
-// loadManifestCache loads a manifest from cache
+// loadManifestCache loads a manifest from cache.
 func (m *Manager) loadManifestCache(repoName string) (*Manifest, error) {
 	cachePath := m.getManifestCachePath(repoName)
 
@@ -497,7 +497,7 @@ func (m *Manager) loadManifestCache(repoName string) (*Manifest, error) {
 	return &manifest, nil
 }
 
-// sortRepositories sorts repositories by priority (lower = higher priority)
+// sortRepositories sorts repositories by priority (lower = higher priority).
 func (m *Manager) sortRepositories() {
 	sort.Slice(m.config.Repositories, func(i, j int) bool {
 		return m.config.Repositories[i].Priority < m.config.Repositories[j].Priority

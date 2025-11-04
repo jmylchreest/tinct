@@ -8,20 +8,20 @@ import (
 
 // Luminance calculates the relative luminance of a colour according to WCAG 2.0.
 // Returns a value between 0 (darkest) and 1 (lightest).
-// https://www.w3.org/TR/WCAG20/#relativeluminancedef
+// https://www.w3.org/TR/WCAG20/#relativeluminancedef.
 func Luminance(c color.Color) float64 {
 	r, g, b, _ := c.RGBA()
-	// Convert from 16-bit to 8-bit
+	// Convert from 16-bit to 8-bit.
 	rf := float64(r>>8) / 255.0
 	rg := float64(g>>8) / 255.0
 	rb := float64(b>>8) / 255.0
 
-	// Apply gamma correction
+	// Apply gamma correction.
 	rf = gammaCorrect(rf)
 	rg = gammaCorrect(rg)
 	rb = gammaCorrect(rb)
 
-	// Calculate luminance using WCAG formula
+	// Calculate luminance using WCAG formula.
 	return 0.2126*rf + 0.7152*rg + 0.0722*rb
 }
 
@@ -36,12 +36,12 @@ func gammaCorrect(v float64) float64 {
 // ContrastRatio calculates the contrast ratio between two colours according to WCAG 2.0.
 // Returns a value between 1 and 21, where 21 is maximum contrast (black vs white).
 // Meets WCAG AA standard for normal text at 4.5:1, large text at 3:1.
-// https://www.w3.org/TR/WCAG20/#contrast-ratiodef
+// https://www.w3.org/TR/WCAG20/#contrast-ratiodef.
 func ContrastRatio(c1, c2 color.Color) float64 {
 	l1 := Luminance(c1)
 	l2 := Luminance(c2)
 
-	// Ensure l1 is the lighter colour
+	// Ensure l1 is the lighter colour.
 	if l1 < l2 {
 		l1, l2 = l2, l1
 	}
@@ -68,18 +68,18 @@ func IsAnalogous(h1, h2 float64) bool {
 }
 
 // AdjustSaturation adjusts the saturation of a color by a given factor.
-// factor < 1.0 reduces saturation (creates muted colors)
-// factor > 1.0 increases saturation (creates more vibrant colors)
-// factor = 1.0 leaves saturation unchanged
+// factor < 1.0 reduces saturation (creates muted colors).
+// factor > 1.0 increases saturation (creates more vibrant colors).
+// factor = 1.0 leaves saturation unchanged.
 func AdjustSaturation(h, s, l, factor float64) RGB {
 	newS := math.Max(0.0, math.Min(1.0, s*factor))
 	return HSLToRGB(h, newS, l)
 }
 
 // AdjustLuminance adjusts the luminance of a color by a delta value.
-// delta > 0 makes the color lighter
-// delta < 0 makes the color darker
-// Result is clamped to [0.0, 1.0]
+// delta > 0 makes the color lighter.
+// delta < 0 makes the color darker.
+// Result is clamped to [0.0, 1.0].
 func AdjustLuminance(h, s, l, delta float64) RGB {
 	newL := math.Max(0.0, math.Min(1.0, l+delta))
 	return HSLToRGB(h, s, newL)
@@ -96,10 +96,10 @@ func rgbToHSL(rgb RGB) (h, s, l float64) {
 	min := math.Min(r, math.Min(g, b))
 	delta := max - min
 
-	// Lightness
+	// Lightness.
 	l = (max + min) / 2.0
 
-	// Saturation
+	// Saturation.
 	if delta == 0 {
 		s = 0
 		h = 0
@@ -112,7 +112,7 @@ func rgbToHSL(rgb RGB) (h, s, l float64) {
 		s = delta / (2.0 - max - min)
 	}
 
-	// Hue
+	// Hue.
 	switch max {
 	case r:
 		h = (g - b) / delta
@@ -133,7 +133,7 @@ func rgbToHSL(rgb RGB) (h, s, l float64) {
 // h is hue (0-360), s is saturation (0-1), l is luminance (0-1).
 func HSLToRGB(h, s, l float64) RGB {
 	if s == 0 {
-		// Achromatic (grey)
+		// Achromatic (grey).
 		v := uint8(l * 255)
 		return RGB{R: v, G: v, B: v}
 	}
@@ -159,7 +159,7 @@ func HSLToRGB(h, s, l float64) RGB {
 
 // hueToRGB is a helper for HSL to RGB conversion.
 func hueToRGB(p, q, t float64) float64 {
-	// Normalize t to 0-360 range
+	// Normalize t to 0-360 range.
 	for t < 0 {
 		t += 360
 	}
@@ -180,18 +180,18 @@ func hueToRGB(p, q, t float64) float64 {
 }
 
 // sortByLuminance sorts colours by luminance based on theme type.
-// Dark theme: ascending (dark to light)
-// Light theme: descending (light to dark)
+// Dark theme: ascending (dark to light).
+// Light theme: descending (light to dark).
 func sortByLuminance(colours []CategorisedColour, themeType ThemeType) {
 	n := len(colours)
 	for i := 0; i < n-1; i++ {
 		for j := 0; j < n-i-1; j++ {
 			var shouldSwap bool
 			if themeType == ThemeDark {
-				// Ascending: dark to light
+				// Ascending: dark to light.
 				shouldSwap = colours[j].Luminance > colours[j+1].Luminance
 			} else {
-				// Descending: light to dark
+				// Descending: light to dark.
 				shouldSwap = colours[j].Luminance < colours[j+1].Luminance
 			}
 			if shouldSwap {
@@ -203,7 +203,7 @@ func sortByLuminance(colours []CategorisedColour, themeType ThemeType) {
 
 // sortBySaturation sorts colours by saturation (most vibrant first).
 func sortBySaturation(colours []CategorisedColour) {
-	// Simple bubble sort - good enough for small arrays
+	// Simple bubble sort - good enough for small arrays.
 	n := len(colours)
 	for i := 0; i < n-1; i++ {
 		for j := 0; j < n-i-1; j++ {
@@ -228,7 +228,7 @@ func sortByContrast(colours []CategorisedColour, bg CategorisedColour) {
 	}
 }
 
-// min returns the minimum of two integers
+// min returns the minimum of two integers.
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -236,7 +236,7 @@ func min(a, b int) int {
 	return b
 }
 
-// RGBToColor converts an RGB value to a color.Color (RGBA)
+// RGBToColor converts an RGB value to a color.Color (RGBA).
 func RGBToColor(rgb RGB) color.Color {
 	return color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
 }

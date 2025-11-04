@@ -103,7 +103,7 @@ import (
 	"os"
 )
 
-// PluginInfo represents the metadata returned by --plugin-info
+// PluginInfo represents the metadata returned by --plugin-info.
 type PluginInfo struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
@@ -112,14 +112,14 @@ type PluginInfo struct {
 	Author      string `json:"author"`
 }
 
-// RGB represents an RGB color (simple output format)
+// RGB represents an RGB color (simple output format).
 type RGB struct {
 	R uint8 `json:"r"`
 	G uint8 `json:"g"`
 	B uint8 `json:"b"`
 }
 
-// InputOptions represents the options passed from Tinct
+// InputOptions represents the options passed from Tinct.
 type InputOptions struct {
 	Verbose         bool           `json:"verbose"`
 	DryRun          bool           `json:"dry_run"`
@@ -208,7 +208,7 @@ func main() {
 	}
 }
 
-// generateRandomColors creates n random colors as simple RGB values
+// generateRandomColors creates n random colors as simple RGB values.
 func generateRandomColors(n int, rng *mathrand.Rand) []RGB {
 	colors := make([]RGB, n)
 

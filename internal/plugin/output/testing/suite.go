@@ -95,7 +95,7 @@ func TestVerbosePlugin(t *testing.T, p any) {
 	}
 
 	t.Run("SetVerbose", func(t *testing.T) {
-		// Just test that it doesn't panic
+		// Just test that it doesn't panic.
 		vp.SetVerbose(true)
 		vp.SetVerbose(false)
 	})
@@ -135,7 +135,7 @@ func TestPreExecuteHook(t *testing.T, p any, expectedBinaryName string) {
 			t.Errorf("PreExecute() unexpected error = %v", err)
 		}
 
-		// If skipped, reason should mention the binary name
+		// If skipped, reason should mention the binary name.
 		if skip && !strings.Contains(reason, expectedBinaryName) {
 			t.Errorf("PreExecute() skip reason should mention %s, got: %s", expectedBinaryName, reason)
 		}
@@ -150,8 +150,8 @@ func TestEmbeddedTemplates(t *testing.T, p any, expectedTemplateFiles []string) 
 		}
 	}
 
-	// This is a bit awkward because embed.FS isn't directly testable
-	// Skip this test for now - it's plugin-specific
+	// This is a bit awkward because embed.FS isn't directly testable.
+	// Skip this test for now - it's plugin-specific.
 	t.Skip("Template testing should be done per-plugin due to embed.FS limitations")
 }
 

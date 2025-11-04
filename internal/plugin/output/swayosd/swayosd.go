@@ -86,7 +86,7 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // Generate creates the theme file.
-// Returns map of filename -> content
+// Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -94,7 +94,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate theme file
+	// Generate theme file.
 	themeContent, err := p.generateTheme(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
@@ -107,7 +107,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("swayosd", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -117,7 +117,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for style.css.tmpl\n")
 	}
@@ -140,16 +140,16 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 // PreExecute checks if swayosd is available and config directory exists.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if swayosd-client executable exists on PATH
+	// Check if swayosd-client executable exists on PATH.
 	_, err = exec.LookPath("swayosd-client")
 	if err != nil {
 		return true, "swayosd-client executable not found on $PATH", nil
 	}
 
-	// Check if config directory exists (create it if not)
+	// Check if config directory exists (create it if not).
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// For swayosd, we can create the directory since it's straightforward
+		// For swayosd, we can create the directory since it's straightforward.
 		if err := os.MkdirAll(configDir, 0755); err != nil {
 			return true, fmt.Sprintf("swayosd config directory does not exist and cannot be created: %s", configDir), nil
 		}

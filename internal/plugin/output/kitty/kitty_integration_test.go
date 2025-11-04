@@ -9,7 +9,7 @@ import (
 )
 
 func TestKittyPluginWithPaletteHelper(t *testing.T) {
-	// Create a simple test palette
+	// Create a simple test palette.
 	colors := []color.Color{
 		color.RGBA{R: 30, G: 30, B: 46, A: 255},    // dark bg
 		color.RGBA{R: 205, G: 214, B: 244, A: 255}, // light fg
@@ -23,7 +23,7 @@ func TestKittyPluginWithPaletteHelper(t *testing.T) {
 	config := colour.DefaultCategorisationConfig()
 	categorised := colour.Categorise(palette, config)
 
-	// Create plugin and generate
+	// Create plugin and generate.
 	plugin := New()
 	themeData := colour.NewThemeData(categorised, "", "")
 	files, err := plugin.Generate(themeData)
@@ -31,7 +31,7 @@ func TestKittyPluginWithPaletteHelper(t *testing.T) {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	// Check that tinct.conf was created
+	// Check that tinct.conf was created.
 	content, ok := files["tinct.conf"]
 	if !ok {
 		t.Fatal("tinct.conf not generated")
@@ -39,7 +39,7 @@ func TestKittyPluginWithPaletteHelper(t *testing.T) {
 
 	contentStr := string(content)
 
-	// Verify it contains expected colors in hex format
+	// Verify it contains expected colors in hex format.
 	if !strings.Contains(contentStr, "#1e1e2e") { // background
 		t.Error("Missing background color in output")
 	}
@@ -48,17 +48,17 @@ func TestKittyPluginWithPaletteHelper(t *testing.T) {
 		t.Error("Missing foreground color in output")
 	}
 
-	// Verify template functions worked (should have "themeType" output)
+	// Verify template functions worked (should have "themeType" output).
 	if !strings.Contains(contentStr, "Detected theme:") {
 		t.Error("Missing theme type in output")
 	}
 
-	// Verify no template syntax errors (no {{ or }})
+	// Verify no template syntax errors (no {{ or }}).
 	if strings.Contains(contentStr, "{{") || strings.Contains(contentStr, "}}") {
 		t.Error("Template syntax not fully processed")
 	}
 
-	// Check for new surface colors if they exist
+	// Check for new surface colors if they exist.
 	if strings.Contains(contentStr, "surface") {
 		t.Log("Surface colors are being generated (expected with new system)")
 	}

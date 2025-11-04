@@ -11,13 +11,13 @@ import (
 )
 
 var (
-	// Global theme flag
+	// Global theme flag.
 	globalTheme string
 
-	// Shared plugin manager instance used by all commands
+	// Shared plugin manager instance used by all commands.
 	sharedPluginManager *manager.Manager
 
-	// rootCmd represents the base command when called without any subcommands
+	// rootCmd represents the base command when called without any subcommands.
 	rootCmd = &cobra.Command{
 		Use:   "tinct",
 		Short: "A modern color palette generator",
@@ -40,24 +40,24 @@ func Execute() {
 }
 
 func init() {
-	// Initialise shared plugin manager using builder pattern
-	// Start with environment config, will be updated from lock file at runtime if present
+	// Initialise shared plugin manager using builder pattern.
+	// Start with environment config, will be updated from lock file at runtime if present.
 	sharedPluginManager = manager.NewBuilder().
 		WithEnvConfig().
 		Build()
 
-	// Register plugin flags with all commands that need them
+	// Register plugin flags with all commands that need them.
 	registerPluginFlags()
 
-	// Global flags
+	// Global flags.
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress non-error output")
 	rootCmd.PersistentFlags().StringVarP(&globalTheme, "theme", "t", "auto", "theme type (auto, dark, light)")
 
-	// Set version template
+	// Set version template.
 	rootCmd.SetVersionTemplate(version.String() + "\n")
 
-	// Add subcommands
+	// Add subcommands.
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(extractCmd)
 	rootCmd.AddCommand(generateCmd)
@@ -66,19 +66,19 @@ func init() {
 
 // registerPluginFlags registers plugin-specific flags with commands that use them.
 func registerPluginFlags() {
-	// Register input plugin flags
+	// Register input plugin flags.
 	for _, plugin := range sharedPluginManager.AllInputPlugins() {
 		plugin.RegisterFlags(extractCmd)
 		plugin.RegisterFlags(generateCmd)
 	}
 
-	// Register output plugin flags
+	// Register output plugin flags.
 	for _, plugin := range sharedPluginManager.AllOutputPlugins() {
 		plugin.RegisterFlags(generateCmd)
 	}
 }
 
-// versionCmd represents the version command
+// versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
@@ -86,7 +86,7 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		info := version.GetInfo()
 
-		// Print version information in a structured format
+		// Print version information in a structured format.
 		fmt.Printf("Version:    %s\n", info.Version)
 		fmt.Printf("Commit:     %s\n", info.Commit)
 		fmt.Printf("Build Date: %s\n", info.Date)

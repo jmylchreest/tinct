@@ -13,7 +13,7 @@ import (
 var testEmbedFS embed.FS
 
 func TestLoader_Load(t *testing.T) {
-	// Create a temporary directory for custom templates
+	// Create a temporary directory for custom templates.
 	tmpDir := t.TempDir()
 
 	loader := &Loader{
@@ -36,7 +36,7 @@ func TestLoader_Load(t *testing.T) {
 	})
 
 	t.Run("loads custom template when it exists", func(t *testing.T) {
-		// Create a custom template
+		// Create a custom template.
 		customDir := filepath.Join(tmpDir, "testplugin")
 		if err := os.MkdirAll(customDir, 0755); err != nil {
 			t.Fatalf("failed to create custom dir: %v", err)
@@ -141,7 +141,7 @@ func TestLoader_ListEmbeddedTemplates(t *testing.T) {
 		t.Error("expected at least one template")
 	}
 
-	// Check that all returned files have .tmpl extension
+	// Check that all returned files have .tmpl extension.
 	for _, tmpl := range templates {
 		if filepath.Ext(tmpl) != ".tmpl" {
 			t.Errorf("expected .tmpl extension, got %q", tmpl)
@@ -164,7 +164,7 @@ func TestLoader_DumpTemplate(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		// Check that file was created
+		// Check that file was created.
 		customPath := loader.CustomPath("testdata/test.tmpl")
 		if _, err := os.Stat(customPath); err != nil {
 			t.Errorf("custom template not created: %v", err)
@@ -172,7 +172,7 @@ func TestLoader_DumpTemplate(t *testing.T) {
 	})
 
 	t.Run("fails without force when template exists", func(t *testing.T) {
-		// Try to dump again without force
+		// Try to dump again without force.
 		err := loader.DumpTemplate("testdata/test.tmpl", false)
 		if err == nil {
 			t.Error("expected error when dumping existing template without force")
@@ -212,7 +212,7 @@ func TestLoader_DumpAllTemplates(t *testing.T) {
 		t.Error("expected at least one dumped template")
 	}
 
-	// Verify all files were created
+	// Verify all files were created.
 	for _, path := range dumped {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("dumped file not found: %s (%v)", path, err)
@@ -242,17 +242,17 @@ func TestLoader_DumpAllTemplates_WithExisting(t *testing.T) {
 	t.Run("second dump without force returns error but lists all files", func(t *testing.T) {
 		dumped, err := loader.DumpAllTemplates(false)
 
-		// Should return error about existing files
+		// Should return error about existing files.
 		if err == nil {
 			t.Error("expected error when files already exist")
 		}
 
-		// Should contain "already exists" in error
+		// Should contain "already exists" in error.
 		if err != nil && !strings.Contains(err.Error(), "already exists") {
 			t.Errorf("expected 'already exists' in error, got: %v", err)
 		}
 
-		// Should have empty dumped list (nothing was dumped)
+		// Should have empty dumped list (nothing was dumped).
 		if len(dumped) != 0 {
 			t.Errorf("expected empty dumped list, got %d items", len(dumped))
 		}
@@ -278,7 +278,7 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 		customBase: tmpDir,
 	}
 
-	// Get list of templates
+	// Get list of templates.
 	templates, err := loader.ListEmbeddedTemplates()
 	if err != nil {
 		t.Fatalf("failed to list templates: %v", err)
@@ -287,15 +287,15 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 		t.Skip("no templates to test with")
 	}
 
-	// Dump only the first template manually
+	// Dump only the first template manually.
 	if err := loader.DumpTemplate(templates[0], false); err != nil {
 		t.Fatalf("failed to dump first template: %v", err)
 	}
 
-	// Now try to dump all - should skip existing and dump others
+	// Now try to dump all - should skip existing and dump others.
 	dumped, err := loader.DumpAllTemplates(false)
 
-	// If we have more than one template, should get an error about existing file
+	// If we have more than one template, should get an error about existing file.
 	// but should have dumped the others
 	if len(templates) > 1 {
 		if err == nil {
@@ -304,12 +304,12 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 		if err != nil && !strings.Contains(err.Error(), "already exists") {
 			t.Errorf("expected 'already exists' in error, got: %v", err)
 		}
-		// Should have dumped the remaining templates
+		// Should have dumped the remaining templates.
 		if len(dumped) != len(templates)-1 {
 			t.Errorf("expected %d dumped templates, got %d", len(templates)-1, len(dumped))
 		}
 	} else {
-		// Only one template, should just get the error
+		// Only one template, should just get the error.
 		if err == nil {
 			t.Error("expected error about existing file")
 		}
@@ -342,7 +342,7 @@ func TestLoader_GetInfo(t *testing.T) {
 	})
 
 	t.Run("info for custom template", func(t *testing.T) {
-		// Create a custom template
+		// Create a custom template.
 		customPath := loader.CustomPath("testdata/test.tmpl")
 		if err := os.MkdirAll(filepath.Dir(customPath), 0755); err != nil {
 			t.Fatalf("failed to create dir: %v", err)

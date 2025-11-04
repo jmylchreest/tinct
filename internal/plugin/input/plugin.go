@@ -11,30 +11,30 @@ import (
 
 // GenerateOptions holds options passed to input plugins during generation.
 type GenerateOptions struct {
-	// Verbose enables verbose output
+	// Verbose enables verbose output.
 	Verbose bool
 
-	// DryRun generates output without side effects
+	// DryRun generates output without side effects.
 	DryRun bool
 
-	// ColourOverrides are manual colour specifications (role=hex)
+	// ColourOverrides are manual colour specifications (role=hex).
 	ColourOverrides []string
 
-	// PluginArgs are custom arguments for this plugin
+	// PluginArgs are custom arguments for this plugin.
 	PluginArgs map[string]any
 }
 
 // GenerateResult holds the result of input plugin generation.
 type GenerateResult struct {
-	// Palette is the generated colour palette
+	// Palette is the generated colour palette.
 	Palette *colour.Palette
 
-	// WallpaperPath is the optional path to the source wallpaper image
-	// This is used when --set-wallpaper flag is enabled
+	// WallpaperPath is the optional path to the source wallpaper image.
+	// This is used when --set-wallpaper flag is enabled.
 	WallpaperPath string
 }
 
-// ThemeHinter is an optional interface that input plugins can implement
+// ThemeHinter is an optional interface that input plugins can implement.
 // to provide hints about theme detection to the categorizer.
 // This is purely advisory - the categorizer makes the final decision.
 type ThemeHinter interface {
@@ -43,7 +43,7 @@ type ThemeHinter interface {
 	ThemeHint() string
 }
 
-// WallpaperProvider is an optional interface that input plugins can implement
+// WallpaperProvider is an optional interface that input plugins can implement.
 // to provide the source wallpaper path. This is used with the --set-wallpaper flag
 // to allow output plugins to set the wallpaper alongside the generated themes.
 type WallpaperProvider interface {
@@ -106,7 +106,7 @@ func (r *Registry) List() []string {
 
 // All returns all registered plugins (including disabled ones).
 func (r *Registry) All() map[string]Plugin {
-	// Return a copy to prevent external modification
+	// Return a copy to prevent external modification.
 	plugins := make(map[string]Plugin, len(r.plugins))
 	maps.Copy(plugins, r.plugins)
 	return plugins

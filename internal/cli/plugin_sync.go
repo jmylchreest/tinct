@@ -22,7 +22,7 @@ var (
 	syncUpdate      bool
 )
 
-// pluginSyncCmd syncs plugins from lock file
+// pluginSyncCmd syncs plugins from lock file.
 var pluginSyncCmd = &cobra.Command{
 	Use:     "sync",
 	Aliases: []string{"restore"},
@@ -50,7 +50,7 @@ Examples:
 	RunE: runPluginSync,
 }
 
-// pluginVerifyCmd verifies installed plugins
+// pluginVerifyCmd verifies installed plugins.
 var pluginVerifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify installed plugins match lock file",
@@ -65,7 +65,7 @@ Use this to detect if plugins have been modified or corrupted.`,
 	RunE: runPluginVerify,
 }
 
-// pluginCleanCmd removes plugins not in lock file
+// pluginCleanCmd removes plugins not in lock file.
 var pluginCleanCmd = &cobra.Command{
 	Use:   "clean",
 	Short: "Remove plugins not in lock file",
@@ -77,23 +77,23 @@ with the lock file.`,
 }
 
 func init() {
-	// Add sync command to plugins
+	// Add sync command to plugins.
 	pluginsCmd.AddCommand(pluginSyncCmd)
 	pluginsCmd.AddCommand(pluginVerifyCmd)
 	pluginsCmd.AddCommand(pluginCleanCmd)
 
-	// Sync flags
+	// Sync flags.
 	pluginSyncCmd.Flags().BoolVar(&syncForce, "force", false, "Reinstall even if already present")
 	pluginSyncCmd.Flags().BoolVar(&syncVerify, "verify", false, "Verify checksums of existing plugins")
 	pluginSyncCmd.Flags().BoolVar(&syncSkipMissing, "skip-missing", false, "Continue if source unavailable")
 	pluginSyncCmd.Flags().BoolVar(&syncUpdate, "update", false, "Update to latest compatible version")
 
-	// Clean flags
+	// Clean flags.
 	pluginCleanCmd.Flags().BoolVarP(&pluginYes, "yes", "y", false, "Auto-confirm removal")
 }
 
 func runPluginSync(cmd *cobra.Command, args []string) error {
-	// Read lock file
+	// Read lock file.
 	lock, lockPath, err := loadPluginLock()
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -122,7 +122,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 	for name, meta := range lock.ExternalPlugins {
 		fmt.Printf("Checking %s...\n", name)
 
-		// Check if plugin exists
+		// Check if plugin exists.
 		exists := false
 		if meta.Path != "" {
 			if _, err := os.Stat(meta.Path); err == nil {
@@ -130,9 +130,9 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		// Handle existing plugins
+		// Handle existing plugins.
 		if exists && !syncForce {
-			// Verify checksum if requested and available
+			// Verify checksum if requested and available.
 			if syncVerify && meta.Source != nil && meta.Source.Checksum != "" {
 				if err := verifyPluginChecksum(meta.Path, meta.Source.Checksum); err != nil {
 					fmt.Printf("   Checksum mismatch: %v\n", err)
@@ -154,7 +154,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		// Reinstall from source
+		// Reinstall from source.
 		if meta.Source != nil {
 			fmt.Printf("  → Installing from %s\n", formatPluginSource(meta.Source))
 		} else if meta.SourceLegacy != "" {
@@ -180,7 +180,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 		stats.Installed++
 	}
 
-	// Print summary
+	// Print summary.
 	fmt.Println()
 	printSyncSummary(stats)
 
@@ -192,7 +192,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 }
 
 func runPluginVerify(cmd *cobra.Command, args []string) error {
-	// Read lock file
+	// Read lock file.
 	lock, _, err := loadPluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to read lock file: %w", err)
@@ -212,7 +212,7 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 			Name: name,
 		}
 
-		// Check existence
+		// Check existence.
 		if meta.Path == "" {
 			result.Status = "no_path"
 			results = append(results, result)
@@ -225,14 +225,14 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Verify checksum if available
+		// Verify checksum if available.
 		if meta.Source != nil && meta.Source.Checksum != "" {
 			if err := verifyPluginChecksum(meta.Path, meta.Source.Checksum); err != nil {
 				result.Status = "mismatch"
 				result.Error = err
 				result.Expected = meta.Source.Checksum
 
-				// Calculate actual checksum
+				// Calculate actual checksum.
 				if actual, err := calculateChecksum(meta.Path); err == nil {
 					result.Got = "sha256:" + actual
 				}
@@ -247,10 +247,10 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 		results = append(results, result)
 	}
 
-	// Print results
+	// Print results.
 	printVerifyResults(results)
 
-	// Return error if any mismatches
+	// Return error if any mismatches.
 	for _, result := range results {
 		if result.Status == "mismatch" || result.Status == "missing" {
 			return fmt.Errorf("\nVerification failed. Run 'tinct plugins sync --force' to reinstall plugins.")
@@ -261,19 +261,19 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 }
 
 func runPluginClean(cmd *cobra.Command, args []string) error {
-	// Read lock file
+	// Read lock file.
 	lock, _, err := loadPluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to read lock file: %w", err)
 	}
 
-	// Get plugin directory
+	// Get plugin directory.
 	pluginDir, err := getPluginDirectory()
 	if err != nil {
 		return err
 	}
 
-	// Scan plugin directory
+	// Scan plugin directory.
 	fmt.Printf("Scanning plugin directory: %s\n\n", pluginDir)
 
 	entries, err := os.ReadDir(pluginDir)
@@ -285,14 +285,14 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to read plugin directory: %w", err)
 	}
 
-	// Find plugins not in lock file
+	// Find plugins not in lock file.
 	toRemove := []string{}
 
 	for _, entry := range entries {
 		name := entry.Name()
 		path := filepath.Join(pluginDir, name)
 
-		// Check if in lock file
+		// Check if in lock file.
 		inLockFile := false
 		for _, meta := range lock.ExternalPlugins {
 			if meta.Path == path || filepath.Base(meta.Path) == name {
@@ -314,7 +314,7 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Confirm removal
+	// Confirm removal.
 	fmt.Printf("\nPlugins to remove:\n")
 	for _, path := range toRemove {
 		fmt.Printf("  - %s\n", filepath.Base(path))
@@ -330,7 +330,7 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Remove plugins
+	// Remove plugins.
 	fmt.Println()
 	removed := 0
 	for _, path := range toRemove {
@@ -347,7 +347,7 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// reinstallPlugin reinstalls a plugin from its source
+// reinstallPlugin reinstalls a plugin from its source.
 func reinstallPlugin(meta ExternalPluginMeta) error {
 	if meta.Source != nil {
 		switch meta.Source.Type {
@@ -362,7 +362,7 @@ func reinstallPlugin(meta ExternalPluginMeta) error {
 		}
 	}
 
-	// Fall back to legacy source string
+	// Fall back to legacy source string.
 	if meta.SourceLegacy != "" {
 		return reinstallFromLegacySource(meta)
 	}
@@ -370,7 +370,7 @@ func reinstallPlugin(meta ExternalPluginMeta) error {
 	return fmt.Errorf("no source information available")
 }
 
-// reinstallFromRepository installs a plugin from a repository
+// reinstallFromRepository installs a plugin from a repository.
 func reinstallFromRepository(meta ExternalPluginMeta) error {
 	mgr, err := getRepoManager()
 	if err != nil {
@@ -386,33 +386,33 @@ func reinstallFromRepository(meta ExternalPluginMeta) error {
 		return fmt.Errorf("plugin not found in repository: %w", err)
 	}
 
-	// Get download for current platform
+	// Get download for current platform.
 	download := getDownloadForPlatform(result.Version.Downloads)
 	if download == nil {
 		return fmt.Errorf("no download available for current platform")
 	}
 
-	// Download and install
+	// Download and install.
 	return downloadAndInstallPlugin(download.URL, meta.Name, download.Checksum)
 }
 
-// reinstallFromHTTP installs a plugin from HTTP URL
+// reinstallFromHTTP installs a plugin from HTTP URL.
 func reinstallFromHTTP(meta ExternalPluginMeta) error {
 	return downloadAndInstallPlugin(meta.Source.URL, meta.Name, meta.Source.Checksum)
 }
 
-// reinstallFromLocal installs a plugin from local path
+// reinstallFromLocal installs a plugin from local path.
 func reinstallFromLocal(meta ExternalPluginMeta) error {
 	if meta.Source.OriginalPath == "" {
 		return fmt.Errorf("no original path specified")
 	}
 
-	// Check if source file exists
+	// Check if source file exists.
 	if _, err := os.Stat(meta.Source.OriginalPath); os.IsNotExist(err) {
 		return fmt.Errorf("source file not found: %s", meta.Source.OriginalPath)
 	}
 
-	// Get plugin directory
+	// Get plugin directory.
 	pluginDir, err := getPluginDirectory()
 	if err != nil {
 		return err
@@ -420,12 +420,12 @@ func reinstallFromLocal(meta ExternalPluginMeta) error {
 
 	destPath := filepath.Join(pluginDir, meta.Name)
 
-	// Copy file
+	// Copy file.
 	if err := copyFile(meta.Source.OriginalPath, destPath); err != nil {
 		return fmt.Errorf("failed to copy file: %w", err)
 	}
 
-	// Make executable
+	// Make executable.
 	if err := os.Chmod(destPath, 0755); err != nil {
 		return fmt.Errorf("failed to make executable: %w", err)
 	}
@@ -433,16 +433,16 @@ func reinstallFromLocal(meta ExternalPluginMeta) error {
 	return nil
 }
 
-// reinstallFromLegacySource installs from legacy source string
+// reinstallFromLegacySource installs from legacy source string.
 func reinstallFromLegacySource(meta ExternalPluginMeta) error {
 	source := meta.SourceLegacy
 
-	// Try to parse as URL
+	// Try to parse as URL.
 	if isHTTPURL(source) {
 		return downloadAndInstallPlugin(source, meta.Name, "")
 	}
 
-	// Try as local path
+	// Try as local path.
 	if _, err := os.Stat(source); err == nil {
 		return reinstallFromLocal(ExternalPluginMeta{
 			Name: meta.Name,
@@ -456,15 +456,15 @@ func reinstallFromLegacySource(meta ExternalPluginMeta) error {
 	return fmt.Errorf("unable to determine source type from: %s", source)
 }
 
-// downloadAndInstallPlugin downloads and installs a plugin from URL
+// downloadAndInstallPlugin downloads and installs a plugin from URL.
 func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
-	// Validate URL to prevent SSRF attacks
+	// Validate URL to prevent SSRF attacks.
 	if err := security.ValidateHTTPURL(url); err != nil {
 		return fmt.Errorf("invalid URL: %w", err)
 	}
 
-	// Download file
-	// #nosec G107 -- URL is validated via security.ValidateHTTPURL above
+	// Download file.
+	// #nosec G107 -- URL is validated via security.ValidateHTTPURL above.
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
@@ -480,7 +480,7 @@ func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
 		return fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// Verify checksum if provided
+	// Verify checksum if provided.
 	if expectedChecksum != "" {
 		actualChecksum := "sha256:" + fmt.Sprintf("%x", sha256.Sum256(data))
 		if actualChecksum != expectedChecksum {
@@ -488,13 +488,13 @@ func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
 		}
 	}
 
-	// Get plugin directory
+	// Get plugin directory.
 	pluginDir, err := getPluginDirectory()
 	if err != nil {
 		return err
 	}
 
-	// Determine filename
+	// Determine filename.
 	filename := name
 	if filepath.Ext(url) != "" {
 		filename = name + filepath.Ext(url)
@@ -502,8 +502,8 @@ func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
 
 	destPath := filepath.Join(pluginDir, filename)
 
-	// Write file
-	// #nosec G306 -- Plugin executable needs exec permissions
+	// Write file.
+	// #nosec G306 -- Plugin executable needs exec permissions.
 	if err := os.WriteFile(destPath, data, 0755); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
@@ -511,7 +511,7 @@ func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
 	return nil
 }
 
-// verifyPluginChecksum verifies a plugin's checksum
+// verifyPluginChecksum verifies a plugin's checksum.
 func verifyPluginChecksum(path, expected string) error {
 	actual, err := calculateChecksum(path)
 	if err != nil {
@@ -526,7 +526,7 @@ func verifyPluginChecksum(path, expected string) error {
 	return nil
 }
 
-// calculateChecksum calculates SHA256 checksum of a file
+// calculateChecksum calculates SHA256 checksum of a file.
 func calculateChecksum(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -542,7 +542,7 @@ func calculateChecksum(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// copyFile copies a file from src to dst
+// copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -563,7 +563,7 @@ func copyFile(src, dst string) error {
 	return destFile.Sync()
 }
 
-// getPluginDirectory returns the plugin installation directory
+// getPluginDirectory returns the plugin installation directory.
 func getPluginDirectory() (string, error) {
 	dataDir, err := os.UserHomeDir()
 	if err != nil {
@@ -572,7 +572,7 @@ func getPluginDirectory() (string, error) {
 
 	pluginDir := filepath.Join(dataDir, ".local", "share", "tinct", "plugins")
 
-	// Ensure directory exists
+	// Ensure directory exists.
 	if err := os.MkdirAll(pluginDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create plugin directory: %w", err)
 	}
@@ -580,12 +580,12 @@ func getPluginDirectory() (string, error) {
 	return pluginDir, nil
 }
 
-// isHTTPURL checks if a string is an HTTP(S) URL
+// isHTTPURL checks if a string is an HTTP(S) URL.
 func isHTTPURL(s string) bool {
 	return len(s) > 7 && (s[:7] == "http://" || s[:8] == "https://")
 }
 
-// formatPluginSource formats a plugin source for display
+// formatPluginSource formats a plugin source for display.
 func formatPluginSource(source *repository.PluginSource) string {
 	switch source.Type {
 	case "repository":
@@ -599,20 +599,20 @@ func formatPluginSource(source *repository.PluginSource) string {
 	}
 }
 
-// getDownloadForPlatform returns the appropriate download for the current platform
+// getDownloadForPlatform returns the appropriate download for the current platform.
 func getDownloadForPlatform(downloads map[string]*repository.Download) *repository.Download {
-	// Try platform-specific first
+	// Try platform-specific first.
 	platform := fmt.Sprintf("%s_%s", getOS(), getArch())
 	if dl, ok := downloads[platform]; ok {
 		return dl
 	}
 
-	// Try OS-specific
+	// Try OS-specific.
 	if dl, ok := downloads[getOS()]; ok {
 		return dl
 	}
 
-	// Fall back to "any"
+	// Fall back to "any".
 	if dl, ok := downloads["any"]; ok {
 		return dl
 	}
@@ -620,19 +620,19 @@ func getDownloadForPlatform(downloads map[string]*repository.Download) *reposito
 	return nil
 }
 
-// getOS returns the current OS
+// getOS returns the current OS.
 func getOS() string {
-	// Use runtime.GOOS equivalent
+	// Use runtime.GOOS equivalent.
 	return "linux" // Simplified for now
 }
 
-// getArch returns the current architecture
+// getArch returns the current architecture.
 func getArch() string {
-	// Use runtime.GOARCH equivalent
+	// Use runtime.GOARCH equivalent.
 	return "amd64" // Simplified for now
 }
 
-// printSyncSummary prints a summary of sync operations
+// printSyncSummary prints a summary of sync operations.
 func printSyncSummary(stats repository.SyncStats) {
 	fmt.Println("Summary:")
 	if stats.Installed > 0 {
@@ -649,7 +649,7 @@ func printSyncSummary(stats repository.SyncStats) {
 	}
 }
 
-// printVerifyResults prints verification results
+// printVerifyResults prints verification results.
 func printVerifyResults(results []repository.VerifyResult) {
 	validCount := 0
 	mismatchCount := 0

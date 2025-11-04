@@ -87,7 +87,7 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // Generate creates the theme file.
-// Returns map of filename -> content
+// Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -95,7 +95,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate theme file
+	// Generate theme file.
 	themeContent, err := p.generateTheme(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
@@ -108,7 +108,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("kitty", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -118,7 +118,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.conf.tmpl\n")
 	}
@@ -140,16 +140,16 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 // PreExecute checks if kitty is available before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if kitty executable exists on PATH
+	// Check if kitty executable exists on PATH.
 	_, err = exec.LookPath("kitty")
 	if err != nil {
 		return true, "kitty executable not found on $PATH", nil
 	}
 
-	// Check if themes directory exists, create if it doesn't
+	// Check if themes directory exists, create if it doesn't.
 	themesDir := p.DefaultOutputDir()
 	if _, err := os.Stat(themesDir); os.IsNotExist(err) {
-		// Try to create the themes directory
+		// Try to create the themes directory.
 		if err := os.MkdirAll(themesDir, 0755); err != nil {
 			return true, fmt.Sprintf("failed to create kitty themes directory: %s", themesDir), nil
 		}
@@ -164,12 +164,12 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 // PostExecute applies the theme to all running kitty instances.
 // Implements the output.PostExecuteHook interface.
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
-	// Apply the theme to all running kitty instances using kitten themes command
-	// This is the recommended way per https://sw.kovidgoyal.net/kitty/kittens/themes/
+	// Apply the theme to all running kitty instances using kitten themes command.
+	// This is the recommended way per https://sw.kovidgoyal.net/kitty/kittens/themes/.
 	cmd := exec.CommandContext(ctx, "kitten", "themes", "--reload-in=all", "tinct")
 	if err := cmd.Run(); err != nil {
-		// Don't treat this as a fatal error - theme file was still generated successfully
-		// This can fail if no kitty instances are running or kitten is not in PATH
+		// Don't treat this as a fatal error - theme file was still generated successfully.
+		// This can fail if no kitty instances are running or kitten is not in PATH.
 		if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Note: Could not auto-apply theme (no running kitty instances or kitten not in $PATH)\n")
 		}

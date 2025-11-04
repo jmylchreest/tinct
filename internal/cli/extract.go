@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	// Extract command flags
+	// Extract command flags.
 	extractInputPlugin string
 	extractFormat      string
 	extractOutput      string
 	extractShowPreview bool
 )
 
-// extractCmd represents the extract command
+// extractCmd represents the extract command.
 var extractCmd = &cobra.Command{
 	Use:   "extract",
 	Short: "Extract colour palette from various sources",
@@ -65,10 +65,10 @@ Note: All role names use camelCase (e.g., backgroundMuted, accent1)
 }
 
 func init() {
-	// Note: Plugin manager is initialised in root.go and flags are registered there
-	// Define extract-specific flags
+	// Note: Plugin manager is initialised in root.go and flags are registered there.
+	// Define extract-specific flags.
 
-	// Input plugin selection (required)
+	// Input plugin selection (required).
 	extractCmd.Flags().StringVarP(&extractInputPlugin, "input", "i", "image", "Input plugin (image, file, remote-css, remote-json)")
 	extractCmd.MarkFlagRequired("input")
 
@@ -82,7 +82,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Reload plugin manager config from lock file if available (overrides env)
+	// Reload plugin manager config from lock file if available (overrides env).
 	lock, _, err := loadPluginLock()
 	if err == nil && lock != nil {
 		config := manager.Config{
@@ -92,7 +92,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		sharedPluginManager.UpdateConfig(config)
 	}
 
-	// Get input plugin from shared manager
+	// Get input plugin from shared manager.
 	inputPlugin, ok := sharedPluginManager.GetInputPlugin(extractInputPlugin)
 	if !ok {
 		availablePlugins := make([]string, 0)
@@ -102,18 +102,18 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unknown input plugin: %s (available: %s)", extractInputPlugin, strings.Join(availablePlugins, ", "))
 	}
 
-	// Validate input plugin
+	// Validate input plugin.
 	if err := inputPlugin.Validate(); err != nil {
 		return fmt.Errorf("input plugin validation failed: %w", err)
 	}
 
-	// Generate palette using input plugin
+	// Generate palette using input plugin.
 	if verbose {
 		fmt.Fprintf(os.Stderr, " Input plugin: %s\n", inputPlugin.Name())
 		fmt.Fprintf(os.Stderr, "   %s\n", inputPlugin.Description())
 	}
 
-	// Prepare options for input plugin
+	// Prepare options for input plugin.
 	inputOpts := input.GenerateOptions{
 		Verbose:         verbose,
 		DryRun:          false,
@@ -121,7 +121,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		PluginArgs:      make(map[string]any),
 	}
 
-	// Generate raw palette from input plugin
+	// Generate raw palette from input plugin.
 	palette, err := inputPlugin.Generate(ctx, inputOpts)
 	if err != nil {
 		return fmt.Errorf("failed to extract colours: %w", err)
@@ -131,7 +131,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Successfully extracted %d colours\n", len(palette.Colors))
 	}
 
-	// Determine theme type from global flag
+	// Determine theme type from global flag.
 	themeType := colour.ThemeAuto
 	switch globalTheme {
 	case "dark":
@@ -139,19 +139,19 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	case "light":
 		themeType = colour.ThemeLight
 	case "auto":
-		// Check if plugin provides a theme hint (optional)
+		// Check if plugin provides a theme hint (optional).
 		if hinter, ok := inputPlugin.(input.ThemeHinter); ok {
 			hint := hinter.ThemeHint()
 			if verbose && hint != "" && hint != "auto" {
 				fmt.Fprintf(os.Stderr, "Plugin suggests theme: %s\n", hint)
 			}
-			// Plugin hints are advisory only - we let the categorizer decide
-			// based on weighted color distribution
+			// Plugin hints are advisory only - we let the categorizer decide.
+			// based on weighted color distribution.
 		}
 		themeType = colour.ThemeAuto
 	}
 
-	// Categorize the palette (auto-detection uses weighted color distribution)
+	// Categorize the palette (auto-detection uses weighted color distribution).
 	config := colour.DefaultCategorisationConfig()
 	config.ThemeType = themeType
 	categorised := colour.Categorise(palette, config)
@@ -160,11 +160,11 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Categorized palette with theme: %s\n", categorised.ThemeType.String())
 	}
 
-	// Format the output
+	// Format the output.
 	var output string
 	switch extractFormat {
 	case "palette":
-		// File input plugin compatible format (role=hex)
+		// File input plugin compatible format (role=hex).
 		output = formatPaletteFile(categorised)
 	case "hex":
 		output = formatHexFromCategorised(categorised, extractShowPreview)
@@ -182,7 +182,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unsupported format: %s (supported: palette, hex, rgb, json, categorised)", extractFormat)
 	}
 
-	// Write output to file or stdout
+	// Write output to file or stdout.
 	if extractOutput != "" {
 		if verbose {
 			fmt.Fprintf(os.Stderr, "Writing output to: %s\n", extractOutput)
@@ -200,7 +200,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// formatPaletteFile formats a categorised palette as a simple text file
+// formatPaletteFile formats a categorised palette as a simple text file.
 // with all role and position hints, compatible with the file input plugin.
 // Colors with role/position hints are listed first, then indexed colors (colourN).
 func formatPaletteFile(categorised *colour.CategorisedPalette) string {
@@ -209,14 +209,14 @@ func formatPaletteFile(categorised *colour.CategorisedPalette) string {
 	output += "# Format: role=hex or colourN=hex\n"
 	output += "# Use with: tinct generate --input file --file.path <this-file>\n\n"
 
-	// First pass: output all colors with role/position hints
+	// First pass: output all colors with role/position hints.
 	for _, color := range categorised.AllColours {
 		if color.Role != "" {
 			output += fmt.Sprintf("%s=%s\n", color.Role, color.Hex)
 		}
 	}
 
-	// Second pass: output indexed colors without role hints
+	// Second pass: output indexed colors without role hints.
 	for _, color := range categorised.AllColours {
 		if color.Role == "" {
 			output += fmt.Sprintf("colour%d=%s\n", color.Index, color.Hex)

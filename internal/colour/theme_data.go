@@ -1,16 +1,16 @@
 package colour
 
 // ThemeData is the standard data structure passed to all plugin templates.
-// It embeds PaletteHelper to provide all color access methods and includes
+// It embeds PaletteHelper to provide all color access methods and includes.
 // additional optional fields that plugins can populate.
 type ThemeData struct {
 	*PaletteHelper
 
-	// WallpaperPath is the path to the wallpaper file, populated by plugins
+	// WallpaperPath is the path to the wallpaper file, populated by plugins.
 	// that implement the WallpaperContextProvider interface
 	WallpaperPath string
 
-	// ThemeName is an optional theme name that can be set by plugins
+	// ThemeName is an optional theme name that can be set by plugins.
 	ThemeName string
 }
 

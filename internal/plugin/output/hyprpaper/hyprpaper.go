@@ -88,7 +88,7 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // Generate creates the configuration file.
-// Returns map of filename -> content
+// Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -96,7 +96,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate config file
+	// Generate config file.
 	configContent, err := p.generateConfig(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate config: %w", err)
@@ -109,7 +109,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateConfig creates the configuration file.
 func (p *Plugin) generateConfig(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("hyprpaper", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -119,7 +119,7 @@ func (p *Plugin) generateConfig(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read config template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.conf.tmpl\n")
 	}
@@ -140,7 +140,7 @@ func (p *Plugin) generateConfig(themeData *colour.ThemeData) ([]byte, error) {
 // PreExecute checks if the config directory exists.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if config directory exists (create it if not)
+	// Check if config directory exists (create it if not).
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -154,12 +154,12 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 // PostExecute applies the wallpaper using hyprpaper after files are written.
 // Implements the output.PostExecuteHook interface.
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
-	// If we have a wallpaper path, try to apply it
+	// If we have a wallpaper path, try to apply it.
 	if execCtx.WallpaperPath != "" {
-		// Check if hyprpaper is running before trying to set wallpaper
+		// Check if hyprpaper is running before trying to set wallpaper.
 		cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
 		if err := cmd.Run(); err != nil {
-			// hyprpaper not running - skip wallpaper application
+			// hyprpaper not running - skip wallpaper application.
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   Skipping wallpaper application (hyprpaper not running)\n")
 			}
@@ -170,7 +170,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   Failed to set wallpaper: %v\n", err)
 			}
-			// Don't return error - wallpaper setting is optional
+			// Don't return error - wallpaper setting is optional.
 			return nil
 		}
 	}
@@ -178,43 +178,43 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	return nil
 }
 
-// setWallpaper applies the wallpaper using hyprpaper
+// setWallpaper applies the wallpaper using hyprpaper.
 func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
-	// Make the path absolute
+	// Make the path absolute.
 	absPath, err := filepath.Abs(wallpaperPath)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
-	// Get current wallpaper assignments (monitors and/or wildcard)
+	// Get current wallpaper assignments (monitors and/or wildcard).
 	assignments, err := p.getActiveWallpaperAssignments(ctx)
 	if err != nil {
 		if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Warning: failed to get active assignments, using wildcard: %v\n", err)
 		}
-		// Fallback to wildcard if we can't get assignments
+		// Fallback to wildcard if we can't get assignments.
 		assignments = []string{""}
 	}
 
-	// If no assignments found, use wildcard
+	// If no assignments found, use wildcard.
 	if len(assignments) == 0 {
 		assignments = []string{""}
 	}
 
-	// First, unload all existing wallpapers to clear any cached images
+	// First, unload all existing wallpapers to clear any cached images.
 	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "unload", "all")
 	cmd.Run() // Ignore errors - wallpapers might not be loaded
 
-	// Preload the new wallpaper
+	// Preload the new wallpaper.
 	cmd = exec.CommandContext(ctx, "hyprctl", "hyprpaper", "preload", absPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to preload wallpaper: %w (output: %s)", err, string(output))
 	}
 
-	// Set the wallpaper using the same assignments (monitors or wildcard)
+	// Set the wallpaper using the same assignments (monitors or wildcard).
 	successCount := 0
 	for _, monitor := range assignments {
-		// #nosec G204 -- hyprctl is a system command with validated absolute path for wallpaper
+		// #nosec G204 -- hyprctl is a system command with validated absolute path for wallpaper.
 		cmd = exec.CommandContext(ctx, "hyprctl", "hyprpaper", "wallpaper", monitor+","+absPath)
 		if err := cmd.Run(); err != nil {
 			if p.verbose {
@@ -247,8 +247,8 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 	return nil
 }
 
-// getActiveWallpaperAssignments retrieves the current monitor assignments from listactive
-// Returns a list of monitor names (or empty string for wildcard)
+// getActiveWallpaperAssignments retrieves the current monitor assignments from listactive.
+// Returns a list of monitor names (or empty string for wildcard).
 func (p *Plugin) getActiveWallpaperAssignments(ctx context.Context) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listactive")
 	output, err := cmd.CombinedOutput()
@@ -256,25 +256,25 @@ func (p *Plugin) getActiveWallpaperAssignments(ctx context.Context) ([]string, e
 		return nil, fmt.Errorf("failed to query active wallpapers: %w", err)
 	}
 
-	// Parse the output line by line
-	// Format: "MONITOR = /path/to/wallpaper"
-	// Wildcard format: " = /path/to/wallpaper" (empty monitor name)
+	// Parse the output line by line.
+	// Format: "MONITOR = /path/to/wallpaper".
+	// Wildcard format: " = /path/to/wallpaper" (empty monitor name).
 	lines := strings.Split(string(output), "\n")
 	assignments := make([]string, 0, len(lines))
 
 	for _, line := range lines {
-		// Don't trim yet - we need to preserve leading space for wildcard detection
+		// Don't trim yet - we need to preserve leading space for wildcard detection.
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
 
-		// Split on " = " to get monitor name
+		// Split on " = " to get monitor name.
 		parts := strings.SplitN(line, " = ", 2)
 		if len(parts) != 2 {
 			continue
 		}
 
-		// Now trim the monitor name (will be empty string for wildcard " = /path")
+		// Now trim the monitor name (will be empty string for wildcard " = /path").
 		monitor := strings.TrimSpace(parts[0])
 		assignments = append(assignments, monitor)
 	}

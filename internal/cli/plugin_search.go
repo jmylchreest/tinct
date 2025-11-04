@@ -16,7 +16,7 @@ var (
 	searchRepo   string
 )
 
-// pluginSearchCmd searches for plugins across repositories
+// pluginSearchCmd searches for plugins across repositories.
 var pluginSearchCmd = &cobra.Command{
 	Use:   "search [query]",
 	Short: "Search for plugins in repositories",
@@ -33,7 +33,7 @@ Examples:
 	RunE: runPluginSearch,
 }
 
-// pluginBrowseCmd lists all available plugins
+// pluginBrowseCmd lists all available plugins.
 var pluginBrowseCmd = &cobra.Command{
 	Use:   "browse",
 	Short: "Browse all available plugins",
@@ -43,7 +43,7 @@ This shows a comprehensive list of all plugins with their details.`,
 	RunE: runPluginBrowse,
 }
 
-// pluginInfoCmd shows detailed plugin information
+// pluginInfoCmd shows detailed plugin information.
 var pluginInfoCmd = &cobra.Command{
 	Use:   "info <plugin-name>",
 	Short: "Show detailed plugin information",
@@ -55,18 +55,18 @@ This includes all available versions, download information, and metadata.`,
 }
 
 func init() {
-	// Add search commands to plugins
+	// Add search commands to plugins.
 	pluginsCmd.AddCommand(pluginSearchCmd)
 	pluginsCmd.AddCommand(pluginBrowseCmd)
 	pluginsCmd.AddCommand(pluginInfoCmd)
 
-	// Search flags
+	// Search flags.
 	pluginSearchCmd.Flags().StringVar(&searchType, "type", "", "Filter by plugin type (input/output)")
 	pluginSearchCmd.Flags().StringSliceVar(&searchTags, "tag", []string{}, "Filter by tags")
 	pluginSearchCmd.Flags().StringVar(&searchAuthor, "author", "", "Filter by author")
 	pluginSearchCmd.Flags().StringVar(&searchRepo, "repo", "", "Search only in specific repository")
 
-	// Browse flags
+	// Browse flags.
 	pluginBrowseCmd.Flags().StringVar(&searchType, "type", "", "Filter by plugin type (input/output)")
 	pluginBrowseCmd.Flags().StringVar(&searchRepo, "repo", "", "Browse only specific repository")
 }
@@ -77,7 +77,7 @@ func runPluginSearch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if any repositories are configured
+	// Check if any repositories are configured.
 	repos := mgr.ListRepositories()
 	if len(repos) == 0 {
 		fmt.Println("No repositories configured.")
@@ -86,7 +86,7 @@ func runPluginSearch(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build search filter
+	// Build search filter.
 	filter := repository.SearchFilter{
 		Type:       searchType,
 		Tags:       searchTags,
@@ -98,7 +98,7 @@ func runPluginSearch(cmd *cobra.Command, args []string) error {
 		filter.Query = args[0]
 	}
 
-	// Search for plugins
+	// Search for plugins.
 	results, err := mgr.Search(filter)
 	if err != nil {
 		return fmt.Errorf("search failed: %w", err)
@@ -109,7 +109,7 @@ func runPluginSearch(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Display results
+	// Display results.
 	fmt.Printf("Found %d plugin(s):\n\n", len(results))
 
 	table := NewTable([]string{"NAME", "TYPE", "VERSION", "REPO", "DESCRIPTION"})
@@ -148,7 +148,7 @@ func runPluginBrowse(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if any repositories are configured
+	// Check if any repositories are configured.
 	repos := mgr.ListRepositories()
 	if len(repos) == 0 {
 		fmt.Println("No repositories configured.")
@@ -157,13 +157,13 @@ func runPluginBrowse(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Build filter
+	// Build filter.
 	filter := repository.SearchFilter{
 		Type:       searchType,
 		Repository: searchRepo,
 	}
 
-	// Search for all plugins
+	// Search for all plugins.
 	results, err := mgr.Search(filter)
 	if err != nil {
 		return fmt.Errorf("failed to browse plugins: %w", err)
@@ -174,7 +174,7 @@ func runPluginBrowse(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Group by repository
+	// Group by repository.
 	byRepo := make(map[string][]*repository.SearchResult)
 	for _, result := range results {
 		byRepo[result.Repository] = append(byRepo[result.Repository], result)
@@ -217,7 +217,7 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Find plugin
+	// Find plugin.
 	result, err := mgr.FindPlugin(pluginName, "")
 	if err != nil {
 		return fmt.Errorf("plugin not found: %w", err)
@@ -225,7 +225,7 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 
 	plugin := result.Plugin
 
-	// Display plugin information
+	// Display plugin information.
 	fmt.Printf("Plugin: %s\n", plugin.Name)
 	fmt.Printf("Type: %s\n", plugin.Type)
 	fmt.Printf("Description: %s\n", plugin.Description)
@@ -247,7 +247,7 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Source: %s\n", plugin.Repository)
 	}
 
-	// Display versions
+	// Display versions.
 	if len(plugin.Versions) > 0 {
 		fmt.Printf("\nAvailable Versions:\n")
 
@@ -269,7 +269,7 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 
 			fmt.Println()
 
-			// Show platforms
+			// Show platforms.
 			if len(v.Downloads) > 0 {
 				platforms := make([]string, 0, len(v.Downloads))
 				for platform := range v.Downloads {

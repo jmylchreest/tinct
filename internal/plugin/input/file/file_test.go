@@ -14,7 +14,7 @@ func TestParseColourRole(t *testing.T) {
 		want    colour.ColourRole
 		wantErr bool
 	}{
-		// British spelling (primary)
+		// British spelling (primary).
 		{
 			name:  "background - British",
 			input: "background",
@@ -36,7 +36,7 @@ func TestParseColourRole(t *testing.T) {
 			want:  colour.RoleForegroundMuted,
 		},
 
-		// American spelling (aliases - note: these currently work because
+		// American spelling (aliases - note: these currently work because.
 		// the role names don't contain "colour/color", but we test the
 		// normalization logic)
 		{
@@ -55,7 +55,7 @@ func TestParseColourRole(t *testing.T) {
 			want:  colour.RoleBackgroundMuted,
 		},
 
-		// Case variations
+		// Case variations.
 		{
 			name:  "BACKGROUND - uppercase",
 			input: "BACKGROUND",
@@ -67,7 +67,7 @@ func TestParseColourRole(t *testing.T) {
 			want:  colour.RoleForegroundMuted,
 		},
 
-		// Accent roles
+		// Accent roles.
 		{
 			name:  "accent1",
 			input: "accent1",
@@ -89,7 +89,7 @@ func TestParseColourRole(t *testing.T) {
 			want:  colour.RoleAccent4,
 		},
 
-		// Semantic roles
+		// Semantic roles.
 		{
 			name:  "danger",
 			input: "danger",
@@ -116,7 +116,7 @@ func TestParseColourRole(t *testing.T) {
 			want:  colour.RoleNotification,
 		},
 
-		// Error cases
+		// Error cases.
 		{
 			name:    "invalid role",
 			input:   "invalidrole",
@@ -157,7 +157,7 @@ func TestParseColourRole(t *testing.T) {
 }
 
 func TestParseColourRoleNormalisation(t *testing.T) {
-	// Test that normalisation works correctly by testing equivalent inputs
+	// Test that normalisation works correctly by testing equivalent inputs.
 	equivalentInputs := []struct {
 		name   string
 		inputs []string

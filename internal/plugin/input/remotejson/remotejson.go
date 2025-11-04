@@ -56,7 +56,7 @@ func (p *Plugin) Validate() error {
 		return fmt.Errorf("--remote-json.url is required")
 	}
 
-	// Basic URL validation
+	// Basic URL validation.
 	if !strings.HasPrefix(p.url, "http://") && !strings.HasPrefix(p.url, "https://") {
 		return fmt.Errorf("URL must start with http:// or https://")
 	}
@@ -70,7 +70,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		fmt.Printf("→ Fetching JSON palette from: %s\n", p.url)
 	}
 
-	// Fetch content
+	// Fetch content.
 	content, err := p.fetch(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch palette: %w", err)
@@ -80,7 +80,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		fmt.Printf("   Size: %d bytes\n", len(content))
 	}
 
-	// Parse JSON
+	// Parse JSON.
 	colors, err := p.parseJSON(content, opts.Verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON: %w", err)
@@ -90,7 +90,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		fmt.Printf("   Extracted %d colors\n", len(colors))
 	}
 
-	// Convert to palette
+	// Convert to palette.
 	palette, err := p.buildPalette(colors, opts.Verbose)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (p *Plugin) parseJSON(content []byte, verbose bool) (map[string]string, err
 		return nil, err
 	}
 
-	// If query is provided, navigate to that path
+	// If query is provided, navigate to that path.
 	if p.query != "" {
 		if verbose {
 			fmt.Printf("   Applying query: %s\n", p.query)
@@ -125,7 +125,7 @@ func (p *Plugin) parseJSON(content []byte, verbose bool) (map[string]string, err
 		}
 	}
 
-	// Extract colors from the data
+	// Extract colors from the data.
 	colors := make(map[string]string)
 	p.extractColors(data, "", colors)
 
@@ -133,9 +133,9 @@ func (p *Plugin) parseJSON(content []byte, verbose bool) (map[string]string, err
 }
 
 // applyQuery applies a simplified JSONPath-like query to the data.
-// Supports: $.path.to.field or just path.to.field
+// Supports: $.path.to.field or just path.to.field.
 func (p *Plugin) applyQuery(data any, query string) (any, error) {
-	// Remove leading $. if present
+	// Remove leading $. if present.
 	query = strings.TrimPrefix(query, "$.")
 	query = strings.TrimPrefix(query, "$")
 
@@ -143,7 +143,7 @@ func (p *Plugin) applyQuery(data any, query string) (any, error) {
 		return data, nil
 	}
 
-	// Split path into segments
+	// Split path into segments.
 	segments := strings.Split(query, ".")
 
 	current := data
@@ -172,10 +172,10 @@ func (p *Plugin) applyQuery(data any, query string) (any, error) {
 func (p *Plugin) extractColors(data any, prefix string, colors map[string]string) {
 	switch v := data.(type) {
 	case map[string]any:
-		// Check if this object looks like a color object (has hex/rgb properties)
+		// Check if this object looks like a color object (has hex/rgb properties).
 		if hexVal, hasHex := v["hex"].(string); hasHex && isColor(hexVal) {
-			// This is a color object (e.g., Catppuccin format: {"hex": "#1e1e2e", "rgb": {...}})
-			// Use the prefix as the key
+			// This is a color object (e.g., Catppuccin format: {"hex": "#1e1e2e", "rgb": {...}}).
+			// Use the prefix as the key.
 			if prefix != "" {
 				key := prefix
 				if idx := strings.LastIndex(prefix, "."); idx >= 0 {
@@ -186,23 +186,23 @@ func (p *Plugin) extractColors(data any, prefix string, colors map[string]string
 			return
 		}
 
-		// Not a color object, traverse its properties
+		// Not a color object, traverse its properties.
 		for key, value := range v {
 			fullKey := key
 			if prefix != "" {
 				fullKey = prefix + "." + key
 			}
 
-			// Check if this is a color value (string that looks like a hex color)
+			// Check if this is a color value (string that looks like a hex color).
 			if strVal, ok := value.(string); ok {
 				if isColor(strVal) {
 					colors[key] = strVal
 				} else {
-					// Might be nested, recurse
+					// Might be nested, recurse.
 					p.extractColors(value, fullKey, colors)
 				}
 			} else {
-				// Recurse into nested structures
+				// Recurse into nested structures.
 				p.extractColors(value, fullKey, colors)
 			}
 		}
@@ -212,7 +212,7 @@ func (p *Plugin) extractColors(data any, prefix string, colors map[string]string
 		}
 	case string:
 		if isColor(v) && prefix != "" {
-			// Use the last segment of the path as the key
+			// Use the last segment of the path as the key.
 			key := prefix
 			if idx := strings.LastIndex(prefix, "."); idx >= 0 {
 				key = prefix[idx+1:]
@@ -226,18 +226,18 @@ func (p *Plugin) extractColors(data any, prefix string, colors map[string]string
 func isColor(s string) bool {
 	s = strings.TrimSpace(s)
 
-	// Hex color: #RGB or #RRGGBB
+	// Hex color: #RGB or #RRGGBB.
 	if strings.HasPrefix(s, "#") {
 		hex := s[1:]
 		return len(hex) == 3 || len(hex) == 6
 	}
 
-	// RGB/RGBA format: rgb(r, g, b) or rgba(r, g, b, a)
+	// RGB/RGBA format: rgb(r, g, b) or rgba(r, g, b, a).
 	if strings.HasPrefix(s, "rgb(") || strings.HasPrefix(s, "rgba(") {
 		return true
 	}
 
-	// HSL/HSLA format: hsl(h, s, l) or hsla(h, s, l, a)
+	// HSL/HSLA format: hsl(h, s, l) or hsla(h, s, l, a).
 	if strings.HasPrefix(s, "hsl(") || strings.HasPrefix(s, "hsla(") {
 		return true
 	}
@@ -254,7 +254,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 	var paletteColors []colour.RGB
 	var roleHints map[colour.ColourRole]int
 
-	// First, add ALL colors to the palette
+	// First, add ALL colors to the palette.
 	colorNameToIndex := make(map[string]int)
 	for name, hex := range colors {
 		rgb, err := parseHex(hex)
@@ -268,7 +268,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 		paletteColors = append(paletteColors, rgb)
 	}
 
-	// Then, if mapping is provided, create role hints for the mapped colors
+	// Then, if mapping is provided, create role hints for the mapped colors.
 	if len(p.mapping) > 0 {
 		if verbose {
 			fmt.Printf("→ Applying color mappings:\n")
@@ -278,7 +278,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 
 		for sourceKey, targetRole := range p.mapping {
 			if index, ok := colorNameToIndex[sourceKey]; ok {
-				// Parse the target role
+				// Parse the target role.
 				role, err := parseColourRole(targetRole)
 				if err != nil {
 					return nil, fmt.Errorf("invalid role '%s': %w", targetRole, err)
@@ -302,13 +302,13 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 		return nil, fmt.Errorf("no valid colors extracted")
 	}
 
-	// Convert RGB to color.Color
+	// Convert RGB to color.Color.
 	colorColors := make([]color.Color, len(paletteColors))
 	for i, rgb := range paletteColors {
 		colorColors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
 	}
 
-	// Create palette with role hints if mapping was used
+	// Create palette with role hints if mapping was used.
 	if len(roleHints) > 0 {
 		return colour.NewPaletteWithRoleHints(colorColors, roleHints), nil
 	}
@@ -317,12 +317,12 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 }
 
 // parseHex parses a hex color string into an RGB struct.
-// Supports formats: #RRGGBB, RRGGBB, #RGB, RGB
+// Supports formats: #RRGGBB, RRGGBB, #RGB, RGB.
 func parseHex(hex string) (colour.RGB, error) {
 	hex = strings.TrimSpace(hex)
 	hex = strings.TrimPrefix(hex, "#")
 
-	// Expand shorthand format (RGB -> RRGGBB)
+	// Expand shorthand format (RGB -> RRGGBB).
 	if len(hex) == 3 {
 		hex = string([]byte{hex[0], hex[0], hex[1], hex[1], hex[2], hex[2]})
 	}

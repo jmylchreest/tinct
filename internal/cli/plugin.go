@@ -23,54 +23,54 @@ import (
 )
 
 const (
-	// PluginLockFile is the name of the plugin lock file
+	// PluginLockFile is the name of the plugin lock file.
 	PluginLockFile = ".tinct-plugins.json"
 )
 
-// PluginLock represents the plugin lock file structure
+// PluginLock represents the plugin lock file structure.
 type PluginLock struct {
-	// Version of the lock file format
+	// Version of the lock file format.
 	Version string `json:"version,omitempty"`
 
-	// EnabledPlugins is a list of explicitly enabled plugins
+	// EnabledPlugins is a list of explicitly enabled plugins.
 	EnabledPlugins []string `json:"enabled_plugins,omitempty"`
 
-	// DisabledPlugins is a list of explicitly disabled plugins
+	// DisabledPlugins is a list of explicitly disabled plugins.
 	DisabledPlugins []string `json:"disabled_plugins,omitempty"`
 
-	// ExternalPlugins maps plugin names to their metadata
+	// ExternalPlugins maps plugin names to their metadata.
 	ExternalPlugins map[string]ExternalPluginMeta `json:"external_plugins,omitempty"`
 }
 
-// ExternalPluginMeta contains metadata about an external plugin
+// ExternalPluginMeta contains metadata about an external plugin.
 type ExternalPluginMeta struct {
-	// Name is the plugin's actual name (from --plugin-info)
+	// Name is the plugin's actual name (from --plugin-info).
 	Name string `json:"name"`
 
-	// Path is the absolute path to the plugin executable
+	// Path is the absolute path to the plugin executable.
 	Path string `json:"path"`
 
-	// Type is the plugin type (input or output)
+	// Type is the plugin type (input or output).
 	Type string `json:"type"`
 
-	// Version is the plugin version if available
+	// Version is the plugin version if available.
 	Version string `json:"version,omitempty"`
 
-	// Description is the plugin description if available
+	// Description is the plugin description if available.
 	Description string `json:"description,omitempty"`
 
-	// Source contains structured information about where the plugin came from
+	// Source contains structured information about where the plugin came from.
 	Source *repository.PluginSource `json:"source,omitempty"`
 
-	// SourceLegacy is the old string-based source field for backward compatibility
+	// SourceLegacy is the old string-based source field for backward compatibility.
 	SourceLegacy string `json:"source_legacy,omitempty"`
 
-	// InstalledAt is the timestamp when the plugin was installed
+	// InstalledAt is the timestamp when the plugin was installed.
 	InstalledAt string `json:"installed_at,omitempty"`
 }
 
 var (
-	// Plugin command flags
+	// Plugin command flags.
 	pluginLockPath string
 	pluginType     string
 	pluginForce    bool
@@ -79,7 +79,7 @@ var (
 	pluginYes      bool
 )
 
-// pluginsCmd represents the plugins command
+// pluginsCmd represents the plugins command.
 var pluginsCmd = &cobra.Command{
 	Use:   "plugins",
 	Short: "Manage plugins",
@@ -96,7 +96,7 @@ When TINCT_ENABLED_PLUGINS is set, only those plugins are enabled (whitelist mod
 When TINCT_DISABLED_PLUGINS is set, those plugins are disabled (blacklist mode).`,
 }
 
-// pluginListCmd lists all available plugins
+// pluginListCmd lists all available plugins.
 var pluginListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all available plugins",
@@ -106,7 +106,7 @@ Shows both built-in and external plugins with their type and description.`,
 	RunE: runPluginList,
 }
 
-// pluginEnableCmd enables a plugin
+// pluginEnableCmd enables a plugin.
 var pluginEnableCmd = &cobra.Command{
 	Use:   "enable <plugin-name>",
 	Short: "Enable a plugin",
@@ -123,7 +123,7 @@ Examples:
 	RunE: runPluginEnable,
 }
 
-// pluginDisableCmd disables a plugin
+// pluginDisableCmd disables a plugin.
 var pluginDisableCmd = &cobra.Command{
 	Use:   "disable <plugin-name>",
 	Short: "Disable a plugin",
@@ -140,7 +140,7 @@ Examples:
 	RunE: runPluginDisable,
 }
 
-// pluginClearCmd clears plugin configuration
+// pluginClearCmd clears plugin configuration.
 var pluginClearCmd = &cobra.Command{
 	Use:   "clear [plugin-name]",
 	Short: "Clear plugin configuration",
@@ -157,7 +157,7 @@ Examples:
 	RunE: runPluginClear,
 }
 
-// pluginAddCmd adds an external plugin
+// pluginAddCmd adds an external plugin.
 var pluginAddCmd = &cobra.Command{
 	Use:   "add <source>",
 	Short: "Add an external plugin",
@@ -176,7 +176,7 @@ Examples:
 	RunE: runPluginAdd,
 }
 
-// pluginDeleteCmd removes an external plugin
+// pluginDeleteCmd removes an external plugin.
 var pluginDeleteCmd = &cobra.Command{
 	Use:   "delete <plugin-name>",
 	Short: "Delete an external plugin",
@@ -191,7 +191,7 @@ Examples:
 	RunE: runPluginDelete,
 }
 
-// pluginUpdateCmd updates external plugins from lock file
+// pluginUpdateCmd updates external plugins from lock file.
 var pluginUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update external plugins from lock file sources",
@@ -208,17 +208,17 @@ Examples:
 }
 
 func init() {
-	// Add plugins command flags
+	// Add plugins command flags.
 	pluginsCmd.PersistentFlags().StringVar(&pluginLockPath, "lock-file", "", "path to plugin lock file (default: .tinct-plugins.json in current or home directory)")
 
-	// Add type flag to relevant commands (no shorthand to avoid conflict with global -t theme flag)
+	// Add type flag to relevant commands (no shorthand to avoid conflict with global -t theme flag).
 	pluginEnableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
 	pluginDisableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
 	pluginAddCmd.Flags().StringVar(&pluginType, "type", "output", "plugin type (input or output)")
 	pluginAddCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force overwrite if plugin already exists")
 	pluginDeleteCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force deletion without confirmation")
 
-	// Add subcommands
+	// Add subcommands.
 	pluginsCmd.AddCommand(pluginListCmd)
 	pluginsCmd.AddCommand(pluginEnableCmd)
 	pluginsCmd.AddCommand(pluginDisableCmd)
@@ -227,16 +227,16 @@ func init() {
 	pluginsCmd.AddCommand(pluginDeleteCmd)
 	pluginsCmd.AddCommand(pluginUpdateCmd)
 
-	// Add flags
+	// Add flags.
 	pluginEnableCmd.Flags().BoolVarP(&pluginClear, "clear", "c", false, "Only remove from disabled list (don't add to enabled)")
 	pluginDisableCmd.Flags().BoolVarP(&pluginClear, "clear", "c", false, "Only remove from enabled list (don't add to disabled)")
 }
 
-// runPluginList lists all available plugins
+// runPluginList lists all available plugins.
 func runPluginList(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Load plugin lock and create manager
+	// Load plugin lock and create manager.
 	lock, lockPath, err := loadPluginLock()
 	if err != nil && verbose {
 		fmt.Fprintf(os.Stderr, "Note: %v\n", err)
@@ -248,7 +248,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n\n", lockPath)
 	}
 
-	// Build list of all plugins with type prefix
+	// Build list of all plugins with type prefix.
 	type pluginInfo struct {
 		fullName    string
 		status      string
@@ -260,7 +260,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	var allPlugins []pluginInfo
 	seenPlugins := make(map[string]bool)
 
-	// Add input plugins
+	// Add input plugins.
 	inputPlugins := mgr.AllInputPlugins()
 	for name, plugin := range inputPlugins {
 		status := "disabled"
@@ -268,7 +268,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			status = "enabled"
 		}
 		fullName := fmt.Sprintf("input:%s", name)
-		// Check if this is an external plugin by comparing names
+		// Check if this is an external plugin by comparing names.
 		isExternal := false
 		if lock != nil && lock.ExternalPlugins != nil {
 			for _, meta := range lock.ExternalPlugins {
@@ -278,7 +278,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 				}
 			}
 		}
-		// Get source for external plugins
+		// Get source for external plugins.
 		pluginSource := ""
 		if isExternal && lock != nil && lock.ExternalPlugins != nil {
 			for _, meta := range lock.ExternalPlugins {
@@ -303,7 +303,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		seenPlugins[fullName] = true
 	}
 
-	// Add output plugins
+	// Add output plugins.
 	outputPlugins := mgr.AllOutputPlugins()
 	for name, plugin := range outputPlugins {
 		status := "disabled"
@@ -311,7 +311,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			status = "enabled"
 		}
 		fullName := fmt.Sprintf("output:%s", name)
-		// Check if this is an external plugin by comparing names
+		// Check if this is an external plugin by comparing names.
 		isExternal := false
 		if lock != nil && lock.ExternalPlugins != nil {
 			for _, meta := range lock.ExternalPlugins {
@@ -321,7 +321,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 				}
 			}
 		}
-		// Get source for external plugins
+		// Get source for external plugins.
 		pluginSource := ""
 		if isExternal && lock != nil && lock.ExternalPlugins != nil {
 			for _, meta := range lock.ExternalPlugins {
@@ -346,10 +346,10 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		seenPlugins[fullName] = true
 	}
 
-	// Add external plugins that aren't in the manager
+	// Add external plugins that aren't in the manager.
 	if lock != nil && lock.ExternalPlugins != nil {
 		for lockKey, meta := range lock.ExternalPlugins {
-			// Use the plugin's actual name, not the lock file key
+			// Use the plugin's actual name, not the lock file key.
 			pluginName := meta.Name
 			if pluginName == "" {
 				pluginName = lockKey // Fallback to lock key if name is missing
@@ -360,7 +360,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 				continue // Already added from manager
 			}
 
-			// Determine status for external-only plugins
+			// Determine status for external-only plugins.
 			status := "enabled"
 			for _, disabled := range lock.DisabledPlugins {
 				if disabled == pluginName || disabled == fullName || disabled == lockKey || disabled == fmt.Sprintf("%s:%s", meta.Type, lockKey) {
@@ -369,7 +369,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 				}
 			}
 
-			// Use plugin's description if available, otherwise show source
+			// Use plugin's description if available, otherwise show source.
 			description := meta.Description
 			if description == "" {
 				sourceStr := ""
@@ -391,12 +391,12 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Sort by full name
+	// Sort by full name.
 	sort.Slice(allPlugins, func(i, j int) bool {
 		return allPlugins[i].fullName < allPlugins[j].fullName
 	})
 
-	// Display plugins
+	// Display plugins.
 	fmt.Println("Plugins:")
 	fmt.Println(strings.Repeat("-", 90))
 	fmt.Printf("%-30s %-10s %s\n", "PLUGIN", "STATUS", "DESCRIPTION")
@@ -408,13 +408,13 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			marker = " *"
 		}
 		fmt.Printf("%-30s %-10s %s\n", p.fullName+marker, p.status, p.description)
-		// Show source for external plugins
+		// Show source for external plugins.
 		if p.isExternal && p.source != "" {
 			fmt.Printf("%-30s %-10s   src: %s\n", "", "", p.source)
 		}
 	}
 
-	// Add legend if there are external plugins
+	// Add legend if there are external plugins.
 	hasExternal := false
 	for _, p := range allPlugins {
 		if p.isExternal {
@@ -430,12 +430,12 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runPluginEnable enables a plugin
+// runPluginEnable enables a plugin.
 func runPluginEnable(cmd *cobra.Command, args []string) error {
 	pluginName := args[0]
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Load or create plugin lock
+	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
@@ -445,15 +445,15 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
 	}
 
-	// Handle "all" pseudo-plugin
+	// Handle "all" pseudo-plugin.
 	if pluginName == "all" {
 		if pluginClear {
-			// Just remove "all" from disabled list
+			// Just remove "all" from disabled list.
 			lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all", "all")
 		} else {
-			// Clear disabled list
+			// Clear disabled list.
 			lock.DisabledPlugins = []string{}
-			// Add "all" to enabled list
+			// Add "all" to enabled list.
 			lock.EnabledPlugins = []string{"all"}
 		}
 
@@ -469,29 +469,29 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Parse plugin name
+	// Parse plugin name.
 	parsedType, parsedName := parsePluginName(pluginName)
 	if pluginType != "" {
 		parsedType = pluginType
 	}
 
-	// Format full plugin name
+	// Format full plugin name.
 	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
 
 	if pluginClear {
-		// Just remove from disabled list
+		// Just remove from disabled list.
 		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
 	} else {
-		// Remove from disabled list
+		// Remove from disabled list.
 		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
 
-		// Add to enabled list if not already there
+		// Add to enabled list if not already there.
 		if !containsPlugin(lock.EnabledPlugins, parsedName, fullName) {
 			lock.EnabledPlugins = append(lock.EnabledPlugins, fullName)
 		}
 	}
 
-	// Save lock file
+	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
@@ -504,12 +504,12 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runPluginDisable disables a plugin
+// runPluginDisable disables a plugin.
 func runPluginDisable(cmd *cobra.Command, args []string) error {
 	pluginName := args[0]
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Load or create plugin lock
+	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
@@ -519,15 +519,15 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
 	}
 
-	// Handle "all" pseudo-plugin
+	// Handle "all" pseudo-plugin.
 	if pluginName == "all" {
 		if pluginClear {
-			// Just remove "all" from enabled list
+			// Just remove "all" from enabled list.
 			lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all", "all")
 		} else {
-			// Clear enabled list
+			// Clear enabled list.
 			lock.EnabledPlugins = []string{}
-			// Add "all" to disabled list
+			// Add "all" to disabled list.
 			lock.DisabledPlugins = []string{"all"}
 		}
 
@@ -543,29 +543,29 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Parse plugin name
+	// Parse plugin name.
 	parsedType, parsedName := parsePluginName(pluginName)
 	if pluginType != "" {
 		parsedType = pluginType
 	}
 
-	// Format full plugin name
+	// Format full plugin name.
 	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
 
 	if pluginClear {
-		// Just remove from enabled list
+		// Just remove from enabled list.
 		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
 	} else {
-		// Remove from enabled list
+		// Remove from enabled list.
 		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
 
-		// Add to disabled list if not already there
+		// Add to disabled list if not already there.
 		if !containsPlugin(lock.DisabledPlugins, parsedName, fullName) {
 			lock.DisabledPlugins = append(lock.DisabledPlugins, fullName)
 		}
 	}
 
-	// Save lock file
+	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
@@ -578,11 +578,11 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runPluginClear clears plugin configuration
+// runPluginClear clears plugin configuration.
 func runPluginClear(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Load or create plugin lock
+	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
@@ -592,7 +592,7 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
 	}
 
-	// If no plugin name provided, clear all
+	// If no plugin name provided, clear all.
 	if len(args) == 0 {
 		lock.EnabledPlugins = []string{}
 		lock.DisabledPlugins = []string{}
@@ -607,7 +607,7 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 
 	pluginName := args[0]
 
-	// Handle "all" pseudo-plugin
+	// Handle "all" pseudo-plugin.
 	if pluginName == "all" {
 		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all", "all")
 		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all", "all")
@@ -620,20 +620,20 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Parse plugin name
+	// Parse plugin name.
 	parsedType, parsedName := parsePluginName(pluginName)
 	if pluginType != "" {
 		parsedType = pluginType
 	}
 
-	// Format full plugin name
+	// Format full plugin name.
 	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
 
-	// Remove from both lists
+	// Remove from both lists.
 	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
 	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
 
-	// Save lock file
+	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
@@ -642,12 +642,12 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runPluginAdd adds an external plugin
+// runPluginAdd adds an external plugin.
 func runPluginAdd(cmd *cobra.Command, args []string) error {
 	source := args[0]
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Load or create plugin lock
+	// Load or create plugin lock.
 	lock, lockPath, err := loadOrCreatePluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
@@ -657,12 +657,12 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
 	}
 
-	// Initialize external plugins map if needed
+	// Initialize external plugins map if needed.
 	if lock.ExternalPlugins == nil {
 		lock.ExternalPlugins = make(map[string]ExternalPluginMeta)
 	}
 
-	// Get plugin directory
+	// Get plugin directory.
 	pluginDir, err := getPluginDir()
 	if err != nil {
 		return fmt.Errorf("failed to get plugin directory: %w", err)
@@ -672,18 +672,18 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Plugin directory: %s\n", pluginDir)
 	}
 
-	// Ensure plugin directory exists
+	// Ensure plugin directory exists.
 	if err := os.MkdirAll(pluginDir, 0755); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
-	// Determine plugin path based on source type
+	// Determine plugin path based on source type.
 	pluginPath, err := installPluginFromSource(source, "", pluginDir, verbose)
 	if err != nil {
 		return err
 	}
 
-	// Query plugin for its actual name and metadata
+	// Query plugin for its actual name and metadata.
 	pluginName, pluginDescription, pluginType, version := queryPluginMetadata(pluginPath)
 	if pluginName == "" {
 		return fmt.Errorf("failed to query plugin name from --plugin-info")
@@ -692,12 +692,12 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 		pluginType = "output" // default to output if not specified
 	}
 
-	// Check if plugin already exists
+	// Check if plugin already exists.
 	if _, exists := lock.ExternalPlugins[pluginName]; exists && !pluginForce {
 		return fmt.Errorf("plugin '%s' already exists (use --force to overwrite)", pluginName)
 	}
 
-	// Add to lock file
+	// Add to lock file.
 	lock.ExternalPlugins[pluginName] = ExternalPluginMeta{
 		Name:         pluginName,
 		Path:         pluginPath,
@@ -707,7 +707,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 		Description:  pluginDescription,
 	}
 
-	// Save lock file
+	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
@@ -724,12 +724,12 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runPluginDelete removes an external plugin
+// runPluginDelete removes an external plugin.
 func runPluginDelete(cmd *cobra.Command, args []string) error {
 	pluginName := args[0]
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Load plugin lock
+	// Load plugin lock.
 	lock, lockPath, err := loadPluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
@@ -739,13 +739,13 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no external plugins found")
 	}
 
-	// Check if plugin exists
+	// Check if plugin exists.
 	meta, exists := lock.ExternalPlugins[pluginName]
 	if !exists {
 		return fmt.Errorf("plugin '%s' not found", pluginName)
 	}
 
-	// Confirm deletion if not forced
+	// Confirm deletion if not forced.
 	if !pluginForce {
 		fmt.Printf("Are you sure you want to delete plugin '%s'? (y/N): ", pluginName)
 		var response string
@@ -756,7 +756,7 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Delete plugin file
+	// Delete plugin file.
 	if err := os.Remove(meta.Path); err != nil && !os.IsNotExist(err) {
 		if verbose {
 			fmt.Fprintf(os.Stderr, "Warning: failed to delete plugin file: %v\n", err)
@@ -765,15 +765,15 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Deleted plugin file: %s\n", meta.Path)
 	}
 
-	// Remove from lock file
+	// Remove from lock file.
 	delete(lock.ExternalPlugins, pluginName)
 
-	// Remove from enabled/disabled lists
+	// Remove from enabled/disabled lists.
 	fullName := fmt.Sprintf("%s:%s", meta.Type, pluginName)
 	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, pluginName, fullName)
 	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, pluginName, fullName)
 
-	// Save lock file
+	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
@@ -782,11 +782,11 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// runPluginUpdate updates external plugins from lock file sources
+// runPluginUpdate updates external plugins from lock file sources.
 func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
-	// Load plugin lock
+	// Load plugin lock.
 	lock, lockPath, err := loadPluginLock()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
@@ -801,7 +801,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
 	}
 
-	// Get plugin directory
+	// Get plugin directory.
 	pluginDir, err := getPluginDir()
 	if err != nil {
 		return fmt.Errorf("failed to get plugin directory: %w", err)
@@ -811,12 +811,12 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Plugin directory: %s\n\n", pluginDir)
 	}
 
-	// Ensure plugin directory exists
+	// Ensure plugin directory exists.
 	if err := os.MkdirAll(pluginDir, 0755); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
-	// Update each external plugin
+	// Update each external plugin.
 	successCount := 0
 	failCount := 0
 
@@ -836,7 +836,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("Updating plugin '%s' from %s...\n", name, sourceStr)
 
-		// Install plugin from source
+		// Install plugin from source.
 		pluginPath, err := installPluginFromSource(sourceStr, name, pluginDir, verbose)
 		if err != nil {
 			fmt.Printf("   %v\n", err)
@@ -844,7 +844,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Query plugin for updated metadata
+		// Query plugin for updated metadata.
 		actualName, pluginDescription, pluginType, version := queryPluginMetadata(pluginPath)
 		if actualName == "" {
 			actualName = meta.Name // Keep existing name if query fails
@@ -856,7 +856,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			pluginType = meta.Type // Keep existing type if query fails
 		}
 
-		// Update metadata in lock file
+		// Update metadata in lock file.
 		lock.ExternalPlugins[name] = ExternalPluginMeta{
 			Name:        actualName,
 			Path:        pluginPath,
@@ -870,14 +870,14 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		successCount++
 	}
 
-	// Save updated lock file
+	// Save updated lock file.
 	if successCount > 0 {
 		if err := savePluginLock(lockPath, lock); err != nil {
 			return fmt.Errorf("failed to save plugin lock: %w", err)
 		}
 	}
 
-	// Summary
+	// Summary.
 	fmt.Printf("\nUpdate complete: %d succeeded, %d failed\n", successCount, failCount)
 
 	if failCount > 0 {
@@ -887,14 +887,14 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// loadPluginLock loads the plugin lock file
+// loadPluginLock loads the plugin lock file.
 func loadPluginLock() (*PluginLock, string, error) {
 	lockPath := pluginLockPath
 	if lockPath == "" {
-		// Try current directory first
+		// Try current directory first.
 		lockPath = PluginLockFile
 		if _, err := os.Stat(lockPath); os.IsNotExist(err) {
-			// Try home directory
+			// Try home directory.
 			if home, err := os.UserHomeDir(); err == nil {
 				homeLockPath := filepath.Join(home, PluginLockFile)
 				if _, err := os.Stat(homeLockPath); err == nil {
@@ -919,14 +919,14 @@ func loadPluginLock() (*PluginLock, string, error) {
 	return &lock, lockPath, nil
 }
 
-// loadOrCreatePluginLock loads or creates a plugin lock file
+// loadOrCreatePluginLock loads or creates a plugin lock file.
 func loadOrCreatePluginLock() (*PluginLock, string, error) {
 	lock, lockPath, err := loadPluginLock()
 	if err == nil {
 		return lock, lockPath, nil
 	}
 
-	// Create new lock file
+	// Create new lock file.
 	lockPath = pluginLockPath
 	if lockPath == "" {
 		lockPath = PluginLockFile
@@ -941,7 +941,7 @@ func loadOrCreatePluginLock() (*PluginLock, string, error) {
 	return lock, lockPath, nil
 }
 
-// savePluginLock saves the plugin lock file
+// savePluginLock saves the plugin lock file.
 func savePluginLock(path string, lock *PluginLock) error {
 	data, err := json.MarshalIndent(lock, "", "  ")
 	if err != nil {
@@ -955,7 +955,7 @@ func savePluginLock(path string, lock *PluginLock) error {
 	return nil
 }
 
-// createManagerFromLock creates a plugin manager from a lock file
+// createManagerFromLock creates a plugin manager from a lock file.
 func createManagerFromLock(lock *PluginLock) *manager.Manager {
 	if lock == nil {
 		return manager.NewBuilder().WithEnvConfig().Build()
@@ -968,24 +968,24 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 
 	mgr := manager.NewBuilder().WithConfig(config).Build()
 
-	// Register external plugins using their actual names
+	// Register external plugins using their actual names.
 	if lock.ExternalPlugins != nil {
 		for _, meta := range lock.ExternalPlugins {
-			// Use the plugin's actual name (from metadata) not the lock file key
+			// Use the plugin's actual name (from metadata) not the lock file key.
 			pluginName := meta.Name
 			if pluginName == "" {
-				// Fallback: query the plugin if name is missing
+				// Fallback: query the plugin if name is missing.
 				pluginName, _, _, _ = queryPluginMetadata(meta.Path)
 			}
 
-			// Use plugin's description if available
+			// Use plugin's description if available.
 			desc := meta.Description
 			if desc == "" {
 				desc = fmt.Sprintf("External plugin (source: %s)", meta.Source)
 			}
 
 			if err := mgr.RegisterExternalPlugin(pluginName, meta.Type, meta.Path, desc); err != nil {
-				// Silently ignore registration errors
+				// Silently ignore registration errors.
 				continue
 			}
 		}
@@ -994,7 +994,7 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 	return mgr
 }
 
-// queryPluginMetadata queries a plugin for its name, description, type, and version
+// queryPluginMetadata queries a plugin for its name, description, type, and version.
 func queryPluginMetadata(pluginPath string) (name string, description string, pluginType string, version string) {
 	cmd := exec.Command(pluginPath, "--plugin-info")
 	output, err := cmd.Output()
@@ -1016,7 +1016,7 @@ func queryPluginMetadata(pluginPath string) (name string, description string, pl
 	return info.Name, info.Description, info.Type, info.Version
 }
 
-// parsePluginName parses a plugin name into type and name
+// parsePluginName parses a plugin name into type and name.
 func parsePluginName(name string) (string, string) {
 	parts := strings.Split(name, ":")
 	if len(parts) == 2 {
@@ -1025,7 +1025,7 @@ func parsePluginName(name string) (string, string) {
 	return "", name
 }
 
-// containsPlugin checks if a plugin is in a list
+// containsPlugin checks if a plugin is in a list.
 func containsPlugin(list []string, name, fullName string) bool {
 	for _, item := range list {
 		if item == name || item == fullName {
@@ -1035,7 +1035,7 @@ func containsPlugin(list []string, name, fullName string) bool {
 	return false
 }
 
-// removeFromList removes a plugin from a list
+// removeFromList removes a plugin from a list.
 func removeFromList(list []string, name, fullName string) []string {
 	result := make([]string, 0, len(list))
 	for _, item := range list {
@@ -1046,7 +1046,7 @@ func removeFromList(list []string, name, fullName string) []string {
 	return result
 }
 
-// getPluginDir returns the plugin directory path
+// getPluginDir returns the plugin directory path.
 func getPluginDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -1055,7 +1055,7 @@ func getPluginDir() (string, error) {
 	return filepath.Join(home, ".local", "share", "tinct", "plugins"), nil
 }
 
-// formatPluginSourceString converts a PluginSource struct to a display string
+// formatPluginSourceString converts a PluginSource struct to a display string.
 func formatPluginSourceString(source *repository.PluginSource) string {
 	if source == nil {
 		return ""
@@ -1072,9 +1072,9 @@ func formatPluginSourceString(source *repository.PluginSource) string {
 	}
 }
 
-// installPluginFromSource installs a plugin from various source types
+// installPluginFromSource installs a plugin from various source types.
 func installPluginFromSource(source, pluginName, pluginDir string, verbose bool) (string, error) {
-	// Parse source to determine type
+	// Parse source to determine type.
 	sourceType, sourceInfo := parsePluginSource(source)
 
 	switch sourceType {
@@ -1089,22 +1089,22 @@ func installPluginFromSource(source, pluginName, pluginDir string, verbose bool)
 	}
 }
 
-// PluginSourceType represents the type of plugin source
+// PluginSourceType represents the type of plugin source.
 type PluginSourceInfo struct {
 	URL      string
 	FilePath string // For git repos, path to file within repo
 	Ref      string // For git repos, branch/tag/commit
 }
 
-// parsePluginSource determines the source type and extracts relevant info
+// parsePluginSource determines the source type and extracts relevant info.
 func parsePluginSource(source string) (string, PluginSourceInfo) {
 	info := PluginSourceInfo{}
 
-	// Git repository (https://github.com/user/repo.git or git@github.com:user/repo.git)
+	// Git repository (https://github.com/user/repo.git or git@github.com:user/repo.git).
 	if strings.HasSuffix(source, ".git") || strings.Contains(source, "github.com") || strings.Contains(source, "gitlab.com") || strings.Contains(source, "bitbucket.org") {
-		// Check for file path specification: repo.git:path/to/file.sh
+		// Check for file path specification: repo.git:path/to/file.sh.
 		if idx := strings.LastIndex(source, ":"); idx > 0 && !strings.HasPrefix(source, "git@") {
-			// Make sure it's not the : in git@github.com
+			// Make sure it's not the : in git@github.com.
 			if idx > 6 && source[idx-1] != 'm' { // Not ending in ".com:"
 				info.URL = source[:idx]
 				info.FilePath = source[idx+1:]
@@ -1117,11 +1117,11 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 		return "git", info
 	}
 
-	// HTTP/HTTPS URL
+	// HTTP/HTTPS URL.
 	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
-		// Check for file path specification: url.tar.gz:path/to/plugin
+		// Check for file path specification: url.tar.gz:path/to/plugin.
 		if idx := strings.LastIndex(source, ":"); idx > 0 {
-			// Check if it's part of the protocol (http:// or https://)
+			// Check if it's part of the protocol (http:// or https://).
 			if idx > 7 && source[idx-2:idx] != "tp" && source[idx-3:idx] != "tps" {
 				info.URL = source[:idx]
 				info.FilePath = source[idx+1:]
@@ -1134,30 +1134,30 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 		return "http", info
 	}
 
-	// Local file
+	// Local file.
 	info.FilePath = source
 	return "local", info
 }
 
-// installFromLocal installs a plugin from a local file
+// installFromLocal installs a plugin from a local file.
 func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (string, error) {
 	absSource, err := filepath.Abs(info.FilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve plugin path: %w", err)
 	}
 
-	// Verify plugin exists
+	// Verify plugin exists.
 	if _, err := os.Stat(absSource); err != nil {
 		return "", fmt.Errorf("plugin file not found: %w", err)
 	}
 
-	// Copy plugin to plugin directory
+	// Copy plugin to plugin directory.
 	destPath := filepath.Join(pluginDir, filepath.Base(absSource))
 	if err := copyFile(absSource, destPath); err != nil {
 		return "", fmt.Errorf("failed to copy plugin: %w", err)
 	}
 
-	// Make it executable
+	// Make it executable.
 	if err := os.Chmod(destPath, 0755); err != nil {
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
@@ -1169,13 +1169,13 @@ func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (st
 	return destPath, nil
 }
 
-// installFromHTTP downloads a plugin from an HTTP/HTTPS URL
+// installFromHTTP downloads a plugin from an HTTP/HTTPS URL.
 func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) {
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Downloading from %s...\n", info.URL)
 	}
 
-	// Download the file
+	// Download the file.
 	resp, err := http.Get(info.URL)
 	if err != nil {
 		return "", fmt.Errorf("failed to download plugin: %w", err)
@@ -1186,32 +1186,32 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 		return "", fmt.Errorf("failed to download plugin: HTTP %d", resp.StatusCode)
 	}
 
-	// Read the entire response into memory for archive detection
+	// Read the entire response into memory for archive detection.
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read download: %w", err)
 	}
 
-	// Determine filename from URL
+	// Determine filename from URL.
 	filename := filepath.Base(info.URL)
 	if filename == "" || filename == "." {
 		filename = pluginName
 	}
 
-	// Check if it's an archive
+	// Check if it's an archive.
 	if strings.HasSuffix(info.URL, ".tar.gz") || strings.HasSuffix(info.URL, ".tgz") {
-		// Extract from tar.gz archive
+		// Extract from tar.gz archive.
 		return extractFromTarGz(data, info.FilePath, pluginDir, verbose)
 	} else if strings.HasSuffix(info.URL, ".zip") {
-		// Extract from zip archive
+		// Extract from zip archive.
 		return extractFromZip(data, info.FilePath, pluginDir, verbose)
 	}
 
-	// Not an archive - treat as direct plugin file
+	// Not an archive - treat as direct plugin file.
 	destPath := filepath.Join(pluginDir, filename)
 
-	// Write file
-	// #nosec G306 -- Plugin executable needs exec permissions
+	// Write file.
+	// #nosec G306 -- Plugin executable needs exec permissions.
 	if err := os.WriteFile(destPath, data, 0755); err != nil {
 		return "", fmt.Errorf("failed to write plugin file: %w", err)
 	}
@@ -1223,19 +1223,19 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 	return destPath, nil
 }
 
-// extractFromTarGz extracts a plugin from a tar.gz archive
+// extractFromTarGz extracts a plugin from a tar.gz archive.
 func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (string, error) {
-	// Create gzip reader
+	// Create gzip reader.
 	gzr, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer gzr.Close()
 
-	// Create tar reader
+	// Create tar reader.
 	tr := tar.NewReader(gzr)
 
-	// If no specific file requested, find the first executable or use first file
+	// If no specific file requested, find the first executable or use first file.
 	var targetPath string
 	foundFiles := []string{}
 
@@ -1248,21 +1248,21 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			return "", fmt.Errorf("failed to read tar archive: %w", err)
 		}
 
-		// Skip directories
+		// Skip directories.
 		if header.Typeflag == tar.TypeDir {
 			continue
 		}
 
 		foundFiles = append(foundFiles, header.Name)
 
-		// Check if this is the file we want
+		// Check if this is the file we want.
 		if targetFile != "" {
 			if header.Name == targetFile || strings.HasSuffix(header.Name, "/"+targetFile) {
 				targetPath = header.Name
 				break
 			}
 		} else {
-			// Auto-detect: prefer executable files
+			// Auto-detect: prefer executable files.
 			if header.FileInfo().Mode()&0111 != 0 {
 				targetPath = header.Name
 				break
@@ -1270,12 +1270,12 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 		}
 	}
 
-	// If we didn't find the target, reset and look for any match
+	// If we didn't find the target, reset and look for any match.
 	if targetPath == "" && targetFile != "" {
 		return "", fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
 	}
 
-	// If still no target and we have files, use the first one
+	// If still no target and we have files, use the first one.
 	if targetPath == "" && len(foundFiles) > 0 {
 		targetPath = foundFiles[0]
 	}
@@ -1284,7 +1284,7 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 		return "", fmt.Errorf("no files found in archive")
 	}
 
-	// Reset readers to extract the target file
+	// Reset readers to extract the target file.
 	gzr, err = gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("failed to create gzip reader: %w", err)
@@ -1303,7 +1303,7 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 		}
 
 		if header.Name == targetPath {
-			// Extract the file
+			// Extract the file.
 			destPath := filepath.Join(pluginDir, filepath.Base(targetPath))
 
 			out, err := os.Create(destPath)
@@ -1312,13 +1312,13 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			}
 			defer out.Close()
 
-			// Limit decompression size to prevent zip bombs (100MB limit for plugins)
+			// Limit decompression size to prevent zip bombs (100MB limit for plugins).
 			limitedReader := security.NewLimitedReader(tr, 100*1024*1024)
 			if _, err := io.Copy(out, limitedReader); err != nil {
 				return "", fmt.Errorf("failed to extract plugin: %w", err)
 			}
 
-			// Make executable
+			// Make executable.
 			if err := os.Chmod(destPath, 0755); err != nil {
 				return "", fmt.Errorf("failed to make plugin executable: %w", err)
 			}
@@ -1332,35 +1332,35 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 	}
 }
 
-// extractFromZip extracts a plugin from a zip archive
+// extractFromZip extracts a plugin from a zip archive.
 func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (string, error) {
-	// Create zip reader
+	// Create zip reader.
 	reader := bytes.NewReader(data)
 	zr, err := zip.NewReader(reader, int64(len(data)))
 	if err != nil {
 		return "", fmt.Errorf("failed to create zip reader: %w", err)
 	}
 
-	// If no specific file requested, find the first executable or use first file
+	// If no specific file requested, find the first executable or use first file.
 	var targetZipFile *zip.File
 	foundFiles := []string{}
 
 	for _, f := range zr.File {
-		// Skip directories
+		// Skip directories.
 		if f.FileInfo().IsDir() {
 			continue
 		}
 
 		foundFiles = append(foundFiles, f.Name)
 
-		// Check if this is the file we want
+		// Check if this is the file we want.
 		if targetFile != "" {
 			if f.Name == targetFile || strings.HasSuffix(f.Name, "/"+targetFile) {
 				targetZipFile = f
 				break
 			}
 		} else {
-			// Auto-detect: prefer executable files
+			// Auto-detect: prefer executable files.
 			if f.FileInfo().Mode()&0111 != 0 {
 				targetZipFile = f
 				break
@@ -1368,12 +1368,12 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 		}
 	}
 
-	// If we didn't find the target, check if any file matches
+	// If we didn't find the target, check if any file matches.
 	if targetZipFile == nil && targetFile != "" {
 		return "", fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
 	}
 
-	// If still no target and we have files, use the first one
+	// If still no target and we have files, use the first one.
 	if targetZipFile == nil && len(foundFiles) > 0 {
 		targetZipFile = zr.File[0]
 	}
@@ -1382,7 +1382,7 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 		return "", fmt.Errorf("no files found in archive")
 	}
 
-	// Extract the file
+	// Extract the file.
 	destPath := filepath.Join(pluginDir, filepath.Base(targetZipFile.Name))
 
 	rc, err := targetZipFile.Open()
@@ -1397,13 +1397,13 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 	}
 	defer out.Close()
 
-	// Limit decompression size to prevent zip bombs (100MB limit for plugins)
+	// Limit decompression size to prevent zip bombs (100MB limit for plugins).
 	limitedReader := security.NewLimitedReader(rc, 100*1024*1024)
 	if _, err := io.Copy(out, limitedReader); err != nil {
 		return "", fmt.Errorf("failed to extract plugin: %w", err)
 	}
 
-	// Make executable
+	// Make executable.
 	if err := os.Chmod(destPath, 0755); err != nil {
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
@@ -1415,14 +1415,14 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 	return destPath, nil
 }
 
-// installFromGit clones a git repository and extracts the plugin
+// installFromGit clones a git repository and extracts the plugin.
 func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) {
-	// Check if git is available
+	// Check if git is available.
 	if _, err := exec.LookPath("git"); err != nil {
 		return "", fmt.Errorf("git is not installed or not in PATH")
 	}
 
-	// Validate the git URL for security
+	// Validate the git URL for security.
 	if err := security.ValidateGitURL(info.URL); err != nil {
 		return "", fmt.Errorf("invalid git URL: %w", err)
 	}
@@ -1431,31 +1431,31 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 		fmt.Fprintf(os.Stderr, "Cloning from %s...\n", info.URL)
 	}
 
-	// Create temporary directory for cloning
+	// Create temporary directory for cloning.
 	tmpDir, err := os.MkdirTemp("", "tinct-plugin-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Clone the repository using -- to separate options from arguments (prevents command injection)
-	// #nosec G204 -- URL is validated via security.ValidateGitURL above
+	// Clone the repository using -- to separate options from arguments (prevents command injection).
+	// #nosec G204 -- URL is validated via security.ValidateGitURL above.
 	cloneCmd := exec.Command("git", "clone", "--depth", "1", "--", info.URL, tmpDir)
 	if output, err := cloneCmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("failed to clone repository: %w\nOutput: %s", err, string(output))
 	}
 
-	// Determine which file to copy
+	// Determine which file to copy.
 	var sourceFile string
 	if info.FilePath != "" {
-		// Specific file path provided
+		// Specific file path provided.
 		sourceFile = filepath.Join(tmpDir, info.FilePath)
 		if _, err := os.Stat(sourceFile); err != nil {
 			return "", fmt.Errorf("plugin file not found in repository: %s", info.FilePath)
 		}
 	} else {
-		// Try to find a plugin file automatically
-		// Look for common patterns: plugin.sh, *.py, *.sh in root or bin/
+		// Try to find a plugin file automatically.
+		// Look for common patterns: plugin.sh, *.py, *.sh in root or bin/.
 		candidates := []string{
 			filepath.Join(tmpDir, pluginName),
 			filepath.Join(tmpDir, pluginName+".sh"),
@@ -1483,13 +1483,13 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 		fmt.Fprintf(os.Stderr, "Found plugin file: %s\n", filepath.Base(sourceFile))
 	}
 
-	// Copy plugin to plugin directory
+	// Copy plugin to plugin directory.
 	destPath := filepath.Join(pluginDir, filepath.Base(sourceFile))
 	if err := copyFile(sourceFile, destPath); err != nil {
 		return "", fmt.Errorf("failed to copy plugin: %w", err)
 	}
 
-	// Make it executable
+	// Make it executable.
 	if err := os.Chmod(destPath, 0755); err != nil {
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}

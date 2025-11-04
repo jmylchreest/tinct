@@ -55,7 +55,7 @@ func (p *Plugin) Validate() error {
 		return fmt.Errorf("--remote-css.url is required")
 	}
 
-	// Basic URL validation
+	// Basic URL validation.
 	if !strings.HasPrefix(p.url, "http://") && !strings.HasPrefix(p.url, "https://") {
 		return fmt.Errorf("URL must start with http:// or https://")
 	}
@@ -69,7 +69,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		fmt.Printf("→ Fetching CSS palette from: %s\n", p.url)
 	}
 
-	// Fetch content
+	// Fetch content.
 	content, err := p.fetch(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch palette: %w", err)
@@ -79,7 +79,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		fmt.Printf("   Size: %d bytes\n", len(content))
 	}
 
-	// Parse CSS
+	// Parse CSS.
 	colors, err := p.parseCSS(string(content), opts.Verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse CSS: %w", err)
@@ -89,7 +89,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		fmt.Printf("   Extracted %d colors\n", len(colors))
 	}
 
-	// Convert to palette
+	// Convert to palette.
 	palette, err := p.buildPalette(colors, opts.Verbose)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (p *Plugin) fetch(ctx context.Context) ([]byte, error) {
 func (p *Plugin) parseCSS(content string, verbose bool) (map[string]string, error) {
 	colors := make(map[string]string)
 
-	// Extract CSS custom properties (--variable-name: value)
+	// Extract CSS custom properties (--variable-name: value).
 	cssVarRegex := regexp.MustCompile(`--([a-zA-Z0-9_-]+)\s*:\s*([^;]+);`)
 	matches := cssVarRegex.FindAllStringSubmatch(content, -1)
 	for _, match := range matches {
@@ -124,7 +124,7 @@ func (p *Plugin) parseCSS(content string, verbose bool) (map[string]string, erro
 		}
 	}
 
-	// Extract color properties (color: value, background-color: value, etc.)
+	// Extract color properties (color: value, background-color: value, etc.).
 	colorPropRegex := regexp.MustCompile(`(?:color|background-color|background|border-color|fill|stroke)\s*:\s*([^;]+);`)
 	propMatches := colorPropRegex.FindAllStringSubmatch(content, -1)
 	for _, match := range propMatches {
@@ -132,7 +132,7 @@ func (p *Plugin) parseCSS(content string, verbose bool) (map[string]string, erro
 			value := strings.TrimSpace(match[1])
 
 			if hexColor := extractColor(value); hexColor != "" {
-				// Only add if not already in colors (avoid duplicates)
+				// Only add if not already in colors (avoid duplicates).
 				found := false
 				for _, existing := range colors {
 					if existing == hexColor {
@@ -159,27 +159,27 @@ func (p *Plugin) parseCSS(content string, verbose bool) (map[string]string, erro
 func extractColor(value string) string {
 	value = strings.TrimSpace(value)
 
-	// Hex color
+	// Hex color.
 	if hexColor := extractHexColor(value); hexColor != "" {
 		return hexColor
 	}
 
-	// RGB/RGBA
+	// RGB/RGBA.
 	if rgbColor := convertRGBToHex(value); rgbColor != "" {
 		return rgbColor
 	}
 
-	// HSL/HSLA
+	// HSL/HSLA.
 	if hslColor := convertHSLToHex(value); hslColor != "" {
 		return hslColor
 	}
 
-	// OKLCH
+	// OKLCH.
 	if oklchColor := convertOKLCHToHex(value); oklchColor != "" {
 		return oklchColor
 	}
 
-	// OKLAB
+	// OKLAB.
 	if oklabColor := convertOKLABToHex(value); oklabColor != "" {
 		return oklabColor
 	}
@@ -221,7 +221,7 @@ func convertHSLToHex(value string) string {
 		s, _ := strconv.ParseFloat(matches[2], 64)
 		l, _ := strconv.ParseFloat(matches[3], 64)
 
-		// Handle percentage values
+		// Handle percentage values.
 		if s > 1 {
 			s = s / 100.0
 		}
@@ -236,7 +236,7 @@ func convertHSLToHex(value string) string {
 }
 
 // convertOKLCHToHex extracts oklch color and converts to hex.
-// Format: oklch(L C H) where L is 0-1, C is 0-0.4, H is 0-360
+// Format: oklch(L C H) where L is 0-1, C is 0-0.4, H is 0-360.
 func convertOKLCHToHex(value string) string {
 	oklchRegex := regexp.MustCompile(`oklch\s*\(\s*([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)`)
 	matches := oklchRegex.FindStringSubmatch(value)
@@ -252,7 +252,7 @@ func convertOKLCHToHex(value string) string {
 }
 
 // convertOKLABToHex extracts oklab color and converts to hex.
-// Format: oklab(L a b) where L is 0-1, a and b are typically -0.4 to 0.4
+// Format: oklab(L a b) where L is 0-1, a and b are typically -0.4 to 0.4.
 func convertOKLABToHex(value string) string {
 	oklabRegex := regexp.MustCompile(`oklab\s*\(\s*([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)`)
 	matches := oklabRegex.FindStringSubmatch(value)
@@ -330,22 +330,22 @@ func hueToRGB(p, q, t float64) float64 {
 }
 
 // oklchToRGB converts OKLCH to RGB.
-// OKLCH: Lightness (0-1), Chroma (0-0.4), Hue (0-360)
+// OKLCH: Lightness (0-1), Chroma (0-0.4), Hue (0-360).
 func oklchToRGB(l, c, h float64) colour.RGB {
-	// Convert OKLCH to OKLAB
+	// Convert OKLCH to OKLAB.
 	hRad := h * math.Pi / 180.0
 	a := c * math.Cos(hRad)
 	b := c * math.Sin(hRad)
 
-	// Convert OKLAB to RGB
+	// Convert OKLAB to RGB.
 	return oklabToRGB(l, a, b)
 }
 
 // oklabToRGB converts OKLAB to RGB.
-// OKLAB: Lightness (0-1), a (-0.4 to 0.4), b (-0.4 to 0.4)
-// Reference: https://bottosson.github.io/posts/oklab/
+// OKLAB: Lightness (0-1), a (-0.4 to 0.4), b (-0.4 to 0.4).
+// Reference: https://bottosson.github.io/posts/oklab/.
 func oklabToRGB(l, a, b float64) colour.RGB {
-	// OKLAB to linear RGB (D65 illuminant)
+	// OKLAB to linear RGB (D65 illuminant).
 	l_ := l + 0.3963377774*a + 0.2158037573*b
 	m_ := l - 0.1055613458*a - 0.0638541728*b
 	s_ := l - 0.0894841775*a - 1.2914855480*b
@@ -358,7 +358,7 @@ func oklabToRGB(l, a, b float64) colour.RGB {
 	g := -1.2684380046*l_ + 2.6097574011*m_ - 0.3413193965*s_
 	b_ := -0.0041960863*l_ - 0.7034186147*m_ + 1.7076147010*s_
 
-	// Convert linear RGB to sRGB (gamma correction)
+	// Convert linear RGB to sRGB (gamma correction).
 	r = linearToSRGB(r)
 	g = linearToSRGB(g)
 	b_ = linearToSRGB(b_)
@@ -387,7 +387,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 	var paletteColors []colour.RGB
 	var roleHints map[colour.ColourRole]int
 
-	// First, add ALL colors to the palette
+	// First, add ALL colors to the palette.
 	colorNameToIndex := make(map[string]int)
 	for name, hex := range colors {
 		rgb, err := parseHex(hex)
@@ -401,7 +401,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 		paletteColors = append(paletteColors, rgb)
 	}
 
-	// Then, if mapping is provided, create role hints for the mapped colors
+	// Then, if mapping is provided, create role hints for the mapped colors.
 	if len(p.mapping) > 0 {
 		if verbose {
 			fmt.Printf("→ Applying color mappings:\n")
@@ -411,7 +411,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 
 		for sourceKey, targetRole := range p.mapping {
 			if index, ok := colorNameToIndex[sourceKey]; ok {
-				// Parse the target role
+				// Parse the target role.
 				role, err := parseColourRole(targetRole)
 				if err != nil {
 					return nil, fmt.Errorf("invalid role '%s': %w", targetRole, err)
@@ -435,13 +435,13 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 		return nil, fmt.Errorf("no valid colors extracted")
 	}
 
-	// Convert RGB to color.Color
+	// Convert RGB to color.Color.
 	colorColors := make([]color.Color, len(paletteColors))
 	for i, rgb := range paletteColors {
 		colorColors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
 	}
 
-	// Create palette with role hints if mapping was used
+	// Create palette with role hints if mapping was used.
 	if len(roleHints) > 0 {
 		return colour.NewPaletteWithRoleHints(colorColors, roleHints), nil
 	}
@@ -450,12 +450,12 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 }
 
 // parseHex parses a hex color string into an RGB struct.
-// Supports formats: #RRGGBB, RRGGBB, #RGB, RGB
+// Supports formats: #RRGGBB, RRGGBB, #RGB, RGB.
 func parseHex(hex string) (colour.RGB, error) {
 	hex = strings.TrimSpace(hex)
 	hex = strings.TrimPrefix(hex, "#")
 
-	// Expand shorthand format (RGB -> RRGGBB)
+	// Expand shorthand format (RGB -> RRGGBB).
 	if len(hex) == 3 {
 		hex = string([]byte{hex[0], hex[0], hex[1], hex[1], hex[2], hex[2]})
 	}

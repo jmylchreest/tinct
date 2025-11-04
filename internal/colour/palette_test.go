@@ -254,7 +254,7 @@ func TestPaletteToJSON(t *testing.T) {
 		t.Error("ToJSON() returned empty bytes")
 	}
 
-	// Check that it contains expected content
+	// Check that it contains expected content.
 	jsonStr := string(jsonBytes)
 	expectedStrings := []string{
 		`"count": 2`,
@@ -387,7 +387,7 @@ func TestPaletteString(t *testing.T) {
 	}
 }
 
-// Helper function
+// Helper function.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || findSubstring(s, substr))
 }

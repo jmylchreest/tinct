@@ -26,13 +26,13 @@ func TestNewTable(t *testing.T) {
 func TestTableAddRow(t *testing.T) {
 	table := NewTable([]string{"Name", "Age"})
 
-	// Add matching row
+	// Add matching row.
 	table.AddRow([]string{"Alice", "30"})
 	if len(table.rows) != 1 {
 		t.Errorf("Expected 1 row, got %d", len(table.rows))
 	}
 
-	// Add row with fewer columns (should be padded)
+	// Add row with fewer columns (should be padded).
 	table.AddRow([]string{"Bob"})
 	if len(table.rows) != 2 {
 		t.Errorf("Expected 2 rows, got %d", len(table.rows))
@@ -44,7 +44,7 @@ func TestTableAddRow(t *testing.T) {
 		t.Errorf("Expected empty string for padded column, got %q", table.rows[1][1])
 	}
 
-	// Add row with more columns (should be truncated)
+	// Add row with more columns (should be truncated).
 	table.AddRow([]string{"Charlie", "25", "Extra"})
 	if len(table.rows) != 3 {
 		t.Errorf("Expected 3 rows, got %d", len(table.rows))
@@ -61,7 +61,7 @@ func TestTableRender(t *testing.T) {
 
 	output := table.Render()
 
-	// Check that output contains headers
+	// Check that output contains headers.
 	if !strings.Contains(output, "Name") {
 		t.Error("Output should contain 'Name' header")
 	}
@@ -72,7 +72,7 @@ func TestTableRender(t *testing.T) {
 		t.Error("Output should contain 'City' header")
 	}
 
-	// Check that output contains data
+	// Check that output contains data.
 	if !strings.Contains(output, "Alice") {
 		t.Error("Output should contain 'Alice'")
 	}
@@ -83,20 +83,20 @@ func TestTableRender(t *testing.T) {
 		t.Error("Output should contain 'New York'")
 	}
 
-	// Check for separator line (should contain dashes)
+	// Check for separator line (should contain dashes).
 	lines := strings.Split(output, "\n")
 	if len(lines) < 4 { // header + separator + 2 data rows + trailing newline
 		t.Errorf("Expected at least 4 lines, got %d", len(lines))
 	}
 
-	// Second line should be separator with dashes
+	// Second line should be separator with dashes.
 	if !strings.Contains(lines[1], "---") {
 		t.Errorf("Expected separator line with dashes, got: %q", lines[1])
 	}
 }
 
 func TestTableRenderEmpty(t *testing.T) {
-	// Empty table (no headers)
+	// Empty table (no headers).
 	table := &Table{
 		headers: []string{},
 		rows:    make([][]string, 0),
@@ -110,12 +110,12 @@ func TestTableRenderEmpty(t *testing.T) {
 }
 
 func TestTableRenderNoRows(t *testing.T) {
-	// Table with headers but no rows
+	// Table with headers but no rows.
 	table := NewTable([]string{"Column1", "Column2"})
 
 	output := table.Render()
 
-	// Should still render headers and separator
+	// Should still render headers and separator.
 	if !strings.Contains(output, "Column1") {
 		t.Error("Output should contain headers even without rows")
 	}
@@ -138,12 +138,12 @@ func TestTableColumnAlignment(t *testing.T) {
 		t.Fatalf("Expected at least 4 lines, got %d", len(lines))
 	}
 
-	// Check that columns are aligned (all rows should have same positions)
-	// The "Very Long Header" should determine the width of that column
+	// Check that columns are aligned (all rows should have same positions).
+	// The "Very Long Header" should determine the width of that column.
 	headerLine := lines[0]
 	separatorLine := lines[1]
 
-	// Separator should have dashes matching column widths
+	// Separator should have dashes matching column widths.
 	if len(separatorLine) != len(headerLine) {
 		t.Errorf("Separator length (%d) should match header length (%d)", len(separatorLine), len(headerLine))
 	}
@@ -192,14 +192,14 @@ func TestTableMultipleColumns(t *testing.T) {
 
 	output := table.Render()
 
-	// Verify all columns are present
+	// Verify all columns are present.
 	for _, col := range []string{"Col1", "Col2", "Col3", "Col4", "Col5"} {
 		if !strings.Contains(output, col) {
 			t.Errorf("Output should contain column %s", col)
 		}
 	}
 
-	// Verify all data is present
+	// Verify all data is present.
 	for _, val := range []string{"A", "B", "C", "D", "E", "1", "2", "3", "4", "5"} {
 		if !strings.Contains(output, val) {
 			t.Errorf("Output should contain value %s", val)
@@ -214,7 +214,7 @@ func TestTableConsistentSpacing(t *testing.T) {
 
 	output := table.Render()
 
-	// Check that all expected content is present
+	// Check that all expected content is present.
 	if !strings.Contains(output, "Name") {
 		t.Error("Output should contain 'Name' header")
 	}
@@ -234,7 +234,7 @@ func TestTableConsistentSpacing(t *testing.T) {
 		t.Error("Output should contain '2'")
 	}
 
-	// Check that we have the expected structure (header, separator, rows)
+	// Check that we have the expected structure (header, separator, rows).
 	lines := strings.Split(output, "\n")
 	nonEmptyLines := 0
 	for _, line := range lines {

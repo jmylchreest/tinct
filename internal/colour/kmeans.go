@@ -38,13 +38,13 @@ func (e *KMeansExtractor) Extract(img image.Image, count int) (*Palette, error) 
 		return nil, fmt.Errorf("color count too large: %d (maximum: 256)", count)
 	}
 
-	// Sample pixels from the image
+	// Sample pixels from the image.
 	pixels := samplePixels(img)
 	if len(pixels) == 0 {
 		return nil, fmt.Errorf("no pixels found in image")
 	}
 
-	// Get unique colors first
+	// Get unique colors first.
 	uniqueColors := make([]color.Color, 0, len(pixels))
 	seen := make(map[RGB]bool)
 	for _, p := range pixels {
@@ -55,15 +55,15 @@ func (e *KMeansExtractor) Extract(img image.Image, count int) (*Palette, error) 
 		}
 	}
 
-	// If we want more colors than unique colors exist, return all unique colors
+	// If we want more colors than unique colors exist, return all unique colors.
 	if count >= len(uniqueColors) {
 		return NewPalette(uniqueColors), nil
 	}
 
-	// Run k-means clustering and get cluster weights
+	// Run k-means clustering and get cluster weights.
 	centroids, weights := e.kmeans(pixels, count)
 
-	// Convert centroids to colors
+	// Convert centroids to colors.
 	colors := make([]color.Color, len(centroids))
 	for i, c := range centroids {
 		colors[i] = color.RGBA{
@@ -98,11 +98,11 @@ func samplePixels(img image.Image) []color.Color {
 	height := bounds.Dy()
 	totalPixels := width * height
 
-	// Aggressive sampling for performance
+	// Aggressive sampling for performance.
 	const maxSamples = 2000 // Reduced from 10000
 
 	if totalPixels <= maxSamples {
-		// Small image, sample all pixels
+		// Small image, sample all pixels.
 		pixels := make([]color.Color, 0, totalPixels)
 		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 			for x := bounds.Min.X; x < bounds.Max.X; x++ {
@@ -112,8 +112,8 @@ func samplePixels(img image.Image) []color.Color {
 		return pixels
 	}
 
-	// Large image, use grid sampling
-	// Calculate step size to get approximately maxSamples
+	// Large image, use grid sampling.
+	// Calculate step size to get approximately maxSamples.
 	step := max(int(math.Sqrt(float64(totalPixels)/float64(maxSamples))), 1)
 
 	pixels := make([]color.Color, 0, maxSamples)
@@ -132,7 +132,7 @@ func samplePixels(img image.Image) []color.Color {
 // kmeans performs k-means clustering on the pixel data.
 // Returns centroids and their weights (relative cluster sizes).
 func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []float64) {
-	// Convert colors to 3D points
+	// Convert colors to 3D points.
 	points := make([]point3D, len(pixels))
 	for i, c := range pixels {
 		rgb := ToRGB(c)
@@ -143,15 +143,15 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []floa
 		}
 	}
 
-	// Initialise centroids using k-means++ algorithm
+	// Initialise centroids using k-means++ algorithm.
 	centroids := e.initializeCentroidsKMeansPlusPlus(points, k)
 
-	// Track cluster assignments
+	// Track cluster assignments.
 	assignments := make([]int, len(points))
 
-	// Iterate until convergence or max iterations
+	// Iterate until convergence or max iterations.
 	for iter := 0; iter < e.maxIterations; iter++ {
-		// Assign each point to nearest centroid
+		// Assign each point to nearest centroid.
 		changed := 0
 		for i, point := range points {
 			nearest := e.findNearestCentroid(point, centroids)
@@ -161,15 +161,15 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []floa
 			}
 		}
 
-		// If very few assignments changed (< 1%), we've converged
+		// If very few assignments changed (< 1%), we've converged.
 		if float64(changed)/float64(len(points)) < 0.01 {
 			break
 		}
 
-		// Recalculate centroids
+		// Recalculate centroids.
 		newCentroids := e.recalculateCentroids(points, assignments, k)
 
-		// Check for convergence based on centroid movement
+		// Check for convergence based on centroid movement.
 		totalMovement := 0.0
 		for i := range centroids {
 			totalMovement += centroids[i].distance(newCentroids[i])
@@ -178,19 +178,19 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []floa
 
 		centroids = newCentroids
 
-		// If centroids barely moved, we've converged
+		// If centroids barely moved, we've converged.
 		if avgMovement < e.convergence {
 			break
 		}
 	}
 
-	// Calculate cluster weights (relative sizes)
+	// Calculate cluster weights (relative sizes).
 	weights := make([]float64, k)
 	for _, assignment := range assignments {
 		weights[assignment]++
 	}
 
-	// Normalize weights to sum to 1.0
+	// Normalize weights to sum to 1.0.
 	totalPixels := float64(len(assignments))
 	for i := range weights {
 		weights[i] /= totalPixels
@@ -208,14 +208,14 @@ func (e *KMeansExtractor) initializeCentroidsKMeansPlusPlus(points []point3D, k 
 
 	centroids := make([]point3D, 0, k)
 
-	// Choose first centroid randomly
+	// Choose first centroid randomly.
 	// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
 	firstIdx := rand.Intn(len(points))
 	centroids = append(centroids, points[firstIdx])
 
-	// Choose remaining centroids
+	// Choose remaining centroids.
 	for len(centroids) < k {
-		// Calculate distances from each point to nearest centroid
+		// Calculate distances from each point to nearest centroid.
 		distances := make([]float64, len(points))
 		totalDistance := 0.0
 
@@ -227,17 +227,17 @@ func (e *KMeansExtractor) initializeCentroidsKMeansPlusPlus(points []point3D, k 
 					minDist = dist
 				}
 			}
-			// Square the distance for k-means++
+			// Square the distance for k-means++.
 			distances[i] = minDist * minDist
 			totalDistance += distances[i]
 		}
 
-		// Choose next centroid with probability proportional to squared distance
+		// Choose next centroid with probability proportional to squared distance.
 		if totalDistance == 0 {
-			// All remaining points are too close or identical to existing centroids
-			// Just duplicate an existing centroid slightly perturbed
+			// All remaining points are too close or identical to existing centroids.
+			// Just duplicate an existing centroid slightly perturbed.
 			if len(centroids) > 0 {
-				// Duplicate the last centroid with a tiny perturbation
+				// Duplicate the last centroid with a tiny perturbation.
 				lastCentroid := centroids[len(centroids)-1]
 				centroids = append(centroids, point3D{
 					R: lastCentroid.R + 0.1,
@@ -281,7 +281,7 @@ func (e *KMeansExtractor) findNearestCentroid(point point3D, centroids []point3D
 
 // recalculateCentroids recalculates centroid positions based on assigned points.
 func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []int, k int) []point3D {
-	// Sum up all points assigned to each cluster
+	// Sum up all points assigned to each cluster.
 	sums := make([]point3D, k)
 	counts := make([]int, k)
 
@@ -293,7 +293,7 @@ func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []i
 		counts[cluster]++
 	}
 
-	// Calculate averages
+	// Calculate averages.
 	centroids := make([]point3D, k)
 	for i := range k {
 		if counts[i] > 0 {
@@ -303,7 +303,7 @@ func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []i
 				B: sums[i].B / float64(counts[i]),
 			}
 		} else {
-			// Empty cluster - reinitialise randomly
+			// Empty cluster - reinitialise randomly.
 			// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
 			centroids[i] = points[rand.Intn(len(points))]
 		}

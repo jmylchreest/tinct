@@ -71,7 +71,7 @@ func (cv ColorValue) Format(format ColorFormat) string {
 	}
 }
 
-// Convenience accessors for common formats
+// Convenience accessors for common formats.
 func (cv ColorValue) Hex() string        { return cv.Format(FormatHex) }
 func (cv ColorValue) HexAlpha() string   { return cv.Format(FormatHexAlpha) }
 func (cv ColorValue) RGB() string        { return cv.Format(FormatRGB) }
@@ -79,11 +79,11 @@ func (cv ColorValue) RGBA() string       { return cv.Format(FormatRGBA) }
 func (cv ColorValue) HexNoHash() string  { return cv.Format(FormatHexNoHash) }
 func (cv ColorValue) RGBDecimal() string { return cv.Format(FormatRGBDecimal) }
 
-// Metadata accessors
+// Metadata accessors.
 func (cv ColorValue) Role() ColourRole { return cv.role }
 func (cv ColorValue) Index() int       { return cv.index }
 
-// Component accessors (for advanced template use)
+// Component accessors (for advanced template use).
 func (cv ColorValue) R() uint8            { return cv.rgba.R }
 func (cv ColorValue) G() uint8            { return cv.rgba.G }
 func (cv ColorValue) B() uint8            { return cv.rgba.B }
@@ -107,7 +107,7 @@ func NewPaletteHelper(palette *CategorisedPalette) *PaletteHelper {
 		indexed: make([]ColorValue, 0, len(palette.AllColours)),
 	}
 
-	// Build color map by role
+	// Build color map by role.
 	for role, cc := range palette.Colours {
 		ph.colors[role] = ColorValue{
 			role:  role,
@@ -116,7 +116,7 @@ func NewPaletteHelper(palette *CategorisedPalette) *PaletteHelper {
 		}
 	}
 
-	// Build indexed array (deterministic order)
+	// Build indexed array (deterministic order).
 	for _, cc := range palette.AllColours {
 		ph.indexed = append(ph.indexed, ColorValue{
 			role:  cc.Role,
@@ -153,7 +153,7 @@ func (ph *PaletteHelper) GetWithFallback(role ColourRole, fallbackHex string) Co
 	if cv, ok := ph.colors[role]; ok {
 		return cv
 	}
-	// Parse fallback hex and create ColorValue
+	// Parse fallback hex and create ColorValue.
 	rgb := parseHex(fallbackHex)
 	return ColorValue{
 		role:  role,
@@ -173,41 +173,41 @@ func (ph *PaletteHelper) GetByIndex(index int) (ColorValue, bool) {
 
 // AllRoles returns all roles in deterministic order (core → accents → semantic → surface → variants).
 func (ph *PaletteHelper) AllRoles() []ColourRole {
-	// Define priority order for consistency across all plugins
+	// Define priority order for consistency across all plugins.
 	order := []ColourRole{
-		// Core colors
+		// Core colors.
 		RoleBackground, RoleBackgroundMuted,
 		RoleForeground, RoleForegroundMuted,
 
-		// Accents
+		// Accents.
 		RoleAccent1, RoleAccent1Muted,
 		RoleAccent2, RoleAccent2Muted,
 		RoleAccent3, RoleAccent3Muted,
 		RoleAccent4, RoleAccent4Muted,
 
-		// Semantic
+		// Semantic.
 		RoleDanger, RoleWarning, RoleSuccess, RoleInfo, RoleNotification,
 
-		// Surface & Container (Priority 1)
+		// Surface & Container (Priority 1).
 		RoleSurface, RoleOnSurface, RoleOutline, RoleBorder,
 
-		// Surface & Border Variants (Priority 2)
+		// Surface & Border Variants (Priority 2).
 		RoleSurfaceVariant, RoleOnSurfaceVariant,
 		RoleBorderMuted, RoleOutlineVariant,
 
-		// On-colors for Accents (Priority 2)
+		// On-colors for Accents (Priority 2).
 		RoleOnAccent1, RoleOnAccent2, RoleOnAccent3, RoleOnAccent4,
 
-		// On-colors for Semantic (Priority 2)
+		// On-colors for Semantic (Priority 2).
 		RoleOnDanger, RoleOnWarning, RoleOnSuccess, RoleOnInfo,
 
-		// Inverse Colors (Priority 3)
+		// Inverse Colors (Priority 3).
 		RoleInverseSurface, RoleInverseOnSurface, RoleInversePrimary,
 
-		// Scrim & Shadow (Priority 3)
+		// Scrim & Shadow (Priority 3).
 		RoleScrim, RoleShadow,
 
-		// Container Elevation Variants (Priority 3)
+		// Container Elevation Variants (Priority 3).
 		RoleSurfaceContainerLowest, RoleSurfaceContainerLow, RoleSurfaceContainer,
 		RoleSurfaceContainerHigh, RoleSurfaceContainerHighest,
 	}

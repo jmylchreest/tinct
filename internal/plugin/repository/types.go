@@ -3,7 +3,7 @@ package repository
 
 import "time"
 
-// Manifest represents a plugin repository manifest
+// Manifest represents a plugin repository manifest.
 type Manifest struct {
 	Version      string             `json:"version"`
 	Name         string             `json:"name"`
@@ -14,7 +14,7 @@ type Manifest struct {
 	Plugins      map[string]*Plugin `json:"plugins"`
 }
 
-// Plugin represents a plugin in the repository
+// Plugin represents a plugin in the repository.
 type Plugin struct {
 	Name        string    `json:"name"`
 	Type        string    `json:"type"` // "input" or "output"
@@ -26,7 +26,7 @@ type Plugin struct {
 	Versions    []Version `json:"versions"`
 }
 
-// Version represents a specific version of a plugin
+// Version represents a specific version of a plugin.
 type Version struct {
 	Version       string               `json:"version"`
 	Released      time.Time            `json:"released"`
@@ -35,7 +35,7 @@ type Version struct {
 	Downloads     map[string]*Download `json:"downloads"`
 }
 
-// Download represents a downloadable artifact for a specific platform
+// Download represents a downloadable artifact for a specific platform.
 type Download struct {
 	URL          string   `json:"url"`
 	Checksum     string   `json:"checksum"` // Format: "sha256:..."
@@ -44,7 +44,7 @@ type Download struct {
 	Dependencies []string `json:"dependencies,omitempty"` // Runtime dependencies
 }
 
-// Repository represents a configured plugin repository
+// Repository represents a configured plugin repository.
 type Repository struct {
 	Name     string    `json:"name"`
 	URL      string    `json:"url"`
@@ -53,19 +53,19 @@ type Repository struct {
 	Manifest *Manifest `json:"-"`                  // Cached manifest (not persisted)
 }
 
-// RepositoryConfig contains all configured repositories
+// RepositoryConfig contains all configured repositories.
 type RepositoryConfig struct {
 	Repositories []*Repository `json:"repositories"`
 	Cache        *CacheConfig  `json:"cache,omitempty"`
 }
 
-// CacheConfig contains cache settings
+// CacheConfig contains cache settings.
 type CacheConfig struct {
 	TTL        int              `json:"ttl"`         // Cache TTL in seconds
 	LastUpdate map[string]int64 `json:"last_update"` // repo name -> unix timestamp
 }
 
-// PluginSource represents where a plugin was installed from
+// PluginSource represents where a plugin was installed from.
 type PluginSource struct {
 	Type         string `json:"type"` // "repository", "http", "local"
 	Repository   string `json:"repository,omitempty"`
@@ -76,7 +76,7 @@ type PluginSource struct {
 	OriginalPath string `json:"original_path,omitempty"`
 }
 
-// SearchFilter contains criteria for searching plugins
+// SearchFilter contains criteria for searching plugins.
 type SearchFilter struct {
 	Query      string
 	Type       string // "input" or "output"
@@ -85,14 +85,14 @@ type SearchFilter struct {
 	Repository string
 }
 
-// SearchResult represents a plugin found in search
+// SearchResult represents a plugin found in search.
 type SearchResult struct {
 	Plugin     *Plugin
 	Version    *Version
 	Repository string
 }
 
-// SyncStats tracks statistics for sync operations
+// SyncStats tracks statistics for sync operations.
 type SyncStats struct {
 	Total     int
 	Installed int
@@ -101,7 +101,7 @@ type SyncStats struct {
 	Skipped   int
 }
 
-// VerifyResult represents the result of verifying a plugin
+// VerifyResult represents the result of verifying a plugin.
 type VerifyResult struct {
 	Name     string
 	Status   string // "valid", "mismatch", "missing", "no_checksum"

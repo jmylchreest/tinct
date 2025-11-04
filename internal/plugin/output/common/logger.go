@@ -7,7 +7,7 @@ import (
 )
 
 // VerboseLogger implements a simple logger that writes to an io.Writer.
-// This is used by output plugins that need to log verbose information
+// This is used by output plugins that need to log verbose information.
 // during template processing or generation.
 type VerboseLogger struct {
 	out io.Writer

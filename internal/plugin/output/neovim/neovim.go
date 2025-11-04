@@ -93,7 +93,7 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // Generate creates the theme file.
-// Returns map of filename -> content
+// Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -101,7 +101,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate theme file
+	// Generate theme file.
 	themeContent, err := p.generateTheme(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
@@ -115,7 +115,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("neovim", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -125,7 +125,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for theme.lua.tmpl\n")
 	}
@@ -135,7 +135,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}
 
-	// Set plugin-specific themeName for template
+	// Set plugin-specific themeName for template.
 	themeData.ThemeName = p.themeName
 
 	var buf bytes.Buffer
@@ -149,16 +149,16 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 // PreExecute checks if neovim config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if nvim executable exists on PATH
+	// Check if nvim executable exists on PATH.
 	_, err = exec.LookPath("nvim")
 	if err != nil {
 		return true, "nvim executable not found on $PATH", nil
 	}
 
-	// Check if config directory exists, create if it doesn't
+	// Check if config directory exists, create if it doesn't.
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the directory
+		// Try to create the directory.
 		if err := os.MkdirAll(configDir, 0755); err != nil {
 			return true, fmt.Sprintf("neovim colors directory not found and could not be created: %s", configDir), nil
 		}

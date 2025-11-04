@@ -78,7 +78,7 @@ func (p *Plugin) GetEmbeddedFS() interface{} {
 
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
-	// Nothing to validate - all fields have defaults
+	// Nothing to validate - all fields have defaults.
 	return nil
 }
 
@@ -88,7 +88,7 @@ func (p *Plugin) DefaultOutputDir() string {
 		return p.outputDir
 	}
 
-	// Expand ~ to home directory
+	// Expand ~ to home directory.
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ".config/hypr"
@@ -97,7 +97,7 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // Generate creates the theme file and optional stub configuration.
-// Returns map of filename -> content
+// Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -105,7 +105,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate main theme file
+	// Generate main theme file.
 	themeContent, err := p.generateTheme(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
@@ -114,7 +114,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	themeFile := "tinct-colours.conf"
 	files[themeFile] = themeContent
 
-	// Generate stub if requested
+	// Generate stub if requested.
 	if p.generateStub {
 		stubContent, err := p.generateStubConfig()
 		if err != nil {
@@ -133,7 +133,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateTheme creates the main theme configuration file with colour variables.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -143,7 +143,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct-colours.conf.tmpl\n")
 	}
@@ -164,7 +164,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 
 // generateStubConfig creates an example configuration file showing how to use the theme.
 func (p *Plugin) generateStubConfig() ([]byte, error) {
-	// Load template with custom override support
+	// Load template with custom override support.
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -174,7 +174,7 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 		return nil, fmt.Errorf("failed to read example template: %w", err)
 	}
 
-	// Log if using custom template
+	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.conf.tmpl\n")
 	}
@@ -196,10 +196,10 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 // PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if config directory exists - create it if needed
+	// Check if config directory exists - create it if needed.
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the directory
+		// Try to create the directory.
 		if err := os.MkdirAll(configDir, 0755); err != nil {
 			return true, fmt.Sprintf("hyprland config directory does not exist and cannot be created: %s", configDir), nil
 		}
@@ -211,12 +211,12 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 // PostExecute reloads hyprland configuration if requested.
 // Implements the output.PostExecuteHook interface.
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
-	// Reload hyprland configuration if requested
+	// Reload hyprland configuration if requested.
 	if !p.reloadConfig {
 		return nil
 	}
 
-	// Reload hyprland configuration using hyprctl
+	// Reload hyprland configuration using hyprctl.
 	cmd := exec.CommandContext(ctx, "hyprctl", "reload")
 	output, err := cmd.CombinedOutput()
 	if err != nil {

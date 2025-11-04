@@ -19,7 +19,7 @@ var (
 	repoCachePath  string
 )
 
-// pluginRepoCmd represents the plugins repo command
+// pluginRepoCmd represents the plugins repo command.
 var pluginRepoCmd = &cobra.Command{
 	Use:   "repo",
 	Short: "Manage plugin repositories",
@@ -30,7 +30,7 @@ and download links. This allows for easy plugin discovery and installation
 without storing binaries in the repository itself.`,
 }
 
-// pluginRepoAddCmd adds a new repository
+// pluginRepoAddCmd adds a new repository.
 var pluginRepoAddCmd = &cobra.Command{
 	Use:   "add <name> <url>",
 	Short: "Add a plugin repository",
@@ -44,7 +44,7 @@ Example:
 	RunE: runPluginRepoAdd,
 }
 
-// pluginRepoListCmd lists all repositories
+// pluginRepoListCmd lists all repositories.
 var pluginRepoListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List configured repositories",
@@ -52,7 +52,7 @@ var pluginRepoListCmd = &cobra.Command{
 	RunE:  runPluginRepoList,
 }
 
-// pluginRepoRemoveCmd removes a repository
+// pluginRepoRemoveCmd removes a repository.
 var pluginRepoRemoveCmd = &cobra.Command{
 	Use:     "remove <name>",
 	Aliases: []string{"rm", "delete"},
@@ -62,7 +62,7 @@ var pluginRepoRemoveCmd = &cobra.Command{
 	RunE:    runPluginRepoRemove,
 }
 
-// pluginRepoUpdateCmd updates repository manifests
+// pluginRepoUpdateCmd updates repository manifests.
 var pluginRepoUpdateCmd = &cobra.Command{
 	Use:   "update [name]",
 	Short: "Update repository manifests",
@@ -73,7 +73,7 @@ If no repository name is provided, all enabled repositories will be updated.`,
 	RunE: runPluginRepoUpdate,
 }
 
-// pluginRepoInfoCmd shows repository details
+// pluginRepoInfoCmd shows repository details.
 var pluginRepoInfoCmd = &cobra.Command{
 	Use:   "info <name>",
 	Short: "Show repository information",
@@ -83,17 +83,17 @@ var pluginRepoInfoCmd = &cobra.Command{
 }
 
 func init() {
-	// Add repo subcommands
+	// Add repo subcommands.
 	pluginRepoCmd.AddCommand(pluginRepoAddCmd)
 	pluginRepoCmd.AddCommand(pluginRepoListCmd)
 	pluginRepoCmd.AddCommand(pluginRepoRemoveCmd)
 	pluginRepoCmd.AddCommand(pluginRepoUpdateCmd)
 	pluginRepoCmd.AddCommand(pluginRepoInfoCmd)
 
-	// Add repo command to plugins
+	// Add repo command to plugins.
 	pluginsCmd.AddCommand(pluginRepoCmd)
 
-	// Flags
+	// Flags.
 	pluginRepoAddCmd.Flags().IntVar(&repoPriority, "priority", 10, "Repository priority (lower = higher priority)")
 }
 
@@ -102,7 +102,7 @@ func getRepoManager() (*repository.Manager, error) {
 		return repoManager, nil
 	}
 
-	// Default paths
+	// Default paths.
 	if repoConfigPath == "" {
 		configDir, err := os.UserConfigDir()
 		if err != nil {
@@ -212,7 +212,7 @@ func runPluginRepoUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(args) == 0 {
-		// Update all repositories
+		// Update all repositories.
 		fmt.Println("Updating all repositories...")
 
 		repos := mgr.ListRepositories()
@@ -236,7 +236,7 @@ func runPluginRepoUpdate(cmd *cobra.Command, args []string) error {
 
 		fmt.Println("\n Repository update complete")
 	} else {
-		// Update specific repository
+		// Update specific repository.
 		name := args[0]
 		fmt.Printf("Updating repository %q...\n", name)
 
@@ -263,7 +263,7 @@ func runPluginRepoInfo(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Load manifest if not already loaded
+	// Load manifest if not already loaded.
 	if repo.Manifest == nil {
 		fmt.Printf("Loading manifest for %q...\n", name)
 		if err := mgr.UpdateRepository(name); err != nil {
@@ -289,7 +289,7 @@ func runPluginRepoInfo(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("  Plugins: %d\n", len(repo.Manifest.Plugins))
 
-		// List plugin names
+		// List plugin names.
 		if len(repo.Manifest.Plugins) > 0 {
 			fmt.Printf("\nAvailable Plugins:\n")
 			for name, plugin := range repo.Manifest.Plugins {

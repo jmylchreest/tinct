@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Plugin represents an output plugin that can generate configuration files
+// Plugin represents an output plugin that can generate configuration files.
 // from a categorised colour palette.
 type Plugin interface {
 	// Name returns the plugin's name (e.g., "tailwind", "hyprland").
@@ -32,26 +32,26 @@ type Plugin interface {
 	DefaultOutputDir() string
 }
 
-// PreExecuteHook is an optional interface that plugins can implement to perform
+// PreExecuteHook is an optional interface that plugins can implement to perform.
 // checks before generation. If the hook returns an error or skip=true, the plugin
 // will be skipped without generating output.
 //
-// Common use cases:
+// Common use cases:.
 //   - Check if required executables exist on $PATH
 //   - Verify configuration directories exist
 //   - Validate environment prerequisites
 type PreExecuteHook interface {
-	// PreExecute runs before Generate(). Returns:
+	// PreExecute runs before Generate(). Returns:.
 	//   - skip: if true, plugin is skipped (not an error, just bypassed)
 	//   - reason: human-readable explanation for skipping
 	//   - error: actual error that should stop execution
 	PreExecute(ctx context.Context) (skip bool, reason string, err error)
 }
 
-// PostExecuteHook is an optional interface that plugins can implement to perform
+// PostExecuteHook is an optional interface that plugins can implement to perform.
 // actions after successful file generation.
 //
-// Common use cases:
+// Common use cases:.
 //   - Reload application configuration
 //   - Send signals to running processes
 //   - Restart services
@@ -65,14 +65,14 @@ type PostExecuteHook interface {
 	PostExecute(ctx context.Context, execCtx ExecutionContext, writtenFiles []string) error
 }
 
-// VerbosePlugin is an optional interface that plugins can implement to receive
+// VerbosePlugin is an optional interface that plugins can implement to receive.
 // verbose logging settings from the CLI.
 type VerbosePlugin interface {
 	// SetVerbose enables or disables verbose logging for the plugin.
 	SetVerbose(verbose bool)
 }
 
-// TemplateProvider is an optional interface that plugins can implement to expose
+// TemplateProvider is an optional interface that plugins can implement to expose.
 // their embedded template filesystem for template management commands.
 type TemplateProvider interface {
 	// GetEmbeddedFS returns the embedded filesystem containing template files.
@@ -122,7 +122,7 @@ func (r *Registry) List() []string {
 
 // All returns all registered plugins (including disabled ones).
 func (r *Registry) All() map[string]Plugin {
-	// Return a copy to prevent external modification
+	// Return a copy to prevent external modification.
 	plugins := make(map[string]Plugin, len(r.plugins))
 	maps.Copy(plugins, r.plugins)
 	return plugins

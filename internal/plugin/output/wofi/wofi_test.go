@@ -35,7 +35,7 @@ func TestWofiPlugin_ContentValidation(t *testing.T) {
 	styleCSS := string(files["style.css"])
 	colorsFile := string(files["tinct-colors"])
 
-	// Check for required CSS content in style
+	// Check for required CSS content in style.
 	requiredStyleStrings := []string{
 		"window",
 		"#input",
@@ -48,7 +48,7 @@ func TestWofiPlugin_ContentValidation(t *testing.T) {
 		}
 	}
 
-	// Check colors file contains color definitions
+	// Check colors file contains color definitions.
 	if len(colorsFile) == 0 {
 		t.Error("Colors file should not be empty")
 	}
@@ -67,7 +67,7 @@ func TestWofiPlugin_GenerateWithLightTheme(t *testing.T) {
 
 	colorsFile := string(files["tinct-colors"])
 
-	// Check that colors file is generated
+	// Check that colors file is generated.
 	if len(colorsFile) == 0 {
 		t.Error("Colors file should not be empty for light theme")
 	}
@@ -111,12 +111,12 @@ func TestWofiPlugin_PrepareThemeData(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	data := colour.NewThemeData(palette, "", "")
 
-	// Check that PaletteHelper is created properly
+	// Check that PaletteHelper is created properly.
 	if data == nil {
 		t.Fatal("NewThemeData should return non-nil ThemeData")
 	}
 
-	// Check that required roles exist
+	// Check that required roles exist.
 	requiredRoles := []colour.ColourRole{
 		colour.RoleBackground,
 		colour.RoleForeground,
@@ -128,7 +128,7 @@ func TestWofiPlugin_PrepareThemeData(t *testing.T) {
 		}
 	}
 
-	// Check that theme type matches
+	// Check that theme type matches.
 	if data.ThemeTypeString() != "dark" {
 		t.Errorf("ThemeTypeString() = %s, want dark", data.ThemeTypeString())
 	}

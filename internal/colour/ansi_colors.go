@@ -13,10 +13,10 @@ type ANSIColor struct {
 	IsBright bool
 }
 
-// Standard ANSI color palette (xterm-256 basic 16 colors)
-// These are the typical/common values - actual terminals may vary slightly
+// Standard ANSI color palette (xterm-256 basic 16 colors).
+// These are the typical/common values - actual terminals may vary slightly.
 var ansiColors = []ANSIColor{
-	// Normal colors (0-7)
+	// Normal colors (0-7).
 	{Name: "black", R: 0, G: 0, B: 0, Aliases: []string{"color0"}},
 	{Name: "red", R: 205, G: 49, B: 49, Aliases: []string{"color1"}},
 	{Name: "green", R: 13, G: 188, B: 121, Aliases: []string{"color2"}},
@@ -26,7 +26,7 @@ var ansiColors = []ANSIColor{
 	{Name: "cyan", R: 17, G: 168, B: 205, Aliases: []string{"color6"}},
 	{Name: "white", R: 229, G: 229, B: 229, Aliases: []string{"color7", "gray", "grey"}},
 
-	// Bright colors (8-15)
+	// Bright colors (8-15).
 	{Name: "brightblack", R: 102, G: 102, B: 102, Aliases: []string{"color8", "darkgray", "darkgrey", "brightBlack"}, IsBright: true},
 	{Name: "brightred", R: 241, G: 76, B: 76, Aliases: []string{"color9", "brightRed"}, IsBright: true},
 	{Name: "brightgreen", R: 35, G: 209, B: 139, Aliases: []string{"color10", "brightGreen"}, IsBright: true},
@@ -36,7 +36,7 @@ var ansiColors = []ANSIColor{
 	{Name: "brightcyan", R: 41, G: 184, B: 219, Aliases: []string{"color14", "brightCyan"}, IsBright: true},
 	{Name: "brightwhite", R: 255, G: 255, B: 255, Aliases: []string{"color15", "brightWhite"}, IsBright: true},
 
-	// Additional common color names
+	// Additional common color names.
 	{Name: "orange", R: 255, G: 165, B: 0, Aliases: []string{}},
 	{Name: "pink", R: 255, G: 192, B: 203, Aliases: []string{}},
 	{Name: "brown", R: 165, G: 42, B: 42, Aliases: []string{}},
@@ -49,11 +49,11 @@ var ansiColors = []ANSIColor{
 	{Name: "indigo", R: 75, G: 0, B: 130, Aliases: []string{}},
 }
 
-// FindClosestANSIColor finds the color in the palette that most closely matches
+// FindClosestANSIColor finds the color in the palette that most closely matches.
 // the given ANSI color name using perceptual color distance (CIEDE2000-like).
 // Returns the ColorValue and true if found, or ColorValue{} and false if not found.
 //
-// Supported color names include:
+// Supported color names include:.
 //   - Standard ANSI: black, red, green, yellow, blue, magenta, cyan, white
 //   - Bright variants: brightblack, brightred, brightgreen, etc.
 //   - Aliases: color0-color15, gray, grey, purple, darkgray, etc.
@@ -61,17 +61,17 @@ var ansiColors = []ANSIColor{
 //
 // Name matching is case-insensitive.
 func (ph *PaletteHelper) FindClosestANSIColor(colorName string) (ColorValue, bool) {
-	// Normalize color name (lowercase, remove spaces/dashes)
+	// Normalize color name (lowercase, remove spaces/dashes).
 	normalizedName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(colorName, " ", ""), "-", ""))
 
-	// Find the ANSI color definition
+	// Find the ANSI color definition.
 	var targetColor *ANSIColor
 	for i := range ansiColors {
 		if ansiColors[i].Name == normalizedName {
 			targetColor = &ansiColors[i]
 			break
 		}
-		// Check aliases
+		// Check aliases.
 		for _, alias := range ansiColors[i].Aliases {
 			if strings.ToLower(alias) == normalizedName {
 				targetColor = &ansiColors[i]
@@ -87,7 +87,7 @@ func (ph *PaletteHelper) FindClosestANSIColor(colorName string) (ColorValue, boo
 		return ColorValue{}, false
 	}
 
-	// Find closest color in palette using perceptual distance
+	// Find closest color in palette using perceptual distance.
 	var closestColor ColorValue
 	minDistance := math.MaxFloat64
 
@@ -106,13 +106,13 @@ func (ph *PaletteHelper) FindClosestANSIColor(colorName string) (ColorValue, boo
 // CIEDE2000-like formula (weighted Euclidean distance in RGB space).
 // This is faster than full CIEDE2000 and good enough for color matching.
 func colorDistance(r1, g1, b1, r2, g2, b2 uint8) float64 {
-	// Convert to float64 for calculation
+	// Convert to float64 for calculation.
 	dr := float64(r1) - float64(r2)
 	dg := float64(g1) - float64(g2)
 	db := float64(b1) - float64(b2)
 
-	// Weighted Euclidean distance (emphasizes green more like human perception)
-	// Weights based on human color perception sensitivity
+	// Weighted Euclidean distance (emphasizes green more like human perception).
+	// Weights based on human color perception sensitivity.
 	return math.Sqrt(2*dr*dr + 4*dg*dg + 3*db*db)
 }
 

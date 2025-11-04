@@ -30,11 +30,11 @@ func NewPalette(colors []color.Color) *Palette {
 // Weights should be normalised (sum to 1.0) but will be normalised if not.
 func NewPaletteWithWeights(colors []color.Color, weights []float64) *Palette {
 	if len(weights) != len(colors) {
-		// Fallback to equal weights if mismatch
+		// Fallback to equal weights if mismatch.
 		return NewPalette(colors)
 	}
 
-	// Normalise weights to sum to 1.0
+	// Normalise weights to sum to 1.0.
 	sum := 0.0
 	for _, w := range weights {
 		sum += w
@@ -46,7 +46,7 @@ func NewPaletteWithWeights(colors []color.Color, weights []float64) *Palette {
 			normalized[i] = w / sum
 		}
 	} else {
-		// Equal weights if all zero
+		// Equal weights if all zero.
 		equalWeight := 1.0 / float64(len(weights))
 		for i := range normalized {
 			normalized[i] = equalWeight
@@ -61,7 +61,7 @@ func NewPaletteWithWeights(colors []color.Color, weights []float64) *Palette {
 }
 
 // NewPaletteWithRoleHints creates a new Palette with colors and explicit role assignments.
-// RoleHints maps semantic roles to color indices, allowing input plugins to override
+// RoleHints maps semantic roles to color indices, allowing input plugins to override.
 // automatic categorization for specific roles.
 func NewPaletteWithRoleHints(colors []color.Color, roleHints map[ColourRole]int) *Palette {
 	return &Palette{
@@ -142,7 +142,7 @@ func (rgba RGBA) ToRGB() RGB {
 // ToRGB converts a color.Color to RGB.
 func ToRGB(c color.Color) RGB {
 	r, g, b, _ := c.RGBA()
-	// RGBA returns values in the range [0, 65535], convert to [0, 255]
+	// RGBA returns values in the range [0, 65535], convert to [0, 255].
 	return RGB{
 		R: security.SafeUint8FromUint32(r >> 8),
 		G: security.SafeUint8FromUint32(g >> 8),
@@ -154,7 +154,7 @@ func ToRGB(c color.Color) RGB {
 // If the color doesn't have an alpha channel, it defaults to 255 (fully opaque).
 func ToRGBA(c color.Color) RGBA {
 	r, g, b, a := c.RGBA()
-	// RGBA returns values in the range [0, 65535], convert to [0, 255]
+	// RGBA returns values in the range [0, 65535], convert to [0, 255].
 	return RGBA{
 		R: security.SafeUint8FromUint32(r >> 8),
 		G: security.SafeUint8FromUint32(g >> 8),

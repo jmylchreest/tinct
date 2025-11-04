@@ -46,12 +46,12 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 
 // Validate checks if the plugin has all required inputs configured.
 func (p *Plugin) Validate() error {
-	// Either path or colour overrides must be provided
+	// Either path or colour overrides must be provided.
 	if p.path == "" && len(p.colourOverrides) == 0 {
 		return fmt.Errorf("must provide either --file.path or --colour specifications")
 	}
 
-	// Validate colour overrides format
+	// Validate colour overrides format.
 	for _, override := range p.colourOverrides {
 		if !strings.Contains(override, "=") {
 			return fmt.Errorf("invalid colour format '%s': expected 'role=hex'", override)
@@ -68,11 +68,11 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	var colors []color.Color
 	roleHints := make(map[colour.ColourRole]int) // Map roles to color indices
 
-	// Merge colour overrides from options with plugin's own overrides
+	// Merge colour overrides from options with plugin's own overrides.
 	allOverrides := append([]string{}, p.colourOverrides...)
 	allOverrides = append(allOverrides, opts.ColourOverrides...)
 
-	// Load from file if provided
+	// Load from file if provided.
 	if p.path != "" {
 		loadedColors, hints, err := p.loadFromFile(p.path)
 		if err != nil {
@@ -82,33 +82,33 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		roleHints = hints
 	}
 
-	// Apply colour overrides (from both plugin flags and options)
+	// Apply colour overrides (from both plugin flags and options).
 	if len(allOverrides) > 0 {
 		overrideColors, overrideHints, err := p.parseOverrides(allOverrides)
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply colour overrides: %w", err)
 		}
 
-		// Merge override colors and hints
+		// Merge override colors and hints.
 		for role, idx := range overrideHints {
-			// Check if we need to add this color or replace an existing one
+			// Check if we need to add this color or replace an existing one.
 			if existingIdx, exists := roleHints[role]; exists {
-				// Replace existing color
+				// Replace existing color.
 				colors[existingIdx] = overrideColors[idx]
 			} else {
-				// Add new color
+				// Add new color.
 				roleHints[role] = len(colors)
 				colors = append(colors, overrideColors[idx])
 			}
 		}
 	}
 
-	// If no colors provided at all, return error
+	// If no colors provided at all, return error.
 	if len(colors) == 0 {
 		return nil, fmt.Errorf("no colors provided")
 	}
 
-	// Create palette with role hints if any were provided
+	// Create palette with role hints if any were provided.
 	var palette *colour.Palette
 	if len(roleHints) > 0 {
 		palette = colour.NewPaletteWithRoleHints(colors, roleHints)
@@ -127,10 +127,10 @@ func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.ColourRole
 		return nil, nil, err
 	}
 
-	// Try JSON first (categorised palette format)
+	// Try JSON first (categorised palette format).
 	var categorised colour.CategorisedPalette
 	if err := json.Unmarshal(data, &categorised); err == nil {
-		// Extract colors and role hints from categorised palette
+		// Extract colors and role hints from categorised palette.
 		colors := make([]color.Color, 0)
 		roleHints := make(map[colour.ColourRole]int)
 
@@ -139,7 +139,7 @@ func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.ColourRole
 			colors = append(colors, catColor.Colour)
 		}
 
-		// Also add any colors from AllColours that aren't in roles
+		// Also add any colors from AllColours that aren't in roles.
 		for _, catColor := range categorised.AllColours {
 			colors = append(colors, catColor.Colour)
 		}
@@ -147,12 +147,12 @@ func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.ColourRole
 		return colors, roleHints, nil
 	}
 
-	// Try simple text format: hex colors or role=hex
+	// Try simple text format: hex colors or role=hex.
 	return p.parseTextFormat(string(data))
 }
 
 // parseTextFormat parses a simple text format palette file.
-// Format: hex colors (one per line) or role=hex (one per line), # for comments
+// Format: hex colors (one per line) or role=hex (one per line), # for comments.
 func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.ColourRole]int, error) {
 	colors := make([]color.Color, 0)
 	roleHints := make(map[colour.ColourRole]int)
@@ -161,14 +161,14 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Colo
 	for lineNum, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Skip empty lines and comments
+		// Skip empty lines and comments.
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 
-		// Check if it's role=hex format or just hex
+		// Check if it's role=hex format or just hex.
 		if strings.Contains(line, "=") {
-			// Parse role=hex or colourN=hex
+			// Parse role=hex or colourN=hex.
 			parts := strings.SplitN(line, "=", 2)
 			if len(parts) != 2 {
 				return nil, nil, fmt.Errorf("line %d: invalid format, expected 'role=hex' or just 'hex'", lineNum+1)
@@ -177,16 +177,16 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Colo
 			roleName := strings.TrimSpace(parts[0])
 			hex := strings.TrimSpace(parts[1])
 
-			// Check if it's an indexed color (colourN or colorN)
+			// Check if it's an indexed color (colourN or colorN).
 			if strings.HasPrefix(strings.ToLower(roleName), "colour") || strings.HasPrefix(strings.ToLower(roleName), "color") {
-				// Indexed color - just add the hex without role hint
+				// Indexed color - just add the hex without role hint.
 				rgb, err := parseHex(hex)
 				if err != nil {
 					return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
 				}
 				colors = append(colors, rgbToColor(rgb))
 			} else {
-				// Role-based color
+				// Role-based color.
 				role, err := parseColourRole(roleName)
 				if err != nil {
 					return nil, nil, fmt.Errorf("line %d: %w", lineNum+1, err)
@@ -201,7 +201,7 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Colo
 				colors = append(colors, rgbToColor(rgb))
 			}
 		} else {
-			// Just a hex color
+			// Just a hex color.
 			hex := line
 			rgb, err := parseHex(hex)
 			if err != nil {
@@ -230,13 +230,13 @@ func (p *Plugin) parseOverrides(overrides []string) ([]color.Color, map[colour.C
 		roleName := strings.TrimSpace(parts[0])
 		hex := strings.TrimSpace(parts[1])
 
-		// Parse role name
+		// Parse role name.
 		role, err := parseColourRole(roleName)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		// Parse hex colour
+		// Parse hex colour.
 		rgb, err := parseHex(hex)
 		if err != nil {
 			return nil, nil, fmt.Errorf("invalid hex colour '%s': %w", hex, err)
@@ -252,13 +252,13 @@ func (p *Plugin) parseOverrides(overrides []string) ([]color.Color, map[colour.C
 // parseColourRole parses a role name string into a ColourRole constant.
 // Accepts both British English (colour) and American English (color) spelling.
 func parseColourRole(name string) (colour.ColourRole, error) {
-	// Normalise the name - convert to lowercase and replace underscores/hyphens
+	// Normalise the name - convert to lowercase and replace underscores/hyphens.
 	name = strings.ToLower(name)
 	name = strings.ReplaceAll(name, "_", "")
 	name = strings.ReplaceAll(name, "-", "")
 
 	roleMap := map[string]colour.ColourRole{
-		// Core semantic roles
+		// Core semantic roles.
 		"background":      colour.RoleBackground,
 		"backgroundmuted": colour.RoleBackgroundMuted,
 		"foreground":      colour.RoleForeground,
@@ -277,7 +277,7 @@ func parseColourRole(name string) (colour.ColourRole, error) {
 		"info":            colour.RoleInfo,
 		"notification":    colour.RoleNotification,
 
-		// Position hints (edge/corner regions for ambient lighting)
+		// Position hints (edge/corner regions for ambient lighting).
 		"positiontopleft":     colour.RolePositionTopLeft,
 		"positiontop":         colour.RolePositionTop,
 		"positiontopright":    colour.RolePositionTopRight,
@@ -287,7 +287,7 @@ func parseColourRole(name string) (colour.ColourRole, error) {
 		"positionbottomleft":  colour.RolePositionBottomLeft,
 		"positionleft":        colour.RolePositionLeft,
 
-		// Position hints (12-region grid)
+		// Position hints (12-region grid).
 		"positiontopleftinner":     colour.RolePositionTopLeftInner,
 		"positiontopcenter":        colour.RolePositionTopCenter,
 		"positiontoprightinner":    colour.RolePositionTopRightInner,
@@ -299,7 +299,7 @@ func parseColourRole(name string) (colour.ColourRole, error) {
 		"positionleftbottom":       colour.RolePositionLeftBottom,
 		"positionlefttop":          colour.RolePositionLeftTop,
 
-		// Position hints (16-region grid)
+		// Position hints (16-region grid).
 		"positiontopleftouter":      colour.RolePositionTopLeftOuter,
 		"positiontopleftcenter":     colour.RolePositionTopLeftCenter,
 		"positiontoprightcenter":    colour.RolePositionTopRightCenter,
@@ -323,22 +323,22 @@ func parseColourRole(name string) (colour.ColourRole, error) {
 }
 
 // parseHex parses a hex colour string into an RGB struct.
-// Supports formats: #RRGGBB, RRGGBB, #RGB, RGB
+// Supports formats: #RRGGBB, RRGGBB, #RGB, RGB.
 func parseHex(hex string) (colour.RGB, error) {
-	// Remove # prefix if present
+	// Remove # prefix if present.
 	hex = strings.TrimPrefix(hex, "#")
 
-	// Expand shorthand format (RGB -> RRGGBB)
+	// Expand shorthand format (RGB -> RRGGBB).
 	if len(hex) == 3 {
 		hex = string([]byte{hex[0], hex[0], hex[1], hex[1], hex[2], hex[2]})
 	}
 
-	// Validate length
+	// Validate length.
 	if len(hex) != 6 {
 		return colour.RGB{}, fmt.Errorf("invalid hex colour length: expected 6 characters, got %d", len(hex))
 	}
 
-	// Parse hex values
+	// Parse hex values.
 	r, err := strconv.ParseUint(hex[0:2], 16, 8)
 	if err != nil {
 		return colour.RGB{}, fmt.Errorf("invalid red component: %w", err)

@@ -34,7 +34,7 @@ func TestFuzzelPlugin_ContentValidation(t *testing.T) {
 
 	content := string(files["tinct.ini"])
 
-	// Fuzzel-specific validations
+	// Fuzzel-specific validations.
 	requiredStrings := []string{
 		"[colors]",
 		"background=",
@@ -56,7 +56,7 @@ func TestFuzzelPlugin_ContentValidation(t *testing.T) {
 		}
 	}
 
-	// Check that theme type is present
+	// Check that theme type is present.
 	if !strings.Contains(content, "Detected theme: dark") {
 		t.Error("Generated content missing theme type")
 	}
@@ -90,12 +90,12 @@ func TestFuzzelPlugin_PrepareThemeData(t *testing.T) {
 
 	data := colour.NewThemeData(palette, "", "")
 
-	// Check that PaletteHelper is created properly
+	// Check that PaletteHelper is created properly.
 	if data == nil {
 		t.Fatal("NewThemeData should return non-nil ThemeData")
 	}
 
-	// Check that required roles exist
+	// Check that required roles exist.
 	requiredRoles := []colour.ColourRole{
 		colour.RoleBackground,
 		colour.RoleForeground,
@@ -108,7 +108,7 @@ func TestFuzzelPlugin_PrepareThemeData(t *testing.T) {
 		}
 	}
 
-	// Check that theme type matches
+	// Check that theme type matches.
 	if data.ThemeTypeString() != "dark" {
 		t.Errorf("ThemeTypeString() = %s, want dark", data.ThemeTypeString())
 	}
@@ -127,13 +127,13 @@ func TestFuzzelPlugin_ColorFormatting(t *testing.T) {
 
 	content := string(files["tinct.ini"])
 
-	// Verify RGBA color format (RRGGBBAA without #)
-	// Fuzzel uses RRGGBBAA format
+	// Verify RGBA color format (RRGGBBAA without #).
+	// Fuzzel uses RRGGBBAA format.
 	if !strings.Contains(content, "=") {
 		t.Error("Generated content should contain color assignments")
 	}
 
-	// Check that colors section exists
+	// Check that colors section exists.
 	if !strings.Contains(content, "[colors]") {
 		t.Error("Generated content should contain [colors] section")
 	}
