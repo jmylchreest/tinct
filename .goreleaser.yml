@@ -107,6 +107,80 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: wob (Go)
+  - id: plugin-wob
+    main: .
+    binary: wob-tinct
+    dir: ./contrib/plugins/output/wob
+
+    # Build for Linux only (wob is a Wayland-specific tool)
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+
+    ldflags:
+      - -s -w
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  # Plugin: templater (Go)
+  - id: plugin-templater
+    main: .
+    binary: templater
+    dir: ./contrib/plugins/output/templater
+
+    # Build for multiple platforms
+    goos:
+      - linux
+      - darwin
+      - windows
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Ignore specific combinations
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+      - goos: freebsd
+        goarch: arm
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+
+    ldflags:
+      - -s -w
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 # Archive configuration
 archives:
   - id: tinct-archive
@@ -157,6 +231,55 @@ archives:
       - src: LICENSE
         dst: LICENSE
 
+  - id: plugin-wob-archive
+    builds:
+      - plugin-wob
+    name_template: >-
+      tinct-plugin-wob_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+
+    files:
+      - src: contrib/plugins/output/wob/README.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: plugin-templater-archive
+    builds:
+      - plugin-templater
+    name_template: >-
+      tinct-plugin-templater_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    files:
+      - src: contrib/plugins/output/templater/README.md
+        dst: README.md
+      - src: contrib/plugins/output/templater/QUICKSTART.md
+        dst: QUICKSTART.md
+      - src: contrib/plugins/output/templater/example-config.yaml
+        dst: example-config.yaml
+      - src: contrib/plugins/output/templater/templates/*.tmpl
+        dst: templates/
+      - src: LICENSE
+        dst: LICENSE
+
   # Script-based plugins archive (platform-independent)
   - id: plugin-scripts-archive
     name_template: "tinct-plugin-scripts_{{ .Version }}"
@@ -185,8 +308,9 @@ checksum:
   algorithm: sha256
 
 # Snapshots (non-tagged builds)
+# Format: v0.1.2-abc1234 (next version after tag with git short hash)
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-{{ .ShortCommit }}"
 
 # Changelog generation
 changelog:
@@ -358,8 +482,10 @@ release:
     Plugins are available as separate downloadable archives. Install them using:
 
     ```bash
-    # Install random plugin (compiled binary)
+    # Install compiled Go plugins
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-random_{{.Version}}_Linux_x86_64.tar.gz:random
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-wob_{{.Version}}_Linux_x86_64.tar.gz:wob-tinct
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-templater_{{.Version}}_Linux_x86_64.tar.gz:templater
 
     # Install script-based plugins
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-scripts_{{.Version}}.tar.gz:notify-send
@@ -369,6 +495,8 @@ release:
     Or download manually from the assets below and add locally:
     ```bash
     tinct plugins add ./random
+    tinct plugins add ./wob-tinct
+    tinct plugins add ./templater
     tinct plugins add ./notify-send
     ```
 

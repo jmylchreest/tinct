@@ -25,7 +25,8 @@ func TestKittyPluginWithPaletteHelper(t *testing.T) {
 
 	// Create plugin and generate
 	plugin := New()
-	files, err := plugin.Generate(categorised)
+	themeData := colour.NewThemeData(categorised, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}

@@ -26,7 +26,8 @@ func TestDunstPlugin_ContentValidation(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	files, err := plugin.Generate(palette)
+	themeData := colour.NewThemeData(palette, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -63,7 +64,8 @@ func TestDunstPlugin_GenerateWithLightTheme(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeLight)
 	plugin := New()
 
-	files, err := plugin.Generate(palette)
+	themeData := colour.NewThemeData(palette, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -112,13 +114,11 @@ func TestDunstPlugin_GetEmbeddedTemplates(t *testing.T) {
 // TestDunstPlugin_PrepareThemeData tests theme data preparation.
 func TestDunstPlugin_PrepareThemeData(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
-	plugin := New()
+	data := colour.NewThemeData(palette, "", "")
 
-	data := plugin.prepareThemeData(palette)
-
-	// Check that PaletteHelper is created properly
+	// Check that ThemeData is created properly
 	if data == nil {
-		t.Fatal("prepareThemeData should return non-nil PaletteHelper")
+		t.Fatal("NewThemeData should return non-nil ThemeData")
 	}
 
 	// Check that required roles exist
@@ -134,7 +134,7 @@ func TestDunstPlugin_PrepareThemeData(t *testing.T) {
 
 	for _, role := range requiredRoles {
 		if !data.Has(role) {
-			t.Errorf("PaletteHelper missing required role: %s", role)
+			t.Errorf("ThemeData missing required role: %s", role)
 		}
 	}
 
@@ -149,7 +149,8 @@ func TestDunstPlugin_ColorFormatting(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	files, err := plugin.Generate(palette)
+	themeData := colour.NewThemeData(palette, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}

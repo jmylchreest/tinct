@@ -26,7 +26,8 @@ func TestWofiPlugin_ContentValidation(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	files, err := plugin.Generate(palette)
+	themeData := colour.NewThemeData(palette, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -58,7 +59,8 @@ func TestWofiPlugin_GenerateWithLightTheme(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeLight)
 	plugin := New()
 
-	files, err := plugin.Generate(palette)
+	themeData := colour.NewThemeData(palette, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -107,13 +109,11 @@ func TestWofiPlugin_GetEmbeddedTemplates(t *testing.T) {
 // TestWofiPlugin_PrepareThemeData tests theme data preparation.
 func TestWofiPlugin_PrepareThemeData(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
-	plugin := New()
-
-	data := plugin.prepareThemeData(palette)
+	data := colour.NewThemeData(palette, "", "")
 
 	// Check that PaletteHelper is created properly
 	if data == nil {
-		t.Fatal("prepareThemeData should return non-nil PaletteHelper")
+		t.Fatal("NewThemeData should return non-nil ThemeData")
 	}
 
 	// Check that required roles exist
@@ -124,7 +124,7 @@ func TestWofiPlugin_PrepareThemeData(t *testing.T) {
 
 	for _, role := range requiredRoles {
 		if !data.Has(role) {
-			t.Errorf("PaletteHelper missing required role: %s", role)
+			t.Errorf("ThemeData missing required role: %s", role)
 		}
 	}
 

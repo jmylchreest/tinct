@@ -1,0 +1,53 @@
+# Templater Configuration Example
+# Copy this to ~/.config/tinct/templater.yaml and customize
+
+templates:
+  # Example 1: CSS Variables
+  - name: "css-variables"
+    description: "CSS custom properties for web projects"
+    template_path: "~/.config/tinct/templates/css-vars.tmpl"
+    output_path: "~/projects/myapp/src/styles/colors.css"
+    enabled: true
+
+  # Example 2: SCSS Variables
+  - name: "scss-variables"
+    description: "SCSS variables file"
+    template_path: "~/.config/tinct/templates/scss-vars.tmpl"
+    output_path: "~/projects/myapp/src/styles/_colors.scss"
+    enabled: false
+
+  # Example 3: i3 Window Manager Colors
+  - name: "i3-colors"
+    description: "i3 window manager color configuration"
+    template_path: "~/.config/tinct/templates/i3-colors.tmpl"
+    output_path: "~/.config/i3/colors"
+    enabled: false
+
+  # Example 4: Custom JSON Theme
+  - name: "custom-json"
+    description: "Custom JSON theme format"
+    template_path: "~/.config/tinct/templates/theme.json.tmpl"
+    output_path: "~/.config/myapp/theme.json"
+    enabled: false
+
+  # Example 5: Alacritty Colors (using YAML template)
+  - name: "alacritty-colors"
+    description: "Alacritty terminal color scheme"
+    template_path: "~/.config/tinct/templates/alacritty.yml.tmpl"
+    output_path: "~/.config/alacritty/tinct-colors.yml"
+    enabled: false
+
+# Global settings
+settings:
+  # Create output directories if they don't exist
+  create_dirs: true
+
+  # Backup existing files before overwriting
+  backup: true
+  backup_suffix: ".backup"
+
+  # Verbose output
+  verbose: false
+
+  # Output file permissions (octal)
+  file_mode: 0644

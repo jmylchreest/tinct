@@ -26,7 +26,8 @@ func TestKittyPlugin_ContentValidation(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	files, err := plugin.Generate(palette)
+	themeData := colour.NewThemeData(palette, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
@@ -64,7 +65,8 @@ func TestKittyPlugin_GenerateWithLightTheme(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeLight)
 	plugin := New()
 
-	files, err := plugin.Generate(palette)
+	themeData := colour.NewThemeData(palette, "", "")
+	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
