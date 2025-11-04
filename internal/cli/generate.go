@@ -91,7 +91,20 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 					desc = fmt.Sprintf("External plugin (source: %s)", meta.Source)
 				}
 
-				if err := sharedPluginManager.RegisterExternalPlugin(pluginName, meta.Type, meta.Path, desc); err != nil {
+				// Convert relative paths to absolute.
+				pluginPath := meta.Path
+				if !filepath.IsAbs(pluginPath) {
+					absPath, err := filepath.Abs(pluginPath)
+					if err != nil {
+						if generateVerbose {
+							fmt.Fprintf(os.Stderr, " Failed to resolve absolute path for plugin '%s': %v\n", pluginName, err)
+						}
+						continue
+					}
+					pluginPath = absPath
+				}
+
+				if err := sharedPluginManager.RegisterExternalPlugin(pluginName, meta.Type, pluginPath, desc); err != nil {
 					if generateVerbose {
 						fmt.Fprintf(os.Stderr, " Failed to register external plugin '%s': %v\n", pluginName, err)
 					}
@@ -459,7 +472,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 // runGlobalHookScript executes a global hook script if it exists.
 // Looks for scripts at ~/.config/tinct/hooks/{hook-name}.sh.
-func runGlobalHookScript(ctx context.Context, hookName string, verbose bool, dryRun bool) error {
+func runGlobalHookScript(ctx context.Context, hookName string, verbose, dryRun bool) error {
 	if dryRun {
 		return nil // Don't run hooks in dry-run mode
 	}
@@ -481,7 +494,7 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose bool, dry
 	}
 
 	// Check if executable.
-	if info.Mode()&0111 == 0 {
+	if info.Mode()&0o111 == 0 {
 		if verbose {
 			fmt.Fprintf(os.Stderr, " Hook script exists but is not executable: %s\n", hookPath)
 		}
@@ -593,12 +606,12 @@ func savePalette(palette *colour.CategorisedPalette, path string) error {
 	// Ensure directory exists.
 	dir := filepath.Dir(path)
 	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
 
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -662,7 +675,7 @@ func writeFile(path string, content []byte, verbose bool) error {
 
 	// Ensure directory exists.
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -680,7 +693,7 @@ func writeFile(path string, content []byte, verbose bool) error {
 	}
 
 	// Write the file.
-	if err := os.WriteFile(path, content, 0600); err != nil {
+	if err := os.WriteFile(path, content, 0o600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
