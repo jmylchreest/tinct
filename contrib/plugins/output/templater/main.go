@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/hashicorp/go-plugin"
+
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
 const (
@@ -25,20 +29,35 @@ type PluginInfo struct {
 func main() {
 	// Handle --plugin-info flag for Tinct discovery
 	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
-		info := PluginInfo{
-			Name:        Name,
-			Type:        "output",
-			Version:     Version,
-			Description: "Templater for custom configuration files",
-			Enabled:     true,
-			Author:      "Tinct Contributors",
-		}
-		if err := json.NewEncoder(os.Stdout).Encode(info); err != nil {
+		p := &TemplaterPlugin{}
+		info := p.GetMetadata()
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(info); err != nil {
 			fmt.Fprintf(os.Stderr, "Error encoding plugin info: %v\n", err)
 			os.Exit(1)
 		}
 		os.Exit(0)
 	}
+
+	// If no arguments, run as go-plugin server (Tinct integration)
+	if len(os.Args) == 1 {
+		plugin.Serve(&plugin.ServeConfig{
+			HandshakeConfig: protocol.Handshake,
+			Plugins: map[string]plugin.Plugin{
+				"output": &protocol.OutputPluginRPC{
+					Impl: &TemplaterPlugin{},
+				},
+			},
+		})
+		return
+	}
+
+	// Legacy JSON-stdio mode (deprecated, kept for backward compatibility)
+	runLegacyMode()
+}
+
+func runLegacyMode() {
 
 	// Read palette data from stdin
 	var input PaletteInput
@@ -110,7 +129,7 @@ func main() {
 func getConfigPath(args map[string]interface{}) string {
 	// Check plugin args first
 	if configPath, ok := args["config"].(string); ok && configPath != "" {
-		return expandPath(configPath)
+		return expandPathSimple(configPath)
 	}
 
 	// Try default locations in order
@@ -121,7 +140,7 @@ func getConfigPath(args map[string]interface{}) string {
 	}
 
 	for _, path := range defaults {
-		expanded := expandPath(path)
+		expanded := expandPathSimple(path)
 		if _, err := os.Stat(expanded); err == nil {
 			return expanded
 		}
@@ -129,11 +148,11 @@ func getConfigPath(args map[string]interface{}) string {
 
 	// Return the first default even if it doesn't exist
 	// (error will be handled by LoadConfig)
-	return expandPath(defaults[0])
+	return expandPathSimple(defaults[0])
 }
 
-// expandPath expands ~ to home directory
-func expandPath(path string) string {
+// expandPathSimple expands ~ to home directory (JSON-stdio mode)
+func expandPathSimple(path string) string {
 	if len(path) > 0 && path[0] == '~' {
 		home, err := os.UserHomeDir()
 		if err != nil {

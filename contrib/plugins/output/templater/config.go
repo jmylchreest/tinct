@@ -37,7 +37,11 @@ type Settings struct {
 // LoadConfig loads configuration from a file (YAML or JSON)
 func LoadConfig(path string) (*Config, error) {
 	// Expand path
-	path = expandPath(path)
+	var err error
+	path, err = expandPath(path)
+	if err != nil {
+		return nil, err
+	}
 
 	// Read file
 	data, err := os.ReadFile(path) // #nosec G304 - User-specified config file, intended to be read
@@ -68,7 +72,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Apply defaults
-	applyDefaults(&config)
+	if err := applyDefaults(&config); err != nil {
+		return nil, err
+	}
 
 	// Validate config
 	if err := validateConfig(&config); err != nil {
@@ -79,7 +85,7 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 // applyDefaults applies default values to config
-func applyDefaults(config *Config) {
+func applyDefaults(config *Config) error {
 	// Default settings
 	if config.Settings.BackupSuffix == "" {
 		config.Settings.BackupSuffix = ".backup"
@@ -90,9 +96,17 @@ func applyDefaults(config *Config) {
 
 	// Expand paths in templates
 	for i := range config.Templates {
-		config.Templates[i].TemplatePath = expandPath(config.Templates[i].TemplatePath)
-		config.Templates[i].OutputPath = expandPath(config.Templates[i].OutputPath)
+		var err error
+		config.Templates[i].TemplatePath, err = expandPath(config.Templates[i].TemplatePath)
+		if err != nil {
+			return fmt.Errorf("failed to expand template path: %w", err)
+		}
+		config.Templates[i].OutputPath, err = expandPath(config.Templates[i].OutputPath)
+		if err != nil {
+			return fmt.Errorf("failed to expand output path: %w", err)
+		}
 	}
+	return nil
 }
 
 // validateConfig validates the configuration

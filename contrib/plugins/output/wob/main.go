@@ -11,6 +11,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/hashicorp/go-plugin"
+
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
 // isValidPath checks if a path is safe to use in commands.
@@ -63,16 +67,38 @@ type WobConfig struct {
 }
 
 func main() {
-	// Default to plugin mode when called without arguments (Tinct integration)
-	// Otherwise use the specified command
-	command := "plugin"
-	if len(os.Args) >= 2 {
-		command = os.Args[1]
+	// Handle --plugin-info flag for protocol detection
+	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
+		p := &WobPlugin{}
+		info := p.GetMetadata()
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(info); err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding plugin info: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
+
+	// If no arguments, run as go-plugin server (Tinct integration)
+	if len(os.Args) == 1 {
+		plugin.Serve(&plugin.ServeConfig{
+			HandshakeConfig: protocol.Handshake,
+			Plugins: map[string]plugin.Plugin{
+				"output": &protocol.OutputPluginRPC{
+					Impl: &WobPlugin{},
+				},
+			},
+		})
+		return
+	}
+
+	// Otherwise use the specified command for wrapper mode
+	command := os.Args[1]
 
 	switch command {
 	case "plugin":
-		// Plugin mode: run as Tinct external plugin
+		// Legacy JSON-stdio plugin mode (deprecated, use go-plugin instead)
 		if err := runPlugin(); err != nil {
 			fmt.Fprintf(os.Stderr, "Plugin error: %v\n", err)
 			os.Exit(1)
@@ -119,24 +145,6 @@ func main() {
 	case "version", "-v", "--version":
 		fmt.Printf("wob-tinct %s\n", pluginVersion)
 
-	case "--plugin-info":
-		// Plugin info mode: output JSON metadata for Tinct discovery
-		printPluginInfo()
-
-	case "--pre-execute":
-		// Pre-execute hook: check if wob binary exists
-		if err := runPreExecute(); err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
-		}
-
-	case "--post-execute":
-		// Post-execute hook: stop running wob instance so it picks up new theme on next use
-		if err := runPostExecute(); err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
-		}
-
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
 		printUsage()
@@ -144,27 +152,18 @@ func main() {
 	}
 }
 
-func printPluginInfo() {
-	info := map[string]interface{}{
-		"name":             pluginName,
-		"type":             "output",
-		"description":      pluginDescription,
-		"version":          pluginVersion,
-		"protocol_version": protocolVersion,
-		"author":           "Tinct Contributors",
-		"capabilities": map[string]bool{
-			"generate": true,
-			"preview":  false,
-		},
-		"options": []map[string]string{},
+// lookupWobBinary finds the wob binary on PATH
+func lookupWobBinary() (string, error) {
+	wobBin := os.Getenv("WOB_BIN")
+	if wobBin == "" {
+		wobBin = "wob"
 	}
 
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(info); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to encode plugin info: %v\n", err)
-		os.Exit(1)
+	if !isValidExecutableName(wobBin) {
+		return "", fmt.Errorf("invalid WOB_BIN executable name: contains suspicious characters")
 	}
+
+	return exec.LookPath(wobBin)
 }
 
 func printUsage() {
@@ -634,75 +633,7 @@ func runStop() error {
 	return nil
 }
 
-// runPreExecute implements the pre-execute hook for Tinct
-// Exit code 0 = continue, 1 = skip plugin, 2+ = error
-func runPreExecute() error {
-	// Check if wob binary exists on PATH
-	_, err := exec.LookPath("wob")
-	if err != nil {
-		// Exit code 1 = skip plugin gracefully
-		fmt.Println("wob binary not found on $PATH")
-		os.Exit(1)
-	}
-
-	// Check if config directory exists (create if it doesn't)
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		// Exit code 2+ = actual error
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "wob")
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Create it - this is expected on first run
-		if err := os.MkdirAll(configDir, 0755); err != nil { // #nosec G301 - Config directory needs standard permissions
-			return fmt.Errorf("failed to create wob config directory: %w", err)
-		}
-	}
-
-	// Exit code 0 = continue
-	return nil
-}
-
-// runPostExecute implements the post-execute hook for Tinct
-// Stops any running wob instance so it picks up the new theme on next use
-func runPostExecute() error {
-	// Read written files JSON from stdin (we don't actually need this for wob)
-	var input struct {
-		WrittenFiles []string `json:"written_files"`
-	}
-	decoder := json.NewDecoder(os.Stdin)
-	if err := decoder.Decode(&input); err != nil {
-		// Don't fail if we can't read stdin - just continue
-		fmt.Fprintf(os.Stderr, "Warning: failed to read post-execute input: %v\n", err)
-	}
-
-	// Check if wob is running
-	running, err := isWobRunning()
-	if err != nil {
-		// If we can't check, just continue silently
-		return nil
-	}
-
-	if !running {
-		// Not running, nothing to do
-		fmt.Fprintf(os.Stderr, "wob is not running, theme will be used on next start\n")
-		return nil
-	}
-
-	// Stop the running instance
-	if err := runStop(); err != nil {
-		// Don't fail the whole operation if stop fails
-		fmt.Fprintf(os.Stderr, "Warning: failed to stop wob: %v\n", err)
-		fmt.Fprintf(os.Stderr, "You may need to manually restart wob to use the new theme\n")
-		return nil
-	}
-
-	fmt.Fprintf(os.Stderr, "Stopped wob - theme will be applied on next use\n")
-	return nil
-}
-
-// runPlugin runs in Tinct plugin mode
+// runPlugin runs in Tinct plugin mode (legacy JSON-stdio, deprecated)
 func runPlugin() error {
 	// Read palette from stdin (JSON)
 	var palette map[string]interface{}
@@ -725,7 +656,7 @@ func runPlugin() error {
 	themeFile := filepath.Join(themesDir, "tinct.ini")
 
 	// Generate theme content
-	themeContent, err := generateWobTheme(palette)
+	themeContent, err := generateWobThemeFromMap(palette)
 	if err != nil {
 		return fmt.Errorf("failed to generate theme: %w", err)
 	}
@@ -768,8 +699,8 @@ func runPlugin() error {
 	return nil
 }
 
-// generateWobTheme creates wob INI content from palette
-func generateWobTheme(palette map[string]interface{}) (string, error) {
+// generateWobThemeFromMap creates wob INI content from palette map (JSON-stdio mode)
+func generateWobThemeFromMap(palette map[string]interface{}) (string, error) {
 	// Helper to get hex color from nested palette structure
 	getColor := func(key string) string {
 		// Access palette.colours[key].hex

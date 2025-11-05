@@ -64,8 +64,9 @@ builds:
 
   # Plugin: random (Go)
   - id: plugin-random
-    main: ./contrib/random.go
+    main: .
     binary: random
+    dir: ./contrib/plugins/input/random
 
     # Build for multiple platforms
     goos:
@@ -179,6 +180,36 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: dunstify (Go)
+  - id: plugin-dunstify
+    main: .
+    binary: dunstify
+    dir: ./contrib/plugins/output/dunstify
+
+    # Build for Linux only (notifications are Linux-specific)
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+
+    ldflags:
+      - -s -w
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 # Archive configuration
 archives:
   - id: tinct-archive
@@ -275,6 +306,24 @@ archives:
         dst: example-config.yaml
       - src: contrib/plugins/output/templater/templates/*.tmpl
         dst: templates/
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: plugin-dunstify-archive
+    builds:
+      - plugin-dunstify
+    name_template: >-
+      tinct-plugin-dunstify_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+
+    files:
       - src: LICENSE
         dst: LICENSE
 

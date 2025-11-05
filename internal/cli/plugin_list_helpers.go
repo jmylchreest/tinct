@@ -217,6 +217,9 @@ func collectAllPlugins(mgr *manager.Manager, lock *PluginLock) []pluginInfo {
 func displayPluginTable(plugins []pluginInfo) {
 	tbl := NewTable([]string{"", "PLUGIN", "STATUS", "VERSION", "DESCRIPTION"})
 
+	// Set max width of 80 characters for the description column (index 4).
+	tbl.SetColumnMaxWidth(4, 80)
+
 	for _, p := range plugins {
 		addPluginToTable(tbl, p)
 	}

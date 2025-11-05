@@ -2,23 +2,20 @@
 package manager
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"image/color"
 	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/executor"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/file"
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
@@ -491,99 +488,42 @@ func (p *ExternalInputPlugin) GetDryRun() bool {
 }
 
 // Generate executes the external plugin and returns a palette.
+// Uses the hybrid executor which automatically detects and uses the appropriate
+// protocol (go-plugin RPC or JSON-stdio).
 func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
-	// Create extended payload with plugin args and dry-run flag.
-	type ExtendedInputOptions struct {
-		Verbose         bool           `json:"verbose"`
-		DryRun          bool           `json:"dry_run"`
-		ColourOverrides []string       `json:"colour_overrides,omitempty"`
-		PluginArgs      map[string]any `json:"plugin_args,omitempty"`
+	// Create executor (detects protocol automatically).
+	exec, err := executor.NewWithVerbose(p.path, opts.Verbose)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
 	}
+	defer exec.Close()
 
 	// Merge plugin args from opts with plugin's own args.
 	mergedArgs := make(map[string]any)
 	maps.Copy(mergedArgs, p.args)
 	maps.Copy(mergedArgs, opts.PluginArgs)
 
-	extended := ExtendedInputOptions{
+	// Convert to protocol format.
+	protocolOpts := protocol.InputOptions{
 		Verbose:         opts.Verbose,
 		DryRun:          opts.DryRun || p.dryRun,
 		ColourOverrides: opts.ColourOverrides,
 		PluginArgs:      mergedArgs,
 	}
 
-	// Convert to JSON.
-	optsJSON, err := json.Marshal(extended)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal options: %w", err)
-	}
-
 	// Debug: show what's being sent to plugin.
 	if opts.Verbose {
+		optsJSON, _ := json.Marshal(protocolOpts)
 		fmt.Fprintf(os.Stderr, "   Sending to plugin: %s\n", string(optsJSON))
 	}
 
-	// Execute external plugin.
-	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
-	cmd := exec.CommandContext(ctx, p.path)
-	cmd.Stdin = bytes.NewReader(optsJSON)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
+	// Execute input plugin.
+	colors, err := exec.ExecuteInput(ctx, protocolOpts)
+	if err != nil {
+		return nil, fmt.Errorf("plugin execution failed: %w", err)
 	}
 
-	// Parse the output - try simple color array first, then categorised format for backwards compatibility.
-	var rawColors []struct {
-		R uint8 `json:"r"`
-		G uint8 `json:"g"`
-		B uint8 `json:"b"`
-	}
-
-	if err := json.Unmarshal(stdout.Bytes(), &rawColors); err == nil {
-		// Simple color array format.
-		colors := make([]color.Color, len(rawColors))
-		for i, rgb := range rawColors {
-			colors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
-		}
-		return colour.NewPalette(colors), nil
-	}
-
-	// Try categorised palette format (backwards compatibility).
-	var categorised colour.CategorisedPalette
-	if err := json.Unmarshal(stdout.Bytes(), &categorised); err == nil {
-		// Extract colors from categorised palette.
-		colors := make([]color.Color, 0)
-
-		// Get colors from AllColours if available.
-		if len(categorised.AllColours) > 0 {
-			for _, cc := range categorised.AllColours {
-				colors = append(colors, color.RGBA{
-					R: cc.RGB.R,
-					G: cc.RGB.G,
-					B: cc.RGB.B,
-					A: 255,
-				})
-			}
-		} else {
-			// Fallback to colors from Colours map.
-			for _, cc := range categorised.Colours {
-				colors = append(colors, color.RGBA{
-					R: cc.RGB.R,
-					G: cc.RGB.G,
-					B: cc.RGB.B,
-					A: 255,
-				})
-			}
-		}
-
-		return colour.NewPalette(colors), nil
-	}
-
-	return nil, fmt.Errorf("failed to parse plugin output as color array or categorised palette\nOutput: %s", stdout.String())
+	return colour.NewPalette(colors), nil
 }
 
 // RegisterFlags is a no-op for external plugins (they don't have flags).
@@ -606,6 +546,7 @@ type ExternalOutputPlugin struct {
 	path        string
 	args        map[string]any
 	dryRun      bool
+	verbose     bool
 }
 
 // NewExternalOutputPlugin creates a new external output plugin wrapper.
@@ -660,54 +601,43 @@ func (p *ExternalOutputPlugin) GetDryRun() bool {
 	return p.dryRun
 }
 
+// SetVerbose sets the verbose flag for this plugin.
+func (p *ExternalOutputPlugin) SetVerbose(verbose bool) {
+	p.verbose = verbose
+}
+
+// GetVerbose returns the verbose setting for this plugin.
+func (p *ExternalOutputPlugin) GetVerbose() bool {
+	return p.verbose
+}
+
 // Generate executes the external plugin and returns its output.
 func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
-	// Extract palette from themeData for backward compatibility with external plugins.
-	palette := themeData.Palette()
-	// Create extended payload with plugin args and dry-run flag.
-	type ExtendedPalette struct {
-		Colours    map[colour.Role]colour.CategorisedColour `json:"colours"`
-		AllColours []colour.CategorisedColour               `json:"all_colours"`
-		ThemeType  colour.ThemeType                         `json:"theme_type"`
-		PluginArgs map[string]any                           `json:"plugin_args,omitempty"`
-		DryRun     bool                                     `json:"dry_run"`
-	}
-
-	extended := ExtendedPalette{
-		Colours:    palette.Colours,
-		AllColours: palette.AllColours,
-		ThemeType:  palette.ThemeType,
-		PluginArgs: p.args,
-		DryRun:     p.dryRun,
-	}
-
-	// Convert to JSON.
-	paletteJSON, err := json.Marshal(extended)
+	// Create executor (detects protocol automatically).
+	exec, err := executor.NewWithVerbose(p.path, p.verbose)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal palette: %w", err)
+		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
+	}
+	defer exec.Close()
+
+	// Extract palette from themeData.
+	palette := themeData.Palette()
+
+	// Convert to protocol format.
+	paletteData := convertCategorisedPaletteToProtocol(palette, p.args, p.dryRun)
+
+	// Execute output plugin.
+	files, err := exec.ExecuteOutput(context.Background(), paletteData)
+	if err != nil {
+		return nil, fmt.Errorf("plugin execution failed: %w", err)
 	}
 
-	// Execute external plugin.
-	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
-	cmd := exec.Command(p.path)
-	cmd.Stdin = bytes.NewReader(paletteJSON)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
+	// If no files generated, return empty map.
+	if len(files) == 0 {
+		return make(map[string][]byte), nil
 	}
 
-	// External plugins output to stdout, not files.
-	// Return stdout as a virtual file for display purposes.
-	result := make(map[string][]byte)
-	if stdout.Len() > 0 {
-		result[p.name+"-output.txt"] = stdout.Bytes()
-	}
-
-	return result, nil
+	return files, nil
 }
 
 // RegisterFlags is a no-op for external plugins (they don't have flags).
@@ -728,83 +658,32 @@ func (p *ExternalOutputPlugin) DefaultOutputDir() string {
 	return "" // External plugins handle their own output
 }
 
-// PreExecute calls the external plugin with --pre-execute flag.
+// PreExecute calls the external plugin's pre-execute hook.
 // Implements the output.PreExecuteHook interface.
 func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Create a context with timeout.
-	execCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	// Execute plugin with --pre-execute flag.
-	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
-	cmd := exec.CommandContext(execCtx, p.path, "--pre-execute")
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err = cmd.Run()
-
-	// Exit code 0 = continue, 1 = skip, 2+ = error.
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		exitCode := exitErr.ExitCode()
-
-		if exitCode == 1 {
-			// Plugin wants to be skipped.
-			reason := strings.TrimSpace(stdout.String())
-			if reason == "" {
-				reason = "plugin requested skip"
-			}
-			return true, reason, nil
-		}
-
-		// Other non-zero exit codes are errors.
-		errMsg := strings.TrimSpace(stderr.String())
-		if errMsg == "" {
-			errMsg = fmt.Sprintf("exit code %d", exitCode)
-		}
-		return false, "", fmt.Errorf("pre-execute failed: %s", errMsg)
+	// Create executor (detects protocol automatically).
+	exec, err := executor.NewWithVerbose(p.path, p.verbose)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to create plugin executor: %w", err)
 	}
+	defer exec.Close()
 
-	// Command succeeded (exit 0) or plugin doesn't support pre-execute.
-	return false, "", nil
+	// Execute pre-execute hook.
+	return exec.PreExecute(ctx)
 }
 
-// PostExecute calls the external plugin with --post-execute flag.
+// PostExecute calls the external plugin's post-execute hook.
 // Implements the output.PostExecuteHook interface.
 func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
-	// Create a context with timeout.
-	execCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	// Pass written files as JSON via stdin.
-	filesJSON, err := json.Marshal(map[string]any{
-		"written_files": writtenFiles,
-	})
+	// Create executor (detects protocol automatically).
+	exec, err := executor.NewWithVerbose(p.path, p.verbose)
 	if err != nil {
-		return fmt.Errorf("failed to marshal files: %w", err)
+		return fmt.Errorf("failed to create plugin executor: %w", err)
 	}
+	defer exec.Close()
 
-	// Execute plugin with --post-execute flag.
-	// #nosec G204 -- Plugin path is validated in RegisterExternalPlugin to be absolute and existing file
-	cmd := exec.CommandContext(execCtx, p.path, "--post-execute")
-	cmd.Stdin = bytes.NewReader(filesJSON)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err = cmd.Run()
-	if err != nil {
-		errMsg := strings.TrimSpace(stderr.String())
-		if errMsg == "" {
-			errMsg = err.Error()
-		}
-		return fmt.Errorf("post-execute failed: %s", errMsg)
-	}
-
-	return nil
+	// Execute post-execute hook.
+	return exec.PostExecute(ctx, writtenFiles)
 }
 
 // GetExternalPluginInfo queries an external plugin for its metadata.
@@ -829,25 +708,90 @@ func GetExternalPluginInfo(path string) (name, description string, err error) {
 }
 
 // ExecuteExternalPlugin runs an external plugin with the given palette.
-func ExecuteExternalPlugin(ctx context.Context, path string, palette *colour.CategorisedPalette) ([]byte, error) {
-	// Convert palette to JSON.
-	paletteJSON, err := palette.ToJSON()
+// Uses the hybrid executor which automatically detects and uses the appropriate
+// protocol (go-plugin RPC or JSON-stdio).
+// This is a utility function that may be used by external code.
+func ExecuteExternalPlugin(ctx context.Context, path string, palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool) ([]byte, error) {
+	// Create executor (detects protocol automatically).
+	exec, err := executor.New(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal palette: %w", err)
+		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
+	}
+	defer exec.Close()
+
+	// Convert palette to protocol format.
+	paletteData := convertCategorisedPaletteToProtocol(palette, pluginArgs, dryRun)
+
+	// Execute output plugin.
+	files, err := exec.ExecuteOutput(ctx, paletteData)
+	if err != nil {
+		return nil, fmt.Errorf("plugin execution failed: %w", err)
 	}
 
-	// Execute external plugin.
-	// #nosec G204 -- Path comes from validated plugin installation or user's explicit plugin add command
-	cmd := exec.CommandContext(ctx, path)
-	cmd.Stdin = bytes.NewReader(paletteJSON)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
+	// For backward compatibility, if the plugin generated files,
+	// return them as JSON. If no files (like notification plugins),
+	// return empty JSON object.
+	if len(files) == 0 {
+		return []byte("{}"), nil
 	}
 
-	return stdout.Bytes(), nil
+	// Return files as JSON map.
+	result, err := json.Marshal(files)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal plugin output: %w", err)
+	}
+
+	return result, nil
+}
+
+// convertCategorisedPaletteToProtocol converts a CategorisedPalette to protocol.PaletteData.
+func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool) protocol.PaletteData {
+	colours := make(map[string]protocol.CategorisedColour)
+	for role, colour := range palette.Colours {
+		colours[string(role)] = protocol.CategorisedColour{
+			RGB: protocol.RGBColour{
+				R: colour.RGB.R,
+				G: colour.RGB.G,
+				B: colour.RGB.B,
+			},
+			Hex:        colour.Hex,
+			Role:       string(colour.Role),
+			Luminance:  colour.Luminance,
+			IsLight:    colour.IsLight,
+			Hue:        colour.Hue,
+			Saturation: colour.Saturation,
+			Index:      colour.Index,
+		}
+	}
+
+	allColours := make([]protocol.CategorisedColour, len(palette.AllColours))
+	for i, colour := range palette.AllColours {
+		allColours[i] = protocol.CategorisedColour{
+			RGB: protocol.RGBColour{
+				R: colour.RGB.R,
+				G: colour.RGB.G,
+				B: colour.RGB.B,
+			},
+			Hex:        colour.Hex,
+			Role:       string(colour.Role),
+			Luminance:  colour.Luminance,
+			IsLight:    colour.IsLight,
+			Hue:        colour.Hue,
+			Saturation: colour.Saturation,
+			Index:      colour.Index,
+		}
+	}
+
+	themeType := "dark"
+	if palette.ThemeType == colour.ThemeLight {
+		themeType = "light"
+	}
+
+	return protocol.PaletteData{
+		Colours:    colours,
+		AllColours: allColours,
+		ThemeType:  themeType,
+		PluginArgs: pluginArgs,
+		DryRun:     dryRun,
+	}
 }

@@ -9,8 +9,11 @@ dist/
 
 # Contrib plugin binaries
 contrib/random
+contrib/plugins/input/random/random
 contrib/plugins/output/wob/wob-tinct
+contrib/plugins/output/wob/wob
 contrib/plugins/output/templater/templater
+contrib/plugins/output/dunstify/dunstify
 
 # Test binary, built with `go test -c`
 *.test
@@ -54,6 +57,7 @@ dist/
 .env.local
 config.local.yaml
 config.local.yml
+.tinct-plugins.json
 
 # Test output
 testdata/*.txt

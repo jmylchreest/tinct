@@ -31,29 +31,25 @@ Tinct supports external plugins that extend functionality without requiring modi
 
 ### Plugin Communication
 
-Tinct uses **HashiCorp's go-plugin** protocol for robust plugin communication:
+Tinct supports **two plugin protocols** for flexibility:
 
-```
-┌────────────────────────────────────────────────────────┐
-│                    Tinct (Host)                        │
-│                                                        │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │           Plugin Manager                         │  │
-│  │  - Discovery                                     │  │
-│  │  - Loading                                       │  │
-│  │  - RPC Communication                             │  │
-│  └──────────────┬───────────────────────────────────┘  │
-└─────────────────┼──────────────────────────────────────┘
-                  │ RPC (net/rpc or gRPC)
-                  │
-    ┌─────────────┼────────────┬──────────────┐
-    │             │            │              │
-    ▼            ▼            ▼              ▼
-┌────────┐   ┌────────┐   ┌──────────┐   ┌─────────┐
-│ Plugin │   │ Plugin │   │  Plugin  │   │ Plugin  │
-│   A    │   │   B    │   │    C     │   │    D    │
-│  (Go)  │   │(Python)│   │  (Bash)  │   │ (Rust)  │
-└────────┘   └────────┘   └──────────┘   └─────────┘
+```mermaid
+graph TB
+    Host[Tinct Host<br/>Plugin Manager]
+    Host --> Discovery[Plugin Discovery]
+    Host --> Loading[Plugin Loading]
+    Host --> Comm[Communication Layer]
+    
+    Comm -->|go-plugin RPC| GoA[Go Plugin A<br/>RPC over stdio]
+    Comm -->|go-plugin RPC| GoB[Go Plugin B<br/>RPC over stdio]
+    Comm -->|JSON-stdio| PyC[Python Plugin C<br/>JSON I/O]
+    Comm -->|JSON-stdio| ShD[Bash Plugin D<br/>JSON I/O]
+    
+    style Host fill:#4a90e2,color:#fff
+    style GoA fill:#7cb342,color:#fff
+    style GoB fill:#7cb342,color:#fff
+    style PyC fill:#ff9800,color:#fff
+    style ShD fill:#ff9800,color:#fff
 ```
 
 ### Plugin Protocol

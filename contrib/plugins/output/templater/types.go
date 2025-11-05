@@ -71,6 +71,7 @@ type ProcessingResult struct {
 	Success      bool
 	Error        error
 	BytesWritten int
+	Content      string // For go-plugin mode - rendered template content
 }
 
 // convertToThemeData converts PaletteInput to ThemeData for templates

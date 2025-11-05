@@ -83,6 +83,7 @@ func (tp *TemplateProcessor) processTemplate(tmplConfig TemplateConfig, themeDat
 
 	output := buf.Bytes()
 	result.BytesWritten = len(output)
+	result.Content = string(output) // Store content for go-plugin mode
 
 	// In dry-run mode, don't write files
 	if tp.dryRun {
