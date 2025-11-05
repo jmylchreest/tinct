@@ -91,7 +91,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 
 	// Reload plugin manager config from lock file if available (overrides env).
 	// Load plugin lock and apply configuration to shared manager.
-	_, _, _ = loadAndApplyPluginLock()
+	_ = loadAndApplyPluginLock() // Ignore error - no lock file is acceptable
 
 	// Get input plugin from shared manager.
 	inputPlugin, ok := sharedPluginManager.GetInputPlugin(extractInputPlugin)

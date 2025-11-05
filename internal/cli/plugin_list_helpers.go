@@ -8,6 +8,10 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 )
 
+const (
+	pluginStatusOnDemand = "on-demand"
+)
+
 // pluginInfo holds information about a plugin for display.
 type pluginInfo struct {
 	fullName    string
@@ -77,7 +81,7 @@ func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description
 // determinePluginStatus determines the status of a plugin (enabled/disabled/on-demand).
 func (c *pluginCollector) determinePluginStatus(pluginType, pluginName string) string {
 	if c.lock == nil {
-		return "on-demand"
+		return pluginStatusOnDemand
 	}
 
 	fullName := fmt.Sprintf("%s:%s", pluginType, pluginName)
@@ -92,10 +96,10 @@ func (c *pluginCollector) determinePluginStatus(pluginType, pluginName string) s
 		if c.isInList(c.lock.EnabledPlugins, pluginName, fullName) {
 			return "enabled"
 		}
-		return "on-demand"
+		return pluginStatusOnDemand
 	}
 
-	return "on-demand"
+	return pluginStatusOnDemand
 }
 
 // isInList checks if a plugin name or full name is in a list.

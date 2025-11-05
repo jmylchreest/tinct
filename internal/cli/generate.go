@@ -78,7 +78,7 @@ func init() {
 }
 
 // runGenerate executes the generate command.
-func runGenerate(cmd *cobra.Command, args []string) error {
+func runGenerate(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
 	// Phase 1: Load and configure plugins.

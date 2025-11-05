@@ -102,26 +102,26 @@ func applyRoleHints(result *CategorisedPalette, extracted, allExtracted []Catego
 // selectForegroundWithHints selects foreground color, applying hints if available.
 func selectForegroundWithHints(result *CategorisedPalette, extracted []CategorisedColour,
 	bg CategorisedColour, bgIdx int, config CategorisationConfig,
-	themeType ThemeType, hintsApplied map[Role]bool) (CategorisedColour, int) {
+	themeType ThemeType, hintsApplied map[Role]bool) (fg CategorisedColour, fgIdx int) {
 
 	// Check if already hinted.
 	if hintsApplied[RoleForeground] {
-		fg, _ := result.Get(RoleForeground)
-		fgIdx := findColourIndex(extracted, fg.Hex)
+		fg, _ = result.Get(RoleForeground)
+		fgIdx = findColourIndex(extracted, fg.Hex)
 		return fg, fgIdx
 	}
 
 	// Select foreground.
-	fgIdx := selectForeground(extracted, bg, config, bgIdx)
+	fgIdx = selectForeground(extracted, bg, config, bgIdx)
 	if fgIdx >= 0 {
-		fg := extracted[fgIdx]
+		fg = extracted[fgIdx]
 		fg.Role = RoleForeground
 		result.Set(RoleForeground, fg)
 		return fg, fgIdx
 	}
 
 	// Generate synthetic foreground.
-	fg := generateSyntheticForeground(bg, themeType, config)
+	fg = generateSyntheticForeground(bg, themeType, config)
 	fg.Role = RoleForeground
 	result.Set(RoleForeground, fg)
 	return fg, -1
@@ -177,10 +177,8 @@ func buildUsedIndicesSet(hints map[Role]int, bgIdx, fgIdx int) map[int]bool {
 	}
 
 	// Mark any hinted role indices as used.
-	if hints != nil {
-		for _, index := range hints {
-			used[index] = true
-		}
+	for _, index := range hints {
+		used[index] = true
 	}
 
 	return used
@@ -252,13 +250,4 @@ func findColourIndex(colours []CategorisedColour, hex string) int {
 // needsSyntheticAccents determines if synthetic accents should be generated.
 func needsSyntheticAccents(accents []CategorisedColour, bg CategorisedColour) bool {
 	return len(accents) < 4 || areAccentsTooSimilar(accents, bg)
-}
-
-// convertHintsToMap converts role hints to a boolean map for tracking.
-func convertHintsToMap(hints map[Role]int) map[Role]bool {
-	result := make(map[Role]bool)
-	for role := range hints {
-		result[role] = true
-	}
-	return result
 }

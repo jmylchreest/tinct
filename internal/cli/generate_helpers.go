@@ -17,17 +17,17 @@ import (
 
 // loadAndConfigurePlugins loads the plugin lock file and configures plugins.
 func loadAndConfigurePlugins() error {
-	lock, _, err := loadAndApplyPluginLock()
-	if err != nil || lock == nil {
+	if err := loadAndApplyPluginLock(); err != nil {
 		return nil // No lock file is OK
 	}
 
-	// Register external plugins with absolute path resolution.
-	if err := registerExternalPluginsFromLock(lock, true, generateVerbose); err != nil {
-		if generateVerbose {
-			fmt.Fprintf(os.Stderr, " Warning: failed to register some external plugins: %v\n", err)
-		}
+	lock, _, err := loadPluginLock()
+	if err != nil || lock == nil {
+		return nil
 	}
+
+	// Register external plugins with absolute path resolution.
+	registerExternalPluginsFromLock(lock, true, generateVerbose)
 
 	// Configure external plugins with dry-run and args.
 	if lock.ExternalPlugins != nil {

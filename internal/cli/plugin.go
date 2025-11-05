@@ -32,6 +32,7 @@ const (
 	sourceTypeRepository = "repository"
 	sourceTypeHTTP       = "http"
 	sourceTypeLocal      = "local"
+	sourceTypeGit        = "git"
 )
 
 // PluginLock represents the plugin lock file structure.
@@ -242,7 +243,7 @@ func init() {
 }
 
 // runPluginList lists all available plugins.
-func runPluginList(cmd *cobra.Command, args []string) error {
+func runPluginList(cmd *cobra.Command, _ []string) error {
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
@@ -771,7 +772,7 @@ func loadPluginLock() (*PluginLock, string, error) {
 
 // loadOrCreatePluginLock loads or creates a plugin lock file.
 // Always succeeds by creating a new lock if one doesn't exist.
-func loadOrCreatePluginLock() (*PluginLock, string) {
+func loadOrCreatePluginLock() (lock *PluginLock, lockPath string) {
 	lock, lockPath, err := loadPluginLock()
 	if err == nil {
 		return lock, lockPath
@@ -848,10 +849,10 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 // loadAndApplyPluginLock loads the plugin lock file and applies configuration
 // to the shared plugin manager. This is used by commands that need to respect
 // plugin enable/disable settings without creating a new manager.
-func loadAndApplyPluginLock() (*PluginLock, string, error) {
-	lock, lockPath, err := loadPluginLock()
+func loadAndApplyPluginLock() error {
+	lock, _, err := loadPluginLock()
 	if err != nil {
-		return nil, "", err
+		return err
 	}
 
 	if lock != nil {
@@ -862,14 +863,14 @@ func loadAndApplyPluginLock() (*PluginLock, string, error) {
 		sharedPluginManager.UpdateConfig(config)
 	}
 
-	return lock, lockPath, nil
+	return nil
 }
 
 // registerExternalPluginsFromLock registers all external plugins from the lock file
 // into the shared plugin manager. Optionally resolves relative paths to absolute.
-func registerExternalPluginsFromLock(lock *PluginLock, resolveAbsolutePaths, verbose bool) error {
+func registerExternalPluginsFromLock(lock *PluginLock, resolveAbsolutePaths, verbose bool) {
 	if lock == nil || lock.ExternalPlugins == nil {
-		return nil
+		return
 	}
 
 	for _, meta := range lock.ExternalPlugins {
@@ -880,12 +881,10 @@ func registerExternalPluginsFromLock(lock *PluginLock, resolveAbsolutePaths, ver
 			// Continue with other plugins on error
 		}
 	}
-
-	return nil
 }
 
 // registerExternalPlugin registers a single external plugin into the shared manager.
-func registerExternalPlugin(meta *ExternalPluginMeta, resolveAbsolutePaths, verbose bool) error {
+func registerExternalPlugin(meta *ExternalPluginMeta, resolveAbsolutePaths, _ bool) error {
 	// Use the plugin's actual name from metadata.
 	pluginName := meta.Name
 	if pluginName == "" {
@@ -922,7 +921,7 @@ func registerExternalPlugin(meta *ExternalPluginMeta, resolveAbsolutePaths, verb
 
 // configureExternalPlugin applies additional configuration to an external plugin
 // (dry-run mode, plugin-specific arguments, etc.)
-func configureExternalPlugin(pluginName, pluginType string, dryRun bool, pluginArgs map[string]string, verbose bool) error {
+func configureExternalPlugin(pluginName, pluginType string, dryRun bool, pluginArgs map[string]string, verbose bool) {
 	// Set dry-run mode if applicable.
 	if err := setPluginDryRun(sharedPluginManager, pluginName, pluginType, dryRun); err != nil {
 		if verbose {
@@ -938,8 +937,6 @@ func configureExternalPlugin(pluginName, pluginType string, dryRun bool, pluginA
 			}
 		}
 	}
-
-	return nil
 }
 
 // queryPluginMetadata queries a plugin for its name, description, type, and version.
@@ -1030,7 +1027,7 @@ func installPluginFromSource(source, pluginName, pluginDir string, verbose bool)
 		return installFromLocal(sourceInfo, pluginDir, verbose)
 	case sourceTypeHTTP:
 		return installFromHTTP(sourceInfo, pluginName, pluginDir, verbose)
-	case "git":
+	case sourceTypeGit:
 		return installFromGit(sourceInfo, pluginName, pluginDir, verbose)
 	default:
 		return "", fmt.Errorf("unsupported source type: %s", source)
@@ -1059,7 +1056,7 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 		idx := strings.LastIndex(source, ":")
 		if idx <= 0 || strings.HasPrefix(source, "git@") {
 			info.URL = source
-			return "git", info
+			return sourceTypeGit, info
 		}
 
 		// Make sure it's not the : in git@github.com.
@@ -1069,7 +1066,7 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 		} else {
 			info.URL = source
 		}
-		return "git", info
+		return sourceTypeGit, info
 	}
 
 	// HTTP/HTTPS URL.
