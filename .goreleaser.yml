@@ -257,7 +257,7 @@ archives:
         formats: [zip]
 
     files:
-      - src: contrib/README-random.md
+      - src: contrib/plugins/input/random/README.md
         dst: README.md
       - src: LICENSE
         dst: LICENSE

@@ -1,0 +1,35 @@
+{
+  "enabled_plugins": [
+    "output:hyprland",
+    "output:kitty",
+    "output:notify",
+    "input:image"
+  ],
+  "disabled_plugins": [],
+  "external_plugins": {
+    "notify": {
+      "path": "/home/user/.local/share/tinct/plugins/notify-send.py",
+      "type": "output",
+      "source": "./contrib/notify-send.py",
+      "version": "1.0.0"
+    },
+    "custom-theme": {
+      "path": "/home/user/.local/share/tinct/plugins/my-theme.sh",
+      "type": "output",
+      "source": "/path/to/my-theme.sh",
+      "version": "1.0.0"
+    },
+    "image": {
+      "name": "image",
+      "type": "input",
+      "version": "0.0.1",
+      "description": "Extract colour palette from images",
+      "config": {
+        "seed": {
+          "mode": "content",
+          "value": null
+        }
+      }
+    }
+  }
+}
