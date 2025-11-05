@@ -19,6 +19,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// isValidPath checks if a path is safe to use in commands.
+func isValidPath(path string) bool {
+	// Reject paths with suspicious characters
+	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
+		return false
+	}
+	// Clean the path and ensure it matches
+	cleaned := filepath.Clean(path)
+	return cleaned == path
+}
+
 var (
 	// Generate command flags.
 	generateInputPlugin string
@@ -43,7 +54,7 @@ func init() {
 
 	// Input plugin selection (required).
 	generateCmd.Flags().StringVarP(&generateInputPlugin, "input", "i", "", "Input plugin (required: image, file)")
-	generateCmd.MarkFlagRequired("input")
+	_ = generateCmd.MarkFlagRequired("input") // Error only occurs if flag doesn't exist, which is impossible here
 
 	// Output plugin selection.
 	generateCmd.Flags().StringSliceVarP(&generateOutputs, "outputs", "o", []string{"all"}, "Output plugins (comma-separated or 'all')")
@@ -501,6 +512,11 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose, dryRun b
 		return nil
 	}
 
+	// Validate path to prevent command injection.
+	if !isValidPath(hookPath) {
+		return fmt.Errorf("invalid hook path: contains suspicious characters")
+	}
+
 	if verbose {
 		fmt.Fprintf(os.Stderr, "→ Running global %s hook: %s\n", hookName, hookPath)
 	}
@@ -509,6 +525,7 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose, dryRun b
 	hookCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
+	// #nosec G204 -- hookPath is validated to be a safe file path
 	cmd := exec.CommandContext(hookCtx, hookPath)
 
 	// Set environment variables for the hook script.
@@ -606,7 +623,7 @@ func savePalette(palette *colour.CategorisedPalette, path string) error {
 	// Ensure directory exists.
 	dir := filepath.Dir(path)
 	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 - Output directory needs standard permissions
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
@@ -675,7 +692,7 @@ func writeFile(path string, content []byte, verbose bool) error {
 
 	// Ensure directory exists.
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 - Output directory needs standard permissions
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 

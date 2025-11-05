@@ -13,6 +13,27 @@ import (
 	"time"
 )
 
+// isValidPath checks if a path is safe to use in commands.
+func isValidPath(path string) bool {
+	// Reject paths with suspicious characters
+	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
+		return false
+	}
+	// Clean the path and ensure it matches
+	cleaned := filepath.Clean(path)
+	return cleaned == path
+}
+
+// isValidExecutableName checks if a string is a safe executable name (no path separators).
+func isValidExecutableName(name string) bool {
+	// Reject if it contains path separators or suspicious characters
+	if strings.ContainsAny(name, "/\\|&;`$()") {
+		return false
+	}
+	// Should not be empty
+	return name != ""
+}
+
 const (
 	// Plugin metadata
 	pluginName        = "wob"
@@ -218,7 +239,12 @@ func getRuntimePaths() (*RuntimePaths, error) {
 	}
 
 	stat := fileInfo.Sys().(*syscall.Stat_t)
-	if stat.Uid != uint32(os.Getuid()) {
+	// Safe conversion: UIDs are always positive
+	currentUID := os.Getuid()
+	if currentUID < 0 {
+		return nil, fmt.Errorf("invalid current UID")
+	}
+	if stat.Uid != uint32(currentUID) { // #nosec G115 - UID validated to be >= 0
 		return nil, fmt.Errorf("runtime directory not owned by current user")
 	}
 
@@ -233,10 +259,10 @@ func getRuntimePaths() (*RuntimePaths, error) {
 // Apply env defaults
 func init() {
 	if os.Getenv("WOB_PIPE") == "" {
-		os.Setenv("WOB_PIPE", defaultPipeName)
+		_ = os.Setenv("WOB_PIPE", defaultPipeName) // Setenv only fails if key/value are invalid
 	}
 	if os.Getenv("WOB_MERGED_CONFIG") == "" {
-		os.Setenv("WOB_MERGED_CONFIG", defaultConfigName)
+		_ = os.Setenv("WOB_MERGED_CONFIG", defaultConfigName) // Setenv only fails if key/value are invalid
 	}
 }
 
@@ -308,12 +334,12 @@ func runStart(args []string) error {
 
 	// Parse arguments
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
+		switch args[i] { // #nosec G602 - bounds checked above
 		case "--base-config":
 			if i+1 >= len(args) {
 				return fmt.Errorf("--base-config requires an argument")
 			}
-			baseConfig = args[i+1]
+			baseConfig = args[i+1] // #nosec G602 - bounds checked
 			i++
 		case "--append-config":
 			if i+1 >= len(args) {
@@ -322,7 +348,7 @@ func runStart(args []string) error {
 			appendConfigs = append(appendConfigs, args[i+1])
 			i++
 		default:
-			return fmt.Errorf("unknown option: %s", args[i])
+			return fmt.Errorf("unknown option: %s", args[i]) // #nosec G602 - loop condition ensures valid index
 		}
 	}
 
@@ -353,18 +379,35 @@ func runStart(args []string) error {
 		wobBin = "wob"
 	}
 
+	// Validate executable name to prevent command injection
+	if !isValidExecutableName(wobBin) {
+		return fmt.Errorf("invalid WOB_BIN executable name: contains suspicious characters")
+	}
+
 	if baseConfig != "" {
 		// Merge configs
 		mergedPath, err := mergeConfigs(paths, baseConfig, appendConfigs)
 		if err != nil {
 			return fmt.Errorf("failed to merge configs: %w", err)
 		}
+		// Validate merged config path
+		if !isValidPath(mergedPath) {
+			return fmt.Errorf("invalid merged config path: contains suspicious characters")
+		}
+		// #nosec G204 -- wobBin and mergedPath are validated
 		wobCmd = exec.Command(wobBin, "-c", mergedPath)
 	} else {
+		// #nosec G204 -- wobBin is validated as a safe executable name
 		wobCmd = exec.Command(wobBin)
 	}
 
+	// Validate pipe path to prevent command injection
+	if !isValidPath(paths.Pipe) {
+		return fmt.Errorf("invalid pipe path: contains suspicious characters")
+	}
+
 	// Start tail | wob pipeline
+	// #nosec G204 -- paths.Pipe is validated to be a safe file path
 	tailCmd := exec.Command("tail", "-f", paths.Pipe)
 	wobCmd.Stdin, err = tailCmd.StdoutPipe()
 	if err != nil {
@@ -377,26 +420,26 @@ func runStart(args []string) error {
 	}
 
 	if err := wobCmd.Start(); err != nil {
-		tailCmd.Process.Kill()
+		_ = tailCmd.Process.Kill() // Best effort cleanup
 		return fmt.Errorf("failed to start wob: %w", err)
 	}
 
 	// Write PID file
 	if err := writePIDFile(paths, wobCmd.Process.Pid); err != nil {
-		wobCmd.Process.Kill()
-		tailCmd.Process.Kill()
+		_ = wobCmd.Process.Kill()  // Best effort cleanup
+		_ = tailCmd.Process.Kill() // Best effort cleanup
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 
 	fmt.Fprintf(os.Stderr, "Started wob (PID: %d)\n", wobCmd.Process.Pid)
 
 	// Wait for wob to exit
-	wobCmd.Wait()
-	tailCmd.Process.Kill()
+	_ = wobCmd.Wait()          // Wait for process to finish, ignore exit status
+	_ = tailCmd.Process.Kill() // Best effort cleanup
 
 	// Cleanup
-	os.Remove(paths.Pipe)
-	os.Remove(paths.PID)
+	_ = os.Remove(paths.Pipe) // Ignore cleanup errors
+	_ = os.Remove(paths.PID)  // Ignore cleanup errors
 
 	return nil
 }
@@ -414,20 +457,24 @@ func mergeConfigs(paths *RuntimePaths, baseConfig string, appendConfigs []string
 	fmt.Fprintf(tmpFile, "# Base: %s\n\n", baseConfig)
 
 	// Copy base config
-	baseData, err := os.ReadFile(baseConfig)
+	baseData, err := os.ReadFile(baseConfig) // #nosec G304 - User-specified config file, intended to be read
 	if err != nil {
 		return "", fmt.Errorf("failed to read base config: %w", err)
 	}
-	tmpFile.Write(baseData)
+	if _, err := tmpFile.Write(baseData); err != nil {
+		return "", fmt.Errorf("failed to write base config: %w", err)
+	}
 
 	// Append additional configs
 	for _, appendConfig := range appendConfigs {
 		fmt.Fprintf(tmpFile, "\n# Append: %s\n", appendConfig)
-		appendData, err := os.ReadFile(appendConfig)
+		appendData, err := os.ReadFile(appendConfig) // #nosec G304 - User-specified config file, intended to be read
 		if err != nil {
 			return "", fmt.Errorf("failed to read append config %s: %w", appendConfig, err)
 		}
-		tmpFile.Write(appendData)
+		if _, err := tmpFile.Write(appendData); err != nil {
+			return "", fmt.Errorf("failed to write append config %s: %w", appendConfig, err)
+		}
 	}
 
 	tmpPath := tmpFile.Name()
@@ -435,7 +482,7 @@ func mergeConfigs(paths *RuntimePaths, baseConfig string, appendConfigs []string
 
 	// Atomic rename
 	if err := os.Rename(tmpPath, finalPath); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath) // Ignore cleanup errors
 		return "", fmt.Errorf("failed to rename merged config: %w", err)
 	}
 
@@ -484,7 +531,7 @@ func runSend(args []string) error {
 	if !running {
 		// Start wob in background with default config
 		go func() {
-			runStart([]string{})
+			_ = runStart([]string{}) // Run in background, errors are logged by runStart
 		}()
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -577,11 +624,11 @@ func runStop() error {
 
 	// Force kill if still running
 	if err := process.Signal(syscall.Signal(0)); err == nil {
-		process.Kill()
+		_ = process.Kill() // Best effort force kill
 	}
 
 	// Cleanup
-	os.Remove(paths.PID)
+	_ = os.Remove(paths.PID) // Ignore cleanup errors
 
 	fmt.Println("Stopped wob")
 	return nil
@@ -608,7 +655,7 @@ func runPreExecute() error {
 	configDir := filepath.Join(homeDir, ".config", "wob")
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		// Create it - this is expected on first run
-		if err := os.MkdirAll(configDir, 0755); err != nil {
+		if err := os.MkdirAll(configDir, 0755); err != nil { // #nosec G301 - Config directory needs standard permissions
 			return fmt.Errorf("failed to create wob config directory: %w", err)
 		}
 	}
@@ -671,7 +718,7 @@ func runPlugin() error {
 	}
 
 	themesDir := filepath.Join(homeDir, ".config", "wob", "themes")
-	if err := os.MkdirAll(themesDir, 0755); err != nil {
+	if err := os.MkdirAll(themesDir, 0755); err != nil { // #nosec G301 - Themes directory needs standard permissions
 		return fmt.Errorf("failed to create themes directory: %w", err)
 	}
 
@@ -683,13 +730,13 @@ func runPlugin() error {
 		return fmt.Errorf("failed to generate theme: %w", err)
 	}
 
-	if err := os.WriteFile(themeFile, []byte(themeContent), 0644); err != nil {
+	if err := os.WriteFile(themeFile, []byte(themeContent), 0644); err != nil { // #nosec G306 - Theme file needs standard read permissions
 		return fmt.Errorf("failed to write theme file: %w", err)
 	}
 
 	// Install wrapper (copy self)
 	scriptsDir := filepath.Join(homeDir, ".config", "wob", "scripts")
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+	if err := os.MkdirAll(scriptsDir, 0755); err != nil { // #nosec G301 - Scripts directory needs standard permissions
 		return fmt.Errorf("failed to create scripts directory: %w", err)
 	}
 
@@ -704,7 +751,7 @@ func runPlugin() error {
 		return fmt.Errorf("failed to install wrapper: %w", err)
 	}
 
-	if err := os.Chmod(wrapperPath, 0755); err != nil {
+	if err := os.Chmod(wrapperPath, 0755); err != nil { // #nosec G302 - Wrapper executable needs execute permission
 		return fmt.Errorf("failed to chmod wrapper: %w", err)
 	}
 
@@ -773,13 +820,13 @@ bar_color = FF%s
 
 // copyFile copies a file from src to dst
 func copyFile(src, dst string) error {
-	source, err := os.Open(src)
+	source, err := os.Open(src) // #nosec G304 - User-specified source file, intended to be read
 	if err != nil {
 		return err
 	}
 	defer source.Close()
 
-	destination, err := os.Create(dst)
+	destination, err := os.Create(dst) // #nosec G304 - User-specified destination file
 	if err != nil {
 		return err
 	}

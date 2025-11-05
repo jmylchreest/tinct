@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -83,6 +84,12 @@ func (p *Plugin) GetEmbeddedFS() interface{} {
 func (p *Plugin) Validate() error {
 	// Nothing to validate - all fields have defaults.
 	return nil
+}
+
+// isValidPID validates that a PID string contains only digits.
+func isValidPID(pid string) bool {
+	matched, _ := regexp.MatchString(`^\d+$`, pid)
+	return matched
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
@@ -232,7 +239,11 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 
 	// Send SIGUSR2 to all waybar instances to reload config.
 	for _, pid := range pids {
-		killCmd := exec.CommandContext(ctx, "kill", "-SIGUSR2", pid)
+		// Validate PID format to prevent command injection
+		if !isValidPID(pid) {
+			return fmt.Errorf("invalid PID format: %s", pid)
+		}
+		killCmd := exec.CommandContext(ctx, "kill", "-SIGUSR2", pid) // #nosec G204 - PID validated to contain only digits
 		if err := killCmd.Run(); err != nil {
 			return fmt.Errorf("failed to send reload signal to waybar (PID %s): %w", pid, err)
 		}

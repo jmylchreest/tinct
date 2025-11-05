@@ -339,10 +339,10 @@ func (s *Sampler) extractAverageColor(img image.Image, rect image.Rectangle) col
 		return color.RGBA{R: 0, G: 0, B: 0, A: 255}
 	}
 
-	// Calculate averages.
-	avgR := uint8(totalR / count)
-	avgG := uint8(totalG / count)
-	avgB := uint8(totalB / count)
+	// Calculate averages with bounds checking.
+	avgR := uint8(min(totalR/count, 255)) // #nosec G115 - min() ensures value is <= 255
+	avgG := uint8(min(totalG/count, 255)) // #nosec G115 - min() ensures value is <= 255
+	avgB := uint8(min(totalB/count, 255)) // #nosec G115 - min() ensures value is <= 255
 
 	return color.RGBA{R: avgR, G: avgG, B: avgB, A: 255}
 }
@@ -357,9 +357,10 @@ func (s *Sampler) extractDominantColor(img image.Image, rect image.Rectangle) co
 		for x := rect.Min.X; x < rect.Max.X; x++ {
 			r, g, b, _ := img.At(x, y).RGBA()
 			// Quantize to 5-bit (32 values) per channel to reduce unique colors.
-			r8 := uint8((r >> 8) & 0xF8)
-			g8 := uint8((g >> 8) & 0xF8)
-			b8 := uint8((b >> 8) & 0xF8)
+			// Safe conversion: (r >> 8) is already in 0-255 range, & 0xF8 keeps it there
+			r8 := uint8(min((r>>8)&0xF8, 255)) // #nosec G115 - value masked to 8 bits and bounded by min
+			g8 := uint8(min((g>>8)&0xF8, 255)) // #nosec G115 - value masked to 8 bits and bounded by min
+			b8 := uint8(min((b>>8)&0xF8, 255)) // #nosec G115 - value masked to 8 bits and bounded by min
 
 			// Pack into single uint32 for map key.
 			packed := uint32(r8)<<16 | uint32(g8)<<8 | uint32(b8)
@@ -377,10 +378,11 @@ func (s *Sampler) extractDominantColor(img image.Image, rect image.Rectangle) co
 		}
 	}
 
-	// Unpack the color.
-	r := uint8(dominantColor >> 16)
-	g := uint8((dominantColor >> 8) & 0xFF)
-	b := uint8(dominantColor & 0xFF)
+	// Unpack the color with safe conversion.
+	// dominantColor is already masked to 24-bit RGB, so shifts are safe
+	r := uint8((dominantColor >> 16) & 0xFF) // #nosec G115 - value explicitly masked to 8 bits
+	g := uint8((dominantColor >> 8) & 0xFF)  // #nosec G115 - value explicitly masked to 8 bits
+	b := uint8(dominantColor & 0xFF)         // #nosec G115 - value explicitly masked to 8 bits
 
 	return color.RGBA{R: r, G: g, B: b, A: 255}
 }

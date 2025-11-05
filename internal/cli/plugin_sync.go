@@ -428,7 +428,7 @@ func reinstallFromLocal(meta ExternalPluginMeta) error {
 	}
 
 	// Make executable.
-	if err := os.Chmod(destPath, 0o755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
 		return fmt.Errorf("failed to make executable: %w", err)
 	}
 
@@ -530,7 +530,7 @@ func verifyPluginChecksum(path, expected string) error {
 
 // calculateChecksum calculates SHA256 checksum of a file.
 func calculateChecksum(path string) (string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 - Plugin file path controlled by application
 	if err != nil {
 		return "", err
 	}
@@ -546,13 +546,13 @@ func calculateChecksum(path string) (string, error) {
 
 // copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
+	sourceFile, err := os.Open(src) // #nosec G304 - Plugin source path controlled by application
 	if err != nil {
 		return err
 	}
 	defer sourceFile.Close()
 
-	destFile, err := os.Create(dst)
+	destFile, err := os.Create(dst) // #nosec G304 - Plugin destination path controlled by application
 	if err != nil {
 		return err
 	}
@@ -575,7 +575,7 @@ func getPluginDirectory() (string, error) {
 	pluginDir := filepath.Join(dataDir, ".local", "share", "tinct", "plugins")
 
 	// Ensure directory exists.
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil { // #nosec G301 - Plugin directory needs standard permissions
 		return "", fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 

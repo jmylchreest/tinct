@@ -70,7 +70,7 @@ func init() {
 
 	// Input plugin selection (required).
 	extractCmd.Flags().StringVarP(&extractInputPlugin, "input", "i", "image", "Input plugin (image, file, remote-css, remote-json)")
-	extractCmd.MarkFlagRequired("input")
+	_ = extractCmd.MarkFlagRequired("input") // Error only occurs if flag doesn't exist, which is impossible here
 
 	extractCmd.Flags().StringVarP(&extractFormat, "format", "f", "palette", "output format (palette, hex, rgb, json, categorised)")
 	extractCmd.Flags().StringVarP(&extractOutput, "output", "o", "", "output file (default: stdout)")

@@ -19,6 +19,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// isValidPath checks if a path is safe to use in commands.
+func isValidPath(path string) bool {
+	// Reject paths with suspicious characters
+	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
+		return false
+	}
+	// Clean the path and ensure it matches
+	cleaned := filepath.Clean(path)
+	return cleaned == path
+}
+
 //go:embed *.tmpl
 var templates embed.FS
 
@@ -148,7 +159,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 	// Check if config directory exists (create it if not).
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0o755); err != nil {
+		if err := os.MkdirAll(configDir, 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
 			return true, fmt.Sprintf("hypr config directory does not exist and cannot be created: %s", configDir), nil
 		}
 	}
@@ -191,6 +202,11 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
+	// Validate path to prevent command injection.
+	if !isValidPath(absPath) {
+		return fmt.Errorf("invalid wallpaper path: contains suspicious characters")
+	}
+
 	// Get current wallpaper assignments (monitors and/or wildcard).
 	assignments, err := p.getActiveWallpaperAssignments(ctx)
 	if err != nil {
@@ -211,6 +227,7 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 	_ = cmd.Run() //nolint:errcheck // Explicitly ignore errors - wallpapers might not be loaded
 
 	// Preload the new wallpaper.
+	// #nosec G204 -- absPath is validated to be a safe file path
 	cmd = exec.CommandContext(ctx, "hyprctl", "hyprpaper", "preload", absPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to preload wallpaper: %w (output: %s)", err, string(output))

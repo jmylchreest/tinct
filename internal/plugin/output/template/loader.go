@@ -66,7 +66,7 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 	// Try custom template first.
 	customPath := filepath.Join(l.customBase, l.pluginName, filename)
 
-	if content, err := os.ReadFile(customPath); err == nil {
+	if content, err := os.ReadFile(customPath); err == nil { // #nosec G304 - User-specified template directory, validated by caller
 		if l.verbose && l.logger != nil {
 			l.logger.Printf("   Using custom template: %s", customPath)
 		}
@@ -145,12 +145,12 @@ func (l *Loader) DumpTemplate(filename string, force bool) error {
 
 	// Create directory if it doesn't exist.
 	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil { // #nosec G301 - Template directory needs standard permissions
 		return fmt.Errorf("failed to create directory %q: %w", outputDir, err)
 	}
 
 	// Write file.
-	if err := os.WriteFile(outputPath, content, 0o644); err != nil {
+	if err := os.WriteFile(outputPath, content, 0o644); err != nil { // #nosec G306 - Template file needs standard read permissions
 		return fmt.Errorf("failed to write template to %q: %w", outputPath, err)
 	}
 

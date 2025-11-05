@@ -713,7 +713,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil { // #nosec G301 - Plugin directory needs standard permissions
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
@@ -860,7 +860,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
+	if err := os.MkdirAll(pluginDir, 0o755); err != nil { // #nosec G301 - Plugin directory needs standard permissions
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
@@ -954,7 +954,7 @@ func loadPluginLock() (*PluginLock, string, error) {
 		}
 	}
 
-	data, err := os.ReadFile(lockPath)
+	data, err := os.ReadFile(lockPath) // #nosec G304 - Lock file path controlled by application
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to read plugin lock file: %w", err)
 	}
@@ -1206,7 +1206,7 @@ func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (st
 	}
 
 	// Make it executable.
-	if err := os.Chmod(destPath, 0o755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 
@@ -1354,7 +1354,7 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			// Extract the file.
 			destPath := filepath.Join(pluginDir, filepath.Base(targetPath))
 
-			out, err := os.Create(destPath)
+			out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
 			if err != nil {
 				return "", fmt.Errorf("failed to create plugin file: %w", err)
 			}
@@ -1367,7 +1367,7 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			}
 
 			// Make executable.
-			if err := os.Chmod(destPath, 0o755); err != nil {
+			if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
 				return "", fmt.Errorf("failed to make plugin executable: %w", err)
 			}
 
@@ -1439,7 +1439,7 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 	}
 	defer rc.Close()
 
-	out, err := os.Create(destPath)
+	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
 	if err != nil {
 		return "", fmt.Errorf("failed to create plugin file: %w", err)
 	}
@@ -1452,7 +1452,7 @@ func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (st
 	}
 
 	// Make executable.
-	if err := os.Chmod(destPath, 0o755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 
@@ -1538,7 +1538,7 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 	}
 
 	// Make it executable.
-	if err := os.Chmod(destPath, 0o755); err != nil {
+	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
 		return "", fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 

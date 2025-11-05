@@ -153,7 +153,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		// For swayosd, we can create the directory since it's straightforward.
-		if err := os.MkdirAll(configDir, 0o755); err != nil {
+		if err := os.MkdirAll(configDir, 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
 			return true, fmt.Sprintf("swayosd config directory does not exist and cannot be created: %s", configDir), nil
 		}
 	}

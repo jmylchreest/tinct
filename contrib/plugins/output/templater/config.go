@@ -40,7 +40,7 @@ func LoadConfig(path string) (*Config, error) {
 	path = expandPath(path)
 
 	// Read file
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 - User-specified config file, intended to be read
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}

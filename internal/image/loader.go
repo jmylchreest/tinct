@@ -53,7 +53,7 @@ func (l *FileLoader) Load(path string) (image.Image, error) {
 	}
 
 	// Open the file.
-	file, err := os.Open(path)
+	file, err := os.Open(path) // #nosec G304 - User-specified image path, intended to be read
 	if err != nil {
 		return nil, fmt.Errorf("failed to open image file: %w", err)
 	}
@@ -101,7 +101,7 @@ func ValidateImagePath(path string) error {
 
 	// Attempt to decode the image config to verify it's a supported format.
 	// This will work with any format that the image library supports.
-	file, err := os.Open(path)
+	file, err := os.Open(path) // #nosec G304 - User-specified image path, intended to be read
 	if err != nil {
 		return fmt.Errorf("failed to open image file: %w", err)
 	}
@@ -120,7 +120,7 @@ func ValidateImagePath(path string) error {
 
 // GetImageDimensions returns the width and height of an image without fully loading it.
 func GetImageDimensions(path string) (width, height int, err error) {
-	file, err := os.Open(path)
+	file, err := os.Open(path) // #nosec G304 - User-specified image path, intended to be read
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to open image: %w", err)
 	}

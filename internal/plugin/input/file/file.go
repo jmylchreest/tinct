@@ -127,7 +127,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 // loadFromFile loads colors from a JSON or text file.
 // Returns colors and optional role hints.
 func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.ColourRole]int, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 - User-specified input file, intended to be read
 	if err != nil {
 		return nil, nil, err
 	}
