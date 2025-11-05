@@ -71,6 +71,18 @@ echo -e "  $OUT_DIR/"
 echo -e "  ├── tinct"
 echo -e "  └── plugins/"
 echo -e "      ├── input/"
-echo -e "      │   $(ls -1 "$INPUT_PLUGINS_DIR" 2>/dev/null | sed 's/^/└── /' | tr '\n' ' ' || echo '(none)')"
+if [ -n "$(ls -A "$INPUT_PLUGINS_DIR" 2>/dev/null)" ]; then
+    ls -1 "$INPUT_PLUGINS_DIR" 2>/dev/null | while read -r plugin; do
+        echo -e "      │   └── $plugin"
+    done
+else
+    echo -e "      │   (none)"
+fi
 echo -e "      └── output/"
-echo -e "          $(ls -1 "$OUTPUT_PLUGINS_DIR" 2>/dev/null | sed 's/^/└── /' | tr '\n' ' ' || echo '(none)')"
+if [ -n "$(ls -A "$OUTPUT_PLUGINS_DIR" 2>/dev/null)" ]; then
+    ls -1 "$OUTPUT_PLUGINS_DIR" 2>/dev/null | while read -r plugin; do
+        echo -e "          └── $plugin"
+    done
+else
+    echo -e "          (none)"
+fi
