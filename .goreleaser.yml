@@ -11,10 +11,8 @@ before:
   hooks:
     # Ensure dependencies are up to date
     - go mod tidy
-    # Run tests before building
+    # Run tests before building (linting happens separately in CI)
     - go test ./...
-    # Run linter
-    - golangci-lint run ./...
 
 # Build configuration
 builds:

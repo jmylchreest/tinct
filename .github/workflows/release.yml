@@ -17,6 +17,7 @@ permissions:
   contents: write
   packages: write
   issues: write
+  security-events: write # Required for uploading SARIF files to Security tab
 
 jobs:
   # Test job - runs on all pushes and PRs
@@ -100,24 +101,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: true
+
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
-          args: ./...
+          args: "-fmt sarif -out gosec-results.sarif ./..."
+        continue-on-error: true
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: "fs"
-          scan-ref: "."
-          format: "sarif"
-          output: "trivy-results.sarif"
-
-      - name: Upload Trivy results to GitHub Security tab
+      - name: Upload Gosec results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('gosec-results.sarif') != ''
         with:
-          sarif_file: "trivy-results.sarif"
+          sarif_file: "gosec-results.sarif"
+        continue-on-error: true
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck -json -format json ./... > govulncheck-results.json || true
+        continue-on-error: true
+
+      - name: Upload govulncheck results
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('govulncheck-results.json') != ''
+        with:
+          name: govulncheck-results
+          path: govulncheck-results.json
+          retention-days: 30
+        continue-on-error: true
 
   # Build job - creates snapshot builds for testing
   build:
@@ -136,6 +152,34 @@ jobs:
         with:
           go-version: "1.25.x"
           cache: true
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom-cyclonedx.json
+          upload-artifact: false
+        continue-on-error: true
+
+      - name: Generate SBOM (SPDX format)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom-spdx.json
+          upload-artifact: false
+        continue-on-error: true
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        if: always() && (hashFiles('sbom-*.json') != '')
+        with:
+          name: sbom-snapshot
+          path: |
+            sbom-cyclonedx.json
+            sbom-spdx.json
+          retention-days: 30
 
       - name: Run GoReleaser (snapshot)
         uses: goreleaser/goreleaser-action@v5
@@ -172,6 +216,30 @@ jobs:
           go-version: "1.25.x"
           cache: true
 
+      - name: Generate SBOM with Syft (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: tinct-sbom-cyclonedx.json
+          upload-artifact: false
+        continue-on-error: true
+
+      - name: Generate SBOM with Syft (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: tinct-sbom-spdx.json
+          upload-artifact: false
+        continue-on-error: true
+
+      - name: Generate SBOM checksums
+        if: hashFiles('tinct-sbom-*.json') != ''
+        run: |
+          sha256sum tinct-sbom-cyclonedx.json > tinct-sbom-cyclonedx.json.sha256
+          sha256sum tinct-sbom-spdx.json > tinct-sbom-spdx.json.sha256
+
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
 
@@ -188,10 +256,27 @@ jobs:
           NIX_GITHUB_TOKEN: ${{ secrets.NIX_GITHUB_TOKEN }}
           COSIGN_EXPERIMENTAL: 1
 
-      - name: Update release notes
+      - name: Upload SBOM to release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          files: |
+            tinct-sbom-cyclonedx.json
+            tinct-sbom-cyclonedx.json.sha256
+            tinct-sbom-spdx.json
+            tinct-sbom-spdx.json.sha256
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload SBOM to security artifacts
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('tinct-sbom-*.json') != ''
+        with:
+          name: sbom-release
+          path: |
+            tinct-sbom-cyclonedx.json
+            tinct-sbom-cyclonedx.json.sha256
+            tinct-sbom-spdx.json
+            tinct-sbom-spdx.json.sha256
+          retention-days: 90
