@@ -83,7 +83,7 @@ CI/CD pipeline with multiple jobs:
 
 2. **Development Tools** (optional but recommended):
    ```bash
-   go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+   go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
    go install github.com/goreleaser/goreleaser@latest
    ```
 

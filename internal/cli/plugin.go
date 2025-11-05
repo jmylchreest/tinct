@@ -77,7 +77,7 @@ type ExternalPluginMeta struct {
 	InstalledAt string `json:"installed_at,omitempty"`
 
 	// Config holds plugin-specific configuration (optional).
-	Config map[string]interface{} `json:"config,omitempty"`
+	Config map[string]any `json:"config,omitempty"`
 }
 
 var (

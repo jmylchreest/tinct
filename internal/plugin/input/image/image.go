@@ -4,6 +4,7 @@ package image
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/spf13/cobra"
 
@@ -146,13 +147,7 @@ func (p *Plugin) Validate() error {
 		string(SeedModeManual),
 		string(SeedModeRandom),
 	}
-	valid := false
-	for _, mode := range validSeedModes {
-		if p.seedMode == mode {
-			valid = true
-			break
-		}
-	}
+	valid := slices.Contains(validSeedModes, p.seedMode)
 	if !valid {
 		return fmt.Errorf("invalid seed mode '%s' (valid: content, filepath, manual, random)", p.seedMode)
 	}

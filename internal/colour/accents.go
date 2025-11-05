@@ -224,7 +224,7 @@ func generateSyntheticAccents(bg CategorisedColour, theme ThemeType, count int) 
 	}
 
 	// Generate accents with varied hues.
-	for i := 0; i < count; i++ {
+	for i := range count {
 		// Calculate hue with offset for diversity.
 		offset := hueOffsets[i%len(hueOffsets)]
 		newHue := math.Mod(h+offset, 360.0)

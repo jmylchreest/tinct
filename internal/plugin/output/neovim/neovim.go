@@ -73,7 +73,7 @@ func (p *Plugin) SetVerbose(verbose bool) {
 
 // GetEmbeddedFS returns the embedded template filesystem.
 // Implements the output.TemplateProvider interface.
-func (p *Plugin) GetEmbeddedFS() interface{} {
+func (p *Plugin) GetEmbeddedFS() any {
 	return templates
 }
 

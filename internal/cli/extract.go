@@ -205,52 +205,53 @@ func runExtract(cmd *cobra.Command, args []string) error {
 // with all role and position hints, compatible with the file input plugin.
 // Colors with role/position hints are listed first, then indexed colors (colourN).
 func formatPaletteFile(categorised *colour.CategorisedPalette) string {
-	output := "# Tinct colour palette\n"
-	output += "# Generated from extraction\n"
-	output += "# Format: role=hex or colourN=hex\n"
-	output += "# Use with: tinct generate --input file --file.path <this-file>\n\n"
+	var output strings.Builder
+	output.WriteString("# Tinct colour palette\n")
+	output.WriteString("# Generated from extraction\n")
+	output.WriteString("# Format: role=hex or colourN=hex\n")
+	output.WriteString("# Use with: tinct generate --input file --file.path <this-file>\n\n")
 
 	// First pass: output all colors with role/position hints.
 	for _, color := range categorised.AllColours {
 		if color.Role != "" {
-			output += fmt.Sprintf("%s=%s\n", color.Role, color.Hex)
+			output.WriteString(fmt.Sprintf("%s=%s\n", color.Role, color.Hex))
 		}
 	}
 
 	// Second pass: output indexed colors without role hints.
 	for _, color := range categorised.AllColours {
 		if color.Role == "" {
-			output += fmt.Sprintf("colour%d=%s\n", color.Index, color.Hex)
+			output.WriteString(fmt.Sprintf("colour%d=%s\n", color.Index, color.Hex))
 		}
 	}
 
-	return output
+	return output.String()
 }
 
 // formatHexFromCategorised formats a categorised palette as hex colour codes.
 // If showPreview is true, color blocks are displayed before each hex value.
 func formatHexFromCategorised(categorised *colour.CategorisedPalette, showPreview bool) string {
-	output := ""
+	var output strings.Builder
 	for _, color := range categorised.AllColours {
 		if showPreview {
-			output += colour.FormatColourWithPreview(color.RGB, 8) + "\n"
+			output.WriteString(colour.FormatColourWithPreview(color.RGB, 8) + "\n")
 		} else {
-			output += color.Hex + "\n"
+			output.WriteString(color.Hex + "\n")
 		}
 	}
-	return output
+	return output.String()
 }
 
 // formatRGBFromCategorised formats a categorised palette as RGB values.
 // If showPreview is true, color blocks are displayed before each RGB value.
 func formatRGBFromCategorised(categorised *colour.CategorisedPalette, showPreview bool) string {
-	output := ""
+	var output strings.Builder
 	for _, color := range categorised.AllColours {
 		if showPreview {
-			output += colour.FormatColourWithPreview(color.RGB, 8) + "  " + color.RGB.String() + "\n"
+			output.WriteString(colour.FormatColourWithPreview(color.RGB, 8) + "  " + color.RGB.String() + "\n")
 		} else {
-			output += color.RGB.String() + "\n"
+			output.WriteString(color.RGB.String() + "\n")
 		}
 	}
-	return output
+	return output.String()
 }

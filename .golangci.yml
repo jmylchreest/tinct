@@ -1,56 +1,24 @@
 # golangci-lint configuration for Tinct
 # https://golangci-lint.run/usage/configuration/
+# Compatible with golangci-lint v2.6.1 (latest)
 
-run:
-  # Timeout for analysis
-  timeout: 5m
-
-  # Include test files
-  tests: true
-
-  # Go version to target
-  go: "1.25"
-
-  # Allow multiple parallel golangci-lint instances
-  allow-parallel-runners: true
-
-# Output configuration
-output:
-  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
-  formats:
-    - format: colored-line-number
-
-  # Print lines of code with issue
-  print-issued-lines: true
-
-  # Print linter name in the end of issue text
-  print-linter-name: true
-
-  # Make issues output unique by line
-  uniq-by-line: true
-
-  # Sort results by: filepath, line and column
-  sort-results: true
+version: "2"
 
 # Linters configuration
 linters:
-  # Disable all linters by default
-  disable-all: true
+  # Default set: 'standard' (enabled by default), 'all', or 'none'
+  default: none
 
   # Enable specific linters
   enable:
     # Bugs and correctness
     - errcheck # Check for unchecked errors
-    - gosimple # Simplify code
     - govet # Reports suspicious constructs
     - ineffassign # Detect ineffectual assignments
-    - staticcheck # Go static analysis
-    - typecheck # Type-check Go code
+    - staticcheck # Go static analysis (includes gosimple in v2)
     - unused # Check for unused constants, variables, functions and types
 
     # Style and formatting
-    - gofmt # Check if code is formatted with gofmt
-    - goimports # Check if imports are formatted with goimports
     - misspell # Find commonly misspelled English words
     - whitespace # Check for trailing whitespace
 
@@ -89,176 +57,244 @@ linters:
     # Error handling
     - wrapcheck # Check that errors from external packages are wrapped
 
-# Linters settings
-linters-settings:
-  # Error checking
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-    exclude-functions:
-      - (io.Closer).Close
-      - (*database/sql.Rows).Close
-      - (*github.com/spf13/cobra.Command).MarkFlagRequired
+    # Modern Go features and simplifications
+    - modernize # Suggest simplifications using modern Go constructs (NEW in v2.6.0)
 
-  # Cyclomatic complexity
-  gocyclo:
-    min-complexity: 15
+  # Linters settings
+  settings:
+    # Error checking
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (io.Closer).Close
+        - (*database/sql.Rows).Close
+        - (*github.com/spf13/cobra.Command).MarkFlagRequired
 
-  # Cognitive complexity
-  gocognit:
-    min-complexity: 20
+    # Cyclomatic complexity
+    gocyclo:
+      min-complexity: 15
 
-  # Constants detection
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-    ignore-tests: true
+    # Cognitive complexity
+    gocognit:
+      min-complexity: 20
 
-  # Go critic
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-      - experimental
-    disabled-checks:
-      - commentedOutCode
-      - whyNoLint
-      - hugeParam # 112 bytes for CategorisedColour is acceptable for our use case
+    # Constants detection
+    goconst:
+      min-len: 3
+      min-occurrences: 3
 
-  # Import formatting
-  goimports:
-    local-prefixes: github.com/jmylchreest/tinct
+    # Go critic
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+      disabled-checks:
+        - commentedOutCode
+        - whyNoLint
+        - hugeParam # 112 bytes for CategorisedColour is acceptable for our use case
 
-  # Security
-  gosec:
-    excludes:
-      - G104 # Audit errors not checked (covered by errcheck)
-    config:
-      global:
-        audit: true
+    # Security
+    gosec:
+      excludes:
+        - G104 # Audit errors not checked (covered by errcheck)
+      config:
+        global:
+          audit: true
 
-  # Nested if depth
-  nestif:
-    min-complexity: 5
+    # Nested if depth
+    nestif:
+      min-complexity: 5
 
-  # Revive configuration
-  revive:
+    # Revive configuration
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+
+    # Static check
+    staticcheck:
+      checks:
+        - all
+        - -SA1019 # Allow deprecated packages (we'll handle these explicitly)
+
+    # Unused code
+    unused:
+      field-writes-are-uses: true
+      exported-fields-are-used: false
+
+    # Whitespace
+    whitespace:
+      multi-if: true
+      multi-func: true
+
+    # Error wrapping
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - errors.Join(
+        - .Wrap(
+        - .Wrapf(
+        - .WithMessage(
+        - .WithMessagef(
+        - .WithStack(
+      ignore-package-globs:
+        - github.com/jmylchreest/tinct/*
+
+  # Exclusions configuration
+  exclusions:
+    # Mode of the generated files analysis
+    # Options: strict, lax, disable
+    generated: lax
+
+    # Log a warning if an exclusion rule is unused
+    warn-unused: true
+
+    # Predefined exclusion rules
+    presets:
+      - comments
+      - std-error-handling
+      - common-false-positives
+      - legacy
+
+    # Excluding configuration per-path, per-linter, per-text and per-source
     rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
+      # Exclude some linters from running on tests files
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - errcheck
+          - dupl
+          - gosec
+          - goconst
 
-  # Static check
-  staticcheck:
-    checks:
-      - all
-      - -SA1019 # Allow deprecated packages (we'll handle these explicitly)
+      # Exclude magic number warnings in tests
+      - path: _test\.go
+        text: "mnd: Magic number"
 
-  # Unused code
-  unused:
-    check-exported: false
+      # Exclude some staticcheck messages
+      - linters:
+          - staticcheck
+        text: "SA9003:"
 
-  # Whitespace
-  whitespace:
-    multi-if: true
-    multi-func: true
+      # Exclude lll issues for long lines with go:generate
+      - linters:
+          - lll
+        source: "^//go:generate "
 
-  # Error wrapping
-  wrapcheck:
-    ignoreSigs:
-      - .Errorf(
-      - errors.New(
-      - errors.Unwrap(
-      - .Wrap(
-      - .Wrapf(
-      - .WithMessage(
-      - .WithMessagef(
-      - .WithStack(
-    ignorePackageGlobs:
-      - github.com/jmylchreest/tinct/*
+      # Exclude godot issues for TODO comments
+      - linters:
+          - godot
+        source: "^// TODO"
+
+      # Allow blank identifiers in main and init functions
+      - path: cmd/
+        text: "G104:"
+        linters:
+          - gosec
+
+      # Allow error shadowing in certain contexts
+      - text: 'shadow: declaration of "err"'
+        linters:
+          - govet
+
+      # Exclude wrapcheck for internal packages
+      - path: internal/
+        linters:
+          - wrapcheck
+
+# Formatters configuration
+formatters:
+  # Enable specific formatters
+  enable:
+    - gofmt # Format code with gofmt
 
 # Issues configuration
 issues:
   # Maximum issues count per one linter
+  # Set to 0 to disable
   max-issues-per-linter: 0
 
   # Maximum count of issues with the same text
+  # Set to 0 to disable
   max-same-issues: 0
 
-  # Show all issues from all linters
+  # Make issues output unique by line
+  uniq-by-line: true
+
+  # Show only new issues: if there are unstaged changes or untracked files,
+  # only those changes are analyzed, else only changes in HEAD~ are analyzed.
   new: false
 
-  # Exclude specific rules
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - goconst
+# Output configuration
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+      colors: true
 
-    # Exclude magic number warnings in tests
-    - path: _test\.go
-      text: "mnd: Magic number"
+  # Sort order for results
+  # Possible values: file, linter, severity
+  sort-order:
+    - linter
+    - severity
+    - file
 
-    # Exclude some staticcheck messages
-    - linters:
-        - staticcheck
-      text: "SA9003:"
+  # Show statistics per linter
+  show-stats: true
 
-    # Exclude lll issues for long lines with go:generate
-    - linters:
-        - lll
-      source: "^//go:generate "
+# Options for analysis running
+run:
+  # Timeout for analysis
+  timeout: 5m
 
-    # Exclude godot issues for TODO comments
-    - linters:
-        - godot
-      source: "^// TODO"
+  # Include test files
+  tests: true
 
-    # Allow blank identifiers in main and init functions
-    - path: cmd/
-      text: "G104:"
-      linters:
-        - gosec
+  # Go version to target
+  go: "1.25"
 
-    # Allow error shadowing in certain contexts
-    - text: 'shadow: declaration of "err"'
-      linters:
-        - govet
+  # Allow multiple parallel golangci-lint instances
+  allow-parallel-runners: true
 
-    # Exclude wrapcheck for internal packages
-    - path: internal/
-      linters:
-        - wrapcheck
+  # The mode used to evaluate relative paths
+  # Options: gomod, gitroot, cfg, wd
+  relative-path-mode: gomod
 
 # Severity settings
 severity:
-  default-severity: error
+  # Set default severity
+  default: error
+
+  # Severity rules
   rules:
     - linters:
         - dupl

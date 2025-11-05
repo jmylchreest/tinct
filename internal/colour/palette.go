@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"strings"
 
 	"github.com/jmylchreest/tinct/internal/security"
 )
@@ -220,12 +221,13 @@ func (p *Palette) String() string {
 		return "Empty palette"
 	}
 
-	result := fmt.Sprintf("Palette with %d colors:\n", len(p.Colors))
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("Palette with %d colors:\n", len(p.Colors)))
 	for i, c := range p.Colors {
 		rgb := ToRGB(c)
-		result += fmt.Sprintf("  %2d: %s (%s)\n", i+1, rgb.Hex(), rgb.String())
+		result.WriteString(fmt.Sprintf("  %2d: %s (%s)\n", i+1, rgb.Hex(), rgb.String()))
 	}
-	return result
+	return result.String()
 }
 
 // Get returns the color at the specified index.

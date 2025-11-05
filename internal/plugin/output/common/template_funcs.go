@@ -57,7 +57,7 @@ func TemplateFuncs() template.FuncMap {
 // getRoleFunc returns a color by role name (string).
 // Panics if role doesn't exist - use getSafe or has to check first.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func getRoleFunc(data interface{}, roleName string) colour.ColorValue {
+func getRoleFunc(data any, roleName string) colour.ColorValue {
 	ph := extractPaletteHelper(data)
 	return ph.Get(colour.Role(roleName))
 }
@@ -65,7 +65,7 @@ func getRoleFunc(data interface{}, roleName string) colour.ColorValue {
 // getSafeRoleFunc returns a color by role name with existence check.
 // Returns error if role doesn't exist (Go template convention).
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func getSafeRoleFunc(data interface{}, roleName string) (colour.ColorValue, error) {
+func getSafeRoleFunc(data any, roleName string) (colour.ColorValue, error) {
 	ph := extractPaletteHelper(data)
 	cv, ok := ph.GetSafe(colour.Role(roleName))
 	if !ok {
@@ -76,14 +76,14 @@ func getSafeRoleFunc(data interface{}, roleName string) (colour.ColorValue, erro
 
 // hasRoleFunc checks if a role exists in the palette.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func hasRoleFunc(data interface{}, roleName string) bool {
+func hasRoleFunc(data any, roleName string) bool {
 	ph := extractPaletteHelper(data)
 	return ph.Has(colour.Role(roleName))
 }
 
 // getByIndexFunc returns a color by index in the AllColors array.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func getByIndexFunc(data interface{}, index int) (colour.ColorValue, error) {
+func getByIndexFunc(data any, index int) (colour.ColorValue, error) {
 	ph := extractPaletteHelper(data)
 	cv, ok := ph.GetByIndex(index)
 	if !ok {
@@ -93,7 +93,7 @@ func getByIndexFunc(data interface{}, index int) (colour.ColorValue, error) {
 }
 
 // extractPaletteHelper extracts PaletteHelper from either *ThemeData or *PaletteHelper.
-func extractPaletteHelper(data interface{}) *colour.PaletteHelper {
+func extractPaletteHelper(data any) *colour.PaletteHelper {
 	switch v := data.(type) {
 	case *colour.ThemeData:
 		return v.PaletteHelper
@@ -156,28 +156,28 @@ func indexFunc(cv colour.ColorValue) int {
 
 // themeTypeFunc returns the theme type string ("dark" or "light").
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func themeTypeFunc(data interface{}) string {
+func themeTypeFunc(data any) string {
 	ph := extractPaletteHelper(data)
 	return ph.ThemeTypeString()
 }
 
 // allRolesFunc returns all color roles in deterministic order.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func allRolesFunc(data interface{}) []colour.Role {
+func allRolesFunc(data any) []colour.Role {
 	ph := extractPaletteHelper(data)
 	return ph.AllRoles()
 }
 
 // allColorsFunc returns all colors in index order.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func allColorsFunc(data interface{}) []colour.ColorValue {
+func allColorsFunc(data any) []colour.ColorValue {
 	ph := extractPaletteHelper(data)
 	return ph.AllColors()
 }
 
 // countFunc returns the total number of colors in the palette.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func countFunc(data interface{}) int {
+func countFunc(data any) int {
 	ph := extractPaletteHelper(data)
 	return ph.Count()
 }
@@ -187,7 +187,7 @@ func countFunc(data interface{}) int {
 // Supported names: black, red, green, yellow, blue, magenta, cyan, white,.
 // brightblack, brightred, etc., and aliases like color0-color15, gray, purple, etc.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func ansiFunc(data interface{}, colorName string) colour.ColorValue {
+func ansiFunc(data any, colorName string) colour.ColorValue {
 	ph := extractPaletteHelper(data)
 	cv, ok := ph.FindClosestANSIColor(colorName)
 	if !ok {
@@ -199,7 +199,7 @@ func ansiFunc(data interface{}, colorName string) colour.ColorValue {
 // ansiSafeFunc finds the closest color to a given ANSI color name with error handling.
 // Returns error if color name is not recognized.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func ansiSafeFunc(data interface{}, colorName string) (colour.ColorValue, error) {
+func ansiSafeFunc(data any, colorName string) (colour.ColorValue, error) {
 	ph := extractPaletteHelper(data)
 	cv, ok := ph.FindClosestANSIColor(colorName)
 	if !ok {

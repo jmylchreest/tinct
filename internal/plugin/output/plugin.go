@@ -81,7 +81,7 @@ type VerbosePlugin interface {
 type TemplateProvider interface {
 	// GetEmbeddedFS returns the embedded filesystem containing template files.
 	// This should return the same embed.FS used by the plugin's generateTheme method.
-	GetEmbeddedFS() interface{}
+	GetEmbeddedFS() any
 }
 
 // ExecutionContext provides context for hook execution.
