@@ -10,7 +10,6 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
-	"github.com/jmylchreest/tinct/internal/plugin/manager"
 )
 
 const (
@@ -91,14 +90,8 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	}
 
 	// Reload plugin manager config from lock file if available (overrides env).
-	lock, _, err := loadPluginLock()
-	if err == nil && lock != nil {
-		config := manager.Config{
-			EnabledPlugins:  lock.EnabledPlugins,
-			DisabledPlugins: lock.DisabledPlugins,
-		}
-		sharedPluginManager.UpdateConfig(config)
-	}
+	// Load plugin lock and apply configuration to shared manager.
+	_, _, _ = loadAndApplyPluginLock()
 
 	// Get input plugin from shared manager.
 	inputPlugin, ok := sharedPluginManager.GetInputPlugin(extractInputPlugin)

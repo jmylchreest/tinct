@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -259,210 +260,11 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n\n", lockPath)
 	}
 
-	// Build list of all plugins with type prefix.
-	type pluginInfo struct {
-		fullName    string
-		status      string
-		version     string
-		description string
-		isExternal  bool
-		source      string
-	}
+	// Collect all plugins.
+	allPlugins := collectAllPlugins(mgr, lock)
 
-	// Pre-allocate capacity for all plugins (input + output)
-	inputPlugins := mgr.AllInputPlugins()
-	outputPlugins := mgr.AllOutputPlugins()
-	allPlugins := make([]pluginInfo, 0, len(inputPlugins)+len(outputPlugins))
-	seenPlugins := make(map[string]bool)
-
-	// Helper to determine plugin status
-	getPluginStatus := func(pluginType, pluginName string) string {
-		fullName := fmt.Sprintf("%s:%s", pluginType, pluginName)
-
-		// Check if explicitly disabled
-		if lock != nil {
-			for _, disabled := range lock.DisabledPlugins {
-				if disabled == fullName || disabled == pluginName || disabled == pluginTypeAll {
-					return "disabled"
-				}
-			}
-		}
-
-		// Check if explicitly enabled
-		if lock != nil && len(lock.EnabledPlugins) > 0 {
-			for _, enabled := range lock.EnabledPlugins {
-				if enabled == fullName || enabled == pluginName || enabled == pluginTypeAll {
-					return "enabled"
-				}
-			}
-			// If enabled list exists but plugin not in it, it's on-demand
-			return "on-demand"
-		}
-
-		// No config = on-demand
-		return "on-demand"
-	}
-
-	// Add input plugins.
-	for name, plugin := range inputPlugins {
-		status := getPluginStatus("input", name)
-		fullName := fmt.Sprintf("input:%s", name)
-		// Check if this is an external plugin by comparing names.
-		isExternal := false
-		if lock != nil && lock.ExternalPlugins != nil {
-			for _, meta := range lock.ExternalPlugins {
-				if meta.Name == name && meta.Type == "input" {
-					isExternal = true
-					break
-				}
-			}
-		}
-		// Get source for external plugins.
-		pluginSource := ""
-		if isExternal && lock != nil && lock.ExternalPlugins != nil {
-			for _, meta := range lock.ExternalPlugins {
-				if meta.Name == name && meta.Type == "input" {
-					if meta.Source != nil {
-						pluginSource = formatPluginSourceString(meta.Source)
-					} else if meta.SourceLegacy != "" {
-						pluginSource = meta.SourceLegacy
-					}
-					break
-				}
-			}
-		}
-
-		allPlugins = append(allPlugins, pluginInfo{
-			fullName:    fullName,
-			status:      status,
-			version:     plugin.Version(),
-			description: plugin.Description(),
-			isExternal:  isExternal,
-			source:      pluginSource,
-		})
-		seenPlugins[fullName] = true
-	}
-
-	// Add output plugins.
-	for name, plugin := range outputPlugins {
-		status := getPluginStatus("output", name)
-		fullName := fmt.Sprintf("output:%s", name)
-		// Check if this is an external plugin by comparing names.
-		isExternal := false
-		if lock != nil && lock.ExternalPlugins != nil {
-			for _, meta := range lock.ExternalPlugins {
-				if meta.Name == name && meta.Type == pluginTypeOutput {
-					isExternal = true
-					break
-				}
-			}
-		}
-		// Get source for external plugins.
-		pluginSource := ""
-		if isExternal && lock != nil && lock.ExternalPlugins != nil {
-			for _, meta := range lock.ExternalPlugins {
-				if meta.Name == name && meta.Type == "output" {
-					if meta.Source != nil {
-						pluginSource = formatPluginSourceString(meta.Source)
-					} else if meta.SourceLegacy != "" {
-						pluginSource = meta.SourceLegacy
-					}
-					break
-				}
-			}
-		}
-
-		allPlugins = append(allPlugins, pluginInfo{
-			fullName:    fullName,
-			status:      status,
-			version:     plugin.Version(),
-			description: plugin.Description(),
-			isExternal:  isExternal,
-			source:      pluginSource,
-		})
-		seenPlugins[fullName] = true
-	}
-
-	// Add external plugins that aren't in the manager.
-	if lock != nil && lock.ExternalPlugins != nil {
-		for lockKey, meta := range lock.ExternalPlugins {
-			// Use the plugin's actual name, not the lock file key.
-			pluginName := meta.Name
-			if pluginName == "" {
-				pluginName = lockKey // Fallback to lock key if name is missing
-			}
-
-			fullName := fmt.Sprintf("%s:%s", meta.Type, pluginName)
-			if seenPlugins[fullName] {
-				continue // Already added from manager
-			}
-
-			// Determine status for external-only plugins.
-			status := getPluginStatus(meta.Type, pluginName)
-
-			// Use plugin's description if available, otherwise show source.
-			description := meta.Description
-			if description == "" {
-				sourceStr := ""
-				if meta.Source != nil {
-					sourceStr = formatPluginSourceString(meta.Source)
-				} else if meta.SourceLegacy != "" {
-					sourceStr = meta.SourceLegacy
-				}
-				description = fmt.Sprintf("External plugin (source: %s)", sourceStr)
-			}
-
-			// Get version from meta if available
-			version := meta.Version
-			if version == "" {
-				version = "unknown"
-			}
-
-			allPlugins = append(allPlugins, pluginInfo{
-				fullName:    fullName,
-				status:      status,
-				version:     version,
-				description: description,
-				isExternal:  true,
-				source:      formatPluginSourceString(meta.Source),
-			})
-		}
-	}
-
-	// Sort by full name.
-	sort.Slice(allPlugins, func(i, j int) bool {
-		return allPlugins[i].fullName < allPlugins[j].fullName
-	})
-
-	// Display plugins using table formatter.
-	tbl := NewTable([]string{"", "PLUGIN", "STATUS", "VERSION", "DESCRIPTION"})
-
-	for _, p := range allPlugins {
-		marker := ""
-		if p.isExternal {
-			marker = "*"
-		}
-		tbl.AddRow([]string{marker, p.fullName, p.status, p.version, p.description})
-		// Show source for external plugins.
-		if p.isExternal && p.source != "" {
-			tbl.AddRow([]string{"", "", "", "", "  src: " + p.source})
-		}
-	}
-
-	fmt.Print(tbl.Render())
-
-	// Add legend if there are external plugins.
-	hasExternal := false
-	for _, p := range allPlugins {
-		if p.isExternal {
-			hasExternal = true
-			break
-		}
-	}
-	if hasExternal {
-		fmt.Println()
-		fmt.Println("* = external plugin")
-	}
+	// Display plugins.
+	displayPluginTable(allPlugins)
 
 	return nil
 }
@@ -1043,6 +845,103 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 	return mgr
 }
 
+// loadAndApplyPluginLock loads the plugin lock file and applies configuration
+// to the shared plugin manager. This is used by commands that need to respect
+// plugin enable/disable settings without creating a new manager.
+func loadAndApplyPluginLock() (*PluginLock, string, error) {
+	lock, lockPath, err := loadPluginLock()
+	if err != nil {
+		return nil, "", err
+	}
+
+	if lock != nil {
+		config := manager.Config{
+			EnabledPlugins:  lock.EnabledPlugins,
+			DisabledPlugins: lock.DisabledPlugins,
+		}
+		sharedPluginManager.UpdateConfig(config)
+	}
+
+	return lock, lockPath, nil
+}
+
+// registerExternalPluginsFromLock registers all external plugins from the lock file
+// into the shared plugin manager. Optionally resolves relative paths to absolute.
+func registerExternalPluginsFromLock(lock *PluginLock, resolveAbsolutePaths, verbose bool) error {
+	if lock == nil || lock.ExternalPlugins == nil {
+		return nil
+	}
+
+	for _, meta := range lock.ExternalPlugins {
+		if err := registerExternalPlugin(meta, resolveAbsolutePaths, verbose); err != nil {
+			if verbose {
+				fmt.Fprintf(os.Stderr, " Failed to register external plugin '%s': %v\n", meta.Name, err)
+			}
+			// Continue with other plugins on error
+		}
+	}
+
+	return nil
+}
+
+// registerExternalPlugin registers a single external plugin into the shared manager.
+func registerExternalPlugin(meta *ExternalPluginMeta, resolveAbsolutePaths, verbose bool) error {
+	// Use the plugin's actual name from metadata.
+	pluginName := meta.Name
+	if pluginName == "" {
+		// Fallback: query the plugin if name is missing.
+		pluginName, _, _, _ = queryPluginMetadata(meta.Path)
+		if pluginName == "" {
+			return fmt.Errorf("unable to determine plugin name")
+		}
+	}
+
+	// Use plugin's description if available.
+	desc := meta.Description
+	if desc == "" {
+		desc = fmt.Sprintf("External plugin (source: %s)", meta.Source)
+	}
+
+	// Convert relative paths to absolute if requested.
+	pluginPath := meta.Path
+	if resolveAbsolutePaths && !filepath.IsAbs(pluginPath) {
+		absPath, err := filepath.Abs(pluginPath)
+		if err != nil {
+			return fmt.Errorf("failed to resolve absolute path: %w", err)
+		}
+		pluginPath = absPath
+	}
+
+	// Register the plugin.
+	if err := sharedPluginManager.RegisterExternalPlugin(pluginName, meta.Type, pluginPath, desc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// configureExternalPlugin applies additional configuration to an external plugin
+// (dry-run mode, plugin-specific arguments, etc.)
+func configureExternalPlugin(pluginName, pluginType string, dryRun bool, pluginArgs map[string]string, verbose bool) error {
+	// Set dry-run mode if applicable.
+	if err := setPluginDryRun(sharedPluginManager, pluginName, pluginType, dryRun); err != nil {
+		if verbose {
+			fmt.Fprintf(os.Stderr, " Failed to set dry-run for plugin '%s': %v\n", pluginName, err)
+		}
+	}
+
+	// Set plugin args if provided.
+	if argsJSON, ok := pluginArgs[pluginName]; ok {
+		if err := setPluginArgs(sharedPluginManager, pluginName, pluginType, argsJSON); err != nil {
+			if verbose {
+				fmt.Fprintf(os.Stderr, " Failed to set args for plugin '%s': %v\n", pluginName, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 // queryPluginMetadata queries a plugin for its name, description, type, and version.
 func queryPluginMetadata(pluginPath string) (name, description, pluginType, version string) {
 	cmd := exec.Command(pluginPath, "--plugin-info")
@@ -1353,7 +1252,7 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 
 	for {
 		header, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return "", fmt.Errorf("file not found in archive")
 		}
 		if err != nil {

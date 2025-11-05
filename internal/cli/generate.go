@@ -14,9 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
-	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
@@ -83,390 +81,55 @@ func init() {
 func runGenerate(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	// Reload shared plugin manager config from lock file if available (overrides env).
-	lock, _, err := loadPluginLock()
-	if err == nil && lock != nil {
-		config := manager.Config{
-			EnabledPlugins:  lock.EnabledPlugins,
-			DisabledPlugins: lock.DisabledPlugins,
-		}
-		sharedPluginManager.UpdateConfig(config)
-
-		// Register external plugins from lock file.
-		if lock.ExternalPlugins != nil {
-			for _, meta := range lock.ExternalPlugins {
-				// Use the plugin's actual name from metadata.
-				pluginName := meta.Name
-				if pluginName == "" {
-					// Fallback: query the plugin if name is missing.
-					pluginName, _, _, _ = queryPluginMetadata(meta.Path)
-				}
-
-				// Use plugin's description if available.
-				desc := meta.Description
-				if desc == "" {
-					desc = fmt.Sprintf("External plugin (source: %s)", meta.Source)
-				}
-
-				// Convert relative paths to absolute.
-				pluginPath := meta.Path
-				if !filepath.IsAbs(pluginPath) {
-					absPath, err := filepath.Abs(pluginPath)
-					if err != nil {
-						if generateVerbose {
-							fmt.Fprintf(os.Stderr, " Failed to resolve absolute path for plugin '%s': %v\n", pluginName, err)
-						}
-						continue
-					}
-					pluginPath = absPath
-				}
-
-				if err := sharedPluginManager.RegisterExternalPlugin(pluginName, meta.Type, pluginPath, desc); err != nil {
-					if generateVerbose {
-						fmt.Fprintf(os.Stderr, " Failed to register external plugin '%s': %v\n", pluginName, err)
-					}
-				} else {
-					// Set dry-run mode on external plugin.
-					if err := setPluginDryRun(sharedPluginManager, pluginName, meta.Type, generateDryRun); err != nil {
-						if generateVerbose {
-							fmt.Fprintf(os.Stderr, " Failed to set dry-run for plugin '%s': %v\n", pluginName, err)
-						}
-					}
-
-					// Set plugin args if provided.
-					if argsJSON, ok := generatePluginArgs[pluginName]; ok {
-						if err := setPluginArgs(sharedPluginManager, pluginName, meta.Type, argsJSON); err != nil {
-							if generateVerbose {
-								fmt.Fprintf(os.Stderr, " Failed to set args for plugin '%s': %v\n", pluginName, err)
-							}
-						}
-					}
-				}
-			}
-		}
+	// Phase 1: Load and configure plugins.
+	if err := loadAndConfigurePlugins(); err != nil {
+		return err
 	}
 
-	// Get input plugin.
-	plugin, ok := sharedPluginManager.GetInputPlugin(generateInputPlugin)
-	if !ok {
-		availablePlugins := make([]string, 0)
-		for pluginName := range sharedPluginManager.AllInputPlugins() {
-			availablePlugins = append(availablePlugins, pluginName)
-		}
-		return fmt.Errorf("unknown input plugin: %s (available: %s)", generateInputPlugin, strings.Join(availablePlugins, ", "))
-	}
-
-	// Input plugin specified on CLI is enabled for this execution regardless of config.
-	inputPlugin := plugin
-
-	// Validate input plugin.
-	if err := inputPlugin.Validate(); err != nil {
-		return fmt.Errorf("input plugin validation failed: %w", err)
-	}
-
-	// Generate palette.
-	if generateVerbose {
-		fmt.Fprintf(os.Stderr, " Input plugin: %s\n", inputPlugin.Name())
-		fmt.Fprintf(os.Stderr, "   %s\n", inputPlugin.Description())
-	}
-
-	// Prepare options for input plugin.
-	inputOpts := input.GenerateOptions{
-		Verbose:         generateVerbose,
-		DryRun:          generateDryRun,
-		ColourOverrides: []string{}, // Could be added as a flag if needed
-		PluginArgs:      make(map[string]any),
-	}
-
-	// Extract plugin-specific args if provided.
-	if argsJSON, ok := generatePluginArgs[generateInputPlugin]; ok {
-		var args map[string]any
-		if err := json.Unmarshal([]byte(argsJSON), &args); err == nil {
-			inputOpts.PluginArgs = args
-			if generateVerbose {
-				fmt.Fprintf(os.Stderr, "   Plugin args: %v\n", args)
-			}
-		} else if generateVerbose {
-			fmt.Fprintf(os.Stderr, "   Failed to parse plugin args: %v\n", err)
-		}
-	}
-
-	// Generate raw palette from input plugin.
-	rawPalette, err := inputPlugin.Generate(ctx, inputOpts)
+	// Phase 2: Get and validate input plugin.
+	inputPlugin, err := getAndValidateInputPlugin()
 	if err != nil {
-		return fmt.Errorf("failed to generate palette: %w", err)
+		return err
 	}
 
-	if generateVerbose {
-		fmt.Fprintf(os.Stderr, "   Generated raw palette (%d colours)\n", len(rawPalette.Colors))
+	// Phase 3: Generate input palette.
+	rawPalette, wallpaperPath, err := generateInputPalette(ctx, inputPlugin)
+	if err != nil {
+		return err
 	}
 
-	// Check if input plugin provides a wallpaper source.
-	var wallpaperPath string
-	if provider, ok := inputPlugin.(input.WallpaperProvider); ok {
-		wallpaperPath = provider.WallpaperPath()
-		if generateVerbose && wallpaperPath != "" {
-			fmt.Fprintf(os.Stderr, "   Wallpaper source: %s\n", wallpaperPath)
-		}
+	// Phase 4: Categorize the palette.
+	palette := categorizePalette(rawPalette, inputPlugin)
+
+	// Phase 5: Handle palette output (preview/save).
+	if err := handlePaletteOutput(palette); err != nil {
+		return err
 	}
 
-	// Determine theme type from global flag.
-	themeType := colour.ThemeAuto
-	switch globalTheme {
-	case "dark":
-		themeType = colour.ThemeDark
-	case "light":
-		themeType = colour.ThemeLight
-	case "auto":
-		// Check if plugin provides a theme hint (optional).
-		if hinter, ok := inputPlugin.(input.ThemeHinter); ok {
-			hint := hinter.ThemeHint()
-			if generateVerbose && hint != "" && hint != "auto" {
-				fmt.Fprintf(os.Stderr, "   Plugin suggests theme: %s\n", hint)
-			}
-			// Plugin hints are advisory only - we let the categorizer decide.
-			// based on weighted color distribution.
-		}
-		themeType = colour.ThemeAuto
+	// Phase 6: Select output plugins.
+	outputPlugins, err := selectOutputPlugins()
+	if err != nil {
+		return err
 	}
 
-	// Categorize the palette (auto-detection uses weighted color distribution).
-	config := colour.DefaultCategorisationConfig()
-	config.ThemeType = themeType
-	palette := colour.Categorise(rawPalette, config)
-
-	if generateVerbose {
-		fmt.Fprintf(os.Stderr, "   Categorized palette (%d colours, %s theme)\n",
-			len(palette.AllColours), palette.ThemeType.String())
-		fmt.Fprintf(os.Stderr, "   Plugin execution complete.\n")
-	}
-
-	// Show preview if requested.
-	if generatePreview {
-		fmt.Println()
-		fmt.Println(palette.StringWithPreview(true))
-		fmt.Println()
-	}
-
-	// Save palette if requested.
-	if generateSavePalette != "" {
-		if err := savePalette(palette, generateSavePalette); err != nil {
-			return fmt.Errorf("failed to save palette: %w", err)
-		}
-		if generateVerbose {
-			fmt.Fprintf(os.Stderr, " Saved palette to: %s\n", generateSavePalette)
-		}
-	}
-
-	// Determine which output plugins to run.
-	var outputPlugins []output.Plugin
-	if len(generateOutputs) == 1 && generateOutputs[0] == pluginTypeAll {
-		// Run all enabled plugins (filtered by manager).
-		for _, plugin := range sharedPluginManager.FilterOutputPlugins() {
-			outputPlugins = append(outputPlugins, plugin)
-		}
-	} else {
-		// Run specific plugins - when plugins are specified on CLI, they are enabled for this execution.
-		for _, name := range generateOutputs {
-			plugin, ok := sharedPluginManager.GetOutputPlugin(name)
-			if !ok {
-				availablePlugins := make([]string, 0)
-				for pluginName := range sharedPluginManager.AllOutputPlugins() {
-					availablePlugins = append(availablePlugins, pluginName)
-				}
-				return fmt.Errorf("unknown output plugin: %s (available: %s)", name, strings.Join(availablePlugins, ", "))
-			}
-			// Plugins specified on CLI are enabled for this execution regardless of config.
-			outputPlugins = append(outputPlugins, plugin)
-		}
-	}
-
-	if len(outputPlugins) == 0 {
-		return fmt.Errorf("no output plugins selected")
-	}
-
-	// Run global pre-hook script if it exists.
+	// Phase 7: Run global pre-hook.
 	if err := runGlobalHookScript(ctx, "pre-generate", generateVerbose, generateDryRun); err != nil {
 		if generateVerbose {
 			fmt.Fprintf(os.Stderr, " Global pre-hook failed: %v\n", err)
 		}
 	}
 
-	// Phase 1: Run all pre-execute hooks and validate plugins.
-	type pluginExecution struct {
-		plugin       output.Plugin
-		skip         bool
-		skipReason   string
-		writtenFiles []string
-	}
-	executions := make([]pluginExecution, 0, len(outputPlugins))
+	// Phase 8: Validate plugins and run pre-execute hooks.
+	executions := preparePluginExecutions(ctx, outputPlugins)
 
-	for _, plugin := range outputPlugins {
-		exec := pluginExecution{plugin: plugin}
+	// Phase 9: Generate and write files.
+	successCount := generateAndWriteFiles(executions, palette, wallpaperPath)
 
-		// Set verbose mode if plugin supports it.
-		if verbosePlugin, ok := plugin.(output.VerbosePlugin); ok {
-			verbosePlugin.SetVerbose(generateVerbose)
-		}
-
-		// Validate plugin.
-		if err := plugin.Validate(); err != nil {
-			if generateVerbose {
-				fmt.Fprintf(os.Stderr, " Skipping %s: %v\n", plugin.Name(), err)
-			}
-			exec.skip = true
-			exec.skipReason = fmt.Sprintf("validation failed: %v", err)
-			executions = append(executions, exec)
-			continue
-		}
-
-		// Run PreExecute hook if plugin implements it.
-		if preHook, ok := plugin.(output.PreExecuteHook); ok {
-			hookCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			skip, reason, err := preHook.PreExecute(hookCtx)
-			cancel()
-
-			if err != nil {
-				fmt.Fprintf(os.Stderr, " %s pre-execution check failed: %v\n", plugin.Name(), err)
-				exec.skip = true
-				exec.skipReason = fmt.Sprintf("pre-hook error: %v", err)
-				executions = append(executions, exec)
-				continue
-			}
-
-			if skip {
-				if generateVerbose {
-					fmt.Fprintf(os.Stderr, "⊘ Skipping %s: %s\n", plugin.Name(), reason)
-				}
-				exec.skip = true
-				exec.skipReason = reason
-				executions = append(executions, exec)
-				continue
-			}
-		}
-
-		executions = append(executions, exec)
-	}
-
-	// Phase 2: Generate and write files for non-skipped plugins.
-	successCount := 0
-	firstOutputPlugin := true
-	for i := range executions {
-		exec := &executions[i]
-		if exec.skip {
-			continue
-		}
-
-		plugin := exec.plugin
-
-		if generateVerbose {
-			// Add blank line before first output plugin for separation from preview.
-			if firstOutputPlugin {
-				fmt.Fprintf(os.Stderr, "→ Running output plugins...\n")
-				firstOutputPlugin = false
-			}
-			fmt.Fprintf(os.Stderr, " Output plugin: %s\n", plugin.Name())
-			fmt.Fprintf(os.Stderr, "   %s\n", plugin.Description())
-		}
-
-		// Create theme data with wallpaper context.
-		themeData := colour.NewThemeData(palette, wallpaperPath, "")
-
-		// Generate files.
-		files, err := plugin.Generate(themeData)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, " %s failed: %v\n", plugin.Name(), err)
-			exec.skip = true
-			exec.skipReason = fmt.Sprintf("generation failed: %v", err)
-			continue
-		}
-
-		// Write files.
-		outputDir := plugin.DefaultOutputDir()
-		exec.writtenFiles = make([]string, 0, len(files))
-
-		// Convert files map to slice for proper ordering.
-		fileList := make([]struct {
-			name    string
-			content []byte
-		}, 0, len(files))
-		for filename, content := range files {
-			fileList = append(fileList, struct {
-				name    string
-				content []byte
-			}{filename, content})
-		}
-
-		for _, file := range fileList {
-			filename := file.name
-			content := file.content
-
-			// Check if this is external plugin output (virtual file).
-			if strings.HasSuffix(filename, "-output.txt") && outputDir == "" {
-				// External plugin - display output directly.
-				if len(content) > 0 {
-					fmt.Println(string(content))
-				}
-			} else {
-				// Regular plugin - write to file.
-				fullPath := filepath.Join(outputDir, filename)
-
-				if generateDryRun {
-					fmt.Printf("   Would write: %s (%d bytes)\n", fullPath, len(content))
-				} else {
-					if err := writeFile(fullPath, content, generateVerbose); err != nil {
-						fmt.Fprintf(os.Stderr, " Failed to write %s: %v\n", fullPath, err)
-						exec.skip = true
-						exec.skipReason = fmt.Sprintf("write failed: %v", err)
-						continue
-					}
-					fmt.Printf("   %s (%d bytes)\n", fullPath, len(content))
-					exec.writtenFiles = append(exec.writtenFiles, fullPath)
-				}
-			}
-		}
-
-		if !exec.skip {
-			successCount++
-			if generateVerbose {
-				fmt.Fprintf(os.Stderr, "   Plugin execution complete.\n")
-			}
-		}
-	}
-
-	// Phase 3: Run all post-execute hooks for successful plugins.
+	// Phase 10: Run post-execute hooks.
 	if !generateDryRun {
-		// Run post-hooks for each plugin.
-		for _, exec := range executions {
-			if exec.skip || len(exec.writtenFiles) == 0 {
-				continue
-			}
+		runPostExecutionHooks(ctx, executions, wallpaperPath)
 
-			plugin := exec.plugin
-			if postHook, ok := plugin.(output.PostExecuteHook); ok {
-				// Build execution context for the hook.
-				execContext := output.ExecutionContext{
-					DryRun:        generateDryRun,
-					Verbose:       generateVerbose,
-					OutputDir:     plugin.DefaultOutputDir(),
-					WallpaperPath: wallpaperPath,
-				}
-
-				if generateVerbose {
-					fmt.Fprintf(os.Stderr, "→ Running %s post-hook...\n", plugin.Name())
-				}
-
-				hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-				err := postHook.PostExecute(hookCtx, execContext, exec.writtenFiles)
-				cancel()
-
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "   %s post-hook failed: %v\n", plugin.Name(), err)
-				}
-			}
-		}
-
-		// Run global post-hook script if it exists.
+		// Run global post-hook.
 		if err := runGlobalHookScript(ctx, "post-generate", generateVerbose, generateDryRun); err != nil {
 			if generateVerbose {
 				fmt.Fprintf(os.Stderr, " Global post-hook failed: %v\n", err)
@@ -474,17 +137,8 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Summary.
-	if !generateDryRun {
-		fmt.Println()
-		if successCount > 0 {
-			fmt.Printf(" Done! Generated %d output plugin(s)\n", successCount)
-		} else {
-			return fmt.Errorf("no output plugins succeeded")
-		}
-	}
-
-	return nil
+	// Phase 11: Print summary.
+	return printGenerationSummary(successCount)
 }
 
 // runGlobalHookScript executes a global hook script if it exists.

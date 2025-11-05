@@ -251,7 +251,7 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginRepoInfo(cmd *cobra.Command, args []string) error {
+func runPluginRepoInfo(_ *cobra.Command, args []string) error {
 	name := args[0]
 
 	mgr, err := getRepoManager()

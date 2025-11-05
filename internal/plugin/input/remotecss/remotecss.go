@@ -113,7 +113,7 @@ func (p *Plugin) fetch(ctx context.Context) ([]byte, error) {
 
 // parseCSS extracts color values from CSS content using regex patterns.
 // Supports: CSS custom properties, color properties, hex, rgb, hsl, oklch, oklab.
-func (p *Plugin) parseCSS(content string, verbose bool) (map[string]string, error) {
+func (p *Plugin) parseCSS(content string, _ bool) (map[string]string, error) {
 	colors := make(map[string]string)
 
 	// Extract CSS custom properties (--variable-name: value).

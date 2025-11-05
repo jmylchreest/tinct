@@ -201,7 +201,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginVerify(cmd *cobra.Command, args []string) error {
+func runPluginVerify(_ *cobra.Command, _ []string) error {
 	// Read lock file.
 	lock, _, err := loadPluginLock()
 	if err != nil {

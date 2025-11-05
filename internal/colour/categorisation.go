@@ -219,78 +219,15 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 		return NewCategorisedPalette(ThemeAuto)
 	}
 
-	// Create categorised colours with metadata.
-	extracted := make([]CategorisedColour, len(palette.Colors))
-
-	// Use equal weights if not provided.
-	weights := palette.Weights
-	if weights == nil || len(weights) != len(palette.Colors) {
-		weights = make([]float64, len(palette.Colors))
-		equalWeight := 1.0 / float64(len(palette.Colors))
-		for i := range weights {
-			weights[i] = equalWeight
-		}
-	}
-
-	for i, c := range palette.Colors {
-		lum := Luminance(c)
-		rgb := ToRGB(c)
-		rgba := ToRGBA(c)
-		h, s, _ := rgbToHSL(rgb)
-
-		extracted[i] = CategorisedColour{
-			Colour:      c,
-			Hex:         rgb.Hex(),
-			RGB:         rgb,
-			RGBA:        rgba,
-			Luminance:   lum,
-			IsLight:     lum > 0.5,
-			Hue:         h,
-			Saturation:  s,
-			IsGenerated: false,
-			Weight:      weights[i],
-		}
-	}
-
-	// Store all extracted colors for later inclusion.
+	// Step 1: Create categorised colours with metadata.
+	extracted := createCategorisedColours(palette)
 	allExtracted := make([]CategorisedColour, len(extracted))
 	copy(allExtracted, extracted)
 
-	// BACKGROUND SELECTION (background.go).
-	// Determines theme type and selects background color.
-	themeType := config.ThemeType
-	var bg CategorisedColour
-	bgIdx := -1
-
-	// Apply explicit role hints from input plugins (if provided).
+	// Step 2: Select background and apply hints.
 	hintsApplied := make(map[Role]bool)
-	if palette.RoleHints != nil {
-		for role, originalIndex := range palette.RoleHints {
-			if originalIndex >= 0 && originalIndex < len(allExtracted) {
-				hintedColor := allExtracted[originalIndex]
-				hintedColor.Role = role
-
-				// Store hinted background separately for later use.
-				if role == RoleBackground {
-					bg = hintedColor
-					bgIdx = originalIndex
-					hintsApplied[RoleBackground] = true
-				}
-			}
-		}
-	}
-
-	// If background not hinted, select it.
-	if !hintsApplied[RoleBackground] {
-		bg, themeType = selectBackground(extracted, themeType)
-		// Find background index in extracted array.
-		for i, cc := range extracted {
-			if cc.Hex == bg.Hex {
-				bgIdx = i
-				break
-			}
-		}
-	}
+	bg, bgIdx, themeType := selectBackgroundWithHints(extracted, allExtracted,
+		palette.RoleHints, config.ThemeType, hintsApplied)
 
 	// Sort extracted colours by luminance for consistent ordering.
 	sortByLuminance(extracted, themeType)
@@ -298,152 +235,46 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	result := NewCategorisedPalette(themeType)
 	result.Set(RoleBackground, bg)
 
-	// Apply all other role hints.
-	if palette.RoleHints != nil {
-		for role, originalIndex := range palette.RoleHints {
-			if role == RoleBackground {
-				continue // Already handled
-			}
-			if originalIndex >= 0 && originalIndex < len(allExtracted) {
-				hintedColor := allExtracted[originalIndex]
-				// Find in sorted array.
-				for _, cc := range extracted {
-					if cc.Hex == hintedColor.Hex {
-						cc.Role = role
-						result.Set(role, cc)
-						hintsApplied[role] = true
-						break
-					}
-				}
-			}
-		}
-	}
+	// Step 3: Apply other role hints.
+	applyRoleHints(result, extracted, allExtracted, palette.RoleHints, hintsApplied)
 
-	// Create background-muted variant (use hint if provided).
-	if !hintsApplied[RoleBackgroundMuted] {
-		bgMuted := createMutedVariant(bg, config.MutedLuminanceAdjust, themeType, true)
-		bgMuted.Role = RoleBackgroundMuted
-		bgMuted.IsGenerated = true
-		result.Set(RoleBackgroundMuted, bgMuted)
-	}
+	// Step 4: Select foreground.
+	fg, fgIdx := selectForegroundWithHints(result, extracted, bg, bgIdx, config,
+		themeType, hintsApplied)
 
-	// FOREGROUND SELECTION (foreground.go).
-	var fg CategorisedColour
-	fgIdx := -1
-	if !hintsApplied[RoleForeground] {
-		fgIdx = selectForeground(extracted, bg, config, bgIdx)
-		if fgIdx >= 0 {
-			fg = extracted[fgIdx]
-			fg.Role = RoleForeground
-			result.Set(RoleForeground, fg)
-		} else {
-			// No suitable foreground found in extracted colors (monochromatic palette).
-			// Generate synthetic foreground with guaranteed contrast.
-			fg = generateSyntheticForeground(bg, themeType, config)
-			fg.Role = RoleForeground
-			result.Set(RoleForeground, fg)
-		}
-	} else {
-		// Use the hinted foreground.
-		fg, _ = result.Get(RoleForeground)
-		// Find the index in extracted for later exclusion.
-		for i, cc := range extracted {
-			if cc.Hex == fg.Hex {
-				fgIdx = i
-				break
-			}
-		}
-	}
+	// Step 5: Create muted variants for background and foreground.
+	addMutedVariants(result, bg, fg, themeType, config, palette.RoleHints)
 
-	// Create foreground-muted variant (use hint if provided).
-	// Check if foreground exists (either extracted or generated).
-	if _, hasFg := result.Get(RoleForeground); hasFg && !hintsApplied[RoleForegroundMuted] {
-		fgMuted := createMutedVariant(fg, config.MutedLuminanceAdjust, themeType, false)
-		fgMuted.Role = RoleForegroundMuted
-		fgMuted.IsGenerated = true
-		result.Set(RoleForegroundMuted, fgMuted)
-	}
-
-	// ACCENT SELECTION (accents.go).
-	// Collect remaining colours for accents (excluding background, foreground, and hinted roles).
-	accents := make([]CategorisedColour, 0)
-	usedIndices := make(map[int]bool)
-
-	// Mark background index as used.
-	if bgIdx >= 0 {
-		usedIndices[bgIdx] = true
-	}
-	// Mark foreground index as used.
-	if fgIdx >= 0 {
-		usedIndices[fgIdx] = true
-	}
-	// Mark any hinted role indices as used.
-	if palette.RoleHints != nil {
-		for _, index := range palette.RoleHints {
-			usedIndices[index] = true
-		}
-	}
-
-	for i, cc := range extracted {
-		if !usedIndices[i] {
-			accents = append(accents, cc)
-		}
-	}
-
-	// Sort accents intelligently for better visual progression.
+	// Step 6: Collect and sort accent colours.
+	accents := collectAccentColours(extracted, palette.RoleHints, bgIdx, fgIdx)
 	sortAccentsForTheme(accents, bg, fg, themeType)
 
-	// Check if accents lack sufficient diversity (monochromatic palette).
-	// If so, generate synthetic accents with guaranteed contrast progression.
-	// Also generate if we have fewer than 4 accents.
-	if len(accents) < 4 || areAccentsTooSimilar(accents, bg) {
+	// Generate synthetic accents if needed.
+	if needsSyntheticAccents(accents, bg) {
 		accents = generateSyntheticAccents(bg, themeType, 4)
 	}
 
-	// Track which accent colors are used for semantic roles.
-	usedForSemantic := make(map[string]bool) // Track by hex value
+	// Step 7: Assign accent roles and their muted variants.
+	assignAccentRoles(result, accents, themeType, config, palette.RoleHints)
 
-	// Assign accent roles (up to 4) and their muted variants.
-	accentRoles := []struct {
-		primary Role
-		muted   Role
-	}{
-		{RoleAccent1, RoleAccent1Muted},
-		{RoleAccent2, RoleAccent2Muted},
-		{RoleAccent3, RoleAccent3Muted},
-		{RoleAccent4, RoleAccent4Muted},
-	}
-	accentIndex := 0
-	for _, roles := range accentRoles {
-		// Skip if this accent role was explicitly hinted.
-		if hintsApplied[roles.primary] {
-			continue
-		}
-
-		if accentIndex < len(accents) {
-			accent := accents[accentIndex]
-			accent.Role = roles.primary
-			result.Set(roles.primary, accent)
-
-			// Create muted variant for this accent (skip if hinted).
-			if !hintsApplied[roles.muted] {
-				accentMuted := createMutedVariant(accent, config.MutedLuminanceAdjust, themeType, false)
-				accentMuted.Role = roles.muted
-				accentMuted.IsGenerated = true
-				result.Set(roles.muted, accentMuted)
-			}
-
-			accentIndex++
-		}
-	}
-
-	// SEMANTIC COLOR ASSIGNMENT (semantic.go).
+	// Step 8: Assign semantic roles.
+	usedForSemantic := make(map[string]bool)
 	assignSemanticRolesWithHints(result, accents, usedForSemantic, hintsApplied)
 
-	// SURFACE & CONTAINER COLOR GENERATION (surface.go).
+	// Step 9: Generate surface and container colors.
 	generateSurfaceColors(result, bg, fg, themeType, hintsApplied)
 
-	// Collect all remaining colors that weren't assigned to any role.
+	// Step 10: Collect unassigned colors.
+	additionalColors := collectUnassignedColors(allExtracted, result)
+
+	// Step 11: Build final AllColours array.
+	result.AllColours = buildSortedAllColours(result, themeType, additionalColors)
+
+	return result
+}
+
+// collectUnassignedColors collects colors that weren't assigned to any role.
+func collectUnassignedColors(allExtracted []CategorisedColour, result *CategorisedPalette) []CategorisedColour {
 	additionalColors := make([]CategorisedColour, 0)
 	for _, cc := range allExtracted {
 		// Check if this color was assigned to any role.
@@ -455,15 +286,10 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 			}
 		}
 		if !alreadyAssigned {
-			// This color wasn't assigned to any semantic role - preserve it.
 			additionalColors = append(additionalColors, cc)
 		}
 	}
-
-	// Build final AllColours array with consistent indices.
-	result.AllColours = buildSortedAllColours(result, themeType, additionalColors)
-
-	return result
+	return additionalColors
 }
 
 // buildSortedAllColours creates the final sorted array of all colours.
