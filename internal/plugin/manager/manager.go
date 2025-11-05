@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/file"
@@ -34,7 +36,6 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
-	"github.com/spf13/cobra"
 )
 
 // Config holds plugin configuration.
@@ -110,10 +111,8 @@ func (b *Builder) Build() *Manager {
 	}
 
 	// Apply lock file config if specified (overrides env).
-	if b.lockFilePath != "" {
-		// Note: Lock file loading is handled externally and updated via UpdateConfig.
-		// This just signals that a lock file path was provided.
-	}
+	// Note: Lock file loading is handled externally and updated via UpdateConfig.
+	// The lockFilePath in the builder just signals that a lock file path was provided.
 
 	m := &Manager{
 		config:         config,
@@ -583,7 +582,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 }
 
 // RegisterFlags is a no-op for external plugins (they don't have flags).
-func (p *ExternalInputPlugin) RegisterFlags(cmd *cobra.Command) {
+func (p *ExternalInputPlugin) RegisterFlags(_ *cobra.Command) {
 	// External plugins don't register flags in Tinct.
 	// They handle their own arguments if needed.
 }
@@ -707,7 +706,7 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 }
 
 // RegisterFlags is a no-op for external plugins (they don't have flags).
-func (p *ExternalOutputPlugin) RegisterFlags(cmd *cobra.Command) {
+func (p *ExternalOutputPlugin) RegisterFlags(_ *cobra.Command) {
 	// External plugins don't register flags in Tinct.
 	// They handle their own arguments if needed.
 }

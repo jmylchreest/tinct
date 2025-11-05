@@ -131,7 +131,7 @@ func samplePixels(img image.Image) []color.Color {
 
 // kmeans performs k-means clustering on the pixel data.
 // Returns centroids and their weights (relative cluster sizes).
-func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []float64) {
+func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) (centroids []point3D, weights []float64) {
 	// Convert colors to 3D points.
 	points := make([]point3D, len(pixels))
 	for i, c := range pixels {
@@ -144,7 +144,7 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []floa
 	}
 
 	// Initialise centroids using k-means++ algorithm.
-	centroids := e.initializeCentroidsKMeansPlusPlus(points, k)
+	centroids = e.initializeCentroidsKMeansPlusPlus(points, k)
 
 	// Track cluster assignments.
 	assignments := make([]int, len(points))
@@ -185,7 +185,7 @@ func (e *KMeansExtractor) kmeans(pixels []color.Color, k int) ([]point3D, []floa
 	}
 
 	// Calculate cluster weights (relative sizes).
-	weights := make([]float64, k)
+	weights = make([]float64, k)
 	for _, assignment := range assignments {
 		weights[assignment]++
 	}

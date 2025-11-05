@@ -11,11 +11,12 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl
@@ -150,7 +151,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 
 // PreExecute checks if zellij config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if zellij executable exists on PATH.
 	_, err = exec.LookPath("zellij")
 	if err != nil {
@@ -174,7 +175,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute provides instructions for enabling the theme.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writtenFiles []string) error {
 	if p.verbose && len(writtenFiles) > 0 {
 		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "   To use this theme in Zellij, add to your config.kdl:\n")

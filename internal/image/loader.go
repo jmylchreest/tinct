@@ -12,8 +12,9 @@ import (
 	"os"
 	"strings"
 
-	httputil "github.com/jmylchreest/tinct/internal/util/http"
 	_ "golang.org/x/image/webp" // Register WebP format
+
+	httputil "github.com/jmylchreest/tinct/internal/util/http"
 )
 
 // Loader handles loading images from various sources.

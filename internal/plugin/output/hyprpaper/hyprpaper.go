@@ -12,11 +12,12 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/spf13/cobra"
 )
 
 // isValidPath checks if a path is safe to use in commands.
@@ -155,7 +156,7 @@ func (p *Plugin) generateConfig(themeData *colour.ThemeData) ([]byte, error) {
 
 // PreExecute checks if the config directory exists.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if config directory exists (create it if not).
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
@@ -169,7 +170,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute applies the wallpaper using hyprpaper after files are written.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
 	// If we have a wallpaper path, try to apply it.
 	if execCtx.WallpaperPath != "" {
 		// Check if hyprpaper is running before trying to set wallpaper.

@@ -11,10 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
-	"github.com/spf13/cobra"
 )
 
 // Plugin implements the input.Plugin interface for remote CSS palette fetching.
@@ -277,12 +278,12 @@ func convertOKLABToHex(value string) string {
 }
 
 // clamp restricts a value to a given range.
-func clamp(val, min, max int) int {
-	if val < min {
-		return min
+func clamp(val, minVal, maxVal int) int {
+	if val < minVal {
+		return minVal
 	}
-	if val > max {
-		return max
+	if val > maxVal {
+		return maxVal
 	}
 	return val
 }
@@ -321,10 +322,10 @@ func hslToRGB(h, s, l float64) colour.RGB {
 // hueToRGB is a helper for HSL to RGB conversion.
 func hueToRGB(p, q, t float64) float64 {
 	if t < 0 {
-		t += 1
+		t++
 	}
 	if t > 1 {
-		t -= 1
+		t--
 	}
 	if t < 1.0/6.0 {
 		return p + (q-p)*6*t
@@ -355,27 +356,27 @@ func oklchToRGB(l, c, h float64) colour.RGB {
 // Reference: https://bottosson.github.io/posts/oklab/.
 func oklabToRGB(l, a, b float64) colour.RGB {
 	// OKLAB to linear RGB (D65 illuminant).
-	l_ := l + 0.3963377774*a + 0.2158037573*b
-	m_ := l - 0.1055613458*a - 0.0638541728*b
-	s_ := l - 0.0894841775*a - 1.2914855480*b
+	lVal := l + 0.3963377774*a + 0.2158037573*b
+	mVal := l - 0.1055613458*a - 0.0638541728*b
+	sVal := l - 0.0894841775*a - 1.2914855480*b
 
-	l_ = l_ * l_ * l_
-	m_ = m_ * m_ * m_
-	s_ = s_ * s_ * s_
+	lVal = lVal * lVal * lVal
+	mVal = mVal * mVal * mVal
+	sVal = sVal * sVal * sVal
 
-	r := +4.0767416621*l_ - 3.3077115913*m_ + 0.2309699292*s_
-	g := -1.2684380046*l_ + 2.6097574011*m_ - 0.3413193965*s_
-	b_ := -0.0041960863*l_ - 0.7034186147*m_ + 1.7076147010*s_
+	r := +4.0767416621*lVal - 3.3077115913*mVal + 0.2309699292*sVal
+	g := -1.2684380046*lVal + 2.6097574011*mVal - 0.3413193965*sVal
+	bVal := -0.0041960863*lVal - 0.7034186147*mVal + 1.7076147010*sVal
 
 	// Convert linear RGB to sRGB (gamma correction).
 	r = linearToSRGB(r)
 	g = linearToSRGB(g)
-	b_ = linearToSRGB(b_)
+	bVal = linearToSRGB(bVal)
 
 	return colour.RGB{
-		R: uint8(clamp(int(r*255+0.5), 0, 255)),  // #nosec G115 -- clamped to 0-255
-		G: uint8(clamp(int(g*255+0.5), 0, 255)),  // #nosec G115 -- clamped to 0-255
-		B: uint8(clamp(int(b_*255+0.5), 0, 255)), // #nosec G115 -- clamped to 0-255
+		R: uint8(clamp(int(r*255+0.5), 0, 255)),    // #nosec G115 -- clamped to 0-255
+		G: uint8(clamp(int(g*255+0.5), 0, 255)),    // #nosec G115 -- clamped to 0-255
+		B: uint8(clamp(int(bVal*255+0.5), 0, 255)), // #nosec G115 -- clamped to 0-255
 	}
 }
 

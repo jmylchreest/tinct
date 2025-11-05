@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
-	"github.com/spf13/cobra"
 )
 
 // Plugin implements the input.Plugin interface for remote JSON palette fetching with JSONPath queries.

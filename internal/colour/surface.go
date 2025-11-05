@@ -336,7 +336,7 @@ func generatePriority3Colors(palette *CategorisedPalette, bg, fg CategorisedColo
 }
 
 // generateSurfaceVariant creates an intermediate color between surface and background.
-func generateSurfaceVariant(surface, bg CategorisedColour, theme ThemeType) CategorisedColour {
+func generateSurfaceVariant(surface, bg CategorisedColour, _ ThemeType) CategorisedColour {
 	surfaceRGB := surface.RGB
 	bgRGB := bg.RGB
 
@@ -424,7 +424,7 @@ func generateOutlineVariant(surface CategorisedColour, theme ThemeType) Categori
 }
 
 // generateOnColors generates high-contrast text colors for all accent and semantic colors.
-func generateOnColors(palette *CategorisedPalette, theme ThemeType, hintsApplied map[ColourRole]bool) {
+func generateOnColors(palette *CategorisedPalette, _ ThemeType, hintsApplied map[ColourRole]bool) {
 	// On-colors for accents.
 	generateOnColor(palette, RoleAccent1, RoleOnAccent1, hintsApplied)
 	generateOnColor(palette, RoleAccent2, RoleOnAccent2, hintsApplied)
@@ -542,7 +542,7 @@ func generateInverseOnSurface(inverseSurface CategorisedColour, theme ThemeType)
 }
 
 // generateInversePrimary creates an inverse accent color.
-func generateInversePrimary(primary, bg CategorisedColour, theme ThemeType) CategorisedColour {
+func generateInversePrimary(primary, _ CategorisedColour, theme ThemeType) CategorisedColour {
 	rgb := primary.RGB
 	h, s, _ := rgbToHSL(rgb)
 
@@ -573,7 +573,7 @@ func generateInversePrimary(primary, bg CategorisedColour, theme ThemeType) Cate
 }
 
 // generateScrim creates a dark overlay color with alpha for modals.
-func generateScrim(theme ThemeType) CategorisedColour {
+func generateScrim(_ ThemeType) CategorisedColour {
 	// Scrim is always dark, but alpha varies.
 	rgb := RGB{R: 0, G: 0, B: 0}
 	rgba := RGBA{R: 0, G: 0, B: 0, A: 82} // ~32% opacity
@@ -594,7 +594,7 @@ func generateScrim(theme ThemeType) CategorisedColour {
 }
 
 // generateShadow creates a shadow color with alpha for elevation.
-func generateShadow(theme ThemeType) CategorisedColour {
+func generateShadow(_ ThemeType) CategorisedColour {
 	// Shadow is always black with low alpha.
 	rgb := RGB{R: 0, G: 0, B: 0}
 	rgba := RGBA{R: 0, G: 0, B: 0, A: 38} // ~15% opacity

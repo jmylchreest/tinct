@@ -11,10 +11,11 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl
@@ -142,7 +143,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 
 // PreExecute checks if dunst is available and config directory exists.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if dunst executable exists on PATH.
 	_, err = exec.LookPath("dunst")
 	if err != nil {

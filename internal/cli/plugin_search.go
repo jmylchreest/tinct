@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/spf13/cobra"
+
+	"github.com/jmylchreest/tinct/internal/plugin/repository"
 )
 
 var (
@@ -71,7 +72,7 @@ func init() {
 	pluginBrowseCmd.Flags().StringVar(&searchRepo, "repo", "", "Browse only specific repository")
 }
 
-func runPluginSearch(cmd *cobra.Command, args []string) error {
+func runPluginSearch(_ *cobra.Command, args []string) error {
 	mgr, err := getRepoManager()
 	if err != nil {
 		return err
@@ -142,7 +143,7 @@ func runPluginSearch(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginBrowse(cmd *cobra.Command, args []string) error {
+func runPluginBrowse(_ *cobra.Command, _ []string) error {
 	mgr, err := getRepoManager()
 	if err != nil {
 		return err

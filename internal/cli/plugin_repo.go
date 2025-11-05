@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/spf13/cobra"
+
+	"github.com/jmylchreest/tinct/internal/plugin/repository"
 )
 
 var (
@@ -128,7 +129,7 @@ func getRepoManager() (*repository.Manager, error) {
 	return repoManager, nil
 }
 
-func runPluginRepoAdd(cmd *cobra.Command, args []string) error {
+func runPluginRepoAdd(_ *cobra.Command, args []string) error {
 	name := args[0]
 	url := args[1]
 
@@ -151,7 +152,7 @@ func runPluginRepoAdd(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginRepoList(cmd *cobra.Command, args []string) error {
+func runPluginRepoList(_ *cobra.Command, _ []string) error {
 	mgr, err := getRepoManager()
 	if err != nil {
 		return err
@@ -189,7 +190,7 @@ func runPluginRepoList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginRepoRemove(cmd *cobra.Command, args []string) error {
+func runPluginRepoRemove(_ *cobra.Command, args []string) error {
 	name := args[0]
 
 	mgr, err := getRepoManager()
@@ -205,7 +206,7 @@ func runPluginRepoRemove(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginRepoUpdate(cmd *cobra.Command, args []string) error {
+func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 	mgr, err := getRepoManager()
 	if err != nil {
 		return err

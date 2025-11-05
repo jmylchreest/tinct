@@ -92,12 +92,12 @@ func rgbToHSL(rgb RGB) (h, s, l float64) {
 	g := float64(rgb.G) / 255.0
 	b := float64(rgb.B) / 255.0
 
-	max := math.Max(r, math.Max(g, b))
-	min := math.Min(r, math.Min(g, b))
-	delta := max - min
+	maxVal := math.Max(r, math.Max(g, b))
+	minVal := math.Min(r, math.Min(g, b))
+	delta := maxVal - minVal
 
 	// Lightness.
-	l = (max + min) / 2.0
+	l = (maxVal + minVal) / 2.0
 
 	// Saturation.
 	if delta == 0 {
@@ -107,13 +107,13 @@ func rgbToHSL(rgb RGB) (h, s, l float64) {
 	}
 
 	if l < 0.5 {
-		s = delta / (max + min)
+		s = delta / (maxVal + minVal)
 	} else {
-		s = delta / (2.0 - max - min)
+		s = delta / (2.0 - maxVal - minVal)
 	}
 
 	// Hue.
-	switch max {
+	switch maxVal {
 	case r:
 		h = (g - b) / delta
 		if g < b {
@@ -228,8 +228,8 @@ func sortByContrast(colours []CategorisedColour, bg CategorisedColour) {
 	}
 }
 
-// min returns the minimum of two integers.
-func min(a, b int) int {
+// minInt returns the minimum of two integers.
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

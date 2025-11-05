@@ -163,9 +163,14 @@ func TestDunstPlugin_ColorFormatting(t *testing.T) {
 	}
 
 	// Verify urgency_critical has timeout = 0.
-	urgencyCriticalSection := content[strings.Index(content, "[urgency_critical]"):]
-	if !strings.Contains(urgencyCriticalSection, "timeout = 0") {
-		t.Error("urgency_critical should have timeout = 0")
+	idx := strings.Index(content, "[urgency_critical]")
+	if idx != -1 {
+		urgencyCriticalSection := content[idx:]
+		if !strings.Contains(urgencyCriticalSection, "timeout = 0") {
+			t.Error("urgency_critical should have timeout = 0")
+		}
+	} else {
+		t.Error("urgency_critical section not found")
 	}
 
 	// Verify urgency_normal and urgency_low have timeout = 10.

@@ -11,11 +11,12 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl
@@ -198,7 +199,7 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 
 // PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if config directory exists - create it if needed.
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
@@ -213,7 +214,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute reloads hyprland configuration if requested.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
 	// Reload hyprland configuration if requested.
 	if !p.reloadConfig {
 		return nil

@@ -16,10 +16,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/jmylchreest/tinct/internal/security"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -1065,7 +1066,7 @@ func queryPluginMetadata(pluginPath string) (name, description, pluginType, vers
 }
 
 // parsePluginName parses a plugin name into type and name.
-func parsePluginName(name string) (string, string) {
+func parsePluginName(name string) (pluginType, pluginName string) {
 	parts := strings.Split(name, ":")
 	if len(parts) == 2 {
 		return parts[0], parts[1]

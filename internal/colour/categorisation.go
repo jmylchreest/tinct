@@ -260,7 +260,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	// Determines theme type and selects background color.
 	themeType := config.ThemeType
 	var bg CategorisedColour
-	var bgIdx int = -1
+	bgIdx := -1
 
 	// Apply explicit role hints from input plugins (if provided).
 	hintsApplied := make(map[ColourRole]bool)
@@ -329,7 +329,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 
 	// FOREGROUND SELECTION (foreground.go).
 	var fg CategorisedColour
-	var fgIdx int = -1
+	fgIdx := -1
 	if !hintsApplied[RoleForeground] {
 		fgIdx = selectForeground(extracted, bg, config, bgIdx)
 		if fgIdx >= 0 {

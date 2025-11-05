@@ -10,9 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/jmylchreest/tinct/internal/security"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -253,7 +254,7 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 	// Return error if any mismatches.
 	for _, result := range results {
 		if result.Status == "mismatch" || result.Status == "missing" {
-			return fmt.Errorf("\nVerification failed. Run 'tinct plugins sync --force' to reinstall plugins.")
+			return fmt.Errorf("\nverification failed. Run 'tinct plugins sync --force' to reinstall plugins")
 		}
 	}
 

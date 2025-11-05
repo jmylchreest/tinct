@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
-	"github.com/spf13/cobra"
 )
 
 // Plugin implements the input.Plugin interface for file-based palette loading.
@@ -69,7 +70,7 @@ func (p *Plugin) Validate() error {
 // Generate creates a raw colour palette from file and/or manual specifications.
 // Returns only the colors - categorization happens separately.
 // If role-based colors are provided (role=hex), they are stored as metadata for later categorization.
-func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+func (p *Plugin) Generate(_ context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
 	var colors []color.Color
 	roleHints := make(map[colour.ColourRole]int) // Map roles to color indices
 

@@ -5,8 +5,9 @@ import (
 	"context"
 	"maps"
 
-	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/spf13/cobra"
+
+	"github.com/jmylchreest/tinct/internal/colour"
 )
 
 // Plugin represents an output plugin that can generate configuration files.

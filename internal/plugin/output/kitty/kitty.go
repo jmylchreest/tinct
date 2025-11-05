@@ -11,11 +11,12 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl
@@ -143,7 +144,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 
 // PreExecute checks if kitty is available before generating the theme.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if kitty executable exists on PATH.
 	_, err = exec.LookPath("kitty")
 	if err != nil {
@@ -167,7 +168,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute applies the theme to all running kitty instances.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
 	// Apply the theme to all running kitty instances using kitten themes command.
 	// This is the recommended way per https://sw.kovidgoyal.net/kitty/kittens/themes/.
 	cmd := exec.CommandContext(ctx, "kitten", "themes", "--reload-in=all", "tinct")

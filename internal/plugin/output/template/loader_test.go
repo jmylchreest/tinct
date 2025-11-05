@@ -2,6 +2,7 @@
 package template
 
 import (
+	"bytes"
 	"embed"
 	"os"
 	"path/filepath"
@@ -58,7 +59,7 @@ func TestLoader_Load(t *testing.T) {
 		if !fromCustom {
 			t.Error("expected custom template, got embedded")
 		}
-		if string(content) != string(customContent) {
+		if !bytes.Equal(content, customContent) {
 			t.Errorf("expected custom content %q, got %q", customContent, content)
 		}
 	})

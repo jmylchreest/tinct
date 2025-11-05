@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	"github.com/spf13/cobra"
 )
 
 // TestBasicInterface tests the basic plugin interface methods that all plugins must implement.
@@ -94,7 +95,7 @@ func TestVerbosePlugin(t *testing.T, p any) {
 		t.Skip("Plugin does not implement SetVerbose")
 	}
 
-	t.Run("SetVerbose", func(t *testing.T) {
+	t.Run("SetVerbose", func(_ *testing.T) {
 		// Just test that it doesn't panic.
 		vp.SetVerbose(true)
 		vp.SetVerbose(false)
@@ -143,7 +144,7 @@ func TestPreExecuteHook(t *testing.T, p any, expectedBinaryName string) {
 }
 
 // TestEmbeddedTemplates tests that embedded templates are accessible.
-func TestEmbeddedTemplates(t *testing.T, p any, expectedTemplateFiles []string) {
+func TestEmbeddedTemplates(t *testing.T, _ any, _ []string) {
 	type hasEmbedded interface {
 		GetEmbeddedTemplates() interface {
 			ReadDir(string) ([]interface{ Name() string }, error)

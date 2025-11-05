@@ -13,11 +13,12 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/spf13/cobra"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
-	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl
@@ -196,7 +197,7 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 
 // PreExecute checks if waybar is available before generating the theme.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if waybar executable exists on PATH.
 	_, err = exec.LookPath("waybar")
 	if err != nil {
@@ -214,7 +215,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute reloads waybar configuration if requested.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
 	if !p.reloadConfig {
 		return nil
 	}
