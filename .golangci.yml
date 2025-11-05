@@ -40,54 +40,54 @@ linters:
   # Enable specific linters
   enable:
     # Bugs and correctness
-    - errcheck        # Check for unchecked errors
-    - gosimple        # Simplify code
-    - govet           # Reports suspicious constructs
-    - ineffassign     # Detect ineffectual assignments
-    - staticcheck     # Go static analysis
-    - typecheck       # Type-check Go code
-    - unused          # Check for unused constants, variables, functions and types
+    - errcheck # Check for unchecked errors
+    - gosimple # Simplify code
+    - govet # Reports suspicious constructs
+    - ineffassign # Detect ineffectual assignments
+    - staticcheck # Go static analysis
+    - typecheck # Type-check Go code
+    - unused # Check for unused constants, variables, functions and types
 
     # Style and formatting
-    - gofmt           # Check if code is formatted with gofmt
-    - goimports       # Check if imports are formatted with goimports
-    - misspell        # Find commonly misspelled English words
-    - whitespace      # Check for trailing whitespace
+    - gofmt # Check if code is formatted with gofmt
+    - goimports # Check if imports are formatted with goimports
+    - misspell # Find commonly misspelled English words
+    - whitespace # Check for trailing whitespace
 
     # Complexity
-    - gocyclo         # Check cyclomatic complexity
-    - gocognit        # Check cognitive complexity
-    - nestif          # Check deeply nested if statements
+    - gocyclo # Check cyclomatic complexity
+    - gocognit # Check cognitive complexity
+    - nestif # Check deeply nested if statements
 
     # Performance
-    - prealloc        # Find slice declarations that could potentially be preallocated
+    - prealloc # Find slice declarations that could potentially be preallocated
 
     # Best practices
-    - errname         # Check error naming conventions
-    - errorlint       # Find code that will cause problems with the error wrapping
-    - goconst         # Find repeated strings that could be replaced by a constant
-    - gocritic        # The most opinionated Go linter
+    - errname # Check error naming conventions
+    - errorlint # Find code that will cause problems with the error wrapping
+    - goconst # Find repeated strings that could be replaced by a constant
+    - gocritic # The most opinionated Go linter
     - goprintffuncname # Check printf-like functions are named with f at the end
-    - nolintlint      # Ensure nolint directives are properly used
-    - revive          # Fast, configurable, extensible, flexible, and beautiful linter
-    - unconvert       # Remove unnecessary type conversions
-    - unparam         # Find unused function parameters
+    - nolintlint # Ensure nolint directives are properly used
+    - revive # Fast, configurable, extensible, flexible, and beautiful linter
+    - unconvert # Remove unnecessary type conversions
+    - unparam # Find unused function parameters
 
     # Security
-    - gosec           # Security problems
+    - gosec # Security problems
 
     # Comments and documentation
-    - godot           # Check if comments end in a period
+    - godot # Check if comments end in a period
 
     # Modern Go features
     - gomoddirectives # Manage replace, retract directives in go.mod
-    - gomodguard      # Check for blocked dependencies
+    - gomodguard # Check for blocked dependencies
 
     # Testing
-    - tparallel       # Detects inappropriate usage of t.Parallel()
+    - tparallel # Detects inappropriate usage of t.Parallel()
 
     # Error handling
-    - wrapcheck       # Check that errors from external packages are wrapped
+    - wrapcheck # Check that errors from external packages are wrapped
 
 # Linters settings
 linters-settings:
@@ -124,6 +124,7 @@ linters-settings:
     disabled-checks:
       - commentedOutCode
       - whyNoLint
+      - hugeParam # 112 bytes for CategorisedColour is acceptable for our use case
 
   # Import formatting
   goimports:

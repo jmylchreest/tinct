@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -228,7 +229,8 @@ func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ [
 	output, err := cmd.Output()
 	if err != nil {
 		// Check if the error is because no process was found.
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			if exitErr.ExitCode() == 1 {
 				return fmt.Errorf("no running waybar instances found to reload")
 			}

@@ -357,7 +357,7 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 }
 
 // reinstallPlugin reinstalls a plugin from its source.
-func reinstallPlugin(meta ExternalPluginMeta) error {
+func reinstallPlugin(meta *ExternalPluginMeta) error {
 	if meta.Source != nil {
 		switch meta.Source.Type {
 		case "repository":
@@ -380,7 +380,7 @@ func reinstallPlugin(meta ExternalPluginMeta) error {
 }
 
 // reinstallFromRepository installs a plugin from a repository.
-func reinstallFromRepository(meta ExternalPluginMeta) error {
+func reinstallFromRepository(meta *ExternalPluginMeta) error {
 	mgr, err := getRepoManager()
 	if err != nil {
 		return fmt.Errorf("failed to get repository manager: %w", err)
@@ -406,12 +406,12 @@ func reinstallFromRepository(meta ExternalPluginMeta) error {
 }
 
 // reinstallFromHTTP installs a plugin from HTTP URL.
-func reinstallFromHTTP(meta ExternalPluginMeta) error {
+func reinstallFromHTTP(meta *ExternalPluginMeta) error {
 	return downloadAndInstallPlugin(meta.Source.URL, meta.Name, meta.Source.Checksum)
 }
 
 // reinstallFromLocal installs a plugin from local path.
-func reinstallFromLocal(meta ExternalPluginMeta) error {
+func reinstallFromLocal(meta *ExternalPluginMeta) error {
 	if meta.Source.OriginalPath == "" {
 		return fmt.Errorf("no original path specified")
 	}
@@ -443,7 +443,7 @@ func reinstallFromLocal(meta ExternalPluginMeta) error {
 }
 
 // reinstallFromLegacySource installs from legacy source string.
-func reinstallFromLegacySource(meta ExternalPluginMeta) error {
+func reinstallFromLegacySource(meta *ExternalPluginMeta) error {
 	source := meta.SourceLegacy
 
 	// Try to parse as URL.
@@ -453,7 +453,7 @@ func reinstallFromLegacySource(meta ExternalPluginMeta) error {
 
 	// Try as local path.
 	if _, err := os.Stat(source); err == nil {
-		return reinstallFromLocal(ExternalPluginMeta{
+		return reinstallFromLocal(&ExternalPluginMeta{
 			Name: meta.Name,
 			Source: &repository.PluginSource{
 				Type:         "local",

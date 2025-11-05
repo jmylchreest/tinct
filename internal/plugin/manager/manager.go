@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image/color"
 	"maps"
@@ -745,7 +746,8 @@ func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reaso
 	err = cmd.Run()
 
 	// Exit code 0 = continue, 1 = skip, 2+ = error.
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		exitCode := exitErr.ExitCode()
 
 		if exitCode == 1 {

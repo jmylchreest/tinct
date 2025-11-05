@@ -212,9 +212,9 @@ func convertRGBToHex(value string) string {
 		g, _ := strconv.ParseFloat(matches[2], 64) //nolint:errcheck
 		b, _ := strconv.ParseFloat(matches[3], 64) //nolint:errcheck
 		return fmt.Sprintf("#%02x%02x%02x",
-			clamp(int(r), 0, 255),
-			clamp(int(g), 0, 255),
-			clamp(int(b), 0, 255))
+			clamp(int(r), 255),
+			clamp(int(g), 255),
+			clamp(int(b), 255))
 	}
 	return ""
 }
@@ -277,10 +277,12 @@ func convertOKLABToHex(value string) string {
 	return ""
 }
 
-// clamp restricts a value to a given range.
-func clamp(val, minVal, maxVal int) int {
-	if val < minVal {
-		return minVal
+// clamp restricts a value to the range 0-maxVal.
+//
+//nolint:unparam // maxVal is always 255 for RGB but keeping generic for clarity
+func clamp(val, maxVal int) int {
+	if val < 0 {
+		return 0
 	}
 	if val > maxVal {
 		return maxVal
@@ -313,9 +315,9 @@ func hslToRGB(h, s, l float64) colour.RGB {
 	}
 
 	return colour.RGB{
-		R: uint8(clamp(int(r*255), 0, 255)), // #nosec G115 -- clamped to 0-255
-		G: uint8(clamp(int(g*255), 0, 255)), // #nosec G115 -- clamped to 0-255
-		B: uint8(clamp(int(b*255), 0, 255)), // #nosec G115 -- clamped to 0-255
+		R: uint8(clamp(int(r*255), 255)), // #nosec G115 -- clamped to 0-255
+		G: uint8(clamp(int(g*255), 255)), // #nosec G115 -- clamped to 0-255
+		B: uint8(clamp(int(b*255), 255)), // #nosec G115 -- clamped to 0-255
 	}
 }
 
@@ -374,9 +376,9 @@ func oklabToRGB(l, a, b float64) colour.RGB {
 	bVal = linearToSRGB(bVal)
 
 	return colour.RGB{
-		R: uint8(clamp(int(r*255+0.5), 0, 255)),    // #nosec G115 -- clamped to 0-255
-		G: uint8(clamp(int(g*255+0.5), 0, 255)),    // #nosec G115 -- clamped to 0-255
-		B: uint8(clamp(int(bVal*255+0.5), 0, 255)), // #nosec G115 -- clamped to 0-255
+		R: uint8(clamp(int(r*255+0.5), 255)),    // #nosec G115 -- clamped to 0-255
+		G: uint8(clamp(int(g*255+0.5), 255)),    // #nosec G115 -- clamped to 0-255
+		B: uint8(clamp(int(bVal*255+0.5), 255)), // #nosec G115 -- clamped to 0-255
 	}
 }
 

@@ -45,7 +45,7 @@ type PluginLock struct {
 	DisabledPlugins []string `json:"disabled_plugins,omitempty"`
 
 	// ExternalPlugins maps plugin names to their metadata.
-	ExternalPlugins map[string]ExternalPluginMeta `json:"external_plugins,omitempty"`
+	ExternalPlugins map[string]*ExternalPluginMeta `json:"external_plugins,omitempty"`
 }
 
 // ExternalPluginMeta contains metadata about an external plugin.
@@ -476,10 +476,7 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load or create plugin lock.
-	lock, lockPath, err := loadOrCreatePluginLock()
-	if err != nil {
-		return fmt.Errorf("failed to load plugin lock: %w", err)
-	}
+	lock, lockPath := loadOrCreatePluginLock()
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
@@ -553,10 +550,7 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load or create plugin lock.
-	lock, lockPath, err := loadOrCreatePluginLock()
-	if err != nil {
-		return fmt.Errorf("failed to load plugin lock: %w", err)
-	}
+	lock, lockPath := loadOrCreatePluginLock()
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
@@ -629,10 +623,7 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load or create plugin lock.
-	lock, lockPath, err := loadOrCreatePluginLock()
-	if err != nil {
-		return fmt.Errorf("failed to load plugin lock: %w", err)
-	}
+	lock, lockPath := loadOrCreatePluginLock()
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
@@ -697,10 +688,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load or create plugin lock.
-	lock, lockPath, err := loadOrCreatePluginLock()
-	if err != nil {
-		return fmt.Errorf("failed to load plugin lock: %w", err)
-	}
+	lock, lockPath := loadOrCreatePluginLock()
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
@@ -708,7 +696,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 
 	// Initialize external plugins map if needed.
 	if lock.ExternalPlugins == nil {
-		lock.ExternalPlugins = make(map[string]ExternalPluginMeta)
+		lock.ExternalPlugins = make(map[string]*ExternalPluginMeta)
 	}
 
 	// Get plugin directory.
@@ -747,7 +735,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add to lock file.
-	lock.ExternalPlugins[pluginName] = ExternalPluginMeta{
+	lock.ExternalPlugins[pluginName] = &ExternalPluginMeta{
 		Name:         pluginName,
 		Path:         pluginPath,
 		Type:         pluginType,
@@ -914,7 +902,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		}
 
 		// Update metadata in lock file.
-		lock.ExternalPlugins[name] = ExternalPluginMeta{
+		lock.ExternalPlugins[name] = &ExternalPluginMeta{
 			Name:        actualName,
 			Path:        pluginPath,
 			Type:        pluginType,
@@ -977,10 +965,11 @@ func loadPluginLock() (*PluginLock, string, error) {
 }
 
 // loadOrCreatePluginLock loads or creates a plugin lock file.
-func loadOrCreatePluginLock() (*PluginLock, string, error) {
+// Always succeeds by creating a new lock if one doesn't exist.
+func loadOrCreatePluginLock() (*PluginLock, string) {
 	lock, lockPath, err := loadPluginLock()
 	if err == nil {
-		return lock, lockPath, nil
+		return lock, lockPath
 	}
 
 	// Create new lock file.
@@ -992,10 +981,10 @@ func loadOrCreatePluginLock() (*PluginLock, string, error) {
 	lock = &PluginLock{
 		EnabledPlugins:  []string{},
 		DisabledPlugins: []string{},
-		ExternalPlugins: make(map[string]ExternalPluginMeta),
+		ExternalPlugins: make(map[string]*ExternalPluginMeta),
 	}
 
-	return lock, lockPath, nil
+	return lock, lockPath
 }
 
 // savePluginLock saves the plugin lock file.

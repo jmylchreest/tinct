@@ -36,8 +36,8 @@ func calculateContentSeed(img image.Image) (int64, error) {
 
 	// Hash image dimensions.
 	dimBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint32(dimBytes[0:4], uint32(bounds.Dx()))
-	binary.LittleEndian.PutUint32(dimBytes[4:8], uint32(bounds.Dy()))
+	binary.LittleEndian.PutUint32(dimBytes[0:4], uint32(bounds.Dx())) // #nosec G115 -- image dimensions are safe to convert
+	binary.LittleEndian.PutUint32(dimBytes[4:8], uint32(bounds.Dy())) // #nosec G115 -- image dimensions are safe to convert
 	hasher.Write(dimBytes)
 
 	// Sample pixels in a grid pattern for efficiency.
@@ -59,7 +59,7 @@ func calculateContentSeed(img image.Image) (int64, error) {
 
 	// Convert hash to int64 seed.
 	hash := hasher.Sum(nil)
-	seed := int64(binary.LittleEndian.Uint64(hash[:8]))
+	seed := int64(binary.LittleEndian.Uint64(hash[:8])) // #nosec G115 -- hash conversion is safe
 	return seed, nil
 }
 
@@ -83,7 +83,7 @@ func calculateFilepathSeed(imagePath string) (int64, error) {
 	hasher := sha256.New()
 	hasher.Write([]byte(absPath))
 	hash := hasher.Sum(nil)
-	seed := int64(binary.LittleEndian.Uint64(hash[:8]))
+	seed := int64(binary.LittleEndian.Uint64(hash[:8])) // #nosec G115 -- hash conversion is safe
 	return seed, nil
 }
 
