@@ -386,6 +386,8 @@ changelog:
       order: 999
 
 # Package managers
+# Note: 'brews' is deprecated in favor of 'homebrew' but still works
+# We use 'brews' for backward compatibility
 brews:
   - repository:
       owner: jmylchreest
