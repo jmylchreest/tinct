@@ -73,6 +73,9 @@ type ExternalPluginMeta struct {
 
 	// InstalledAt is the timestamp when the plugin was installed.
 	InstalledAt string `json:"installed_at,omitempty"`
+
+	// Config holds plugin-specific configuration (optional).
+	Config map[string]interface{} `json:"config,omitempty"`
 }
 
 var (

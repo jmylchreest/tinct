@@ -24,6 +24,26 @@ const (
 	MainColorWeightRatio = 0.9
 )
 
+// SeedMode determines how the random seed for k-means clustering is generated.
+type SeedMode string
+
+const (
+	// SeedModeContent generates seed from image content hash (default, deterministic by content).
+	SeedModeContent SeedMode = "content"
+	// SeedModeFilepath generates seed from absolute file path hash (deterministic by path).
+	SeedModeFilepath SeedMode = "filepath"
+	// SeedModeManual uses a user-provided seed value.
+	SeedModeManual SeedMode = "manual"
+	// SeedModeRandom uses non-deterministic random seed (varies each run).
+	SeedModeRandom SeedMode = "random"
+)
+
+// SeedConfig holds configuration for k-means clustering seed generation.
+type SeedConfig struct {
+	Mode  SeedMode `json:"mode"`
+	Value *int64   `json:"value,omitempty"` // Only used when Mode is SeedModeManual
+}
+
 // Plugin implements the input.Plugin interface for image-based colour extraction.
 type Plugin struct {
 	path      string
@@ -35,6 +55,10 @@ type Plugin struct {
 	regions         int    // Number of regions to extract (4, 8, 12, 16, 0=disabled)
 	samplePercent   int    // Percentage of edge to sample
 	sampleMethod    string // "average" or "dominant"
+
+	// Seed configuration for k-means clustering.
+	seedMode  string // Seed mode: "content", "filepath", "manual", "random"
+	seedValue int64  // Seed value (only used when seedMode is "manual")
 
 	// Wallpaper support.
 	loadedImagePath string // Stores the actual path to the loaded image (for wallpaper setting)
@@ -49,6 +73,8 @@ func New() *Plugin {
 		regions:         8,
 		samplePercent:   10,
 		sampleMethod:    "average",
+		seedMode:        string(SeedModeContent), // Default to content-based seed
+		seedValue:       0,
 	}
 }
 
@@ -78,6 +104,10 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&p.regions, "image.regions", 8, "Number of edge/corner regions to extract (4, 8, 12, 16)")
 	cmd.Flags().IntVar(&p.samplePercent, "image.sample-size", 10, "Percentage of edge to sample (1-50)")
 	cmd.Flags().StringVar(&p.sampleMethod, "image.sample-method", "average", "Sampling method: 'average' or 'dominant'")
+
+	// Seed configuration flags.
+	cmd.Flags().StringVar(&p.seedMode, "image.seed-mode", string(SeedModeContent), "K-means seed mode: content, filepath, manual, random")
+	cmd.Flags().Int64Var(&p.seedValue, "image.seed-value", 0, "K-means seed value (only used with --image.seed-mode=manual)")
 }
 
 // Validate checks if the plugin has all required inputs configured.
@@ -109,6 +139,24 @@ func (p *Plugin) Validate() error {
 		}
 	}
 
+	// Validate seed mode.
+	validSeedModes := []string{
+		string(SeedModeContent),
+		string(SeedModeFilepath),
+		string(SeedModeManual),
+		string(SeedModeRandom),
+	}
+	valid := false
+	for _, mode := range validSeedModes {
+		if p.seedMode == mode {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return fmt.Errorf("invalid seed mode '%s' (valid: content, filepath, manual, random)", p.seedMode)
+	}
+
 	return nil
 }
 
@@ -133,11 +181,31 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	// For URLs, we'll need to handle downloading/caching separately.
 	p.loadedImagePath = p.path
 
-	// Extract palette using k-means.
-	// Create the colour extractor.
-	extractor, err := colour.NewExtractor(colour.Algorithm(p.algorithm))
+	// Calculate seed based on configured mode.
+	seed, err := p.calculateSeed(img, p.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate seed: %w", err)
+	}
+
+	// Extract palette using k-means with deterministic seed.
+	// Create the colour extractor with seed configuration.
+	extractorOpts := colour.ExtractorOptions{}
+	if SeedMode(p.seedMode) != SeedModeRandom {
+		// Only set seed if not in random mode.
+		extractorOpts.Seed = &seed
+	}
+
+	extractor, err := colour.NewExtractor(colour.Algorithm(p.algorithm), extractorOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create extractor: %w", err)
+	}
+
+	if opts.Verbose {
+		if extractorOpts.Seed != nil {
+			fmt.Printf("→ Using seed mode: %s (seed: %d)\n", p.seedMode, seed)
+		} else {
+			fmt.Printf("→ Using seed mode: %s (non-deterministic)\n", p.seedMode)
+		}
 	}
 
 	// Extract and return the raw colour palette.

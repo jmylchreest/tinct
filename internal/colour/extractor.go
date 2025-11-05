@@ -43,12 +43,23 @@ func IsValidAlgorithm(alg Algorithm) bool {
 	return slices.Contains(ValidAlgorithms(), alg)
 }
 
-// NewExtractor creates a new Extractor based on the specified algorithm.
+// ExtractorOptions holds optional configuration for extractor creation.
+type ExtractorOptions struct {
+	// Seed is an optional random seed for deterministic k-means clustering.
+	// Only applicable to k-means algorithm. nil means non-deterministic.
+	Seed *int64
+}
+
+// NewExtractor creates a new Extractor based on the specified algorithm with custom options.
 // Returns an error if the algorithm is not recognized or not yet implemented.
-func NewExtractor(alg Algorithm) (Extractor, error) {
+func NewExtractor(alg Algorithm, opts ExtractorOptions) (Extractor, error) {
 	switch alg {
 	case AlgorithmKMeans:
-		return NewKMeansExtractor(), nil
+		extractor := NewKMeansExtractor()
+		if opts.Seed != nil {
+			extractor.WithSeed(*opts.Seed)
+		}
+		return extractor, nil
 	case AlgorithmMedianCut:
 		return nil, fmt.Errorf("median cut algorithm not yet implemented")
 	case AlgorithmDominant:

@@ -14,6 +14,8 @@ type KMeansExtractor struct {
 	maxIterations int
 	convergence   float64
 	maxSamples    int
+	seed          *int64 // Random seed for k-means initialization (nil = use default random)
+	rng           *rand.Rand
 }
 
 // NewKMeansExtractor creates a new KMeansExtractor with default settings.
@@ -22,7 +24,16 @@ func NewKMeansExtractor() *KMeansExtractor {
 		maxIterations: 20,   // Reduced from 50
 		convergence:   2.0,  // Increased from 1.0 for faster convergence
 		maxSamples:    5000, // Limit total samples for performance
+		seed:          nil,  // No seed by default (non-deterministic)
+		rng:           nil,
 	}
+}
+
+// WithSeed sets the random seed for deterministic k-means clustering.
+func (e *KMeansExtractor) WithSeed(seed int64) *KMeansExtractor {
+	e.seed = &seed
+	e.rng = rand.New(rand.NewSource(seed))
+	return e
 }
 
 // Extract extracts colors from an image using k-means clustering.
@@ -210,7 +221,7 @@ func (e *KMeansExtractor) initializeCentroidsKMeansPlusPlus(points []point3D, k 
 
 	// Choose first centroid randomly.
 	// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
-	firstIdx := rand.Intn(len(points))
+	firstIdx := e.randIntn(len(points))
 	centroids = append(centroids, points[firstIdx])
 
 	// Choose remaining centroids.
@@ -249,7 +260,7 @@ func (e *KMeansExtractor) initializeCentroidsKMeansPlusPlus(points []point3D, k 
 		}
 
 		// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
-		target := rand.Float64() * totalDistance
+		target := e.randFloat64() * totalDistance
 		cumulative := 0.0
 		for i, dist := range distances {
 			cumulative += dist
@@ -305,9 +316,27 @@ func (e *KMeansExtractor) recalculateCentroids(points []point3D, assignments []i
 		} else {
 			// Empty cluster - reinitialise randomly.
 			// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
-			centroids[i] = points[rand.Intn(len(points))]
+			centroids[i] = points[e.randIntn(len(points))]
 		}
 	}
 
 	return centroids
+}
+
+// randIntn returns a random integer in [0, n) using the seeded RNG if available.
+func (e *KMeansExtractor) randIntn(n int) int {
+	if e.rng != nil {
+		return e.rng.Intn(n)
+	}
+	// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
+	return rand.Intn(n)
+}
+
+// randFloat64 returns a random float64 in [0.0, 1.0) using the seeded RNG if available.
+func (e *KMeansExtractor) randFloat64() float64 {
+	if e.rng != nil {
+		return e.rng.Float64()
+	}
+	// #nosec G404 -- Using math/rand for K-means initialization, not security-sensitive
+	return rand.Float64()
 }
