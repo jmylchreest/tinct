@@ -185,7 +185,7 @@ jobs:
           retention-days: 30
 
       - name: Run GoReleaser (snapshot)
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -247,7 +247,7 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
