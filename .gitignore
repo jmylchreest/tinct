@@ -6,6 +6,8 @@
 *.dylib
 bin/
 dist/
+out/
+output/
 
 # Contrib plugin binaries
 contrib/random
