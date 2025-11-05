@@ -290,7 +290,7 @@ func ConvertCategorisedPalette(palette *colour.CategorisedPalette, pluginArgs ma
 	data := PaletteData{
 		Colours:    make(map[string]CategorisedColour),
 		AllColours: make([]CategorisedColour, len(palette.AllColours)),
-		ThemeType:  string(palette.ThemeType),
+		ThemeType:  palette.ThemeType.String(),
 		PluginArgs: pluginArgs,
 		DryRun:     dryRun,
 	}
