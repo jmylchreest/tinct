@@ -17,10 +17,6 @@ contrib/plugins/output/wob/wob
 contrib/plugins/output/templater/templater
 contrib/plugins/output/dunstify/dunstify
 
-# Plugin README files (only included in builds)
-contrib/plugins/input/*/README.md
-contrib/plugins/output/*/README.md
-
 # Test binary, built with `go test -c`
 *.test
 
