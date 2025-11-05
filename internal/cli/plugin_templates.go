@@ -224,28 +224,33 @@ func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
 		}
 
 		// Handle errors (likely "already exists" messages).
-		if err != nil {
-			// Check if it's an "already exists" error.
-			if !templateForce && strings.Contains(err.Error(), "already exists") {
-				// Split multiple errors and show each skipped file.
-				errorParts := strings.SplitSeq(err.Error(), "; ")
-				for errPart := range errorParts {
-					if strings.Contains(errPart, "already exists") {
-						// Extract just the filename from the path.
-						if idx := strings.Index(errPart, "already exists: "); idx != -1 {
-							path := strings.TrimPrefix(errPart[idx:], "already exists: ")
-							path = strings.TrimSuffix(path, " (use --force to overwrite)")
-							fmt.Printf("  ⊘ %s (already exists)\n", path)
-						}
-					}
-				}
-				if len(dumped) == 0 {
-					fmt.Fprintf(os.Stderr, "  Use --force to overwrite existing templates\n")
-				}
-			} else {
-				// Other errors should fail.
-				return fmt.Errorf("failed to dump templates for %s: %w", pluginName, err)
+		if err == nil {
+			continue
+		}
+
+		// Check if it's an "already exists" error.
+		if templateForce || !strings.Contains(err.Error(), "already exists") {
+			// Other errors should fail.
+			return fmt.Errorf("failed to dump templates for %s: %w", pluginName, err)
+		}
+
+		// Split multiple errors and show each skipped file.
+		errorParts := strings.SplitSeq(err.Error(), "; ")
+		for errPart := range errorParts {
+			if !strings.Contains(errPart, "already exists") {
+				continue
 			}
+			// Extract just the filename from the path.
+			idx := strings.Index(errPart, "already exists: ")
+			if idx == -1 {
+				continue
+			}
+			path := strings.TrimPrefix(errPart[idx:], "already exists: ")
+			path = strings.TrimSuffix(path, " (use --force to overwrite)")
+			fmt.Printf("  ⊘ %s (already exists)\n", path)
+		}
+		if len(dumped) == 0 {
+			fmt.Fprintf(os.Stderr, "  Use --force to overwrite existing templates\n")
 		}
 	}
 

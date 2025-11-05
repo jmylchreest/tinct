@@ -935,19 +935,22 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 // loadPluginLock loads the plugin lock file.
 func loadPluginLock() (*PluginLock, string, error) {
 	lockPath := pluginLockPath
+
 	if lockPath == "" {
 		// Try current directory first.
 		lockPath = PluginLockFile
 		if _, err := os.Stat(lockPath); os.IsNotExist(err) {
 			// Try home directory.
-			if home, err := os.UserHomeDir(); err == nil {
-				homeLockPath := filepath.Join(home, PluginLockFile)
-				if _, err := os.Stat(homeLockPath); err == nil {
-					lockPath = homeLockPath
-				} else {
-					return nil, "", fmt.Errorf("no plugin lock file found")
-				}
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return nil, "", fmt.Errorf("no plugin lock file found")
 			}
+
+			homeLockPath := filepath.Join(home, PluginLockFile)
+			if _, err := os.Stat(homeLockPath); err != nil {
+				return nil, "", fmt.Errorf("no plugin lock file found")
+			}
+			lockPath = homeLockPath
 		}
 	}
 
@@ -1147,16 +1150,23 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 	info := PluginSourceInfo{}
 
 	// Git repository (https://github.com/user/repo.git or git@github.com:user/repo.git).
-	if strings.HasSuffix(source, ".git") || strings.Contains(source, "github.com") || strings.Contains(source, "gitlab.com") || strings.Contains(source, "bitbucket.org") {
+	isGit := strings.HasSuffix(source, ".git") ||
+		strings.Contains(source, "github.com") ||
+		strings.Contains(source, "gitlab.com") ||
+		strings.Contains(source, "bitbucket.org")
+
+	if isGit {
 		// Check for file path specification: repo.git:path/to/file.sh.
-		if idx := strings.LastIndex(source, ":"); idx > 0 && !strings.HasPrefix(source, "git@") {
-			// Make sure it's not the : in git@github.com.
-			if idx > 6 && source[idx-1] != 'm' { // Not ending in ".com:"
-				info.URL = source[:idx]
-				info.FilePath = source[idx+1:]
-			} else {
-				info.URL = source
-			}
+		idx := strings.LastIndex(source, ":")
+		if idx <= 0 || strings.HasPrefix(source, "git@") {
+			info.URL = source
+			return "git", info
+		}
+
+		// Make sure it's not the : in git@github.com.
+		if idx > 6 && source[idx-1] != 'm' { // Not ending in ".com:"
+			info.URL = source[:idx]
+			info.FilePath = source[idx+1:]
 		} else {
 			info.URL = source
 		}
@@ -1166,14 +1176,16 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 	// HTTP/HTTPS URL.
 	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
 		// Check for file path specification: url.tar.gz:path/to/plugin.
-		if idx := strings.LastIndex(source, ":"); idx > 0 {
-			// Check if it's part of the protocol (http:// or https://).
-			if idx > 7 && source[idx-2:idx] != "tp" && source[idx-3:idx] != "tps" {
-				info.URL = source[:idx]
-				info.FilePath = source[idx+1:]
-			} else {
-				info.URL = source
-			}
+		idx := strings.LastIndex(source, ":")
+		if idx <= 0 {
+			info.URL = source
+			return sourceTypeHTTP, info
+		}
+
+		// Check if it's part of the protocol (http:// or https://).
+		if idx > 7 && source[idx-2:idx] != "tp" && source[idx-3:idx] != "tps" {
+			info.URL = source[:idx]
+			info.FilePath = source[idx+1:]
 		} else {
 			info.URL = source
 		}
@@ -1348,38 +1360,40 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			return "", fmt.Errorf("failed to read tar archive: %w", err)
 		}
 
-		if header.Name == targetPath {
-			// Extract the file.
-			destPath := filepath.Join(pluginDir, filepath.Base(targetPath))
-
-			out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
-			if err != nil {
-				return "", fmt.Errorf("failed to create plugin file: %w", err)
-			}
-
-			// Limit decompression size to prevent zip bombs (100MB limit for plugins).
-			limitedReader := security.NewLimitedReader(tr, 100*1024*1024)
-			_, copyErr := io.Copy(out, limitedReader)
-			closeErr := out.Close() // Close immediately instead of defer
-
-			if copyErr != nil {
-				return "", fmt.Errorf("failed to extract plugin: %w", copyErr)
-			}
-			if closeErr != nil {
-				return "", fmt.Errorf("failed to close plugin file: %w", closeErr)
-			}
-
-			// Make executable.
-			if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-				return "", fmt.Errorf("failed to make plugin executable: %w", err)
-			}
-
-			if verbose {
-				fmt.Fprintf(os.Stderr, "Extracted plugin to: %s\n", destPath)
-			}
-
-			return destPath, nil
+		if header.Name != targetPath {
+			continue
 		}
+
+		// Extract the file.
+		destPath := filepath.Join(pluginDir, filepath.Base(targetPath))
+
+		out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
+		if err != nil {
+			return "", fmt.Errorf("failed to create plugin file: %w", err)
+		}
+
+		// Limit decompression size to prevent zip bombs (100MB limit for plugins).
+		limitedReader := security.NewLimitedReader(tr, 100*1024*1024)
+		_, copyErr := io.Copy(out, limitedReader)
+		closeErr := out.Close() // Close immediately instead of defer
+
+		if copyErr != nil {
+			return "", fmt.Errorf("failed to extract plugin: %w", copyErr)
+		}
+		if closeErr != nil {
+			return "", fmt.Errorf("failed to close plugin file: %w", closeErr)
+		}
+
+		// Make executable.
+		if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
+			return "", fmt.Errorf("failed to make plugin executable: %w", err)
+		}
+
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Extracted plugin to: %s\n", destPath)
+		}
+
+		return destPath, nil
 	}
 }
 

@@ -136,28 +136,31 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		// Handle existing plugins.
-		if exists && !syncForce {
-			// Verify checksum if requested and available.
-			if syncVerify && meta.Source != nil && meta.Source.Checksum != "" {
-				if err := verifyPluginChecksum(meta.Path, meta.Source.Checksum); err != nil {
-					fmt.Printf("   Checksum mismatch: %v\n", err)
-					if !syncForce {
-						stats.Failed++
-						continue
-					}
-					fmt.Printf("  → Reinstalling...\n")
-					exists = false
-				} else {
-					fmt.Printf("   Checksum verified\n")
-				}
-			}
+		// Determine if we need to reinstall.
+		needsReinstall := !exists || syncForce
 
-			if exists {
-				fmt.Printf("   Already installed (v%s)\n", meta.Version)
-				stats.Existing++
-				continue
+		// Verify checksum if requested and available.
+		if !needsReinstall && syncVerify && meta.Source != nil && meta.Source.Checksum != "" {
+			err := verifyPluginChecksum(meta.Path, meta.Source.Checksum)
+			if err != nil {
+				fmt.Printf("   Checksum mismatch: %v\n", err)
+				if syncForce {
+					fmt.Printf("  → Reinstalling...\n")
+					needsReinstall = true
+				} else {
+					stats.Failed++
+					continue
+				}
+			} else {
+				fmt.Printf("   Checksum verified\n")
 			}
+		}
+
+		// If we don't need to reinstall, report existing plugin.
+		if !needsReinstall {
+			fmt.Printf("   Already installed (v%s)\n", meta.Version)
+			stats.Existing++
+			continue
 		}
 
 		// Reinstall from source.
@@ -233,23 +236,28 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 		}
 
 		// Verify checksum if available.
-		if meta.Source != nil && meta.Source.Checksum != "" {
-			if err := verifyPluginChecksum(meta.Path, meta.Source.Checksum); err != nil {
-				result.Status = statusMismatch
-				result.Error = err
-				result.Expected = meta.Source.Checksum
-
-				// Calculate actual checksum.
-				if actual, err := calculateChecksum(meta.Path); err == nil {
-					result.Got = "sha256:" + actual
-				}
-			} else {
-				result.Status = "valid"
-				result.Expected = meta.Source.Checksum
-			}
-		} else {
+		if meta.Source == nil || meta.Source.Checksum == "" {
 			result.Status = "no_checksum"
+			results = append(results, result)
+			continue
 		}
+
+		err := verifyPluginChecksum(meta.Path, meta.Source.Checksum)
+		if err != nil {
+			result.Status = statusMismatch
+			result.Error = err
+			result.Expected = meta.Source.Checksum
+
+			// Calculate actual checksum.
+			if actual, err := calculateChecksum(meta.Path); err == nil {
+				result.Got = "sha256:" + actual
+			}
+			results = append(results, result)
+			continue
+		}
+
+		result.Status = "valid"
+		result.Expected = meta.Source.Checksum
 
 		results = append(results, result)
 	}

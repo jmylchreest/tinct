@@ -249,39 +249,41 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display versions.
-	if len(plugin.Versions) > 0 {
-		fmt.Printf("\nAvailable Versions:\n")
+	if len(plugin.Versions) == 0 {
+		return nil
+	}
 
-		for i, v := range plugin.Versions {
-			marker := ""
-			if i == 0 {
-				marker = " (latest)"
+	fmt.Printf("\nAvailable Versions:\n")
+
+	for i, v := range plugin.Versions {
+		marker := ""
+		if i == 0 {
+			marker = " (latest)"
+		}
+
+		fmt.Printf("  %s%s", v.Version, marker)
+
+		if v.Compatibility != "" {
+			fmt.Printf(" - Requires tinct %s", v.Compatibility)
+		}
+
+		if !v.Released.IsZero() {
+			fmt.Printf(" - Released %s", v.Released.Format("2006-01-02"))
+		}
+
+		fmt.Println()
+
+		// Show platforms.
+		if len(v.Downloads) > 0 {
+			platforms := make([]string, 0, len(v.Downloads))
+			for platform := range v.Downloads {
+				platforms = append(platforms, platform)
 			}
+			fmt.Printf("    Platforms: %s\n", strings.Join(platforms, ", "))
+		}
 
-			fmt.Printf("  %s%s", v.Version, marker)
-
-			if v.Compatibility != "" {
-				fmt.Printf(" - Requires tinct %s", v.Compatibility)
-			}
-
-			if !v.Released.IsZero() {
-				fmt.Printf(" - Released %s", v.Released.Format("2006-01-02"))
-			}
-
-			fmt.Println()
-
-			// Show platforms.
-			if len(v.Downloads) > 0 {
-				platforms := make([]string, 0, len(v.Downloads))
-				for platform := range v.Downloads {
-					platforms = append(platforms, platform)
-				}
-				fmt.Printf("    Platforms: %s\n", strings.Join(platforms, ", "))
-			}
-
-			if v.ChangelogURL != "" {
-				fmt.Printf("    Changelog: %s\n", v.ChangelogURL)
-			}
+		if v.ChangelogURL != "" {
+			fmt.Printf("    Changelog: %s\n", v.ChangelogURL)
 		}
 	}
 

@@ -212,31 +212,7 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	if len(args) == 0 {
-		// Update all repositories.
-		fmt.Println("Updating all repositories...")
-
-		repos := mgr.ListRepositories()
-		if len(repos) == 0 {
-			fmt.Println("No repositories configured.")
-			return nil
-		}
-
-		for _, repo := range repos {
-			if !repo.Enabled {
-				continue
-			}
-
-			fmt.Printf("\n%s...\n", repo.Name)
-			if err := mgr.UpdateRepository(repo.Name); err != nil {
-				fmt.Printf("   Failed: %v\n", err)
-			} else {
-				fmt.Printf("   Updated\n")
-			}
-		}
-
-		fmt.Println("\n Repository update complete")
-	} else {
+	if len(args) > 0 {
 		// Update specific repository.
 		name := args[0]
 		fmt.Printf("Updating repository %q...\n", name)
@@ -246,8 +222,32 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 		}
 
 		fmt.Printf(" Repository %q updated successfully\n", name)
+		return nil
 	}
 
+	// Update all repositories.
+	fmt.Println("Updating all repositories...")
+
+	repos := mgr.ListRepositories()
+	if len(repos) == 0 {
+		fmt.Println("No repositories configured.")
+		return nil
+	}
+
+	for _, repo := range repos {
+		if !repo.Enabled {
+			continue
+		}
+
+		fmt.Printf("\n%s...\n", repo.Name)
+		if err := mgr.UpdateRepository(repo.Name); err != nil {
+			fmt.Printf("   Failed: %v\n", err)
+		} else {
+			fmt.Printf("   Updated\n")
+		}
+	}
+
+	fmt.Println("\n Repository update complete")
 	return nil
 }
 
@@ -281,35 +281,39 @@ func runPluginRepoInfo(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Status: %s\n", map[bool]string{true: "enabled", false: "disabled"}[repo.Enabled])
 	fmt.Printf("Priority: %d\n", repo.Priority)
 
-	if repo.Manifest != nil {
-		fmt.Printf("\nManifest:\n")
-		fmt.Printf("  Name: %s\n", repo.Manifest.Name)
-		fmt.Printf("  Description: %s\n", repo.Manifest.Description)
-		if repo.Manifest.MaintainedBy != "" {
-			fmt.Printf("  Maintained By: %s\n", repo.Manifest.MaintainedBy)
-		}
-		if !repo.Manifest.LastUpdated.IsZero() {
-			fmt.Printf("  Last Updated: %s\n", repo.Manifest.LastUpdated.Format(time.RFC3339))
-		}
-		fmt.Printf("  Plugins: %d\n", len(repo.Manifest.Plugins))
+	if repo.Manifest == nil {
+		return nil
+	}
 
-		// List plugin names.
-		if len(repo.Manifest.Plugins) > 0 {
-			fmt.Printf("\nAvailable Plugins:\n")
-			for name, plugin := range repo.Manifest.Plugins {
-				versionCount := len(plugin.Versions)
-				latestVersion := ""
-				if versionCount > 0 {
-					latestVersion = plugin.Versions[0].Version
-				}
-				fmt.Printf("  - %s (%s) - %d version(s), latest: %s\n",
-					name,
-					plugin.Type,
-					versionCount,
-					latestVersion,
-				)
-			}
+	fmt.Printf("\nManifest:\n")
+	fmt.Printf("  Name: %s\n", repo.Manifest.Name)
+	fmt.Printf("  Description: %s\n", repo.Manifest.Description)
+	if repo.Manifest.MaintainedBy != "" {
+		fmt.Printf("  Maintained By: %s\n", repo.Manifest.MaintainedBy)
+	}
+	if !repo.Manifest.LastUpdated.IsZero() {
+		fmt.Printf("  Last Updated: %s\n", repo.Manifest.LastUpdated.Format(time.RFC3339))
+	}
+	fmt.Printf("  Plugins: %d\n", len(repo.Manifest.Plugins))
+
+	// List plugin names.
+	if len(repo.Manifest.Plugins) == 0 {
+		return nil
+	}
+
+	fmt.Printf("\nAvailable Plugins:\n")
+	for name, plugin := range repo.Manifest.Plugins {
+		versionCount := len(plugin.Versions)
+		latestVersion := ""
+		if versionCount > 0 {
+			latestVersion = plugin.Versions[0].Version
 		}
+		fmt.Printf("  - %s (%s) - %d version(s), latest: %s\n",
+			name,
+			plugin.Type,
+			versionCount,
+			latestVersion,
+		)
 	}
 
 	return nil
