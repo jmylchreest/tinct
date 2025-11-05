@@ -12,7 +12,7 @@ import (
 // Palette represents a collection of colors extracted from an image.
 type Palette struct {
 	Colors    []color.Color
-	Weights   []float64          // Optional: relative frequency/volume of each color (0.0-1.0)
+	Weights   []float64    // Optional: relative frequency/volume of each color (0.0-1.0)
 	RoleHints map[Role]int // Optional: explicit role assignments (role -> color index)
 }
 

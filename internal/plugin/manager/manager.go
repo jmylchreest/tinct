@@ -667,10 +667,10 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 	// Create extended payload with plugin args and dry-run flag.
 	type ExtendedPalette struct {
 		Colours    map[colour.Role]colour.CategorisedColour `json:"colours"`
-		AllColours []colour.CategorisedColour                     `json:"all_colours"`
-		ThemeType  colour.ThemeType                               `json:"theme_type"`
-		PluginArgs map[string]any                                 `json:"plugin_args,omitempty"`
-		DryRun     bool                                           `json:"dry_run"`
+		AllColours []colour.CategorisedColour               `json:"all_colours"`
+		ThemeType  colour.ThemeType                         `json:"theme_type"`
+		PluginArgs map[string]any                           `json:"plugin_args,omitempty"`
+		DryRun     bool                                     `json:"dry_run"`
 	}
 
 	extended := ExtendedPalette{

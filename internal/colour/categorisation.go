@@ -116,7 +116,7 @@ const (
 // CategorisedColour represents a colour with its assigned role and metadata.
 type CategorisedColour struct {
 	Colour      color.Color `json:"-"`
-	Role        Role  `json:"role"`
+	Role        Role        `json:"role"`
 	Hex         string      `json:"hex"`  // #RRGGBB format (backwards compatible)
 	RGB         RGB         `json:"rgb"`  // RGB without alpha (backwards compatible)
 	RGBA        RGBA        `json:"rgba"` // RGBA with alpha channel (defaults to 255/opaque)
@@ -180,8 +180,8 @@ func DefaultCategorisationConfig() CategorisationConfig {
 // CategorisedPalette represents a palette with categorised colours.
 type CategorisedPalette struct {
 	Colours    map[Role]CategorisedColour `json:"colours"`
-	ThemeType  ThemeType                        `json:"theme_type"`
-	AllColours []CategorisedColour              `json:"all_colours,omitempty"`
+	ThemeType  ThemeType                  `json:"theme_type"`
+	AllColours []CategorisedColour        `json:"all_colours,omitempty"`
 }
 
 // NewCategorisedPalette creates a new categorised palette.

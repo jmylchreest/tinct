@@ -81,7 +81,7 @@ func (cv ColorValue) RGBDecimal() string { return cv.Format(FormatRGBDecimal) }
 
 // Metadata accessors.
 func (cv ColorValue) Role() Role { return cv.role }
-func (cv ColorValue) Index() int       { return cv.index }
+func (cv ColorValue) Index() int { return cv.index }
 
 // Component accessors (for advanced template use).
 func (cv ColorValue) R() uint8            { return cv.rgba.R }
