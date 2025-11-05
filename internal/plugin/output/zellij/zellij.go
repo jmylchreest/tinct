@@ -53,6 +53,11 @@ func (p *Plugin) Description() string {
 	return "Generate Zellij terminal multiplexer colour theme (KDL format)"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "zellij.output-dir", "", "Output directory (default: ~/.config/zellij/themes)")

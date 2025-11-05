@@ -50,6 +50,11 @@ func (p *Plugin) Description() string {
 	return "Generate Hyprlock screen lock colour theme configuration"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "hyprlock.output-dir", "", "Output directory (default: ~/.config/hypr)")

@@ -38,6 +38,11 @@ func (p *Plugin) Description() string {
 	return "Load palette from file or build from colour specifications"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.path, "file.path", "", "Path to palette file (JSON or text, optional)")

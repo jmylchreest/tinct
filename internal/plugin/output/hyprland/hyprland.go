@@ -56,6 +56,11 @@ func (p *Plugin) Description() string {
 	return "Generate Hyprland colour theme configuration"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "hyprland.output-dir", "", "Output directory (default: ~/.config/hypr)")
@@ -153,7 +158,6 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}
 
-
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute theme template: %w", err)
@@ -191,7 +195,6 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
-
 
 // PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.

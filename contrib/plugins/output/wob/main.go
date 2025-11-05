@@ -17,7 +17,8 @@ const (
 	// Plugin metadata
 	pluginName        = "wob"
 	pluginDescription = "Generate wob (Wayland Overlay Bar) theme and provide wrapper functionality"
-	pluginVersion     = "1.0.0"
+	pluginVersion     = "0.0.1"
+	protocolVersion   = "0.0.1" // Tinct plugin protocol version
 
 	// Runtime configuration
 	defaultRuntimeDir = "wob" // under $XDG_RUNTIME_DIR
@@ -124,11 +125,12 @@ func main() {
 
 func printPluginInfo() {
 	info := map[string]interface{}{
-		"name":        pluginName,
-		"type":        "output",
-		"description": pluginDescription,
-		"version":     pluginVersion,
-		"author":      "Tinct Contributors",
+		"name":             pluginName,
+		"type":             "output",
+		"description":      pluginDescription,
+		"version":          pluginVersion,
+		"protocol_version": protocolVersion,
+		"author":           "Tinct Contributors",
 		"capabilities": map[string]bool{
 			"generate": true,
 			"preview":  false,

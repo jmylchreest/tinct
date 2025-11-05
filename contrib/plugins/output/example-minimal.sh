@@ -17,7 +17,8 @@ if [ "$1" = "--plugin-info" ]; then
 {
   "name": "example-minimal",
   "type": "output",
-  "version": "1.0.0",
+  "version": "0.0.1",
+  "protocol_version": "0.0.1",
   "description": "Minimal example plugin that prints colour info",
   "enabled": false,
   "author": "Tinct Contributors"

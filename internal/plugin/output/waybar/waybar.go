@@ -55,6 +55,11 @@ func (p *Plugin) Description() string {
 	return "Generate Waybar status bar color theme"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "waybar.output-dir", "", "Output directory (default: ~/.config/waybar)")
@@ -181,7 +186,6 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 
 	return buf.Bytes(), nil
 }
-
 
 // PreExecute checks if waybar is available before generating the theme.
 // Implements the output.PreExecuteHook interface.

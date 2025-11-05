@@ -33,6 +33,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 	"github.com/spf13/cobra"
 )
 
@@ -302,6 +303,32 @@ func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description str
 		return fmt.Errorf("plugin path is a directory, not a file: %s", path)
 	}
 
+	// Query plugin info to check protocol version.
+	pluginInfo, err := queryPluginInfo(path)
+	if err != nil {
+		return fmt.Errorf("failed to query plugin info: %w", err)
+	}
+
+	// Check protocol version compatibility.
+	if pluginInfo.ProtocolVersion != "" {
+		compatible, err := protocol.IsCompatible(pluginInfo.ProtocolVersion)
+		if err != nil || !compatible {
+			errMsg := "unknown error"
+			if err != nil {
+				errMsg = err.Error()
+			}
+			return fmt.Errorf(
+				"plugin '%s' protocol version %s is incompatible with tinct %s: %s",
+				name,
+				pluginInfo.ProtocolVersion,
+				protocol.ProtocolVersion,
+				errMsg,
+			)
+		}
+	}
+	// Note: If protocol_version is missing, we allow the plugin (backward compatibility)
+	// but this should be warned about in verbose mode
+
 	switch pluginType {
 	case "output":
 		plugin := NewExternalOutputPlugin(name, description, path)
@@ -314,6 +341,31 @@ func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description str
 	default:
 		return fmt.Errorf("unknown plugin type: %s", pluginType)
 	}
+}
+
+// PluginInfo holds metadata returned by a plugin's --plugin-info command.
+type PluginInfo struct {
+	Name            string `json:"name"`
+	Type            string `json:"type"`
+	Version         string `json:"version"`
+	ProtocolVersion string `json:"protocol_version"`
+	Description     string `json:"description"`
+}
+
+// queryPluginInfo queries a plugin for its metadata.
+func queryPluginInfo(pluginPath string) (PluginInfo, error) {
+	cmd := exec.Command(pluginPath, "--plugin-info")
+	output, err := cmd.Output()
+	if err != nil {
+		return PluginInfo{}, fmt.Errorf("failed to execute plugin: %w", err)
+	}
+
+	var info PluginInfo
+	if err := json.Unmarshal(output, &info); err != nil {
+		return PluginInfo{}, fmt.Errorf("failed to parse plugin info: %w", err)
+	}
+
+	return info, nil
 }
 
 // parsePluginList parses a comma-separated list of plugin names.
@@ -399,6 +451,19 @@ func (p *ExternalInputPlugin) Name() string {
 // Description returns the plugin's description.
 func (p *ExternalInputPlugin) Description() string {
 	return p.description
+}
+
+// Version returns the plugin's version.
+// For external plugins, this queries the plugin executable.
+func (p *ExternalInputPlugin) Version() string {
+	info, err := queryPluginInfo(p.path)
+	if err != nil {
+		return "unknown"
+	}
+	if info.Version == "" {
+		return "unknown"
+	}
+	return info.Version
 }
 
 // SetArgs sets custom arguments for this plugin.
@@ -556,6 +621,19 @@ func (p *ExternalOutputPlugin) Name() string {
 // Description returns the plugin's description.
 func (p *ExternalOutputPlugin) Description() string {
 	return p.description
+}
+
+// Version returns the plugin's version.
+// For external plugins, this queries the plugin executable.
+func (p *ExternalOutputPlugin) Version() string {
+	info, err := queryPluginInfo(p.path)
+	if err != nil {
+		return "unknown"
+	}
+	if info.Version == "" {
+		return "unknown"
+	}
+	return info.Version
 }
 
 // SetArgs sets custom arguments for this plugin.

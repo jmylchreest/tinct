@@ -18,6 +18,9 @@ type Plugin interface {
 	// Description returns a human-readable description of the plugin.
 	Description() string
 
+	// Version returns the plugin version (e.g., "1.0.0").
+	Version() string
+
 	// Generate creates output file(s) from the given theme data.
 	// Returns map of filename -> content to support plugins that generate multiple files.
 	Generate(themeData *colour.ThemeData) (map[string][]byte, error)

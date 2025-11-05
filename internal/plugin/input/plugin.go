@@ -60,6 +60,9 @@ type Plugin interface {
 	// Description returns a human-readable description of the plugin.
 	Description() string
 
+	// Version returns the plugin version (e.g., "1.0.0").
+	Version() string
+
 	// Generate creates a raw Palette from plugin-specific inputs.
 	// opts contains flags and arguments passed from the CLI.
 	// Returns a simple list of colors - categorization happens separately.

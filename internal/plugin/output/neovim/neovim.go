@@ -53,6 +53,11 @@ func (p *Plugin) Description() string {
 	return "Generate Neovim colour scheme (Lua format)"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "neovim.output-dir", "", "Output directory (default: ~/.config/nvim/colors)")

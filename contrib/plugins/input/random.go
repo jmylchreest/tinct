@@ -105,11 +105,12 @@ import (
 
 // PluginInfo represents the metadata returned by --plugin-info.
 type PluginInfo struct {
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Version     string `json:"version"`
-	Description string `json:"description"`
-	Author      string `json:"author"`
+	Name            string `json:"name"`
+	Type            string `json:"type"`
+	Version         string `json:"version"`
+	ProtocolVersion string `json:"protocol_version"`
+	Description     string `json:"description"`
+	Author          string `json:"author"`
 }
 
 // RGB represents an RGB color (simple output format).
@@ -131,11 +132,12 @@ func main() {
 	// Handle --plugin-info flag
 	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
 		info := PluginInfo{
-			Name:        "random",
-			Type:        "input",
-			Version:     "1.0.0",
-			Description: "Generate a random color palette (example Go plugin)",
-			Author:      "Tinct Contributors",
+			Name:            "random",
+			Type:            "input",
+			Version:         "0.0.1",
+			ProtocolVersion: "0.0.1",
+			Description:     "Generate a random color palette (example Go plugin)",
+			Author:          "Tinct Contributors",
 		}
 
 		encoder := json.NewEncoder(os.Stdout)

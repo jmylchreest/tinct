@@ -50,6 +50,11 @@ func (p *Plugin) Description() string {
 	return "Generate Wofi application launcher colour theme configuration"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "wofi.output-dir", "", "Output directory (default: ~/.config/wofi)")
@@ -132,7 +137,6 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse colors template: %w", err)
 	}
 
-
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute colors template: %w", err)
@@ -160,7 +164,6 @@ func (p *Plugin) generateStyle(themeData *colour.ThemeData) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse style template: %w", err)
 	}
-
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {

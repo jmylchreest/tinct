@@ -1487,6 +1487,149 @@ func init() {
 }
 ```
 
+### Plugin Protocol Version
+
+**Current Protocol Version: 1.0**
+
+Tinct implements a plugin protocol versioning system to ensure compatibility between the main binary and external plugins. This prevents runtime errors from incompatible plugins built against different API versions.
+
+#### Version Format
+
+Protocol versions follow **MAJOR.MINOR** format:
+- **MAJOR version**: Incremented for breaking/incompatible API changes
+- **MINOR version**: Incremented for backward-compatible additions
+
+#### Compatibility Rules
+
+1. **Major version must match exactly** - Breaking changes require recompilation
+2. **Minor version can be higher** - Forward compatible additions are allowed
+3. **Plugins without protocol_version** - Allowed but should be updated (legacy support)
+
+#### Plugin Implementation
+
+All external plugins **must** report their protocol version in the `--plugin-info` response:
+
+**Go Plugin Example:**
+```go
+type PluginInfo struct {
+    Name            string `json:"name"`
+    Type            string `json:"type"`
+    Version         string `json:"version"`
+    ProtocolVersion string `json:"protocol_version"` // Required!
+    Description     string `json:"description"`
+    Author          string `json:"author"`
+}
+
+func main() {
+    if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
+        info := PluginInfo{
+            Name:            "my-plugin",
+            Type:            "output",
+            Version:         "1.0.0",
+            ProtocolVersion: "1.0", // Current protocol version
+            Description:     "My custom plugin",
+            Author:          "Your Name",
+        }
+        
+        encoder := json.NewEncoder(os.Stdout)
+        encoder.SetIndent("", "  ")
+        encoder.Encode(info)
+        os.Exit(0)
+    }
+    // ... rest of plugin logic
+}
+```
+
+**Shell Script Plugin Example:**
+```bash
+#!/bin/bash
+
+if [ "$1" = "--plugin-info" ]; then
+  cat <<'EOF'
+{
+  "name": "my-plugin",
+  "type": "output",
+  "version": "1.0.0",
+  "protocol_version": "1.0",
+  "description": "My custom shell plugin",
+  "author": "Your Name"
+}
+EOF
+  exit 0
+fi
+
+# ... rest of plugin logic
+```
+
+#### Version Checking
+
+Tinct automatically checks protocol version compatibility when loading external plugins:
+
+```go
+// In internal/plugin/manager/manager.go
+func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description string) error {
+    // Query plugin info
+    pluginInfo, err := queryPluginInfo(path)
+    if err != nil {
+        return fmt.Errorf("failed to query plugin info: %w", err)
+    }
+
+    // Check protocol version compatibility
+    if pluginInfo.ProtocolVersion != "" {
+        compatible, err := protocol.IsCompatible(pluginInfo.ProtocolVersion)
+        if err != nil || !compatible {
+            return fmt.Errorf(
+                "plugin '%s' protocol version %s is incompatible with tinct %s: %s",
+                name,
+                pluginInfo.ProtocolVersion,
+                protocol.ProtocolVersion,
+                err.Error(),
+            )
+        }
+    }
+    
+    // Register plugin...
+}
+```
+
+#### Error Messages
+
+When protocol versions are incompatible, users see clear error messages:
+
+```
+Error: plugin 'my-plugin' protocol version 2.0 is incompatible with tinct 1.0: 
+incompatible major version: plugin is 2.0, tinct requires 1.x
+```
+
+#### Migration Guide
+
+When protocol version changes occur:
+
+**For Plugin Authors:**
+1. Update `protocol_version` field in plugin-info response
+2. Update plugin code to match new API contract
+3. Rebuild and test plugin
+4. Update plugin documentation
+
+**For Major Version Changes (1.x → 2.x):**
+- Review breaking changes in CHANGELOG
+- Update all API calls to new signatures
+- Test thoroughly with new tinct version
+- Consider maintaining separate plugin versions for backward compatibility
+
+**For Minor Version Changes (1.0 → 1.1):**
+- Optional: Add support for new features
+- No changes required if not using new features
+- Plugin remains compatible with older tinct versions
+
+#### Best Practices
+
+1. **Always include protocol_version** - Don't rely on legacy support
+2. **Test with target tinct version** - Verify compatibility before release
+3. **Document required version** - Specify minimum tinct version in plugin README
+4. **Use semantic versioning** - Follow semver for plugin version field
+5. **Handle version gracefully** - Provide clear error messages for version mismatches
+
 ## Hook System
 
 ### Hook Interface

@@ -61,6 +61,11 @@ func (p *Plugin) Description() string {
 	return "Extract colour palette from an image file or HTTP(S) URL (optionally includes edge/corner regions for ambient lighting)"
 }
 
+// Version returns the plugin version.
+func (p *Plugin) Version() string {
+	return "0.0.1"
+}
+
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&p.path, "image.path", "p", "", "Path to image file or HTTP(S) URL (required)")

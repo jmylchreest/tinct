@@ -255,6 +255,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	type pluginInfo struct {
 		fullName    string
 		status      string
+		version     string
 		description string
 		isExternal  bool
 		source      string
@@ -263,13 +264,38 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	var allPlugins []pluginInfo
 	seenPlugins := make(map[string]bool)
 
+	// Helper to determine plugin status
+	getPluginStatus := func(pluginType, pluginName string) string {
+		fullName := fmt.Sprintf("%s:%s", pluginType, pluginName)
+
+		// Check if explicitly disabled
+		if lock != nil {
+			for _, disabled := range lock.DisabledPlugins {
+				if disabled == fullName || disabled == pluginName || disabled == "all" {
+					return "disabled"
+				}
+			}
+		}
+
+		// Check if explicitly enabled
+		if lock != nil && len(lock.EnabledPlugins) > 0 {
+			for _, enabled := range lock.EnabledPlugins {
+				if enabled == fullName || enabled == pluginName || enabled == "all" {
+					return "enabled"
+				}
+			}
+			// If enabled list exists but plugin not in it, it's on-demand
+			return "on-demand"
+		}
+
+		// No config = on-demand
+		return "on-demand"
+	}
+
 	// Add input plugins.
 	inputPlugins := mgr.AllInputPlugins()
 	for name, plugin := range inputPlugins {
-		status := "disabled"
-		if mgr.IsInputEnabled(plugin) {
-			status = "enabled"
-		}
+		status := getPluginStatus("input", name)
 		fullName := fmt.Sprintf("input:%s", name)
 		// Check if this is an external plugin by comparing names.
 		isExternal := false
@@ -299,6 +325,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		allPlugins = append(allPlugins, pluginInfo{
 			fullName:    fullName,
 			status:      status,
+			version:     plugin.Version(),
 			description: plugin.Description(),
 			isExternal:  isExternal,
 			source:      pluginSource,
@@ -309,10 +336,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	// Add output plugins.
 	outputPlugins := mgr.AllOutputPlugins()
 	for name, plugin := range outputPlugins {
-		status := "disabled"
-		if mgr.IsOutputEnabled(plugin) {
-			status = "enabled"
-		}
+		status := getPluginStatus("output", name)
 		fullName := fmt.Sprintf("output:%s", name)
 		// Check if this is an external plugin by comparing names.
 		isExternal := false
@@ -342,6 +366,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		allPlugins = append(allPlugins, pluginInfo{
 			fullName:    fullName,
 			status:      status,
+			version:     plugin.Version(),
 			description: plugin.Description(),
 			isExternal:  isExternal,
 			source:      pluginSource,
@@ -364,13 +389,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			}
 
 			// Determine status for external-only plugins.
-			status := "enabled"
-			for _, disabled := range lock.DisabledPlugins {
-				if disabled == pluginName || disabled == fullName || disabled == lockKey || disabled == fmt.Sprintf("%s:%s", meta.Type, lockKey) {
-					status = "disabled"
-					break
-				}
-			}
+			status := getPluginStatus(meta.Type, pluginName)
 
 			// Use plugin's description if available, otherwise show source.
 			description := meta.Description
@@ -384,9 +403,16 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 				description = fmt.Sprintf("External plugin (source: %s)", sourceStr)
 			}
 
+			// Get version from meta if available
+			version := meta.Version
+			if version == "" {
+				version = "unknown"
+			}
+
 			allPlugins = append(allPlugins, pluginInfo{
 				fullName:    fullName,
 				status:      status,
+				version:     version,
 				description: description,
 				isExternal:  true,
 				source:      formatPluginSourceString(meta.Source),
@@ -399,23 +425,22 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		return allPlugins[i].fullName < allPlugins[j].fullName
 	})
 
-	// Display plugins.
-	fmt.Println("Plugins:")
-	fmt.Println(strings.Repeat("-", 90))
-	fmt.Printf("%-30s %-10s %s\n", "PLUGIN", "STATUS", "DESCRIPTION")
-	fmt.Println(strings.Repeat("-", 90))
+	// Display plugins using table formatter.
+	tbl := NewTable([]string{"", "PLUGIN", "STATUS", "VERSION", "DESCRIPTION"})
 
 	for _, p := range allPlugins {
 		marker := ""
 		if p.isExternal {
-			marker = " *"
+			marker = "*"
 		}
-		fmt.Printf("%-30s %-10s %s\n", p.fullName+marker, p.status, p.description)
+		tbl.AddRow([]string{marker, p.fullName, p.status, p.version, p.description})
 		// Show source for external plugins.
 		if p.isExternal && p.source != "" {
-			fmt.Printf("%-30s %-10s   src: %s\n", "", "", p.source)
+			tbl.AddRow([]string{"", "", "", "", "  src: " + p.source})
 		}
 	}
+
+	fmt.Print(tbl.Render())
 
 	// Add legend if there are external plugins.
 	hasExternal := false

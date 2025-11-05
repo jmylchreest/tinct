@@ -10,7 +10,7 @@ import (
 var (
 	// Version is the semantic version of the application.
 	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Version=x.y.z".
-	Version = "dev"
+	Version = "0.0.0"
 
 	// Commit is the git commit hash of the build.
 	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Commit=$(git rev-parse HEAD)".
