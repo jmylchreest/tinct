@@ -117,7 +117,7 @@ func TestWofiPlugin_PrepareThemeData(t *testing.T) {
 	}
 
 	// Check that required roles exist.
-	requiredRoles := []colour.ColourRole{
+	requiredRoles := []colour.Role{
 		colour.RoleBackground,
 		colour.RoleForeground,
 	}

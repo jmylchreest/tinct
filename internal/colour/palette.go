@@ -13,7 +13,7 @@ import (
 type Palette struct {
 	Colors    []color.Color
 	Weights   []float64          // Optional: relative frequency/volume of each color (0.0-1.0)
-	RoleHints map[ColourRole]int // Optional: explicit role assignments (role -> color index)
+	RoleHints map[Role]int // Optional: explicit role assignments (role -> color index)
 }
 
 // NewPalette creates a new Palette with the given colors.
@@ -63,7 +63,7 @@ func NewPaletteWithWeights(colors []color.Color, weights []float64) *Palette {
 // NewPaletteWithRoleHints creates a new Palette with colors and explicit role assignments.
 // RoleHints maps semantic roles to color indices, allowing input plugins to override.
 // automatic categorization for specific roles.
-func NewPaletteWithRoleHints(colors []color.Color, roleHints map[ColourRole]int) *Palette {
+func NewPaletteWithRoleHints(colors []color.Color, roleHints map[Role]int) *Palette {
 	return &Palette{
 		Colors:    colors,
 		Weights:   nil,

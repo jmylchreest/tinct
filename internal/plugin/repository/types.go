@@ -53,8 +53,8 @@ type Repository struct {
 	Manifest *Manifest `json:"-"`                  // Cached manifest (not persisted)
 }
 
-// RepositoryConfig contains all configured repositories.
-type RepositoryConfig struct {
+// Config contains all configured repositories.
+type Config struct {
 	Repositories []*Repository `json:"repositories"`
 	Cache        *CacheConfig  `json:"cache,omitempty"`
 }

@@ -11,7 +11,7 @@ func TestParseColourRole(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    colour.ColourRole
+		want    colour.Role
 		wantErr bool
 	}{
 		// British spelling (primary).
@@ -161,7 +161,7 @@ func TestParseColourRoleNormalisation(t *testing.T) {
 	equivalentInputs := []struct {
 		name   string
 		inputs []string
-		want   colour.ColourRole
+		want   colour.Role
 	}{
 		{
 			name: "background variants",

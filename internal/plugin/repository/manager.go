@@ -16,7 +16,7 @@ import (
 // Manager handles plugin repository operations.
 type Manager struct {
 	configPath string
-	config     *RepositoryConfig
+	config     *Config
 	cachePath  string
 	client     *http.Client
 }
@@ -35,7 +35,7 @@ func NewManager(configPath, cachePath string) (*Manager, error) {
 	if err := m.loadConfig(); err != nil {
 		// If file doesn't exist, create default config.
 		if os.IsNotExist(err) {
-			m.config = &RepositoryConfig{
+			m.config = &Config{
 				Repositories: []*Repository{},
 				Cache: &CacheConfig{
 					TTL:        3600, // 1 hour
@@ -415,7 +415,7 @@ func (m *Manager) loadConfig() error {
 		return err
 	}
 
-	var config RepositoryConfig
+	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}

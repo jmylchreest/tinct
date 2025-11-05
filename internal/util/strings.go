@@ -15,7 +15,7 @@ func StripHash(hex string) string {
 
 // GetColour retrieves a colour by role from a categorised palette with a fallback.
 // This is a common helper used by output plugins to safely get colours with defaults.
-func GetColour(palette *colour.CategorisedPalette, role colour.ColourRole, fallback string) string {
+func GetColour(palette *colour.CategorisedPalette, role colour.Role, fallback string) string {
 	if c, ok := palette.Get(role); ok {
 		return c.Hex
 	}

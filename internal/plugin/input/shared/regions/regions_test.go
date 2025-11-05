@@ -127,7 +127,7 @@ func TestExtract4Regions(t *testing.T) {
 	}
 
 	// Check that expected roles are present
-	expectedRoles := []colour.ColourRole{
+	expectedRoles := []colour.Role{
 		colour.RolePositionTopLeft,
 		colour.RolePositionTopRight,
 		colour.RolePositionBottomRight,
@@ -178,7 +178,7 @@ func TestExtract8Regions(t *testing.T) {
 	}
 
 	// Check that expected roles are present
-	expectedRoles := []colour.ColourRole{
+	expectedRoles := []colour.Role{
 		colour.RolePositionTopLeft,
 		colour.RolePositionTop,
 		colour.RolePositionTopRight,

@@ -59,7 +59,7 @@ func TemplateFuncs() template.FuncMap {
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
 func getRoleFunc(data interface{}, roleName string) colour.ColorValue {
 	ph := extractPaletteHelper(data)
-	return ph.Get(colour.ColourRole(roleName))
+	return ph.Get(colour.Role(roleName))
 }
 
 // getSafeRoleFunc returns a color by role name with existence check.
@@ -67,7 +67,7 @@ func getRoleFunc(data interface{}, roleName string) colour.ColorValue {
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
 func getSafeRoleFunc(data interface{}, roleName string) (colour.ColorValue, error) {
 	ph := extractPaletteHelper(data)
-	cv, ok := ph.GetSafe(colour.ColourRole(roleName))
+	cv, ok := ph.GetSafe(colour.Role(roleName))
 	if !ok {
 		return colour.ColorValue{}, fmt.Errorf("role %q not found", roleName)
 	}
@@ -78,7 +78,7 @@ func getSafeRoleFunc(data interface{}, roleName string) (colour.ColorValue, erro
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
 func hasRoleFunc(data interface{}, roleName string) bool {
 	ph := extractPaletteHelper(data)
-	return ph.Has(colour.ColourRole(roleName))
+	return ph.Has(colour.Role(roleName))
 }
 
 // getByIndexFunc returns a color by index in the AllColors array.
@@ -163,7 +163,7 @@ func themeTypeFunc(data interface{}) string {
 
 // allRolesFunc returns all color roles in deterministic order.
 // Accepts both *ThemeData and *PaletteHelper for backward compatibility.
-func allRolesFunc(data interface{}) []colour.ColourRole {
+func allRolesFunc(data interface{}) []colour.Role {
 	ph := extractPaletteHelper(data)
 	return ph.AllRoles()
 }

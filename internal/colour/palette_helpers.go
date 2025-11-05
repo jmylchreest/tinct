@@ -22,13 +22,13 @@ const (
 // ColorValue provides multiple format accessors for a single color.
 // This is the primary type templates and plugins will interact with.
 type ColorValue struct {
-	role  ColourRole
+	role  Role
 	rgba  RGBA
 	index int
 }
 
 // NewColorValue creates a ColorValue from RGBA with optional metadata.
-func NewColorValue(rgba RGBA, role ColourRole, index int) ColorValue {
+func NewColorValue(rgba RGBA, role Role, index int) ColorValue {
 	return ColorValue{
 		role:  role,
 		rgba:  rgba,
@@ -80,7 +80,7 @@ func (cv ColorValue) HexNoHash() string  { return cv.Format(FormatHexNoHash) }
 func (cv ColorValue) RGBDecimal() string { return cv.Format(FormatRGBDecimal) }
 
 // Metadata accessors.
-func (cv ColorValue) Role() ColourRole { return cv.role }
+func (cv ColorValue) Role() Role { return cv.role }
 func (cv ColorValue) Index() int       { return cv.index }
 
 // Component accessors (for advanced template use).
@@ -94,7 +94,7 @@ func (cv ColorValue) AlphaFloat() float64 { return cv.rgba.AlphaFloat() }
 // This eliminates code duplication across all output plugins.
 type PaletteHelper struct {
 	palette *CategorisedPalette
-	colors  map[ColourRole]ColorValue
+	colors  map[Role]ColorValue
 	indexed []ColorValue
 }
 
@@ -103,7 +103,7 @@ type PaletteHelper struct {
 func NewPaletteHelper(palette *CategorisedPalette) *PaletteHelper {
 	ph := &PaletteHelper{
 		palette: palette,
-		colors:  make(map[ColourRole]ColorValue),
+		colors:  make(map[Role]ColorValue),
 		indexed: make([]ColorValue, 0, len(palette.AllColours)),
 	}
 
@@ -129,7 +129,7 @@ func NewPaletteHelper(palette *CategorisedPalette) *PaletteHelper {
 }
 
 // Get returns color by role. Panics if role doesn't exist - use Has() first to check.
-func (ph *PaletteHelper) Get(role ColourRole) ColorValue {
+func (ph *PaletteHelper) Get(role Role) ColorValue {
 	if cv, ok := ph.colors[role]; ok {
 		return cv
 	}
@@ -137,19 +137,19 @@ func (ph *PaletteHelper) Get(role ColourRole) ColorValue {
 }
 
 // GetSafe returns color by role with a boolean indicating if it exists.
-func (ph *PaletteHelper) GetSafe(role ColourRole) (ColorValue, bool) {
+func (ph *PaletteHelper) GetSafe(role Role) (ColorValue, bool) {
 	cv, ok := ph.colors[role]
 	return cv, ok
 }
 
 // Has checks if a role exists in the palette.
-func (ph *PaletteHelper) Has(role ColourRole) bool {
+func (ph *PaletteHelper) Has(role Role) bool {
 	_, ok := ph.colors[role]
 	return ok
 }
 
 // GetWithFallback returns color by role or parses a fallback hex string if missing.
-func (ph *PaletteHelper) GetWithFallback(role ColourRole, fallbackHex string) ColorValue {
+func (ph *PaletteHelper) GetWithFallback(role Role, fallbackHex string) ColorValue {
 	if cv, ok := ph.colors[role]; ok {
 		return cv
 	}
@@ -172,9 +172,9 @@ func (ph *PaletteHelper) GetByIndex(index int) (ColorValue, bool) {
 }
 
 // AllRoles returns all roles in deterministic order (core → accents → semantic → surface → variants).
-func (ph *PaletteHelper) AllRoles() []ColourRole {
+func (ph *PaletteHelper) AllRoles() []Role {
 	// Define priority order for consistency across all plugins.
-	order := []ColourRole{
+	order := []Role{
 		// Core colors.
 		RoleBackground, RoleBackgroundMuted,
 		RoleForeground, RoleForegroundMuted,
@@ -212,7 +212,7 @@ func (ph *PaletteHelper) AllRoles() []ColourRole {
 		RoleSurfaceContainerHigh, RoleSurfaceContainerHighest,
 	}
 
-	var result []ColourRole
+	var result []Role
 	for _, role := range order {
 		if ph.Has(role) {
 			result = append(result, role)

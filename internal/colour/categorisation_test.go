@@ -11,7 +11,7 @@ func TestSemanticColourEnhancement(t *testing.T) {
 	tests := []struct {
 		name            string
 		inputColor      color.Color
-		role            ColourRole
+		role            Role
 		themeType       ThemeType
 		wantMinSat      float64
 		wantMinContrast float64
@@ -106,7 +106,7 @@ func TestSemanticColourEnhancement(t *testing.T) {
 func TestGenerateFallbackSemanticColours(t *testing.T) {
 	tests := []struct {
 		name            string
-		role            ColourRole
+		role            Role
 		themeType       ThemeType
 		wantHue         float64
 		wantMinSat      float64
@@ -201,7 +201,7 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 		name      string
 		colors    []color.Color
 		themeType ThemeType
-		wantRoles []ColourRole
+		wantRoles []Role
 	}{
 		{
 			name: "Monochrome palette generates all semantic colors",
@@ -211,7 +211,7 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 				color.RGBA{R: 100, G: 100, B: 110, A: 255}, // Mid grey
 			},
 			themeType: ThemeDark,
-			wantRoles: []ColourRole{
+			wantRoles: []Role{
 				RoleBackground,
 				RoleForeground,
 				RoleDanger,
@@ -232,7 +232,7 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 				color.RGBA{R: 150, G: 120, B: 80, A: 255},  // Dull orange
 			},
 			themeType: ThemeLight,
-			wantRoles: []ColourRole{
+			wantRoles: []Role{
 				RoleBackground,
 				RoleForeground,
 				RoleDanger,
@@ -266,7 +266,7 @@ func TestCategoriseWithSemanticFallbacks(t *testing.T) {
 			}
 
 			// Verify semantic colors have good saturation.
-			semanticRoles := []ColourRole{
+			semanticRoles := []Role{
 				RoleDanger, RoleWarning, RoleSuccess, RoleInfo, RoleNotification,
 			}
 
@@ -303,11 +303,11 @@ func TestSemanticColourDistinctness(t *testing.T) {
 	categorised := Categorise(palette, config)
 
 	// Get all semantic colors.
-	semanticRoles := []ColourRole{
+	semanticRoles := []Role{
 		RoleDanger, RoleWarning, RoleSuccess, RoleInfo, RoleNotification,
 	}
 
-	semanticColors := make(map[ColourRole]CategorisedColour)
+	semanticColors := make(map[Role]CategorisedColour)
 	for _, role := range semanticRoles {
 		if cc, ok := categorised.Get(role); ok {
 			semanticColors[role] = cc
@@ -315,7 +315,7 @@ func TestSemanticColourDistinctness(t *testing.T) {
 	}
 
 	// Check that semantic colors are distinct from each other.
-	roles := make([]ColourRole, 0, len(semanticColors))
+	roles := make([]Role, 0, len(semanticColors))
 	for role := range semanticColors {
 		roles = append(roles, role)
 	}
@@ -347,7 +347,7 @@ func TestSemanticColourDistinctness(t *testing.T) {
 
 func TestSemanticHueRanges(t *testing.T) {
 	// Test that semantic hues are correctly defined.
-	expectedRanges := map[ColourRole]struct {
+	expectedRanges := map[Role]struct {
 		minHue float64
 		maxHue float64
 	}{
@@ -418,7 +418,7 @@ func TestThemeAwareLightness(t *testing.T) {
 
 			categorised := Categorise(palette, config)
 
-			semanticRoles := []ColourRole{
+			semanticRoles := []Role{
 				RoleDanger, RoleWarning, RoleSuccess, RoleInfo, RoleNotification,
 			}
 

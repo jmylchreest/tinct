@@ -192,7 +192,7 @@ func (l *Loader) DumpAllTemplates(force bool) ([]string, error) {
 }
 
 // GetTemplateInfo returns information about a template.
-type TemplateInfo struct {
+type Info struct {
 	Filename       string
 	EmbeddedExists bool
 	CustomExists   bool
@@ -201,11 +201,11 @@ type TemplateInfo struct {
 }
 
 // GetInfo returns information about a specific template.
-func (l *Loader) GetInfo(filename string) TemplateInfo {
+func (l *Loader) GetInfo(filename string) Info {
 	_, embeddedErr := l.embedFS.ReadFile(filename)
 	customExists := l.HasCustomTemplate(filename)
 
-	return TemplateInfo{
+	return Info{
 		Filename:       filename,
 		EmbeddedExists: embeddedErr == nil,
 		CustomExists:   customExists,

@@ -72,7 +72,7 @@ func (p *Plugin) Validate() error {
 // If role-based colors are provided (role=hex), they are stored as metadata for later categorization.
 func (p *Plugin) Generate(_ context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
 	var colors []color.Color
-	roleHints := make(map[colour.ColourRole]int) // Map roles to color indices
+	roleHints := make(map[colour.Role]int) // Map roles to color indices
 
 	// Merge colour overrides from options with plugin's own overrides.
 	allOverrides := append([]string{}, p.colourOverrides...)
@@ -127,7 +127,7 @@ func (p *Plugin) Generate(_ context.Context, opts input.GenerateOptions) (*colou
 
 // loadFromFile loads colors from a JSON or text file.
 // Returns colors and optional role hints.
-func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.ColourRole]int, error) {
+func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.Role]int, error) {
 	data, err := os.ReadFile(path) // #nosec G304 - User-specified input file, intended to be read
 	if err != nil {
 		return nil, nil, err
@@ -138,7 +138,7 @@ func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.ColourRole
 	if err := json.Unmarshal(data, &categorised); err == nil {
 		// Extract colors and role hints from categorised palette.
 		colors := make([]color.Color, 0)
-		roleHints := make(map[colour.ColourRole]int)
+		roleHints := make(map[colour.Role]int)
 
 		for role, catColor := range categorised.Colours {
 			roleHints[role] = len(colors)
@@ -159,9 +159,9 @@ func (p *Plugin) loadFromFile(path string) ([]color.Color, map[colour.ColourRole
 
 // parseTextFormat parses a simple text format palette file.
 // Format: hex colors (one per line) or role=hex (one per line), # for comments.
-func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.ColourRole]int, error) {
+func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Role]int, error) {
 	colors := make([]color.Color, 0)
-	roleHints := make(map[colour.ColourRole]int)
+	roleHints := make(map[colour.Role]int)
 
 	lines := strings.Split(content, "\n")
 	for lineNum, line := range lines {
@@ -223,9 +223,9 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Colo
 
 // parseOverrides parses colour overrides from command line or options.
 // Returns colors and role hints.
-func (p *Plugin) parseOverrides(overrides []string) ([]color.Color, map[colour.ColourRole]int, error) {
+func (p *Plugin) parseOverrides(overrides []string) ([]color.Color, map[colour.Role]int, error) {
 	colors := make([]color.Color, 0)
-	roleHints := make(map[colour.ColourRole]int)
+	roleHints := make(map[colour.Role]int)
 
 	for _, override := range overrides {
 		parts := strings.SplitN(override, "=", 2)
@@ -255,15 +255,15 @@ func (p *Plugin) parseOverrides(overrides []string) ([]color.Color, map[colour.C
 	return colors, roleHints, nil
 }
 
-// parseColourRole parses a role name string into a ColourRole constant.
+// parseColourRole parses a role name string into a Role constant.
 // Accepts both British English (colour) and American English (color) spelling.
-func parseColourRole(name string) (colour.ColourRole, error) {
+func parseColourRole(name string) (colour.Role, error) {
 	// Normalise the name - convert to lowercase and replace underscores/hyphens.
 	name = strings.ToLower(name)
 	name = strings.ReplaceAll(name, "_", "")
 	name = strings.ReplaceAll(name, "-", "")
 
-	roleMap := map[string]colour.ColourRole{
+	roleMap := map[string]colour.Role{
 		// Core semantic roles.
 		"background":      colour.RoleBackground,
 		"backgroundmuted": colour.RoleBackgroundMuted,

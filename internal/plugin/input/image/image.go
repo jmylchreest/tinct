@@ -290,7 +290,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		// Adjust role hints indices to account for the merged colors.
 		if regionPalette.RoleHints != nil {
 			if palette.RoleHints == nil {
-				palette.RoleHints = make(map[colour.ColourRole]int)
+				palette.RoleHints = make(map[colour.Role]int)
 			}
 			offset := numMainColors
 			for role, index := range regionPalette.RoleHints {

@@ -14,7 +14,7 @@ const (
 
 // SemanticHues defines the standard hue values for semantic colors.
 // Based on universal color psychology and industry standards.
-var SemanticHues = map[ColourRole]float64{
+var SemanticHues = map[Role]float64{
 	RoleDanger:       0,   // Red - danger, errors, destructive actions
 	RoleWarning:      45,  // Orange - warnings, caution
 	RoleSuccess:      120, // Green - success, confirmation, positive actions
@@ -34,7 +34,7 @@ var SemanticHues = map[ColourRole]float64{
 // - Purple = notification (badges, highlights)
 // - Must have good contrast with background for visibility.
 // - Enhanced saturation for visual distinctiveness.
-func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool, hintsApplied map[ColourRole]bool) {
+func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool, hintsApplied map[Role]bool) {
 	// Map hue ranges to semantic roles.
 	// Red: 0-30, 330-360 (danger).
 	// Orange/Yellow: 30-60 (warning).
@@ -145,7 +145,7 @@ func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []Categor
 }
 
 // enhanceSemanticColour boosts saturation and adjusts lightness for better visibility.
-func enhanceSemanticColour(cc CategorisedColour, role ColourRole, themeType ThemeType, hasBg bool, bg CategorisedColour) CategorisedColour {
+func enhanceSemanticColour(cc CategorisedColour, role Role, themeType ThemeType, hasBg bool, bg CategorisedColour) CategorisedColour {
 	h, s, l := rgbToHSL(cc.RGB)
 
 	// Boost saturation to minimum threshold.
@@ -207,7 +207,7 @@ func enhanceSemanticColour(cc CategorisedColour, role ColourRole, themeType Them
 }
 
 // generateFallbackSemanticColour creates a semantic color when none exists in the palette.
-func generateFallbackSemanticColour(role ColourRole, themeType ThemeType, hasBg bool, bg CategorisedColour) CategorisedColour {
+func generateFallbackSemanticColour(role Role, themeType ThemeType, hasBg bool, bg CategorisedColour) CategorisedColour {
 	// Get standard hue for this role.
 	hue, exists := SemanticHues[role]
 	if !exists {

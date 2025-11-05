@@ -258,7 +258,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 	}
 
 	paletteColors := make([]colour.RGB, 0, len(colors))
-	var roleHints map[colour.ColourRole]int
+	var roleHints map[colour.Role]int
 
 	// First, add ALL colors to the palette.
 	colorNameToIndex := make(map[string]int)
@@ -280,7 +280,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 			fmt.Printf("→ Applying color mappings:\n")
 		}
 
-		roleHints = make(map[colour.ColourRole]int)
+		roleHints = make(map[colour.Role]int)
 
 		for sourceKey, targetRole := range p.mapping {
 			if index, ok := colorNameToIndex[sourceKey]; ok {
@@ -357,13 +357,13 @@ func parseHex(hex string) (colour.RGB, error) {
 	}, nil
 }
 
-// parseColourRole parses a role name string into a ColourRole constant.
-func parseColourRole(name string) (colour.ColourRole, error) {
+// parseColourRole parses a role name string into a Role constant.
+func parseColourRole(name string) (colour.Role, error) {
 	name = strings.ToLower(name)
 	name = strings.ReplaceAll(name, "_", "")
 	name = strings.ReplaceAll(name, "-", "")
 
-	roleMap := map[string]colour.ColourRole{
+	roleMap := map[string]colour.Role{
 		"background":      colour.RoleBackground,
 		"backgroundmuted": colour.RoleBackgroundMuted,
 		"foreground":      colour.RoleForeground,

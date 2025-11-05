@@ -5,7 +5,7 @@ import "image/color"
 
 // generateSurfaceColors generates all surface, border, on-color, and container variants.
 // These colors are essential for UI design following Material Design 3 principles.
-func generateSurfaceColors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[ColourRole]bool) {
+func generateSurfaceColors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[Role]bool) {
 	// Priority 1: Core surface colors.
 	generatePriority1SurfaceColors(palette, bg, fg, theme, hintsApplied)
 
@@ -17,7 +17,7 @@ func generateSurfaceColors(palette *CategorisedPalette, bg, fg CategorisedColour
 }
 
 // generatePriority1SurfaceColors generates essential surface colors.
-func generatePriority1SurfaceColors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[ColourRole]bool) {
+func generatePriority1SurfaceColors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[Role]bool) {
 	// Generate Surface (if not provided via hints).
 	if !hintsApplied[RoleSurface] {
 		surface := generateSurface(bg, theme)
@@ -251,7 +251,7 @@ func generateBorder(surface CategorisedColour, theme ThemeType) CategorisedColou
 }
 
 // generatePriority2Colors generates surface/border variants and on-colors.
-func generatePriority2Colors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[ColourRole]bool) {
+func generatePriority2Colors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[Role]bool) {
 	surface, hasSurface := palette.Get(RoleSurface)
 	if !hasSurface {
 		surface = bg
@@ -291,7 +291,7 @@ func generatePriority2Colors(palette *CategorisedPalette, bg, fg CategorisedColo
 }
 
 // generatePriority3Colors generates inverse colors, scrim/shadow, and container variants.
-func generatePriority3Colors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[ColourRole]bool) {
+func generatePriority3Colors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[Role]bool) {
 	// Inverse colors.
 	if !hintsApplied[RoleInverseSurface] {
 		inverseSurface := generateInverseSurface(bg, theme)
@@ -424,7 +424,7 @@ func generateOutlineVariant(surface CategorisedColour, theme ThemeType) Categori
 }
 
 // generateOnColors generates high-contrast text colors for all accent and semantic colors.
-func generateOnColors(palette *CategorisedPalette, _ ThemeType, hintsApplied map[ColourRole]bool) {
+func generateOnColors(palette *CategorisedPalette, _ ThemeType, hintsApplied map[Role]bool) {
 	// On-colors for accents.
 	generateOnColor(palette, RoleAccent1, RoleOnAccent1, hintsApplied)
 	generateOnColor(palette, RoleAccent2, RoleOnAccent2, hintsApplied)
@@ -439,7 +439,7 @@ func generateOnColors(palette *CategorisedPalette, _ ThemeType, hintsApplied map
 }
 
 // generateOnColor generates a high-contrast "on" color for a given background role.
-func generateOnColor(palette *CategorisedPalette, bgRole, onRole ColourRole, hintsApplied map[ColourRole]bool) {
+func generateOnColor(palette *CategorisedPalette, bgRole, onRole Role, hintsApplied map[Role]bool) {
 	if hintsApplied[onRole] {
 		return
 	}
@@ -615,7 +615,7 @@ func generateShadow(_ ThemeType) CategorisedColour {
 }
 
 // generateContainerVariants creates elevation-based container colors.
-func generateContainerVariants(palette *CategorisedPalette, bg CategorisedColour, theme ThemeType, hintsApplied map[ColourRole]bool) {
+func generateContainerVariants(palette *CategorisedPalette, bg CategorisedColour, theme ThemeType, hintsApplied map[Role]bool) {
 	surface, hasSurface := palette.Get(RoleSurface)
 	if !hasSurface {
 		surface = bg
@@ -626,7 +626,7 @@ func generateContainerVariants(palette *CategorisedPalette, bg CategorisedColour
 
 	// Generate 5 elevation levels with progressive luminance.
 	containerRoles := []struct {
-		role   ColourRole
+		role   Role
 		offset float64 // Luminance offset from surface
 	}{
 		{RoleSurfaceContainerLowest, -0.04}, // Lowest elevation (closer to background)

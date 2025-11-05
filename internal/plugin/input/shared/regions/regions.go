@@ -34,7 +34,7 @@ const (
 // Position represents a specific sampling position around the image.
 type Position struct {
 	// Role is the semantic role for this position.
-	Role colour.ColourRole
+	Role colour.Role
 
 	// Name is a human-readable name for this position.
 	Name string
@@ -79,7 +79,7 @@ func (s *Sampler) Extract(img image.Image, config Configuration) (*colour.Palett
 	// Extract color from each position.
 	colors := make([]color.Color, len(positions))
 	weights := make([]float64, len(positions))
-	roleHints := make(map[colour.ColourRole]int)
+	roleHints := make(map[colour.Role]int)
 
 	totalPixels := 0
 	pixelCounts := make([]int, len(positions))
@@ -151,7 +151,7 @@ func (s *Sampler) definePositions(bounds image.Rectangle, config Configuration) 
 
 // makePosition is a helper function to create a Position with role, name, and rectangle.
 // This reduces duplication in the position definition methods.
-func makePosition(role colour.ColourRole, name string, rect image.Rectangle) Position {
+func makePosition(role colour.Role, name string, rect image.Rectangle) Position {
 	return Position{Role: role, Name: name, Rect: rect}
 }
 

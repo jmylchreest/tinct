@@ -15,10 +15,10 @@ const (
 	defaultWidth = 8
 )
 
-// ColourPreview returns an ANSI-coloured preview string for a colour.
+// Preview returns an ANSI-coloured preview string for a colour.
 // Width specifies how many characters wide the colour block should be.
 // Uses background colour with spaces for a solid block.
-func ColourPreview(c RGB, width int) string {
+func Preview(c RGB, width int) string {
 	if width <= 0 {
 		width = defaultWidth
 	}
@@ -32,9 +32,9 @@ func ColourPreview(c RGB, width int) string {
 	return bgColour + block + ansiReset
 }
 
-// ColourPreviewWithText returns a colour preview with text overlay.
+// PreviewWithText returns a colour preview with text overlay.
 // The text colour is chosen to have good contrast with the background.
-func ColourPreviewWithText(c RGB, text string, width int) string {
+func PreviewWithText(c RGB, text string, width int) string {
 	if width <= 0 {
 		width = defaultWidth
 	}
@@ -99,13 +99,13 @@ func luminanceFromRGB(rgb RGB) float64 {
 
 // FormatColourWithPreview formats a colour with its preview and hex code.
 func FormatColourWithPreview(rgb RGB, width int) string {
-	preview := ColourPreview(rgb, width)
+	preview := Preview(rgb, width)
 	return fmt.Sprintf("%s %s", preview, rgb.Hex())
 }
 
 // FormatColourWithLabel formats a colour with a label and preview.
 func FormatColourWithLabel(rgb RGB, label string, width int) string {
-	preview := ColourPreview(rgb, width)
+	preview := Preview(rgb, width)
 	return fmt.Sprintf("%s  %-20s %s", preview, label, rgb.Hex())
 }
 
@@ -121,8 +121,8 @@ func SupportsANSIColours() bool {
 // DisableColourOutput can be used to disable colour output.
 var DisableColourOutput = false
 
-// ColourString returns a coloured string if colour output is enabled, plain text otherwise.
-func ColourString(rgb RGB, text string) string {
+// String returns a coloured string if colour output is enabled, plain text otherwise.
+func String(rgb RGB, text string) string {
 	if DisableColourOutput || !SupportsANSIColours() {
 		return text
 	}

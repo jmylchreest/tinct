@@ -8,115 +8,115 @@ import (
 	"strings"
 )
 
-// ColourRole represents the semantic role of a colour in a theme.
-type ColourRole string
+// Role represents the semantic role of a colour in a theme.
+type Role string
 
 const (
 	// Core roles.
-	RoleBackground      ColourRole = "background"
-	RoleBackgroundMuted ColourRole = "backgroundMuted"
-	RoleForeground      ColourRole = "foreground"
-	RoleForegroundMuted ColourRole = "foregroundMuted"
+	RoleBackground      Role = "background"
+	RoleBackgroundMuted Role = "backgroundMuted"
+	RoleForeground      Role = "foreground"
+	RoleForegroundMuted Role = "foregroundMuted"
 
 	// Accent roles.
-	RoleAccent1      ColourRole = "accent1"
-	RoleAccent1Muted ColourRole = "accent1Muted"
-	RoleAccent2      ColourRole = "accent2"
-	RoleAccent2Muted ColourRole = "accent2Muted"
-	RoleAccent3      ColourRole = "accent3"
-	RoleAccent3Muted ColourRole = "accent3Muted"
-	RoleAccent4      ColourRole = "accent4"
-	RoleAccent4Muted ColourRole = "accent4Muted"
+	RoleAccent1      Role = "accent1"
+	RoleAccent1Muted Role = "accent1Muted"
+	RoleAccent2      Role = "accent2"
+	RoleAccent2Muted Role = "accent2Muted"
+	RoleAccent3      Role = "accent3"
+	RoleAccent3Muted Role = "accent3Muted"
+	RoleAccent4      Role = "accent4"
+	RoleAccent4Muted Role = "accent4Muted"
 
 	// Semantic roles.
-	RoleDanger       ColourRole = "danger"
-	RoleWarning      ColourRole = "warning"
-	RoleSuccess      ColourRole = "success"
-	RoleInfo         ColourRole = "info"
-	RoleNotification ColourRole = "notification"
+	RoleDanger       Role = "danger"
+	RoleWarning      Role = "warning"
+	RoleSuccess      Role = "success"
+	RoleInfo         Role = "info"
+	RoleNotification Role = "notification"
 
 	// Surface and container roles (Priority 1 - Material Design 3).
-	RoleSurface   ColourRole = "surface"   // Base surface for cards, sheets, dialogs
-	RoleOnSurface ColourRole = "onSurface" // Text/icons on surface
-	RoleOutline   ColourRole = "outline"   // Borders, dividers, outlines
-	RoleBorder    ColourRole = "border"    // Primary border color
+	RoleSurface   Role = "surface"   // Base surface for cards, sheets, dialogs
+	RoleOnSurface Role = "onSurface" // Text/icons on surface
+	RoleOutline   Role = "outline"   // Borders, dividers, outlines
+	RoleBorder    Role = "border"    // Primary border color
 
 	// Surface and border variants (Priority 2).
-	RoleSurfaceVariant   ColourRole = "surfaceVariant"   // Alternate surface color
-	RoleOnSurfaceVariant ColourRole = "onSurfaceVariant" // Text on surface variant
-	RoleBorderMuted      ColourRole = "borderMuted"      // Inactive/muted borders
-	RoleOutlineVariant   ColourRole = "outlineVariant"   // Secondary outline
+	RoleSurfaceVariant   Role = "surfaceVariant"   // Alternate surface color
+	RoleOnSurfaceVariant Role = "onSurfaceVariant" // Text on surface variant
+	RoleBorderMuted      Role = "borderMuted"      // Inactive/muted borders
+	RoleOutlineVariant   Role = "outlineVariant"   // Secondary outline
 
 	// On-colors for accents (Priority 2).
-	RoleOnAccent1 ColourRole = "onAccent1" // Text on accent1 background
-	RoleOnAccent2 ColourRole = "onAccent2" // Text on accent2 background
-	RoleOnAccent3 ColourRole = "onAccent3" // Text on accent3 background
-	RoleOnAccent4 ColourRole = "onAccent4" // Text on accent4 background
+	RoleOnAccent1 Role = "onAccent1" // Text on accent1 background
+	RoleOnAccent2 Role = "onAccent2" // Text on accent2 background
+	RoleOnAccent3 Role = "onAccent3" // Text on accent3 background
+	RoleOnAccent4 Role = "onAccent4" // Text on accent4 background
 
 	// On-colors for semantic roles (Priority 2).
-	RoleOnDanger  ColourRole = "onDanger"  // Text on danger background
-	RoleOnWarning ColourRole = "onWarning" // Text on warning background
-	RoleOnSuccess ColourRole = "onSuccess" // Text on success background
-	RoleOnInfo    ColourRole = "onInfo"    // Text on info background
+	RoleOnDanger  Role = "onDanger"  // Text on danger background
+	RoleOnWarning Role = "onWarning" // Text on warning background
+	RoleOnSuccess Role = "onSuccess" // Text on success background
+	RoleOnInfo    Role = "onInfo"    // Text on info background
 
 	// Inverse colors for overlays (Priority 3).
-	RoleInverseSurface   ColourRole = "inverseSurface"   // Inverse surface (tooltip backgrounds)
-	RoleInverseOnSurface ColourRole = "inverseOnSurface" // Text on inverse surface
-	RoleInversePrimary   ColourRole = "inversePrimary"   // Inverse accent color
+	RoleInverseSurface   Role = "inverseSurface"   // Inverse surface (tooltip backgrounds)
+	RoleInverseOnSurface Role = "inverseOnSurface" // Text on inverse surface
+	RoleInversePrimary   Role = "inversePrimary"   // Inverse accent color
 
 	// Scrim and shadow with alpha (Priority 3).
-	RoleScrim  ColourRole = "scrim"  // Modal backdrop overlay (with alpha)
-	RoleShadow ColourRole = "shadow" // Elevation shadows (with alpha)
+	RoleScrim  Role = "scrim"  // Modal backdrop overlay (with alpha)
+	RoleShadow Role = "shadow" // Elevation shadows (with alpha)
 
 	// Surface container elevation variants (Priority 3 - Material Design 3).
-	RoleSurfaceContainerLowest  ColourRole = "surfaceContainerLowest"  // Lowest elevation
-	RoleSurfaceContainerLow     ColourRole = "surfaceContainerLow"     // Low elevation
-	RoleSurfaceContainer        ColourRole = "surfaceContainer"        // Default container
-	RoleSurfaceContainerHigh    ColourRole = "surfaceContainerHigh"    // High elevation
-	RoleSurfaceContainerHighest ColourRole = "surfaceContainerHighest" // Highest elevation
+	RoleSurfaceContainerLowest  Role = "surfaceContainerLowest"  // Lowest elevation
+	RoleSurfaceContainerLow     Role = "surfaceContainerLow"     // Low elevation
+	RoleSurfaceContainer        Role = "surfaceContainer"        // Default container
+	RoleSurfaceContainerHigh    Role = "surfaceContainerHigh"    // High elevation
+	RoleSurfaceContainerHighest Role = "surfaceContainerHighest" // Highest elevation
 
 	// Positional roles for ambient lighting.
 	// Core 8 positions (corners + mid-edges).
-	RolePositionTopLeft     ColourRole = "positionTopLeft"
-	RolePositionTop         ColourRole = "positionTop"
-	RolePositionTopRight    ColourRole = "positionTopRight"
-	RolePositionRight       ColourRole = "positionRight"
-	RolePositionBottomRight ColourRole = "positionBottomRight"
-	RolePositionBottom      ColourRole = "positionBottom"
-	RolePositionBottomLeft  ColourRole = "positionBottomLeft"
-	RolePositionLeft        ColourRole = "positionLeft"
+	RolePositionTopLeft     Role = "positionTopLeft"
+	RolePositionTop         Role = "positionTop"
+	RolePositionTopRight    Role = "positionTopRight"
+	RolePositionRight       Role = "positionRight"
+	RolePositionBottomRight Role = "positionBottomRight"
+	RolePositionBottom      Role = "positionBottom"
+	RolePositionBottomLeft  Role = "positionBottomLeft"
+	RolePositionLeft        Role = "positionLeft"
 
 	// Extended positions for 12+ region configurations.
-	RolePositionTopLeftInner     ColourRole = "positionTopLeftInner"
-	RolePositionTopCenter        ColourRole = "positionTopCenter"
-	RolePositionTopRightInner    ColourRole = "positionTopRightInner"
-	RolePositionRightTop         ColourRole = "positionRightTop"
-	RolePositionRightBottom      ColourRole = "positionRightBottom"
-	RolePositionBottomRightInner ColourRole = "positionBottomRightInner"
-	RolePositionBottomCenter     ColourRole = "positionBottomCenter"
-	RolePositionBottomLeftInner  ColourRole = "positionBottomLeftInner"
-	RolePositionLeftBottom       ColourRole = "positionLeftBottom"
-	RolePositionLeftTop          ColourRole = "positionLeftTop"
+	RolePositionTopLeftInner     Role = "positionTopLeftInner"
+	RolePositionTopCenter        Role = "positionTopCenter"
+	RolePositionTopRightInner    Role = "positionTopRightInner"
+	RolePositionRightTop         Role = "positionRightTop"
+	RolePositionRightBottom      Role = "positionRightBottom"
+	RolePositionBottomRightInner Role = "positionBottomRightInner"
+	RolePositionBottomCenter     Role = "positionBottomCenter"
+	RolePositionBottomLeftInner  Role = "positionBottomLeftInner"
+	RolePositionLeftBottom       Role = "positionLeftBottom"
+	RolePositionLeftTop          Role = "positionLeftTop"
 
 	// Ultra-extended positions for 16+ region configurations.
-	RolePositionTopLeftOuter      ColourRole = "positionTopLeftOuter"
-	RolePositionTopLeftCenter     ColourRole = "positionTopLeftCenter"
-	RolePositionTopRightCenter    ColourRole = "positionTopRightCenter"
-	RolePositionTopRightOuter     ColourRole = "positionTopRightOuter"
-	RolePositionRightTopOuter     ColourRole = "positionRightTopOuter"
-	RolePositionRightBottomOuter  ColourRole = "positionRightBottomOuter"
-	RolePositionBottomRightOuter  ColourRole = "positionBottomRightOuter"
-	RolePositionBottomRightCenter ColourRole = "positionBottomRightCenter"
-	RolePositionBottomLeftCenter  ColourRole = "positionBottomLeftCenter"
-	RolePositionBottomLeftOuter   ColourRole = "positionBottomLeftOuter"
-	RolePositionLeftBottomOuter   ColourRole = "positionLeftBottomOuter"
-	RolePositionLeftTopOuter      ColourRole = "positionLeftTopOuter"
+	RolePositionTopLeftOuter      Role = "positionTopLeftOuter"
+	RolePositionTopLeftCenter     Role = "positionTopLeftCenter"
+	RolePositionTopRightCenter    Role = "positionTopRightCenter"
+	RolePositionTopRightOuter     Role = "positionTopRightOuter"
+	RolePositionRightTopOuter     Role = "positionRightTopOuter"
+	RolePositionRightBottomOuter  Role = "positionRightBottomOuter"
+	RolePositionBottomRightOuter  Role = "positionBottomRightOuter"
+	RolePositionBottomRightCenter Role = "positionBottomRightCenter"
+	RolePositionBottomLeftCenter  Role = "positionBottomLeftCenter"
+	RolePositionBottomLeftOuter   Role = "positionBottomLeftOuter"
+	RolePositionLeftBottomOuter   Role = "positionLeftBottomOuter"
+	RolePositionLeftTopOuter      Role = "positionLeftTopOuter"
 )
 
 // CategorisedColour represents a colour with its assigned role and metadata.
 type CategorisedColour struct {
 	Colour      color.Color `json:"-"`
-	Role        ColourRole  `json:"role"`
+	Role        Role  `json:"role"`
 	Hex         string      `json:"hex"`  // #RRGGBB format (backwards compatible)
 	RGB         RGB         `json:"rgb"`  // RGB without alpha (backwards compatible)
 	RGBA        RGBA        `json:"rgba"` // RGBA with alpha channel (defaults to 255/opaque)
@@ -179,7 +179,7 @@ func DefaultCategorisationConfig() CategorisationConfig {
 
 // CategorisedPalette represents a palette with categorised colours.
 type CategorisedPalette struct {
-	Colours    map[ColourRole]CategorisedColour `json:"colours"`
+	Colours    map[Role]CategorisedColour `json:"colours"`
 	ThemeType  ThemeType                        `json:"theme_type"`
 	AllColours []CategorisedColour              `json:"all_colours,omitempty"`
 }
@@ -187,19 +187,19 @@ type CategorisedPalette struct {
 // NewCategorisedPalette creates a new categorised palette.
 func NewCategorisedPalette(themeType ThemeType) *CategorisedPalette {
 	return &CategorisedPalette{
-		Colours:   make(map[ColourRole]CategorisedColour),
+		Colours:   make(map[Role]CategorisedColour),
 		ThemeType: themeType,
 	}
 }
 
 // Get returns a colour by role, if it exists.
-func (cp *CategorisedPalette) Get(role ColourRole) (CategorisedColour, bool) {
+func (cp *CategorisedPalette) Get(role Role) (CategorisedColour, bool) {
 	c, ok := cp.Colours[role]
 	return c, ok
 }
 
 // Set sets a colour for a given role.
-func (cp *CategorisedPalette) Set(role ColourRole, colour CategorisedColour) {
+func (cp *CategorisedPalette) Set(role Role, colour CategorisedColour) {
 	colour.Role = role
 	cp.Colours[role] = colour
 }
@@ -263,7 +263,7 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 	bgIdx := -1
 
 	// Apply explicit role hints from input plugins (if provided).
-	hintsApplied := make(map[ColourRole]bool)
+	hintsApplied := make(map[Role]bool)
 	if palette.RoleHints != nil {
 		for role, originalIndex := range palette.RoleHints {
 			if originalIndex >= 0 && originalIndex < len(allExtracted) {
@@ -405,8 +405,8 @@ func Categorise(palette *Palette, config CategorisationConfig) *CategorisedPalet
 
 	// Assign accent roles (up to 4) and their muted variants.
 	accentRoles := []struct {
-		primary ColourRole
-		muted   ColourRole
+		primary Role
+		muted   Role
 	}{
 		{RoleAccent1, RoleAccent1Muted},
 		{RoleAccent2, RoleAccent2Muted},
@@ -552,7 +552,7 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 		}
 
 		// Always show color preview blocks.
-		preview := ColourPreview(cc.RGB, 8)
+		preview := Preview(cc.RGB, 8)
 
 		// Mark the background role with ">".
 		marker := " "
