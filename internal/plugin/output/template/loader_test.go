@@ -298,18 +298,7 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 
 	// If we have more than one template, should get an error about existing file.
 	// but should have dumped the others
-	if len(templates) > 1 {
-		if err == nil {
-			t.Error("expected error about existing file")
-		}
-		if err != nil && !strings.Contains(err.Error(), "already exists") {
-			t.Errorf("expected 'already exists' in error, got: %v", err)
-		}
-		// Should have dumped the remaining templates.
-		if len(dumped) != len(templates)-1 {
-			t.Errorf("expected %d dumped templates, got %d", len(templates)-1, len(dumped))
-		}
-	} else {
+	if len(templates) <= 1 {
 		// Only one template, should just get the error.
 		if err == nil {
 			t.Error("expected error about existing file")
@@ -317,6 +306,18 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 		if len(dumped) != 0 {
 			t.Error("expected no dumped templates")
 		}
+		return
+	}
+
+	if err == nil {
+		t.Error("expected error about existing file")
+	}
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("expected 'already exists' in error, got: %v", err)
+	}
+	// Should have dumped the remaining templates.
+	if len(dumped) != len(templates)-1 {
+		t.Errorf("expected %d dumped templates, got %d", len(templates)-1, len(dumped))
 	}
 }
 

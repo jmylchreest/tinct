@@ -24,23 +24,18 @@ func createMutedVariant(cc CategorisedColour, adjustment float64, themeType Them
 
 	// Luminance adjustment based on theme and role.
 	var newLum float64
-	if isBackground {
-		if themeType == ThemeDark {
-			// Dark background: make slightly lighter.
-			newLum = math.Min(1.0, l+adjustment)
-		} else {
-			// Light background: make slightly darker.
-			newLum = math.Max(0.0, l-adjustment)
-		}
+	if isBackground && themeType == ThemeDark {
+		// Dark background: make slightly lighter.
+		newLum = math.Min(1.0, l+adjustment)
+	} else if isBackground {
+		// Light background: make slightly darker.
+		newLum = math.Max(0.0, l-adjustment)
+	} else if themeType == ThemeDark {
+		// Foreground/accent in dark theme: Light text/accent - make slightly darker.
+		newLum = math.Max(0.0, l-adjustment)
 	} else {
-		// Foreground/accent: reduce contrast slightly.
-		if themeType == ThemeDark {
-			// Light text/accent: make slightly darker.
-			newLum = math.Max(0.0, l-adjustment)
-		} else {
-			// Dark text/accent: make slightly lighter.
-			newLum = math.Min(1.0, l+adjustment)
-		}
+		// Foreground/accent in light theme: Dark text/accent - make slightly lighter.
+		newLum = math.Min(1.0, l+adjustment)
 	}
 
 	// Saturation reduction: ~50% (reduce to half of original).

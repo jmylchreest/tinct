@@ -69,23 +69,22 @@ func TestIsCompatible(t *testing.T) {
 	for _, tt := range tests {
 		compatible, err := IsCompatible(tt.pluginVersion)
 
-		if tt.compatible {
-			if !compatible {
-				t.Errorf("IsCompatible(%q) = false, want true", tt.pluginVersion)
-			}
-			if err != nil {
-				t.Errorf("IsCompatible(%q) unexpected error: %v", tt.pluginVersion, err)
-			}
-		} else {
+		if !tt.compatible {
 			if compatible {
 				t.Errorf("IsCompatible(%q) = true, want false", tt.pluginVersion)
 			}
-			if err != nil && tt.errorContains != "" {
-				if !strings.Contains(err.Error(), tt.errorContains) {
-					t.Errorf("IsCompatible(%q) error = %q, want error containing %q",
-						tt.pluginVersion, err.Error(), tt.errorContains)
-				}
+			if err != nil && tt.errorContains != "" && !strings.Contains(err.Error(), tt.errorContains) {
+				t.Errorf("IsCompatible(%q) error = %q, want error containing %q",
+					tt.pluginVersion, err.Error(), tt.errorContains)
 			}
+			continue
+		}
+
+		if !compatible {
+			t.Errorf("IsCompatible(%q) = false, want true", tt.pluginVersion)
+		}
+		if err != nil {
+			t.Errorf("IsCompatible(%q) unexpected error: %v", tt.pluginVersion, err)
 		}
 	}
 }

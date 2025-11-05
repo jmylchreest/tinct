@@ -58,32 +58,37 @@ func selectBackground(extracted []CategorisedColour, themeType ThemeType) (Categ
 			}
 		}
 		// Fallback: if no dark colors, use darkest color.
-		if maxWeightIdx == -1 {
-			minLuminance := 1.0
-			for i, color := range extracted {
-				if color.Luminance < minLuminance {
-					minLuminance = color.Luminance
-					maxWeightIdx = i
-				}
-			}
+		if maxWeightIdx != -1 {
+			return extracted[maxWeightIdx], themeType
 		}
-	} else {
-		// Light theme: find most dominant LIGHT color (luminance >= 0.5).
+
+		minLuminance := 1.0
 		for i, color := range extracted {
-			if color.Luminance >= 0.5 && color.Weight > maxWeight {
-				maxWeight = color.Weight
+			if color.Luminance < minLuminance {
+				minLuminance = color.Luminance
 				maxWeightIdx = i
 			}
 		}
-		// Fallback: if no light colors, use lightest color.
-		if maxWeightIdx == -1 {
-			maxLuminance := 0.0
-			for i, color := range extracted {
-				if color.Luminance > maxLuminance {
-					maxLuminance = color.Luminance
-					maxWeightIdx = i
-				}
-			}
+		return extracted[maxWeightIdx], themeType
+	}
+
+	// Light theme: find most dominant LIGHT color (luminance >= 0.5).
+	for i, color := range extracted {
+		if color.Luminance >= 0.5 && color.Weight > maxWeight {
+			maxWeight = color.Weight
+			maxWeightIdx = i
+		}
+	}
+	// Fallback: if no light colors, use lightest color.
+	if maxWeightIdx != -1 {
+		return extracted[maxWeightIdx], themeType
+	}
+
+	maxLuminance := 0.0
+	for i, color := range extracted {
+		if color.Luminance > maxLuminance {
+			maxLuminance = color.Luminance
+			maxWeightIdx = i
 		}
 	}
 

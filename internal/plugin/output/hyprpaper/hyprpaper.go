@@ -172,24 +172,26 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 // Implements the output.PostExecuteHook interface.
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
 	// If we have a wallpaper path, try to apply it.
-	if execCtx.WallpaperPath != "" {
-		// Check if hyprpaper is running before trying to set wallpaper.
-		cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
-		if err := cmd.Run(); err != nil {
-			// hyprpaper not running - skip wallpaper application.
-			if p.verbose {
-				fmt.Fprintf(os.Stderr, "   Skipping wallpaper application (hyprpaper not running)\n")
-			}
-			return nil
-		}
+	if execCtx.WallpaperPath == "" {
+		return nil
+	}
 
-		if err := p.setWallpaper(ctx, execCtx.WallpaperPath); err != nil {
-			if p.verbose {
-				fmt.Fprintf(os.Stderr, "   Failed to set wallpaper: %v\n", err)
-			}
-			// Don't return error - wallpaper setting is optional.
-			return nil
+	// Check if hyprpaper is running before trying to set wallpaper.
+	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
+	if err := cmd.Run(); err != nil {
+		// hyprpaper not running - skip wallpaper application.
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Skipping wallpaper application (hyprpaper not running)\n")
 		}
+		return nil
+	}
+
+	if err := p.setWallpaper(ctx, execCtx.WallpaperPath); err != nil {
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Failed to set wallpaper: %v\n", err)
+		}
+		// Don't return error - wallpaper setting is optional.
+		return nil
 	}
 
 	return nil

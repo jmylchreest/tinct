@@ -173,40 +173,7 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Role
 		}
 
 		// Check if it's role=hex format or just hex.
-		if strings.Contains(line, "=") {
-			// Parse role=hex or colourN=hex.
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) != 2 {
-				return nil, nil, fmt.Errorf("line %d: invalid format, expected 'role=hex' or just 'hex'", lineNum+1)
-			}
-
-			roleName := strings.TrimSpace(parts[0])
-			hex := strings.TrimSpace(parts[1])
-
-			// Check if it's an indexed color (colourN or colorN).
-			if strings.HasPrefix(strings.ToLower(roleName), "colour") || strings.HasPrefix(strings.ToLower(roleName), "color") {
-				// Indexed color - just add the hex without role hint.
-				rgb, err := parseHex(hex)
-				if err != nil {
-					return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
-				}
-				colors = append(colors, rgbToColor(rgb))
-			} else {
-				// Role-based color.
-				role, err := parseColourRole(roleName)
-				if err != nil {
-					return nil, nil, fmt.Errorf("line %d: %w", lineNum+1, err)
-				}
-
-				rgb, err := parseHex(hex)
-				if err != nil {
-					return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
-				}
-
-				roleHints[role] = len(colors)
-				colors = append(colors, rgbToColor(rgb))
-			}
-		} else {
+		if !strings.Contains(line, "=") {
 			// Just a hex color.
 			hex := line
 			rgb, err := parseHex(hex)
@@ -215,7 +182,43 @@ func (p *Plugin) parseTextFormat(content string) ([]color.Color, map[colour.Role
 			}
 
 			colors = append(colors, rgbToColor(rgb))
+			continue
 		}
+
+		// Parse role=hex or colourN=hex.
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			return nil, nil, fmt.Errorf("line %d: invalid format, expected 'role=hex' or just 'hex'", lineNum+1)
+		}
+
+		roleName := strings.TrimSpace(parts[0])
+		hex := strings.TrimSpace(parts[1])
+
+		// Check if it's an indexed color (colourN or colorN).
+		lowerRole := strings.ToLower(roleName)
+		if strings.HasPrefix(lowerRole, "colour") || strings.HasPrefix(lowerRole, "color") {
+			// Indexed color - just add the hex without role hint.
+			rgb, err := parseHex(hex)
+			if err != nil {
+				return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
+			}
+			colors = append(colors, rgbToColor(rgb))
+			continue
+		}
+
+		// Role-based color.
+		role, err := parseColourRole(roleName)
+		if err != nil {
+			return nil, nil, fmt.Errorf("line %d: %w", lineNum+1, err)
+		}
+
+		rgb, err := parseHex(hex)
+		if err != nil {
+			return nil, nil, fmt.Errorf("line %d: invalid hex colour '%s': %w", lineNum+1, hex, err)
+		}
+
+		roleHints[role] = len(colors)
+		colors = append(colors, rgbToColor(rgb))
 	}
 
 	return colors, roleHints, nil

@@ -134,22 +134,26 @@ func (p *Plugin) parseCSS(content string, verbose bool) (map[string]string, erro
 	colorPropRegex := regexp.MustCompile(`(?:color|background-color|background|border-color|fill|stroke)\s*:\s*([^;]+);`)
 	propMatches := colorPropRegex.FindAllStringSubmatch(content, -1)
 	for _, match := range propMatches {
-		if len(match) == 2 {
-			value := strings.TrimSpace(match[1])
+		if len(match) != 2 {
+			continue
+		}
 
-			if hexColor := extractColor(value); hexColor != "" {
-				// Only add if not already in colors (avoid duplicates).
-				found := false
-				for _, existing := range colors {
-					if existing == hexColor {
-						found = true
-						break
-					}
-				}
-				if !found {
-					colors[fmt.Sprintf("color-%s", hexColor[1:])] = hexColor
-				}
+		value := strings.TrimSpace(match[1])
+		hexColor := extractColor(value)
+		if hexColor == "" {
+			continue
+		}
+
+		// Only add if not already in colors (avoid duplicates).
+		found := false
+		for _, existing := range colors {
+			if existing == hexColor {
+				found = true
+				break
 			}
+		}
+		if !found {
+			colors[fmt.Sprintf("color-%s", hexColor[1:])] = hexColor
 		}
 	}
 
@@ -414,30 +418,38 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 	}
 
 	// Then, if mapping is provided, create role hints for the mapped colors.
-	if len(p.mapping) > 0 {
-		if verbose {
-			fmt.Printf("→ Applying color mappings:\n")
+	if len(p.mapping) == 0 {
+		// Convert RGB to color.Color early if no mapping
+		colorColors := make([]color.Color, len(paletteColors))
+		for i, rgb := range paletteColors {
+			colorColors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
+		}
+		return colour.NewPalette(colorColors), nil
+	}
+
+	if verbose {
+		fmt.Printf("→ Applying color mappings:\n")
+	}
+
+	roleHints = make(map[colour.Role]int)
+
+	for sourceKey, targetRole := range p.mapping {
+		index, ok := colorNameToIndex[sourceKey]
+		if !ok {
+			continue
 		}
 
-		roleHints = make(map[colour.Role]int)
+		// Parse the target role.
+		role, err := parseColourRole(targetRole)
+		if err != nil {
+			return nil, fmt.Errorf("invalid role '%s': %w", targetRole, err)
+		}
 
-		for sourceKey, targetRole := range p.mapping {
-			if index, ok := colorNameToIndex[sourceKey]; ok {
-				// Parse the target role.
-				role, err := parseColourRole(targetRole)
-				if err != nil {
-					return nil, fmt.Errorf("invalid role '%s': %w", targetRole, err)
-				}
+		roleHints[role] = index
 
-				roleHints[role] = index
-
-				if verbose {
-					hex := colors[sourceKey]
-					fmt.Printf("   %s (%s) → %s\n", sourceKey, hex, targetRole)
-				}
-			} else if verbose {
-				fmt.Printf("   Warning: color '%s' not found in source\n", sourceKey)
-			}
+		if verbose {
+			hex := colors[sourceKey]
+			fmt.Printf("   %s (%s) → %s\n", sourceKey, hex, targetRole)
 		}
 	}
 

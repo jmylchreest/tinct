@@ -105,25 +105,27 @@ func sortAccentsForTheme(accents []CategorisedColour, bg, fg CategorisedColour, 
 	// Dark themes: accent1 = LIGHTEST (highest contrast) → accent4 = DARKEST.
 	// Light themes: accent1 = DARKEST (highest contrast) → accent4 = LIGHTEST.
 	topCount := min(12, len(reordered)) // Consider top 12 candidates
-	if topCount > 0 {
-		if theme == ThemeDark {
-			// Dark theme: Sort LIGHTEST → DARKEST (descending luminance).
-			// accent1 will be the lightest/highest contrast.
-			for i := 0; i < topCount-1; i++ {
-				for j := 0; j < topCount-i-1; j++ {
-					if reordered[j].Luminance < reordered[j+1].Luminance {
-						reordered[j], reordered[j+1] = reordered[j+1], reordered[j]
-					}
+	if topCount == 0 {
+		return
+	}
+
+	if theme == ThemeDark {
+		// Dark theme: Sort LIGHTEST → DARKEST (descending luminance).
+		// accent1 will be the lightest/highest contrast.
+		for i := 0; i < topCount-1; i++ {
+			for j := 0; j < topCount-i-1; j++ {
+				if reordered[j].Luminance < reordered[j+1].Luminance {
+					reordered[j], reordered[j+1] = reordered[j+1], reordered[j]
 				}
 			}
-		} else {
-			// Light theme: Sort DARKEST → LIGHTEST (ascending luminance).
-			// accent1 will be the darkest/highest contrast.
-			for i := 0; i < topCount-1; i++ {
-				for j := 0; j < topCount-i-1; j++ {
-					if reordered[j].Luminance > reordered[j+1].Luminance {
-						reordered[j], reordered[j+1] = reordered[j+1], reordered[j]
-					}
+		}
+	} else {
+		// Light theme: Sort DARKEST → LIGHTEST (ascending luminance).
+		// accent1 will be the darkest/highest contrast.
+		for i := 0; i < topCount-1; i++ {
+			for j := 0; j < topCount-i-1; j++ {
+				if reordered[j].Luminance > reordered[j+1].Luminance {
+					reordered[j], reordered[j+1] = reordered[j+1], reordered[j]
 				}
 			}
 		}

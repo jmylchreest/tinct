@@ -215,87 +215,89 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	}
 
 	// If ambient extraction is enabled, also extract edge/corner colors with reduced weight.
-	if p.extractAmbience {
-		// Convert regions count to configuration.
-		config, err := regions.ConfigurationFromInt(p.regions)
-		if err != nil {
-			return nil, fmt.Errorf("invalid regions configuration: %w", err)
+	if !p.extractAmbience {
+		return palette, nil
+	}
+
+	// Convert regions count to configuration.
+	config, err := regions.ConfigurationFromInt(p.regions)
+	if err != nil {
+		return nil, fmt.Errorf("invalid regions configuration: %w", err)
+	}
+
+	// Create region sampler with custom settings.
+	sampler := &regions.Sampler{
+		SamplePercent: p.samplePercent,
+		Method:        p.sampleMethod,
+	}
+
+	if opts.Verbose {
+		fmt.Printf("→ Also extracting %d edge/corner regions using %s method\n", p.regions, p.sampleMethod)
+	}
+
+	// Extract colors from regions.
+	regionPalette, err := sampler.Extract(img, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract region colors: %w", err)
+	}
+
+	// Merge the palettes with adjusted weights.
+	// Edge colors get reduced weight to avoid over-representing them.
+	numMainColors := len(palette.Colors)
+	numRegionColors := len(regionPalette.Colors)
+
+	// Calculate weight for region colors using the configured factor.
+	if palette.Weights != nil {
+		// Calculate average weight per palette color.
+		avgPaletteWeight := 1.0 / float64(numMainColors)
+		regionWeightPerColor := avgPaletteWeight * RegionWeightFactor / float64(numRegionColors)
+
+		// Create region weights.
+		regionWeights := make([]float64, numRegionColors)
+		for i := range regionWeights {
+			regionWeights[i] = regionWeightPerColor
 		}
 
-		// Create region sampler with custom settings.
-		sampler := &regions.Sampler{
-			SamplePercent: p.samplePercent,
-			Method:        p.sampleMethod,
+		// Normalize main palette weights to leave room for region weights.
+		totalRegionWeight := regionWeightPerColor * float64(numRegionColors)
+		mainWeightMultiplier := (1.0 - totalRegionWeight)
+
+		adjustedMainWeights := make([]float64, numMainColors)
+		for i, w := range palette.Weights {
+			adjustedMainWeights[i] = w * mainWeightMultiplier
 		}
 
-		if opts.Verbose {
-			fmt.Printf("→ Also extracting %d edge/corner regions using %s method\n", p.regions, p.sampleMethod)
+		// Merge colors and weights.
+		palette.Colors = append(palette.Colors, regionPalette.Colors...)
+		adjustedMainWeights = append(adjustedMainWeights, regionWeights...)
+		palette.Weights = adjustedMainWeights
+	} else {
+		// No weights in main palette, create them.
+		// Main colors get equal weight, region colors get reduced weight.
+		totalColors := numMainColors + numRegionColors
+		mainWeight := MainColorWeightRatio / float64(numMainColors)
+		regionWeight := RegionWeightFactor / float64(numRegionColors)
+
+		weights := make([]float64, totalColors)
+		for i := range numMainColors {
+			weights[i] = mainWeight
+		}
+		for i := numMainColors; i < totalColors; i++ {
+			weights[i] = regionWeight
 		}
 
-		// Extract colors from regions.
-		regionPalette, err := sampler.Extract(img, config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to extract region colors: %w", err)
+		palette.Colors = append(palette.Colors, regionPalette.Colors...)
+		palette.Weights = weights
+	}
+
+	// Adjust role hints indices to account for the merged colors.
+	if regionPalette.RoleHints != nil {
+		if palette.RoleHints == nil {
+			palette.RoleHints = make(map[colour.Role]int)
 		}
-
-		// Merge the palettes with adjusted weights.
-		// Edge colors get reduced weight to avoid over-representing them.
-		numMainColors := len(palette.Colors)
-		numRegionColors := len(regionPalette.Colors)
-
-		// Calculate weight for region colors using the configured factor.
-		if palette.Weights != nil {
-			// Calculate average weight per palette color.
-			avgPaletteWeight := 1.0 / float64(numMainColors)
-			regionWeightPerColor := avgPaletteWeight * RegionWeightFactor / float64(numRegionColors)
-
-			// Create region weights.
-			regionWeights := make([]float64, numRegionColors)
-			for i := range regionWeights {
-				regionWeights[i] = regionWeightPerColor
-			}
-
-			// Normalize main palette weights to leave room for region weights.
-			totalRegionWeight := regionWeightPerColor * float64(numRegionColors)
-			mainWeightMultiplier := (1.0 - totalRegionWeight)
-
-			adjustedMainWeights := make([]float64, numMainColors)
-			for i, w := range palette.Weights {
-				adjustedMainWeights[i] = w * mainWeightMultiplier
-			}
-
-			// Merge colors and weights.
-			palette.Colors = append(palette.Colors, regionPalette.Colors...)
-			adjustedMainWeights = append(adjustedMainWeights, regionWeights...)
-			palette.Weights = adjustedMainWeights
-		} else {
-			// No weights in main palette, create them.
-			// Main colors get equal weight, region colors get reduced weight.
-			totalColors := numMainColors + numRegionColors
-			mainWeight := MainColorWeightRatio / float64(numMainColors)
-			regionWeight := RegionWeightFactor / float64(numRegionColors)
-
-			weights := make([]float64, totalColors)
-			for i := range numMainColors {
-				weights[i] = mainWeight
-			}
-			for i := numMainColors; i < totalColors; i++ {
-				weights[i] = regionWeight
-			}
-
-			palette.Colors = append(palette.Colors, regionPalette.Colors...)
-			palette.Weights = weights
-		}
-
-		// Adjust role hints indices to account for the merged colors.
-		if regionPalette.RoleHints != nil {
-			if palette.RoleHints == nil {
-				palette.RoleHints = make(map[colour.Role]int)
-			}
-			offset := numMainColors
-			for role, index := range regionPalette.RoleHints {
-				palette.RoleHints[role] = index + offset
-			}
+		offset := numMainColors
+		for role, index := range regionPalette.RoleHints {
+			palette.RoleHints[role] = index + offset
 		}
 	}
 
