@@ -38,6 +38,10 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
+const (
+	versionUnknown = "unknown"
+)
+
 // Config holds plugin configuration.
 type Config struct {
 	// DisabledPlugins is a list of plugin names to disable.
@@ -457,10 +461,10 @@ func (p *ExternalInputPlugin) Description() string {
 func (p *ExternalInputPlugin) Version() string {
 	info, err := queryPluginInfo(p.path)
 	if err != nil {
-		return "unknown"
+		return versionUnknown
 	}
 	if info.Version == "" {
-		return "unknown"
+		return versionUnknown
 	}
 	return info.Version
 }
@@ -627,10 +631,10 @@ func (p *ExternalOutputPlugin) Description() string {
 func (p *ExternalOutputPlugin) Version() string {
 	info, err := queryPluginInfo(p.path)
 	if err != nil {
-		return "unknown"
+		return versionUnknown
 	}
 	if info.Version == "" {
-		return "unknown"
+		return versionUnknown
 	}
 	return info.Version
 }

@@ -23,7 +23,7 @@ func createMutedVariant(cc CategorisedColour, adjustment float64, themeType Them
 	h, s, l := rgbToHSL(cc.RGB)
 
 	// Luminance adjustment based on theme and role.
-	newLum := l
+	var newLum float64
 	if isBackground {
 		if themeType == ThemeDark {
 			// Dark background: make slightly lighter.

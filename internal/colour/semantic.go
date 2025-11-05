@@ -53,27 +53,28 @@ func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []Categor
 			continue
 		}
 
-		if (h >= 0 && h < 30) || h >= 330 {
+		switch {
+		case (h >= 0 && h < 30) || h >= 330:
 			// Red - danger.
 			if danger == nil || cc.Saturation > danger.Saturation {
 				danger = cc
 			}
-		} else if h >= 30 && h < 60 {
+		case h >= 30 && h < 60:
 			// Orange/Yellow - warning.
 			if warning == nil || cc.Saturation > warning.Saturation {
 				warning = cc
 			}
-		} else if h >= 90 && h < 150 {
+		case h >= 90 && h < 150:
 			// Green - success.
 			if success == nil || cc.Saturation > success.Saturation {
 				success = cc
 			}
-		} else if h >= 180 && h < 240 {
+		case h >= 180 && h < 240:
 			// Blue - info.
 			if info == nil || cc.Saturation > info.Saturation {
 				info = cc
 			}
-		} else if h >= 240 && h < 330 {
+		case h >= 240 && h < 330:
 			// Cyan/Purple - notification.
 			if notification == nil || cc.Saturation > notification.Saturation {
 				notification = cc
@@ -143,12 +144,6 @@ func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []Categor
 	}
 }
 
-// assignSemanticRoles assigns semantic roles (danger, warning, success, etc.) based on hue.
-// This is a wrapper that calls assignSemanticRolesWithHints with no hints applied.
-func assignSemanticRoles(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool) {
-	assignSemanticRolesWithHints(palette, accents, usedForSemantic, make(map[ColourRole]bool))
-}
-
 // enhanceSemanticColour boosts saturation and adjusts lightness for better visibility.
 func enhanceSemanticColour(cc CategorisedColour, role ColourRole, themeType ThemeType, hasBg bool, bg CategorisedColour) CategorisedColour {
 	h, s, l := rgbToHSL(cc.RGB)
@@ -159,7 +154,7 @@ func enhanceSemanticColour(cc CategorisedColour, role ColourRole, themeType Them
 	}
 
 	// Adjust lightness based on theme.
-	targetLightness := 0.5 // Default middle ground
+	var targetLightness float64
 	if themeType == ThemeDark {
 		// Dark theme: make colors lighter for visibility.
 		targetLightness = 0.60
@@ -169,11 +164,12 @@ func enhanceSemanticColour(cc CategorisedColour, role ColourRole, themeType Them
 	}
 
 	// Ensure within bounds.
-	if l < MinSemanticLightness {
+	switch {
+	case l < MinSemanticLightness:
 		l = targetLightness
-	} else if l > MaxSemanticLightness {
+	case l > MaxSemanticLightness:
 		l = targetLightness
-	} else {
+	default:
 		// Blend towards target.
 		l = (l + targetLightness) / 2.0
 	}
@@ -220,7 +216,7 @@ func generateFallbackSemanticColour(role ColourRole, themeType ThemeType, hasBg 
 
 	// Set saturation and lightness based on theme.
 	saturation := 0.75 // Vibrant
-	lightness := 0.5
+	var lightness float64
 
 	if themeType == ThemeDark {
 		lightness = 0.60 // Lighter for dark backgrounds

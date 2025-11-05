@@ -89,7 +89,10 @@ func (p *Plugin) Validate() error {
 
 // isValidPID validates that a PID string contains only digits.
 func isValidPID(pid string) bool {
-	matched, _ := regexp.MatchString(`^\d+$`, pid)
+	matched, err := regexp.MatchString(`^\d+$`, pid)
+	if err != nil {
+		return false
+	}
 	return matched
 }
 

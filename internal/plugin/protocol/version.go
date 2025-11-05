@@ -9,10 +9,10 @@ import (
 
 const (
 	// ProtocolVersion defines the current plugin API version.
-	// Format: MAJOR.MINOR.PATCH
-	// - Increment MAJOR for breaking changes (incompatible API changes)
-	// - Increment MINOR for backward-compatible additions
-	// - Increment PATCH for backward-compatible bug fixes
+	// Format: MAJOR.MINOR.PATCH.
+	// - Increment MAJOR for breaking changes (incompatible API changes).
+	// - Increment MINOR for backward-compatible additions.
+	// - Increment PATCH for backward-compatible bug fixes.
 	ProtocolVersion = "0.0.1"
 
 	// MinCompatibleVersion is the oldest protocol version this tinct version can work with.
@@ -58,9 +58,9 @@ func (v Version) String() string {
 
 // IsCompatible checks if a plugin protocol version is compatible with the current tinct version.
 // Rules:
-// - Major version must match exactly (breaking changes)
-// - Minor version can be higher (backward compatible)
-// - Patch version can be any value (bug fixes only)
+// - Major version must match exactly (breaking changes).
+// - Minor version can be higher (backward compatible).
+// - Patch version can be any value (bug fixes only).
 func IsCompatible(pluginVersionStr string) (bool, error) {
 	pluginVersion, err := Parse(pluginVersionStr)
 	if err != nil {
@@ -110,6 +110,10 @@ func IsCompatible(pluginVersionStr string) (bool, error) {
 
 // GetCurrentVersion returns the current protocol version as a Version struct.
 func GetCurrentVersion() Version {
-	v, _ := Parse(ProtocolVersion) // Should never error
+	v, err := Parse(ProtocolVersion)
+	if err != nil {
+		// This should never happen since ProtocolVersion is a constant with valid format.
+		panic(fmt.Sprintf("invalid ProtocolVersion constant: %v", err))
+	}
 	return v
 }

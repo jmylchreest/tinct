@@ -529,7 +529,7 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	result += "All Colours (sorted by luminance):\n"
 
 	// Build table data.
-	var rows [][]string
+	rows := make([][]string, 0, len(cp.AllColours))
 
 	// Header row (added empty first column for marker).
 	header := []string{"", "Preview", "Role", "Index", "Hex", "Luminance", "Saturation", "Weight", "Source"}
@@ -592,14 +592,14 @@ func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
 	}
 
 	// Format header.
-	var headerParts []string
+	headerParts := make([]string, 0, len(header))
 	for i, h := range header {
 		headerParts = append(headerParts, padRight(h, colWidths[i]))
 	}
 	result += "  " + strings.Join(headerParts, "  ") + "\n"
 
 	// Format separator.
-	var sepParts []string
+	sepParts := make([]string, 0, len(colWidths))
 	for _, w := range colWidths {
 		sepParts = append(sepParts, strings.Repeat("-", w))
 	}

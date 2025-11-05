@@ -295,8 +295,10 @@ func (m *Manager) matchesFilter(plugin *Plugin, filter SearchFilter) bool {
 	// Query match (name or description).
 	if filter.Query != "" {
 		query := strings.ToLower(filter.Query)
+
 		if !strings.Contains(strings.ToLower(plugin.Name), query) &&
 			!strings.Contains(strings.ToLower(plugin.Description), query) {
+
 			return false
 		}
 	}

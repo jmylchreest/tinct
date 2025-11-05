@@ -97,8 +97,10 @@ func ValidatePluginPath(pluginPath, baseDir string) error {
 	}
 
 	// Ensure plugin path is within base directory
+
 	if !strings.HasPrefix(absPluginPath, absBaseDir+string(filepath.Separator)) &&
 		absPluginPath != absBaseDir {
+
 		return fmt.Errorf("plugin path must be within plugin directory (attempted path traversal)")
 	}
 
@@ -127,6 +129,7 @@ func ValidateFilePath(filePath, baseDir string) error {
 
 	if !strings.HasPrefix(cleanFinal, cleanBase+string(filepath.Separator)) &&
 		cleanFinal != cleanBase {
+
 		return fmt.Errorf("file path would escape base directory")
 	}
 
@@ -216,6 +219,7 @@ func isLocalOrPrivateHost(host string) bool {
 		strings.HasPrefix(host, "172.30.") ||
 		strings.HasPrefix(host, "172.31.") ||
 		strings.HasPrefix(host, "169.254.") {
+
 		return true
 	}
 

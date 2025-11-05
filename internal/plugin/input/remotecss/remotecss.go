@@ -394,7 +394,7 @@ func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.P
 		return nil, fmt.Errorf("no colors extracted")
 	}
 
-	var paletteColors []colour.RGB
+	paletteColors := make([]colour.RGB, 0, len(colors))
 	var roleHints map[colour.ColourRole]int
 
 	// First, add ALL colors to the palette.

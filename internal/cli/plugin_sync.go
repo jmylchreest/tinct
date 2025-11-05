@@ -16,6 +16,11 @@ import (
 	"github.com/jmylchreest/tinct/internal/security"
 )
 
+const (
+	statusMissing  = "missing"
+	statusMismatch = "mismatch"
+)
+
 var (
 	syncForce       bool
 	syncVerify      bool
@@ -156,11 +161,12 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 		}
 
 		// Reinstall from source.
-		if meta.Source != nil {
+		switch {
+		case meta.Source != nil:
 			fmt.Printf("  → Installing from %s\n", formatPluginSource(meta.Source))
-		} else if meta.SourceLegacy != "" {
+		case meta.SourceLegacy != "":
 			fmt.Printf("  → Installing from %s\n", meta.SourceLegacy)
-		} else {
+		default:
 			fmt.Printf("   No source information available\n")
 			stats.Failed++
 			continue
@@ -221,7 +227,7 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 		}
 
 		if _, err := os.Stat(meta.Path); os.IsNotExist(err) {
-			result.Status = "missing"
+			result.Status = statusMissing
 			results = append(results, result)
 			continue
 		}
@@ -229,7 +235,7 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 		// Verify checksum if available.
 		if meta.Source != nil && meta.Source.Checksum != "" {
 			if err := verifyPluginChecksum(meta.Path, meta.Source.Checksum); err != nil {
-				result.Status = "mismatch"
+				result.Status = statusMismatch
 				result.Error = err
 				result.Expected = meta.Source.Checksum
 
@@ -253,7 +259,7 @@ func runPluginVerify(cmd *cobra.Command, args []string) error {
 
 	// Return error if any mismatches.
 	for _, result := range results {
-		if result.Status == "mismatch" || result.Status == "missing" {
+		if result.Status == statusMismatch || result.Status == statusMissing {
 			return fmt.Errorf("\nverification failed. Run 'tinct plugins sync --force' to reinstall plugins")
 		}
 	}
@@ -665,7 +671,7 @@ func printVerifyResults(results []repository.VerifyResult) {
 			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Checksum: %s [VALID]\n", result.Expected)
 			validCount++
-		case "mismatch":
+		case statusMismatch:
 			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Checksum: [MISMATCH]\n")
 			if result.Expected != "" {
@@ -675,7 +681,7 @@ func printVerifyResults(results []repository.VerifyResult) {
 				fmt.Printf("  Got: %s\n", result.Got)
 			}
 			mismatchCount++
-		case "missing":
+		case statusMissing:
 			fmt.Printf(" %s\n", result.Name)
 			fmt.Printf("  Status: [MISSING]\n")
 			missingCount++

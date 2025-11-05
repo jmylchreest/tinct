@@ -13,6 +13,10 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 )
 
+const (
+	themeTypeAuto = "auto"
+)
+
 var (
 	// Extract command flags.
 	extractInputPlugin string
@@ -142,11 +146,11 @@ func runExtract(cmd *cobra.Command, args []string) error {
 		themeType = colour.ThemeDark
 	case "light":
 		themeType = colour.ThemeLight
-	case "auto":
+	case themeTypeAuto:
 		// Check if plugin provides a theme hint (optional).
 		if hinter, ok := inputPlugin.(input.ThemeHinter); ok {
 			hint := hinter.ThemeHint()
-			if verbose && hint != "" && hint != "auto" {
+			if verbose && hint != "" && hint != themeTypeAuto {
 				fmt.Fprintf(os.Stderr, "Plugin suggests theme: %s\n", hint)
 			}
 			// Plugin hints are advisory only - we let the categorizer decide.

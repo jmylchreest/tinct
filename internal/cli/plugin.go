@@ -26,6 +26,11 @@ import (
 const (
 	// PluginLockFile is the name of the plugin lock file.
 	PluginLockFile = ".tinct-plugins.json"
+
+	// Plugin source types.
+	sourceTypeRepository = "repository"
+	sourceTypeHTTP       = "http"
+	sourceTypeLocal      = "local"
 )
 
 // PluginLock represents the plugin lock file structure.
@@ -76,7 +81,6 @@ var (
 	pluginType     string
 	pluginForce    bool
 	pluginClear    bool
-	pluginVerify   bool
 	pluginYes      bool
 )
 
@@ -262,7 +266,10 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		source      string
 	}
 
-	var allPlugins []pluginInfo
+	// Pre-allocate capacity for all plugins (input + output)
+	inputPlugins := mgr.AllInputPlugins()
+	outputPlugins := mgr.AllOutputPlugins()
+	allPlugins := make([]pluginInfo, 0, len(inputPlugins)+len(outputPlugins))
 	seenPlugins := make(map[string]bool)
 
 	// Helper to determine plugin status
@@ -272,7 +279,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		// Check if explicitly disabled
 		if lock != nil {
 			for _, disabled := range lock.DisabledPlugins {
-				if disabled == fullName || disabled == pluginName || disabled == "all" {
+				if disabled == fullName || disabled == pluginName || disabled == pluginTypeAll {
 					return "disabled"
 				}
 			}
@@ -281,7 +288,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		// Check if explicitly enabled
 		if lock != nil && len(lock.EnabledPlugins) > 0 {
 			for _, enabled := range lock.EnabledPlugins {
-				if enabled == fullName || enabled == pluginName || enabled == "all" {
+				if enabled == fullName || enabled == pluginName || enabled == pluginTypeAll {
 					return "enabled"
 				}
 			}
@@ -294,7 +301,6 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add input plugins.
-	inputPlugins := mgr.AllInputPlugins()
 	for name, plugin := range inputPlugins {
 		status := getPluginStatus("input", name)
 		fullName := fmt.Sprintf("input:%s", name)
@@ -335,7 +341,6 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add output plugins.
-	outputPlugins := mgr.AllOutputPlugins()
 	for name, plugin := range outputPlugins {
 		status := getPluginStatus("output", name)
 		fullName := fmt.Sprintf("output:%s", name)
@@ -343,7 +348,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 		isExternal := false
 		if lock != nil && lock.ExternalPlugins != nil {
 			for _, meta := range lock.ExternalPlugins {
-				if meta.Name == name && meta.Type == "output" {
+				if meta.Name == name && meta.Type == pluginTypeOutput {
 					isExternal = true
 					break
 				}
@@ -478,7 +483,7 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 	}
 
 	// Handle "all" pseudo-plugin.
-	if pluginName == "all" {
+	if pluginName == pluginTypeAll {
 		if pluginClear {
 			// Just remove "all" from disabled list.
 			lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all", "all")
@@ -1110,11 +1115,11 @@ func formatPluginSourceString(source *repository.PluginSource) string {
 		return ""
 	}
 	switch source.Type {
-	case "repository":
+	case sourceTypeRepository:
 		return fmt.Sprintf("repo:%s/%s@%s", source.Repository, source.Plugin, source.Version)
-	case "http":
+	case sourceTypeHTTP:
 		return source.URL
-	case "local":
+	case sourceTypeLocal:
 		return source.OriginalPath
 	default:
 		return source.Type
@@ -1127,9 +1132,9 @@ func installPluginFromSource(source, pluginName, pluginDir string, verbose bool)
 	sourceType, sourceInfo := parsePluginSource(source)
 
 	switch sourceType {
-	case "local":
+	case sourceTypeLocal:
 		return installFromLocal(sourceInfo, pluginDir, verbose)
-	case "http":
+	case sourceTypeHTTP:
 		return installFromHTTP(sourceInfo, pluginName, pluginDir, verbose)
 	case "git":
 		return installFromGit(sourceInfo, pluginName, pluginDir, verbose)
@@ -1180,12 +1185,12 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 		} else {
 			info.URL = source
 		}
-		return "http", info
+		return sourceTypeHTTP, info
 	}
 
 	// Local file.
 	info.FilePath = source
-	return "local", info
+	return sourceTypeLocal, info
 }
 
 // installFromLocal installs a plugin from a local file.
@@ -1359,12 +1364,17 @@ func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (
 			if err != nil {
 				return "", fmt.Errorf("failed to create plugin file: %w", err)
 			}
-			defer out.Close()
 
 			// Limit decompression size to prevent zip bombs (100MB limit for plugins).
 			limitedReader := security.NewLimitedReader(tr, 100*1024*1024)
-			if _, err := io.Copy(out, limitedReader); err != nil {
-				return "", fmt.Errorf("failed to extract plugin: %w", err)
+			_, copyErr := io.Copy(out, limitedReader)
+			closeErr := out.Close() // Close immediately instead of defer
+
+			if copyErr != nil {
+				return "", fmt.Errorf("failed to extract plugin: %w", copyErr)
+			}
+			if closeErr != nil {
+				return "", fmt.Errorf("failed to close plugin file: %w", closeErr)
 			}
 
 			// Make executable.

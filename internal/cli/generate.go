@@ -20,6 +20,11 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
+const (
+	pluginTypeAll    = "all"
+	pluginTypeOutput = "output"
+)
+
 // isValidPath checks if a path is safe to use in commands.
 func isValidPath(path string) bool {
 	// Reject paths with suspicious characters
@@ -58,7 +63,7 @@ func init() {
 	_ = generateCmd.MarkFlagRequired("input") // Error only occurs if flag doesn't exist, which is impossible here
 
 	// Output plugin selection.
-	generateCmd.Flags().StringSliceVarP(&generateOutputs, "outputs", "o", []string{"all"}, "Output plugins (comma-separated or 'all')")
+	generateCmd.Flags().StringSliceVarP(&generateOutputs, "outputs", "o", []string{pluginTypeAll}, "Output plugins (comma-separated or 'all')")
 
 	// General options.
 	generateCmd.Flags().BoolVar(&generateDryRun, "dry-run", false, "Preview without writing files")
@@ -255,7 +260,7 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 
 	// Determine which output plugins to run.
 	var outputPlugins []output.Plugin
-	if len(generateOutputs) == 1 && generateOutputs[0] == "all" {
+	if len(generateOutputs) == 1 && generateOutputs[0] == pluginTypeAll {
 		// Run all enabled plugins (filtered by manager).
 		for _, plugin := range sharedPluginManager.FilterOutputPlugins() {
 			outputPlugins = append(outputPlugins, plugin)
@@ -645,7 +650,7 @@ func setPluginArgs(mgr *manager.Manager, pluginName, pluginType, argsJSON string
 	}
 
 	// Get the plugin and set args based on type.
-	if pluginType == "output" {
+	if pluginType == pluginTypeOutput {
 		plugin, ok := mgr.GetOutputPlugin(pluginName)
 		if !ok {
 			return fmt.Errorf("plugin not found")
@@ -664,7 +669,7 @@ func setPluginArgs(mgr *manager.Manager, pluginName, pluginType, argsJSON string
 // setPluginDryRun sets dry-run mode for a plugin.
 func setPluginDryRun(mgr *manager.Manager, pluginName, pluginType string, dryRun bool) error {
 	// Get the plugin and set dry-run based on type.
-	if pluginType == "output" {
+	if pluginType == pluginTypeOutput {
 		plugin, ok := mgr.GetOutputPlugin(pluginName)
 		if !ok {
 			return fmt.Errorf("plugin not found")

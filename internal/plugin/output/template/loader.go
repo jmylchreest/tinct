@@ -167,7 +167,7 @@ func (l *Loader) DumpAllTemplates(force bool) ([]string, error) {
 		return nil, err
 	}
 
-	var dumped []string
+	dumped := make([]string, 0, len(templates))
 	var errors []string
 
 	for _, tmpl := range templates {

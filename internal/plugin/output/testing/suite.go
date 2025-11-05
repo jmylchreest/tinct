@@ -145,12 +145,6 @@ func TestPreExecuteHook(t *testing.T, p any, expectedBinaryName string) {
 
 // TestEmbeddedTemplates tests that embedded templates are accessible.
 func TestEmbeddedTemplates(t *testing.T, _ any, _ []string) {
-	type hasEmbedded interface {
-		GetEmbeddedTemplates() interface {
-			ReadDir(string) ([]interface{ Name() string }, error)
-		}
-	}
-
 	// This is a bit awkward because embed.FS isn't directly testable.
 	// Skip this test for now - it's plugin-specific.
 	t.Skip("Template testing should be done per-plugin due to embed.FS limitations")

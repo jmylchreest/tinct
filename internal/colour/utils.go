@@ -201,41 +201,6 @@ func sortByLuminance(colours []CategorisedColour, themeType ThemeType) {
 	}
 }
 
-// sortBySaturation sorts colours by saturation (most vibrant first).
-func sortBySaturation(colours []CategorisedColour) {
-	// Simple bubble sort - good enough for small arrays.
-	n := len(colours)
-	for i := 0; i < n-1; i++ {
-		for j := 0; j < n-i-1; j++ {
-			if colours[j].Saturation < colours[j+1].Saturation {
-				colours[j], colours[j+1] = colours[j+1], colours[j]
-			}
-		}
-	}
-}
-
-// sortByContrast sorts colours by contrast ratio with background (highest to lowest).
-func sortByContrast(colours []CategorisedColour, bg CategorisedColour) {
-	n := len(colours)
-	for i := 0; i < n-1; i++ {
-		for j := 0; j < n-i-1; j++ {
-			contrast1 := ContrastRatio(colours[j].Colour, bg.Colour)
-			contrast2 := ContrastRatio(colours[j+1].Colour, bg.Colour)
-			if contrast1 < contrast2 {
-				colours[j], colours[j+1] = colours[j+1], colours[j]
-			}
-		}
-	}
-}
-
-// minInt returns the minimum of two integers.
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // RGBToColor converts an RGB value to a color.Color (RGBA).
 func RGBToColor(rgb RGB) color.Color {
 	return color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
