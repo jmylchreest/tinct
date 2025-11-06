@@ -88,3 +88,4 @@ mem.prof
 
 # Generated files
 completions/
+cosign.key

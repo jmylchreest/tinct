@@ -13,6 +13,8 @@ before:
     - go mod tidy
     # Prepare plugin dependencies
     - bash scripts/prepare-plugins.sh
+    # Generate shell completions
+    - bash scripts/generate-completions.sh
     # Run tests before building (linting happens separately in CI)
     - go test ./...
 
@@ -215,7 +217,7 @@ builds:
 # Archive configuration
 archives:
   - id: tinct-archive
-    builds:
+    ids:
       - tinct
     name_template: >-
       {{ .ProjectName }}_
@@ -238,7 +240,7 @@ archives:
 
   # Plugin archives - separate downloadable packages
   - id: plugin-random-archive
-    builds:
+    ids:
       - plugin-random
     name_template: >-
       tinct-plugin-random_
@@ -261,7 +263,7 @@ archives:
         dst: LICENSE
 
   - id: plugin-wob-archive
-    builds:
+    ids:
       - plugin-wob
     name_template: >-
       tinct-plugin-wob_
@@ -281,7 +283,7 @@ archives:
         dst: LICENSE
 
   - id: plugin-templater-archive
-    builds:
+    ids:
       - plugin-templater
     name_template: >-
       tinct-plugin-templater_
@@ -310,7 +312,7 @@ archives:
         dst: LICENSE
 
   - id: plugin-dunstify-archive
-    builds:
+    ids:
       - plugin-dunstify
     name_template: >-
       tinct-plugin-dunstify_
@@ -384,10 +386,12 @@ changelog:
       order: 999
 
 # Package managers
-# Note: 'brews' is deprecated in favor of 'homebrew' but still works
-# We use 'brews' for backward compatibility
-brews:
-  - repository:
+# Migrated from deprecated 'brews' to 'homebrew_casks' (v2.10+)
+homebrew_casks:
+  - name: tinct
+    ids:
+      - tinct-archive
+    repository:
       owner: jmylchreest
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
@@ -396,21 +400,30 @@ brews:
       name: goreleaserbot
       email: bot@goreleaser.com
 
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/jmylchreest/tinct"
     description: "Generate colour palettes from images and apply system-wide theming"
     license: MIT
 
-    install: |
-      bin.install "tinct"
+    # Cask installation (artifacts are automatically installed)
+    # Shell completions need to be handled via post-install hooks
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            # Install shell completions
+            bash_completion = "#{Dir.home}/.bash_completion.d"
+            zsh_completion = "#{Dir.home}/.zsh/completion"
+            fish_completion = "#{Dir.home}/.config/fish/completions"
 
-      # Install shell completions
-      bash_completion.install "completions/tinct.bash" => "tinct"
-      zsh_completion.install "completions/_tinct" => "_tinct"
-      fish_completion.install "completions/tinct.fish"
+            FileUtils.mkdir_p(bash_completion) rescue nil
+            FileUtils.mkdir_p(zsh_completion) rescue nil
+            FileUtils.mkdir_p(fish_completion) rescue nil
 
-    test: |
-      system "#{bin}/tinct", "version"
+            FileUtils.cp("#{staged_path}/completions/tinct.bash", "#{bash_completion}/tinct") rescue nil
+            FileUtils.cp("#{staged_path}/completions/_tinct", "#{zsh_completion}/_tinct") rescue nil
+            FileUtils.cp("#{staged_path}/completions/tinct.fish", "#{fish_completion}/tinct.fish") rescue nil
+          end
 
 # AUR (Arch User Repository) packages
 aurs:
@@ -467,9 +480,6 @@ nfpms:
     contents:
       - src: ./LICENSE
         dst: /usr/share/licenses/tinct/LICENSE
-
-      - src: ./configs/tinct.yaml
-        dst: /usr/share/tinct/tinct.yaml.example
 
       # Completions
       - src: ./completions/tinct.bash
@@ -572,18 +582,38 @@ sboms:
     artifacts: archive
   - id: source
     artifacts: source
-
-# Signs artifacts
+# Signs artifacts using cosign (v3.0+)
+# Supports both key-based and keyless signing:
+# - If cosign.key exists: Uses key-based signing
+# - Otherwise: Uses keyless signing (interactive or CI OIDC)
+#
+# To use key-based signing:
+#   cosign generate-key-pair  # Creates cosign.key and cosign.pub
+#   echo "cosign.key" >> .gitignore  # Keep private key local
+#   export COSIGN_PASSWORD="your-password"  # Set password in environment
+#
+# For CI/CD with key-based signing, set these secrets:
+#   COSIGN_PRIVATE_KEY: base64-encoded cosign.key content
+#   COSIGN_PASSWORD: key password
+#
 signs:
-  - cmd: cosign
-    env:
-      - COSIGN_EXPERIMENTAL=1
-    certificate: "${artifact}.pem"
+  - cmd: bash
+    signature: "${artifact}.sig"
     args:
-      - sign-blob
-      - "--output-certificate=${certificate}"
-      - "--output-signature=${signature}"
-      - "${artifact}"
-      - "--yes"
+      - -c
+      - |
+        set -e
+        # Inherit COSIGN_PASSWORD from environment if set
+        if [ -f cosign.key ]; then
+          # Key-based signing
+          echo "Signing with key: ${artifact}"
+          # Cosign v3+ requires --bundle for all operations
+          cosign sign-blob --key=cosign.key --bundle="${signature}" "${artifact}" --yes
+        else
+          # Keyless signing (interactive locally, OIDC in CI)
+          echo "Signing keyless: ${artifact}"
+          export COSIGN_EXPERIMENTAL=1
+          cosign sign-blob --bundle="${signature}" "${artifact}" --yes
+        fi
     artifacts: all
     output: true
