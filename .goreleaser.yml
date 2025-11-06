@@ -18,6 +18,9 @@ before:
     # Run tests before building (linting happens separately in CI)
     - go test ./...
 
+# ============================================================================
+# BUILD CONFIGURATION
+# ============================================================================
 # Build configuration
 builds:
   - id: tinct
@@ -66,6 +69,10 @@ builds:
     # Ensure we use Go 1.25+
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+
+  # --------------------------------------------------------------------------
+  # INPUT PLUGINS
+  # --------------------------------------------------------------------------
   # Plugin: random (Go)
   - id: plugin-random
     main: .
@@ -110,6 +117,10 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+
+  # --------------------------------------------------------------------------
+  # OUTPUT PLUGINS
+  # --------------------------------------------------------------------------
   # Plugin: wob (Go)
   - id: plugin-wob
     main: .
@@ -214,6 +225,10 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+
+# ============================================================================
+# ARCHIVES
+# ============================================================================
 # Archive configuration
 archives:
   - id: tinct-archive
@@ -351,6 +366,10 @@ archives:
     # Only build once (platform-independent scripts)
     meta: true
 
+
+# ============================================================================
+# CHECKSUMS & SNAPSHOTS
+# ============================================================================
 # Checksums
 checksum:
   name_template: "checksums.txt"
@@ -361,6 +380,10 @@ checksum:
 snapshot:
   version_template: "{{ incpatch .Version }}-{{ .ShortCommit }}"
 
+
+# ============================================================================
+# CHANGELOG
+# ============================================================================
 # Changelog generation
 changelog:
   sort: asc
@@ -385,6 +408,10 @@ changelog:
     - title: Others
       order: 999
 
+
+# ============================================================================
+# PACKAGE MANAGERS
+# ============================================================================
 # Package managers
 # Migrated from deprecated 'brews' to 'homebrew_casks' (v2.10+)
 homebrew_casks:
@@ -501,6 +528,10 @@ nfpms:
       summary: Colour palette generator with system-wide theming
       group: Applications/System
 
+
+# ============================================================================
+# GITHUB RELEASE
+# ============================================================================
 # GitHub release
 release:
   github:
@@ -563,6 +594,10 @@ release:
     -  [Report Issues](https://github.com/jmylchreest/tinct/issues)
     -  [Discussions](https://github.com/jmylchreest/tinct/discussions)
 
+
+# ============================================================================
+# ANNOUNCEMENTS
+# ============================================================================
 # Announce release
 announce:
   skip: "{{gt .Patch 0}}"
@@ -576,6 +611,10 @@ announce:
 
       Download: {{.ReleaseURL}}
 
+
+# ============================================================================
+# SBOMS & SIGNING
+# ============================================================================
 # SBOMs (Software Bill of Materials)
 sboms:
   - id: archive
