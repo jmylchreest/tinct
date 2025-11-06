@@ -29,9 +29,10 @@ tinct/
 ├── .goreleaser.yml             # GoReleaser configuration
 ├── .golangci.yml               # Linter configuration
 ├── Dockerfile                   # Multi-stage container build
-├── DEVELOPMENT.md              # Development guidelines (LLM instructions)
+├── docs/
+│   ├── DEVELOPMENT.md          # Development guidelines (LLM instructions)
 ├── README.md                    # User documentation
-└── SETUP.md                     # This file
+│   └── SETUP.md                 # This file
 ```
 
 ## Configuration Files
@@ -219,11 +220,11 @@ Hooks provide lifecycle management:
 - **Post-Execution**: Service reloads, wallpaper setting, notifications
 - **On Error**: Rollback, cleanup, logging
 
-See `DEVELOPMENT.md` for implementation details.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for implementation details.
 
 ## Documentation
 
-- **[DEVELOPMENT.md](DEVELOPMENT.md)**: Comprehensive development guidelines
+- **[Development Guide](DEVELOPMENT.md)**: Comprehensive development guidelines
   - Go 1.25+ features and best practices
   - SOLID principles in Go
   - Plugin development guide

@@ -78,9 +78,9 @@ tinct extract --categorise --preview wallpaper.jpg
 - Use ambient edge/corner extraction to sync bias lighting with your wallpaper
 - Support for any device with a JSON/HTTP API or command-line interface
 
-See [PLUGINS-WISHLIST.md](PLUGINS-WISHLIST.md) for planned plugins and [External Plugins Guide](docs/external-plugins.md) for creating device controllers.
+See [Plugin Wishlist](docs/PLUGINS-WISHLIST.md) for planned plugins and [External Plugins Guide](docs/external-plugins.md) for creating device controllers.
 
-**Note on Plugin Templates:** The current application plugin templates are based on online examples and personal configurations. They may benefit from refactoring for broader adoption. Contributions are significantly welcome, especially for plugins that make sense to be shipped and managed as part of Tinct. If you have expertise with any of these applications or want to add support for new ones, please see [Contributing](DEVELOPMENT.md).
+**Note on Plugin Templates:** The current application plugin templates are based on online examples and personal configurations. They may benefit from refactoring for broader adoption. Contributions are significantly welcome, especially for plugins that make sense to be shipped and managed as part of Tinct. If you have expertise with any of these applications or want to add support for new ones, please see [Contributing](docs/DEVELOPMENT.md).
 
 ## Template Functions Reference
 
@@ -260,6 +260,148 @@ tinct plugins sync
 export TINCT_ENABLED_PLUGINS="output:hyprland,output:kitty"
 ```
 
+### Plugin Lock File Configuration
+
+Tinct uses a lock file (`.tinct-plugins.json`) to manage plugin state and configuration. The lock file is searched in the following order:
+1. Current directory (`./.tinct-plugins.json`)
+2. Home directory (`~/.tinct-plugins.json`)
+
+**Lock File Structure:**
+
+```json
+{
+  "version": "1",
+  "enabled_plugins": [
+    "input:image",
+    "output:hyprland",
+    "output:kitty"
+  ],
+  "disabled_plugins": [
+    "output:waybar"
+  ],
+  "external_plugins": {
+    "notify-send": {
+      "name": "notify-send",
+      "path": "/home/user/.local/share/tinct/plugins/notify-send.py",
+      "type": "output",
+      "version": "1.0.0",
+      "description": "Send desktop notifications",
+      "source": {
+        "type": "local",
+        "path": "./contrib/plugins/output/notify-send.py"
+      },
+      "installed_at": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+**Configuration Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | string | Lock file format version |
+| `enabled_plugins` | array | List of explicitly enabled plugins (format: `type:name`) |
+| `disabled_plugins` | array | List of explicitly disabled plugins (format: `type:name`) |
+| `external_plugins` | object | Map of external plugin names to their metadata |
+
+**External Plugin Metadata:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | ✓ | Plugin identifier (from `--plugin-info`) |
+| `path` | ✓ | Absolute path to plugin executable |
+| `type` | ✓ | Plugin type: `input` or `output` |
+| `version` |  | Plugin version string |
+| `description` |  | Human-readable description |
+| `source` |  | Structured source information (type, path, url, etc.) |
+| `installed_at` |  | ISO 8601 timestamp of installation |
+| `config` |  | Plugin-specific configuration (see below) |
+
+**Priority Order:**
+1. Lock file settings (highest priority)
+2. Environment variables (`TINCT_ENABLED_PLUGINS`, `TINCT_DISABLED_PLUGINS`)
+3. Plugin defaults (lowest priority)
+
+### Plugin-Specific Configuration
+
+Plugins can store configuration in the lock file under the `config` field. This configuration is applied automatically when the plugin is used.
+
+**Image Plugin Configuration:**
+
+The `image` input plugin supports deterministic k-means clustering via seed configuration:
+
+```json
+{
+  "external_plugins": {
+    "image": {
+      "name": "image",
+      "type": "input",
+      "config": {
+        "seed": {
+          "mode": "content",
+          "value": null
+        }
+      }
+    }
+  }
+}
+```
+
+**Seed Modes:**
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `content` | Hash of image pixel data (default) | Same image → same colors (content-based) |
+| `filepath` | Hash of absolute file path | Same location → same colors (path-based) |
+| `manual` | User-provided seed value | Reproducible results with custom seed |
+| `random` | Non-deterministic random seed | Different colors each run |
+
+**Example: Manual Seed Configuration**
+
+```json
+{
+  "config": {
+    "seed": {
+      "mode": "manual",
+      "value": 42
+    }
+  }
+}
+```
+
+Or via command-line flags:
+
+```bash
+# Use content-based seed (default)
+tinct generate -i image -p wallpaper.jpg --image.seed-mode content
+
+# Use filepath-based seed
+tinct generate -i image -p wallpaper.jpg --image.seed-mode filepath
+
+# Use manual seed
+tinct generate -i image -p wallpaper.jpg --image.seed-mode manual --image.seed-value 42
+
+# Use random seed (non-deterministic)
+tinct generate -i image -p wallpaper.jpg --image.seed-mode random
+```
+
+**How Configuration is Passed to Plugins:**
+
+1. **Built-in Plugins:** CLI flags (e.g., `--image.seed-mode`) are parsed and applied directly
+2. **External Plugins:** Configuration is passed via JSON on stdin during plugin initialization
+3. **Lock File Config:** Merged with CLI flags (CLI flags take precedence)
+
+**Environment Variables:**
+
+```bash
+# Enable only specific plugins (whitelist mode)
+export TINCT_ENABLED_PLUGINS="input:image,output:hyprland,output:kitty"
+
+# Disable specific plugins (blacklist mode)
+export TINCT_DISABLED_PLUGINS="output:waybar,output:dunst"
+```
+
 ## Documentation
 
 - **[Theme Cookbook](docs/THEME-COOKBOOK.md)**: Ready-to-use commands for popular themes (Catppuccin, Dracula, Tokyo Night, Nord, Gruvbox, and more)
@@ -267,8 +409,8 @@ export TINCT_ENABLED_PLUGINS="output:hyprland,output:kitty"
 - **[Plugin Development](contrib/README.md)**: Create custom input/output plugins
 - **[Plugin Hooks](docs/plugin-hooks.md)**: Pre/post-execution hooks
 - **[External Plugins](docs/external-plugins.md)**: Write plugins in any language
-- **[Setup Guide](SETUP.md)**: Detailed installation and configuration
-- **[Development Guide](DEVELOPMENT.md)**: Contributing and architecture
+- **[Setup Guide](docs/SETUP.md)**: Detailed installation and configuration
+- **[Development Guide](docs/DEVELOPMENT.md)**: Contributing and architecture
 
 ## Examples
 
@@ -368,7 +510,7 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## Contributing
 
-Contributions welcome! See [DEVELOPMENT.md](DEVELOPMENT.md) and [contrib/README.md](contrib/README.md).
+Contributions welcome! See [Development Guide](docs/DEVELOPMENT.md) and [Plugin Development Guide](contrib/README.md).
 
 ---
 

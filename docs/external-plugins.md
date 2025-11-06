@@ -950,7 +950,7 @@ Find more examples at:
 
 ## See Also
 
-- [DEVELOPMENT.md](../DEVELOPMENT.md) - Core plugin interfaces
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Core plugin interfaces
 - [README.md](../README.md) - Built-in plugins
 - [ai-wallpaper.md](ai-wallpaper.md) - AI generation plugins
 

@@ -234,8 +234,6 @@ archives:
     files:
       - README.md
       - LICENSE
-      - DEVELOPMENT.md
-      - configs/**/*
       - docs/**/*
 
   # Plugin archives - separate downloadable packages
@@ -410,9 +408,6 @@ brews:
       bash_completion.install "completions/tinct.bash" => "tinct"
       zsh_completion.install "completions/_tinct" => "_tinct"
       fish_completion.install "completions/tinct.fish"
-
-      # Install example config
-      (share/"tinct").install "configs/tinct.yaml"
 
     test: |
       system "#{bin}/tinct", "version"
