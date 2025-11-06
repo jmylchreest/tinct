@@ -339,9 +339,9 @@ archives:
         formats: [zip]
 
     files:
-      - src: contrib/example-minimal.sh
+      - src: contrib/plugins/output/example-minimal.sh
         dst: example-minimal
-      - src: contrib/notify-send.py
+      - src: contrib/plugins/output/notify-send.py
         dst: notify-send
       - src: contrib/README.md
         dst: README.md
