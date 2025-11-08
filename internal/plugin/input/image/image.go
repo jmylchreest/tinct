@@ -4,7 +4,10 @@ package image
 import (
 	"context"
 	"fmt"
+	"os"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -12,6 +15,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/image"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/regions"
+	"github.com/jmylchreest/tinct/internal/util/imagecache"
 )
 
 const (
@@ -61,12 +65,32 @@ type Plugin struct {
 	seedMode  string // Seed mode: "content", "filepath", "manual", "random"
 	seedValue int64  // Seed value (only used when seedMode is "manual")
 
+	// Remote image caching (for wallpaper support).
+	cacheEnabled   bool   // Enable caching of remote images (default: false)
+	cacheDir       string // Directory to cache downloaded images
+	cacheFilename  string // Filename for cached image (empty = auto-generate from URL hash)
+	cacheOverwrite bool   // Allow overwriting existing cached images
+
 	// Wallpaper support.
 	loadedImagePath string // Stores the actual path to the loaded image (for wallpaper setting)
 }
 
 // New creates a new image input plugin with default settings.
 func New() *Plugin {
+	// Check environment variables for cache settings.
+	cacheEnabled := false
+	if val := os.Getenv("TINCT_IMAGE_CACHE"); val != "" {
+		cacheEnabled, _ = strconv.ParseBool(val)
+	}
+
+	cacheDir := os.Getenv("TINCT_IMAGE_CACHE_DIR")
+	cacheFilename := os.Getenv("TINCT_IMAGE_CACHE_FILENAME")
+
+	cacheOverwrite := false
+	if val := os.Getenv("TINCT_IMAGE_CACHE_OVERWRITE"); val != "" {
+		cacheOverwrite, _ = strconv.ParseBool(val)
+	}
+
 	return &Plugin{
 		algorithm:       "kmeans",
 		colours:         16,
@@ -76,6 +100,10 @@ func New() *Plugin {
 		sampleMethod:    "average",
 		seedMode:        string(SeedModeContent), // Default to content-based seed
 		seedValue:       0,
+		cacheEnabled:    cacheEnabled,
+		cacheDir:        cacheDir,
+		cacheFilename:   cacheFilename,
+		cacheOverwrite:  cacheOverwrite,
 	}
 }
 
@@ -109,6 +137,12 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	// Seed configuration flags.
 	cmd.Flags().StringVar(&p.seedMode, "image.seed-mode", string(SeedModeContent), "K-means seed mode: content, filepath, manual, random")
 	cmd.Flags().Int64Var(&p.seedValue, "image.seed-value", 0, "K-means seed value (only used with --image.seed-mode=manual)")
+
+	// Remote image caching flags (use current values as defaults, which may come from env vars).
+	cmd.Flags().BoolVar(&p.cacheEnabled, "image.cache", p.cacheEnabled, "Enable caching of remote images for wallpaper support")
+	cmd.Flags().StringVar(&p.cacheDir, "image.cache-dir", p.cacheDir, "Directory to cache downloaded images (default: ~/.cache/tinct/images)")
+	cmd.Flags().StringVar(&p.cacheFilename, "image.cache-filename", p.cacheFilename, "Filename for cached image (default: auto-generated from URL hash)")
+	cmd.Flags().BoolVar(&p.cacheOverwrite, "image.cache-overwrite", p.cacheOverwrite, "Allow overwriting existing cached images")
 }
 
 // Validate checks if the plugin has all required inputs configured.
@@ -175,6 +209,34 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		fmt.Printf("→ Selected random image from directory: %s\n", resolvedPath)
 	}
 
+	// For remote images (HTTP/HTTPS), optionally download and cache them for wallpaper support.
+	wallpaperPath := resolvedPath
+	isRemoteImage := strings.HasPrefix(resolvedPath, "http://") || strings.HasPrefix(resolvedPath, "https://")
+
+	if isRemoteImage && p.cacheEnabled {
+		cacheOpts := imagecache.CacheOptions{
+			CacheDir:       p.cacheDir,
+			Filename:       p.cacheFilename,
+			AllowOverwrite: p.cacheOverwrite,
+		}
+
+		cachedPath, err := imagecache.DownloadAndCache(ctx, resolvedPath, cacheOpts)
+		if err != nil {
+			if opts.Verbose {
+				fmt.Printf("   Warning: Failed to cache remote image for wallpaper: %v\n", err)
+				fmt.Printf("   Color extraction will continue, but wallpaper path will not be available\n")
+			}
+			// Continue with color extraction even if caching fails.
+			// The wallpaperPath will remain as the URL.
+		} else {
+			// Successfully cached - use local path for wallpaper.
+			wallpaperPath = cachedPath
+			if opts.Verbose {
+				fmt.Printf("→ Cached remote image to: %s\n", cachedPath)
+			}
+		}
+	}
+
 	// Load the image using SmartLoader (handles both files and URLs).
 	loader := image.NewSmartLoader()
 	img, err := loader.Load(resolvedPath)
@@ -182,9 +244,8 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		return nil, fmt.Errorf("failed to load image: %w", err)
 	}
 
-	// Store the resolved image path for wallpaper setting.
-	// This will be the actual image file, not the directory.
-	p.loadedImagePath = resolvedPath
+	// Store the wallpaper path (local file for remote images, original path otherwise).
+	p.loadedImagePath = wallpaperPath
 
 	// Calculate seed based on configured mode.
 	// Use the resolved path for filepath-based seeds.

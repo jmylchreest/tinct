@@ -39,6 +39,54 @@ tinct generate -i image -p https://example.com/wallpaper.jpg -o hyprland
 tinct generate -i image -p wallpaper.jpg -c 24 -o hyprland
 ```
 
+### Directory Input (Random Selection)
+
+```bash
+# Select random image from directory
+tinct generate -i image -p ~/Pictures/wallpapers/ -o hyprland
+
+# Works with symlinks too
+tinct generate -i image -p ~/Pictures/favorites/ -o hyprland
+```
+
+When a directory is provided, the plugin:
+- Scans for all supported image files (.jpg, .jpeg, .png, .gif, .webp)
+- Follows symlinks to image files
+- Randomly selects one image using cryptographically secure randomness
+- Does not recurse into subdirectories
+
+### Remote Image Caching
+
+```bash
+# Enable caching for wallpaper support
+tinct generate -i image -p https://example.com/wallpaper.jpg \
+  --image.cache \
+  -o hyprpaper
+
+# Custom cache location and filename
+tinct generate -i image -p https://example.com/wallpaper.jpg \
+  --image.cache \
+  --image.cache-dir ~/Pictures/wallpapers \
+  --image.cache-filename current.jpg \
+  -o hyprpaper
+
+# Force re-download (useful for URLs that change content)
+tinct generate -i image -p https://example.com/daily-wallpaper.jpg \
+  --image.cache \
+  --image.cache-overwrite \
+  -o hyprpaper
+```
+
+**Why caching is needed:** Output plugins like `hyprpaper` and `hyprlock` require local file paths to set wallpapers. Without caching, remote URLs cannot be used as wallpapers.
+
+**Default behavior:** Caching is **disabled by default**. Color extraction works with or without caching.
+
+**Cache location:** `~/.cache/tinct/images/` (or custom via `--image.cache-dir`)
+
+**Filename:** Auto-generated from URL hash (e.g., `fbac44192e0c01cb.png`) or custom via `--image.cache-filename`
+
+**Reuse:** Cached files are reused on subsequent runs unless `--image.cache-overwrite` is specified
+
 ### Ambient Lighting / LED Extraction
 
 ```bash
@@ -78,7 +126,7 @@ tinct generate -i image -p wallpaper.jpg --image.seed-mode random -o hyprland
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--image.path` | `-p` | *(required)* | Path to image file or HTTP(S) URL |
+| `--image.path` | `-p` | *(required)* | Path to image file, directory, or HTTP(S) URL |
 | `--image.algorithm` | `-a` | `kmeans` | Extraction algorithm (only kmeans supported) |
 | `--image.colours` | `-c` | `16` | Number of colors to extract (1-256) |
 | `--image.extractAmbience` | | `false` | Extract edge/corner regions for ambient lighting |
@@ -87,6 +135,10 @@ tinct generate -i image -p wallpaper.jpg --image.seed-mode random -o hyprland
 | `--image.sample-method` | | `average` | Sampling method: `average` or `dominant` |
 | `--image.seed-mode` | | `content` | Seed mode: `content`, `filepath`, `manual`, `random` |
 | `--image.seed-value` | | `0` | Seed value (only used with `seed-mode=manual`) |
+| `--image.cache` | | `false` | Enable caching of remote images for wallpaper support |
+| `--image.cache-dir` | | `~/.cache/tinct/images` | Directory to cache downloaded images |
+| `--image.cache-filename` | | *(auto)* | Filename for cached image (default: URL hash) |
+| `--image.cache-overwrite` | | `false` | Allow overwriting existing cached images |
 
 ## Seed Modes
 
@@ -249,28 +301,49 @@ The plugin uses k-means clustering to find the most representative colors in the
 
 **Seed control:** Different seeds produce different cluster initializations, affecting final colors.
 
-## Lock File Configuration
+## Environment Variable Configuration
 
-The image plugin supports configuration via the lock file (`.tinct-plugins.json`):
+The image plugin supports configuration via environment variables, allowing you to set defaults without using CLI flags:
 
-```json
-{
-  "external_plugins": {
-    "image": {
-      "name": "image",
-      "type": "input",
-      "config": {
-        "seed": {
-          "mode": "content",
-          "value": null
-        }
-      }
-    }
-  }
-}
+### Remote Image Caching
+
+```bash
+# Enable caching by default
+export TINCT_IMAGE_CACHE=true
+
+# Set custom cache directory
+export TINCT_IMAGE_CACHE_DIR=~/Pictures/wallpapers
+
+# Set custom filename (optional)
+export TINCT_IMAGE_CACHE_FILENAME=current-wallpaper.jpg
+
+# Enable overwrite by default (optional)
+export TINCT_IMAGE_CACHE_OVERWRITE=true
 ```
 
-**Note:** This is primarily for documentation - the image plugin is built-in and doesn't require lock file configuration for basic usage.
+### Example: Enable Caching by Default
+
+Add to your `~/.bashrc` or `~/.zshrc`:
+
+```bash
+# Enable remote image caching for wallpaper support
+export TINCT_IMAGE_CACHE=true
+export TINCT_IMAGE_CACHE_DIR=~/Pictures/tinct-cache
+```
+
+Then use without flags:
+
+```bash
+# Caching is now enabled by default
+tinct generate -i image -p https://example.com/wallpaper.jpg -o hyprpaper
+
+# Override with flag if needed
+tinct generate -i image -p https://example.com/wallpaper.jpg \
+  --image.cache=false \
+  -o hyprland
+```
+
+**Priority:** CLI flags override environment variables, which override built-in defaults.
 
 ## Examples
 
