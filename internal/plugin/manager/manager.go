@@ -191,6 +191,30 @@ func (m *Manager) IsOutputEnabled(plugin output.Plugin) bool {
 	return m.isEnabled("output", plugin.Name())
 }
 
+// IsOutputDisabled checks if an output plugin is explicitly disabled.
+func (m *Manager) IsOutputDisabled(plugin output.Plugin) bool {
+	return m.isDisabled("output", plugin.Name())
+}
+
+// isDisabled checks if a plugin is explicitly disabled.
+func (m *Manager) isDisabled(pluginType, name string) bool {
+	fullName := fmt.Sprintf("%s:%s", pluginType, name)
+
+	// Check if "all" is explicitly disabled.
+	if slices.Contains(m.config.DisabledPlugins, "all") {
+		return true
+	}
+
+	// Check if explicitly disabled.
+	for _, disabled := range m.config.DisabledPlugins {
+		if disabled == fullName || disabled == name {
+			return true
+		}
+	}
+
+	return false
+}
+
 // isEnabled determines if a plugin is enabled based on configuration.
 func (m *Manager) isEnabled(pluginType, name string) bool {
 	fullName := fmt.Sprintf("%s:%s", pluginType, name)

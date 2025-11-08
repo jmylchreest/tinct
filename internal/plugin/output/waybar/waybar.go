@@ -5,15 +5,14 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
-	"strings"
+	"syscall"
 	"text/template"
 
+	"github.com/mitchellh/go-ps"
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
@@ -88,13 +87,22 @@ func (p *Plugin) Validate() error {
 	return nil
 }
 
-// isValidPID validates that a PID string contains only digits.
-func isValidPID(pid string) bool {
-	matched, err := regexp.MatchString(`^\d+$`, pid)
+// findProcessByName finds all PIDs of processes with the given name.
+// Uses go-ps library for cross-platform process discovery.
+func findProcessByName(name string) ([]int, error) {
+	processes, err := ps.Processes()
 	if err != nil {
-		return false
+		return nil, fmt.Errorf("failed to get process list: %w", err)
 	}
-	return matched
+
+	var pids []int
+	for _, p := range processes {
+		if p.Executable() == name {
+			pids = append(pids, p.Pid())
+		}
+	}
+
+	return pids, nil
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
@@ -228,34 +236,20 @@ func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ [
 		return nil
 	}
 
-	// Get waybar process PIDs.
-	cmd := exec.CommandContext(ctx, "pgrep", "-x", "waybar")
-	output, err := cmd.Output()
+	// Find waybar process PIDs using native Go.
+	pids, err := findProcessByName("waybar")
 	if err != nil {
-		// Check if the error is because no process was found.
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			if exitErr.ExitCode() == 1 {
-				return fmt.Errorf("no running waybar instances found to reload")
-			}
-		}
 		return fmt.Errorf("failed to find waybar processes: %w", err)
 	}
 
-	pids := strings.Fields(strings.TrimSpace(string(output)))
 	if len(pids) == 0 {
-		return fmt.Errorf("no running waybar instances found")
+		return fmt.Errorf("no running waybar instances found to reload")
 	}
 
-	// Send SIGUSR2 to all waybar instances to reload config.
+	// Send SIGUSR2 to all waybar instances to reload config using native syscall.
 	for _, pid := range pids {
-		// Validate PID format to prevent command injection
-		if !isValidPID(pid) {
-			return fmt.Errorf("invalid PID format: %s", pid)
-		}
-		killCmd := exec.CommandContext(ctx, "kill", "-SIGUSR2", pid) // #nosec G204 - PID validated to contain only digits
-		if err := killCmd.Run(); err != nil {
-			return fmt.Errorf("failed to send reload signal to waybar (PID %s): %w", pid, err)
+		if err := syscall.Kill(pid, syscall.SIGUSR2); err != nil {
+			return fmt.Errorf("failed to send reload signal to waybar (PID %d): %w", pid, err)
 		}
 	}
 

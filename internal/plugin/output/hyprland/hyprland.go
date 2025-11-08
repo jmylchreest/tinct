@@ -204,6 +204,14 @@ func (p *Plugin) generateStubConfig(themeData *colour.ThemeData) ([]byte, error)
 // PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
+	// Check if hyprctl executable exists on PATH (needed for reload).
+	_, err = exec.LookPath("hyprctl")
+	if err != nil {
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Warning: hyprctl not found - config reload will not be available\n")
+		}
+	}
+
 	// Check if config directory exists - create it if needed.
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {

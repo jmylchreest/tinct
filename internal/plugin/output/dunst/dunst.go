@@ -142,13 +142,21 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if dunst is available and config directory exists.
+// PreExecute checks if dunst and dunstctl are available and config directory exists.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if dunst executable exists on PATH.
 	_, err = exec.LookPath("dunst")
 	if err != nil {
 		return true, "dunst executable not found on $PATH", nil
+	}
+
+	// Check if dunstctl executable exists on PATH (needed for reload).
+	_, err = exec.LookPath("dunstctl")
+	if err != nil {
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Warning: dunstctl not found - config reload will not be available\n")
+		}
 	}
 
 	// Check if config directory exists (create it if not).

@@ -143,13 +143,21 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if kitty is available before generating the theme.
+// PreExecute checks if kitty and kitten are available before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if kitty executable exists on PATH.
 	_, err = exec.LookPath("kitty")
 	if err != nil {
 		return true, "kitty executable not found on $PATH", nil
+	}
+
+	// Check if kitten executable exists on PATH (needed for reload).
+	_, err = exec.LookPath("kitten")
+	if err != nil {
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Warning: kitten not found - config reload will not be available\n")
+		}
 	}
 
 	// Check if themes directory exists, create if it doesn't.
