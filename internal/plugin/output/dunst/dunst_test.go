@@ -14,7 +14,7 @@ func TestDunstPlugin(t *testing.T) {
 
 	config := plugintesting.TestConfig{
 		ExpectedName:       "dunst",
-		ExpectedFiles:      []string{"tinct.dunstrc"},
+		ExpectedFiles:      []string{"60-tinct.conf"},
 		ExpectedBinaryName: "dunst",
 	}
 
@@ -32,7 +32,7 @@ func TestDunstPlugin_ContentValidation(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	content := string(files["tinct.dunstrc"])
+	content := string(files["60-tinct.conf"])
 
 	// Check for required sections.
 	requiredStrings := []string{
@@ -70,7 +70,7 @@ func TestDunstPlugin_GenerateWithLightTheme(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	content := string(files["tinct.dunstrc"])
+	content := string(files["60-tinct.conf"])
 
 	// Check that theme type is present.
 	if !strings.Contains(content, "Detected theme: light") {
@@ -155,7 +155,7 @@ func TestDunstPlugin_ColorFormatting(t *testing.T) {
 		t.Fatalf("Generate() error = %v", err)
 	}
 
-	content := string(files["tinct.dunstrc"])
+	content := string(files["60-tinct.conf"])
 
 	// Verify hex color format (#RRGGBB).
 	if !strings.Contains(content, "#") {

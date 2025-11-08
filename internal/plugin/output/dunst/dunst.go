@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 )
@@ -58,7 +59,7 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "dunst.output-dir", "", "Output directory (default: ~/.config/dunst)")
+	cmd.Flags().StringVar(&p.outputDir, "dunst.output-dir", "", "Output directory (default: ~/.config/dunst/dunstrc.d)")
 }
 
 // SetVerbose enables or disables verbose logging for the plugin.
@@ -86,9 +87,9 @@ func (p *Plugin) DefaultOutputDir() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/dunst"
+		return ".config/dunst/dunstrc.d"
 	}
-	return filepath.Join(home, ".config", "dunst")
+	return filepath.Join(home, ".config", "dunst", "dunstrc.d")
 }
 
 // Generate creates the theme file.
@@ -106,7 +107,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
 
-	files["tinct.dunstrc"] = themeContent
+	files["60-tinct.conf"] = themeContent
 
 	return files, nil
 }
@@ -160,4 +161,25 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	}
 
 	return false, "", nil
+}
+
+// PostExecute reloads dunst configuration after theme generation.
+// Implements the output.PostExecuteHook interface.
+func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
+	// Reload dunst configuration using dunstctl.
+	cmd := exec.CommandContext(ctx, "dunstctl", "reload")
+	if err := cmd.Run(); err != nil {
+		// If dunstctl reload fails, inform the user but don't treat it as an error.
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Note: Could not reload dunst config automatically\n")
+			fmt.Fprintf(os.Stderr, "   Please restart dunst manually to apply changes\n")
+		}
+		return nil
+	}
+
+	if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Dunst configuration reloaded\n")
+	}
+
+	return nil
 }
