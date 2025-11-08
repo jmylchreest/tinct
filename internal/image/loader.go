@@ -4,12 +4,16 @@ package image
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"image"
 	_ "image/gif"  // Register GIF format
 	_ "image/jpeg" // Register JPEG format
 	_ "image/png"  // Register PNG format
+	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 
 	_ "golang.org/x/image/webp" // Register WebP format
@@ -69,9 +73,10 @@ func (l *FileLoader) Load(path string) (image.Image, error) {
 	return img, nil
 }
 
-// ValidateImagePath checks if the given path is valid and points to a supported image file.
-// Supports both local file paths and HTTP(S) URLs.
+// ValidateImagePath checks if the given path is valid and points to a supported image file or directory.
+// Supports both local file paths, directories, and HTTP(S) URLs.
 // For local files, it verifies the file exists and can be decoded.
+// For directories, it verifies the directory exists (actual scanning happens later).
 // For HTTP(S) URLs, it just validates the URL format (actual fetching happens later).
 func ValidateImagePath(path string) error {
 	// Check if path is empty.
@@ -90,14 +95,14 @@ func ValidateImagePath(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("image file not found: %s", path)
+			return fmt.Errorf("image file or directory not found: %s", path)
 		}
-		return fmt.Errorf("failed to access image file: %w", err)
+		return fmt.Errorf("failed to access image path: %w", err)
 	}
 
-	// Check if it's a directory.
+	// If it's a directory, just verify it exists (scanning happens later).
 	if info.IsDir() {
-		return fmt.Errorf("path is a directory, not a file: %s", path)
+		return nil
 	}
 
 	// Attempt to decode the image config to verify it's a supported format.
@@ -117,6 +122,117 @@ func ValidateImagePath(path string) error {
 	_ = format // format contains the detected format name (jpeg, png, gif, webp, etc.)
 
 	return nil
+}
+
+// SupportedImageExtensions returns a list of supported image file extensions.
+func SupportedImageExtensions() []string {
+	return []string{".jpg", ".jpeg", ".png", ".gif", ".webp"}
+}
+
+// isImageFile checks if a file has a supported image extension.
+func isImageFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	for _, supported := range SupportedImageExtensions() {
+		if ext == supported {
+			return true
+		}
+	}
+	return false
+}
+
+// ScanDirectoryForImages scans a directory and returns all valid image files.
+// It does not recurse into subdirectories, but follows symlinks.
+func ScanDirectoryForImages(dirPath string) ([]string, error) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	var imageFiles []string
+	for _, entry := range entries {
+		fullPath := filepath.Join(dirPath, entry.Name())
+
+		// For symlinks, stat the target to determine if it's a file.
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			// Skip entries we can't stat (broken symlinks, permission issues).
+			continue
+		}
+
+		// Skip directories (including symlinks to directories).
+		if info.IsDir() {
+			continue
+		}
+
+		// Check if file has a supported image extension.
+		if isImageFile(entry.Name()) {
+			imageFiles = append(imageFiles, fullPath)
+		}
+	}
+
+	if len(imageFiles) == 0 {
+		return nil, fmt.Errorf("no supported image files found in directory: %s", dirPath)
+	}
+
+	return imageFiles, nil
+}
+
+// SelectRandomImage selects a random image from a list of image paths.
+// Uses crypto/rand for cryptographically secure randomness.
+func SelectRandomImage(imagePaths []string) (string, error) {
+	if len(imagePaths) == 0 {
+		return "", fmt.Errorf("image path list is empty")
+	}
+
+	// Use crypto/rand for truly random selection.
+	maxIndex := big.NewInt(int64(len(imagePaths)))
+	randomIndex, err := rand.Int(rand.Reader, maxIndex)
+	if err != nil {
+		// Fallback to using binary random bytes if crypto/rand.Int fails.
+		var buf [8]byte
+		if _, err := rand.Read(buf[:]); err != nil {
+			return "", fmt.Errorf("failed to generate random number: %w", err)
+		}
+		index := int(binary.LittleEndian.Uint64(buf[:]) % uint64(len(imagePaths)))
+		return imagePaths[index], nil
+	}
+
+	return imagePaths[randomIndex.Int64()], nil
+}
+
+// ResolveImagePath resolves a path that could be a file or directory.
+// If the path is a directory, it scans for images and returns a random one.
+// If the path is a file, it returns the path as-is.
+// For HTTP(S) URLs, it returns the URL as-is.
+func ResolveImagePath(path string) (string, error) {
+	// URLs are returned as-is.
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return path, nil
+	}
+
+	// Check if path exists.
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to access path: %w", err)
+	}
+
+	// If it's a file, return as-is.
+	if !info.IsDir() {
+		return path, nil
+	}
+
+	// It's a directory - scan for images and select randomly.
+	imageFiles, err := ScanDirectoryForImages(path)
+	if err != nil {
+		return "", err
+	}
+
+	selectedImage, err := SelectRandomImage(imageFiles)
+	if err != nil {
+		return "", err
+	}
+
+	return selectedImage, nil
 }
 
 // GetImageDimensions returns the width and height of an image without fully loading it.

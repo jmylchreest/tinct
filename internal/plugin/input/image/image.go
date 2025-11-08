@@ -86,7 +86,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Extract colour palette from an image file or HTTP(S) URL (optionally includes edge/corner regions for ambient lighting)"
+	return "Extract colour palette from an image file, directory (random selection), or HTTP(S) URL (optionally includes edge/corner regions for ambient lighting)"
 }
 
 // Version returns the plugin version.
@@ -96,7 +96,7 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&p.path, "image.path", "p", "", "Path to image file or HTTP(S) URL (required)")
+	cmd.Flags().StringVarP(&p.path, "image.path", "p", "", "Path to image file, directory, or HTTP(S) URL (required, directories will select a random image)")
 	cmd.Flags().StringVarP(&p.algorithm, "image.algorithm", "a", "kmeans", "Extraction algorithm (kmeans)")
 	cmd.Flags().IntVarP(&p.colours, "image.colours", "c", 16, "Number of colours to extract (1-256)")
 
@@ -164,20 +164,31 @@ func (p *Plugin) WallpaperPath() string {
 // Generate creates a raw colour palette by extracting colours from the image.
 // Returns only the extracted colors - categorization happens separately.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+	// Resolve the path - if it's a directory, select a random image.
+	resolvedPath, err := image.ResolveImagePath(p.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve image path: %w", err)
+	}
+
+	// If a random image was selected from a directory, log it.
+	if opts.Verbose && resolvedPath != p.path {
+		fmt.Printf("→ Selected random image from directory: %s\n", resolvedPath)
+	}
+
 	// Load the image using SmartLoader (handles both files and URLs).
 	loader := image.NewSmartLoader()
-	img, err := loader.Load(p.path)
+	img, err := loader.Load(resolvedPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load image: %w", err)
 	}
 
-	// Store the loaded image path for wallpaper setting.
-	// For local files, use the original path.
-	// For URLs, we'll need to handle downloading/caching separately.
-	p.loadedImagePath = p.path
+	// Store the resolved image path for wallpaper setting.
+	// This will be the actual image file, not the directory.
+	p.loadedImagePath = resolvedPath
 
 	// Calculate seed based on configured mode.
-	seed, err := p.calculateSeed(img, p.path)
+	// Use the resolved path for filepath-based seeds.
+	seed, err := p.calculateSeed(img, resolvedPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate seed: %w", err)
 	}
