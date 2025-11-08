@@ -12,6 +12,14 @@ type ThemeData struct {
 
 	// ThemeName is an optional theme name that can be set by plugins.
 	ThemeName string
+
+	// OutputDir is the directory where output files will be written.
+	// This allows templates to reference other generated files with correct paths.
+	OutputDir string
+
+	// ColorFileName is the name of the primary color palette file being generated.
+	// This allows stub/config templates to reference the correct color file.
+	ColorFileName string
 }
 
 // NewThemeData creates a new ThemeData instance with the given palette.

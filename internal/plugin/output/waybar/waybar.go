@@ -118,6 +118,10 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
+	// Populate output directory and color file name in theme data for templates.
+	themeData.OutputDir = p.DefaultOutputDir()
+	themeData.ColorFileName = "tinct-colours.css"
+
 	files := make(map[string][]byte)
 
 	// Generate colors file.
@@ -129,7 +133,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	// Generate example CSS if requested.
 	if p.generateStub {
-		stubContent, err := p.generateStubCSS()
+		stubContent, err := p.generateStubCSS(themeData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate stub: %w", err)
 		}
@@ -170,7 +174,7 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 }
 
 // generateStubCSS creates an example CSS file showing how to use the colors.
-func (p *Plugin) generateStubCSS() ([]byte, error) {
+func (p *Plugin) generateStubCSS(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
 	loader := tmplloader.New("waybar", templates)
 	if p.verbose {
@@ -186,13 +190,13 @@ func (p *Plugin) generateStubCSS() ([]byte, error) {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.css.tmpl\n")
 	}
 
-	tmpl, err := template.New("stub").Parse(string(tmplContent))
+	tmpl, err := template.New("stub").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse stub template: %w", err)
 	}
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, nil); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute stub template: %w", err)
 	}
 

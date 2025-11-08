@@ -177,12 +177,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 // Implements the output.PostExecuteHook interface.
 func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writtenFiles []string) error {
 	if p.verbose && len(writtenFiles) > 0 {
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   To use this theme in Zellij, add to your config.kdl:\n")
-		fmt.Fprintf(os.Stderr, "   theme \"%s\"\n", p.themeName)
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Or set it temporarily with:\n")
-		fmt.Fprintf(os.Stderr, "   zellij options --theme %s\n", p.themeName)
+		fmt.Fprintf(os.Stderr, "   To use this theme in Zellij, add 'theme \"%s\"' to your config.kdl or temporarily by executing: zellij options --theme %s\n", p.themeName, p.themeName)
 	}
 	return nil
 }
