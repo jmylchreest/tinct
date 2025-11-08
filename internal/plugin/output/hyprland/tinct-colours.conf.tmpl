@@ -11,11 +11,12 @@
 # Theme Colours ({{ themeType . }} theme)
 # ============================================================================
 
+{{- $data := . }}
 {{- range allRoles . }}
 {{- $roleName := printf "%s" . }}
-{{- $color := get $ $roleName }}
+{{- $color := get $data $roleName }}
 # {{ $roleName }}
-${{ $roleName }}RGB = rgb({{ $color | hex | trimPrefix "#" }})
+${{ $roleName }}RGB = rgb({{ $color | hexNoHash }})
 ${{ $roleName }}RGBDec = {{ $color | rgbDecimal }}
 {{- end }}
 
@@ -25,6 +26,6 @@ ${{ $roleName }}RGBDec = {{ $color | rgbDecimal }}
 # All extracted colours, sorted by luminance
 
 {{- range $i, $color := allColors . }}
-$colour{{ $i }}RGB = rgb({{ $color | hex | trimPrefix "#" }})
+$colour{{ $i }}RGB = rgb({{ $color | hexNoHash }})
 $colour{{ $i }}RGBDec = {{ $color | rgbDecimal }}
 {{- end }}

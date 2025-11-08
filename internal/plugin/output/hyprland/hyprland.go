@@ -64,7 +64,7 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "hyprland.output-dir", "", "Output directory (default: ~/.config/hypr)")
+	cmd.Flags().StringVar(&p.outputDir, "hyprland.output-dir", "", "Output directory (default: ~/.config/hypr/themes)")
 	cmd.Flags().BoolVar(&p.generateStub, "hyprland.generate-stub", true, "Generate example config stub")
 	cmd.Flags().StringVar(&p.stubPath, "hyprland.stub-path", "", "Custom path for stub file")
 	cmd.Flags().BoolVar(&p.reloadConfig, "hyprland.reload", false, "Reload hyprland config after generation (runs hyprctl reload)")
@@ -97,9 +97,9 @@ func (p *Plugin) DefaultOutputDir() string {
 	// Expand ~ to home directory.
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/hypr"
+		return ".config/hypr/themes"
 	}
-	return filepath.Join(home, ".config", "hypr")
+	return filepath.Join(home, ".config", "hypr", "themes")
 }
 
 // Generate creates the theme file and optional stub configuration.
@@ -108,6 +108,10 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
+
+	// Populate output directory and color file name in theme data for templates.
+	themeData.OutputDir = p.DefaultOutputDir()
+	themeData.ColorFileName = "tinct-colours.conf"
 
 	files := make(map[string][]byte)
 
@@ -122,7 +126,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	// Generate stub if requested.
 	if p.generateStub {
-		stubContent, err := p.generateStubConfig()
+		stubContent, err := p.generateStubConfig(themeData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate stub: %w", err)
 		}
@@ -168,7 +172,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 }
 
 // generateStubConfig creates an example configuration file showing how to use the theme.
-func (p *Plugin) generateStubConfig() ([]byte, error) {
+func (p *Plugin) generateStubConfig(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
@@ -184,13 +188,13 @@ func (p *Plugin) generateStubConfig() ([]byte, error) {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.conf.tmpl\n")
 	}
 
-	tmpl, err := template.New("example").Parse(string(tmplContent))
+	tmpl, err := template.New("example").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse example template: %w", err)
 	}
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, nil); err != nil {
+	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute example template: %w", err)
 	}
 

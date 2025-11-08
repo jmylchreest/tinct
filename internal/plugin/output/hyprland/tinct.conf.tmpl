@@ -3,7 +3,7 @@
 #
 # This file demonstrates how to use the Tinct colour variables.
 # First, source the colour definitions file:
-source = ~/.config/hypr/tinct-colours.conf
+source = {{ .OutputDir }}/{{ .ColorFileName }}
 
 # ============================================================================
 # General Settings
@@ -18,10 +18,14 @@ general {
 # Decoration
 # ============================================================================
 decoration {
-    # Drop shadow colours
+    # Drop shadow configuration
     # Use RGBDec variables with rgba() for opacity control
-    col.shadow = rgba($backgroundRGBDec, 0.25)
-    col.shadow_inactive = rgba($backgroundMutedRGBDec, 0.50)
+    shadow {
+        enabled = true
+        color = rgba($backgroundRGBDec, 0.8)
+        range = 4
+        render_power = 3
+    }
 }
 
 # ============================================================================
