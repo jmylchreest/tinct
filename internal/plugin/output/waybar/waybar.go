@@ -65,9 +65,9 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "waybar.output-dir", "", "Output directory (default: ~/.config/waybar)")
+	cmd.Flags().StringVar(&p.outputDir, "waybar.output-dir", "", "Output directory (default: ~/.config/waybar/themes)")
 	cmd.Flags().BoolVar(&p.generateStub, "waybar.generate-stub", true, "Generate example CSS stub")
-	cmd.Flags().BoolVar(&p.reloadConfig, "waybar.reload", false, "Reload waybar after generation (sends SIGUSR2)")
+	cmd.Flags().BoolVar(&p.reloadConfig, "waybar.reload", true, "Reload waybar after generation (sends SIGUSR2)")
 }
 
 // SetVerbose enables or disables verbose logging for the plugin.
@@ -106,9 +106,9 @@ func (p *Plugin) DefaultOutputDir() string {
 	// Expand ~ to home directory.
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/waybar"
+		return ".config/waybar/themes"
 	}
-	return filepath.Join(home, ".config", "waybar")
+	return filepath.Join(home, ".config", "waybar", "themes")
 }
 
 // Generate creates the theme files.
@@ -120,24 +120,24 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	// Populate output directory and color file name in theme data for templates.
 	themeData.OutputDir = p.DefaultOutputDir()
-	themeData.ColorFileName = "tinct-colours.css"
+	themeData.ColorFileName = "tinct.css"
 
 	files := make(map[string][]byte)
 
-	// Generate colors file.
+	// Generate colors file - goes to themes/tinct.css
 	colorsContent, err := p.generateColors(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate colors: %w", err)
 	}
-	files["tinct-colours.css"] = colorsContent
+	files["tinct.css"] = colorsContent
 
-	// Generate example CSS if requested.
+	// Generate example CSS if requested - goes to parent dir (waybar/) as tinct-style.css
 	if p.generateStub {
 		stubContent, err := p.generateStubCSS(themeData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate stub: %w", err)
 		}
-		files["tinct.css"] = stubContent
+		files["../tinct-style.css"] = stubContent
 	}
 
 	return files, nil

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -169,21 +170,80 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 // PostExecute applies the theme to all running kitty instances.
 // Implements the output.PostExecuteHook interface.
 func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
-	// Apply the theme to all running kitty instances using kitten themes command.
-	// This is the recommended way per https://sw.kovidgoyal.net/kitty/kittens/themes/.
-	cmd := exec.CommandContext(ctx, "kitten", "themes", "--reload-in=all", "tinct")
+	// Check for conflicting current-theme.conf that might override tinct theme.
+	p.checkForConflictingTheme()
+
+	// Reload kitty config using kitten @ load-config (cross-platform).
+	// This works on Linux, macOS, and Windows.
+	cmd := exec.CommandContext(ctx, "kitten", "@", "load-config")
 	if err := cmd.Run(); err != nil {
 		// Don't treat this as a fatal error - theme file was still generated successfully.
-		// This can fail if no kitty instances are running or kitten is not in PATH.
+		// This can fail if no kitty instances are running or remote control is not enabled.
 		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Note: Could not auto-apply theme (no running kitty instances or kitten not in $PATH)\n")
+			fmt.Fprintf(os.Stderr, "   Note: Could not reload kitty config (no running instances or remote control not enabled)\n")
+			fmt.Fprintf(os.Stderr, "   To enable auto-reload, add 'allow_remote_control yes' to your kitty.conf\n")
+			fmt.Fprintf(os.Stderr, "   and fully restart kitty (closing all windows)\n")
 		}
 		return nil
 	}
 
 	if p.verbose {
-		fmt.Fprintf(os.Stderr, "   Theme applied to all kitty instances\n")
+		fmt.Fprintf(os.Stderr, "   Kitty config reloaded in all instances\n")
 	}
 
 	return nil
+}
+
+// checkForConflictingTheme checks if there's a current-theme.conf that might conflict.
+func (p *Plugin) checkForConflictingTheme() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+
+	kittyConf := filepath.Join(home, ".config", "kitty", "kitty.conf")
+	content, err := os.ReadFile(kittyConf)
+	if err != nil {
+		return // File doesn't exist or can't be read
+	}
+
+	confStr := string(content)
+	hasTinctInclude := false
+	hasCurrentTheme := false
+	tinctAfterCurrent := false
+
+	lines := strings.Split(confStr, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.Contains(trimmed, "include") && strings.Contains(trimmed, "tinct.conf") {
+			hasTinctInclude = true
+			// Check if current-theme.conf appears before this line
+			for j := 0; j < i; j++ {
+				if strings.Contains(lines[j], "current-theme.conf") {
+					tinctAfterCurrent = true
+					break
+				}
+			}
+		}
+		if strings.Contains(trimmed, "current-theme.conf") {
+			hasCurrentTheme = true
+		}
+	}
+
+	if hasTinctInclude && hasCurrentTheme && !tinctAfterCurrent {
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "⚠️  WARNING: Conflicting theme configuration detected!\n")
+		fmt.Fprintf(os.Stderr, "   Your kitty.conf includes both 'current-theme.conf' and 'themes/tinct.conf'\n")
+		fmt.Fprintf(os.Stderr, "   The 'current-theme.conf' (from 'kitten themes') appears AFTER tinct.conf\n")
+		fmt.Fprintf(os.Stderr, "   and will override tinct's colors.\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "   Recommended fix:\n")
+		fmt.Fprintf(os.Stderr, "   1. Remove the kitten themes block from your kitty.conf:\n")
+		fmt.Fprintf(os.Stderr, "      # BEGIN_KITTY_THEME\n")
+		fmt.Fprintf(os.Stderr, "      ...\n")
+		fmt.Fprintf(os.Stderr, "      # END_KITTY_THEME\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "   OR move 'include themes/tinct.conf' to appear AFTER 'include current-theme.conf'\n")
+		fmt.Fprintf(os.Stderr, "\n")
+	}
 }
