@@ -138,7 +138,7 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.seedMode, "image.seed-mode", string(SeedModeContent), "K-means seed mode: content, filepath, manual, random")
 	cmd.Flags().Int64Var(&p.seedValue, "image.seed-value", 0, "K-means seed value (only used with --image.seed-mode=manual)")
 
-	// Remote image caching flags (use current values as defaults, which may come from env vars).
+	// Remote image caching flags (use struct values as defaults, which may come from env vars).
 	cmd.Flags().BoolVar(&p.cacheEnabled, "image.cache", p.cacheEnabled, "Enable caching of remote images for wallpaper support")
 	cmd.Flags().StringVar(&p.cacheDir, "image.cache-dir", p.cacheDir, "Directory to cache downloaded images (default: ~/.cache/tinct/images)")
 	cmd.Flags().StringVar(&p.cacheFilename, "image.cache-filename", p.cacheFilename, "Filename for cached image (default: auto-generated from URL hash)")
