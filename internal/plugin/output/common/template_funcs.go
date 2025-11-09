@@ -45,10 +45,10 @@ func TemplateFuncs() template.FuncMap {
 		"allColors": allColorsFunc,
 		"count":     countFunc,
 
-		// String manipulation.
-		"trimPrefix": strings.TrimPrefix,
-		"trimSuffix": strings.TrimSuffix,
-		"replace":    strings.ReplaceAll,
+		// String manipulation (custom wrappers for pipe-friendly argument order).
+		"trimPrefix": trimPrefixFunc,
+		"trimSuffix": trimSuffixFunc,
+		"replace":    replaceFunc,
 		"toLower":    strings.ToLower,
 		"toUpper":    strings.ToUpper,
 	}
@@ -152,6 +152,30 @@ func roleFunc(cv colour.ColorValue) string {
 // indexFunc returns the index of a color in the AllColors array.
 func indexFunc(cv colour.ColorValue) int {
 	return cv.Index()
+}
+
+// trimPrefixFunc removes a prefix from a string (pipe-friendly argument order).
+// Unlike strings.TrimPrefix, this takes prefix first so it works in pipes:
+//
+//	{{ value | trimPrefix "#" }}
+func trimPrefixFunc(prefix, s string) string {
+	return strings.TrimPrefix(s, prefix)
+}
+
+// trimSuffixFunc removes a suffix from a string (pipe-friendly argument order).
+// Unlike strings.TrimSuffix, this takes suffix first so it works in pipes:
+//
+//	{{ value | trimSuffix ".txt" }}
+func trimSuffixFunc(suffix, s string) string {
+	return strings.TrimSuffix(s, suffix)
+}
+
+// replaceFunc replaces all occurrences of old with new (pipe-friendly argument order).
+// Unlike strings.ReplaceAll, this takes old and new first so it works in pipes:
+//
+//	{{ value | replace "_" "-" }}
+func replaceFunc(old, new, s string) string {
+	return strings.ReplaceAll(s, old, new)
 }
 
 // themeTypeFunc returns the theme type string ("dark" or "light").

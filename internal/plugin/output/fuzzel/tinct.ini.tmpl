@@ -2,15 +2,15 @@
 # https://github.com/jmylchreest/tinct
 #
 # Include this file in your fuzzel.ini with:
-#   include=~/.config/fuzzel/tinct.ini
+#   include={{ .OutputDir }}/{{ .ColorFileName }}
 #
-# Or use as standalone config: fuzzel --config ~/.config/fuzzel/tinct.ini
+# Or use as standalone config: fuzzel --config {{ .OutputDir }}/{{ .ColorFileName }}
 #
 # Detected theme: {{ themeType . }}
 
 [colors]
-# Background color (with 93% opacity)
-background={{ withAlpha (get . "background") 0.93 | hexAlpha | trimPrefix "#" }}
+# Background color (with 85% opacity)
+background={{ withAlpha (get . "background") 0.85 | hexAlpha | trimPrefix "#" }}
 
 # Text (foreground) color of unselected entries
 text={{ get . "foreground" | hexAlpha | trimPrefix "#" }}

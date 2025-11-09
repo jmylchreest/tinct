@@ -86,9 +86,9 @@ func (p *Plugin) DefaultOutputDir() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/fuzzel"
+		return ".config/fuzzel/themes"
 	}
-	return filepath.Join(home, ".config", "fuzzel")
+	return filepath.Join(home, ".config", "fuzzel", "themes")
 }
 
 // Generate creates the theme file.
@@ -97,6 +97,10 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
+
+	// Populate template metadata fields.
+	themeData.OutputDir = p.DefaultOutputDir()
+	themeData.ColorFileName = "tinct.ini"
 
 	files := make(map[string][]byte)
 
