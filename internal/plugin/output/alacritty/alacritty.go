@@ -1,5 +1,5 @@
-// Package neovim provides an output plugin for Neovim colour themes.
-package neovim
+// Package alacritty provides an output plugin for Alacritty terminal colour themes.
+package alacritty
 
 import (
 	"bytes"
@@ -28,30 +28,28 @@ func GetEmbeddedTemplates() embed.FS {
 	return templates
 }
 
-// Plugin implements the output.Plugin interface for Neovim.
+// Plugin implements the output.Plugin interface for Alacritty terminal.
 type Plugin struct {
 	outputDir string
-	themeName string
 	verbose   bool
 }
 
-// New creates a new Neovim output plugin with default settings.
+// New creates a new Alacritty output plugin with default settings.
 func New() *Plugin {
 	return &Plugin{
 		outputDir: "",
-		themeName: "tinct",
 		verbose:   false,
 	}
 }
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "neovim"
+	return "alacritty"
 }
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Neovim colour scheme (Lua format)"
+	return "Generate Alacritty terminal colour theme configuration"
 }
 
 // Version returns the plugin version.
@@ -61,8 +59,7 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "neovim.output-dir", "", "Output directory (default: ~/.config/nvim/colors)")
-	cmd.Flags().StringVar(&p.themeName, "neovim.theme-name", "tinct", "Theme name for the colorscheme")
+	cmd.Flags().StringVar(&p.outputDir, "alacritty.output-dir", "", "Output directory (default: ~/.config/alacritty)")
 }
 
 // SetVerbose enables or disables verbose logging for the plugin.
@@ -79,9 +76,6 @@ func (p *Plugin) GetEmbeddedFS() any {
 
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
-	if p.themeName == "" {
-		return fmt.Errorf("theme name cannot be empty")
-	}
 	return nil
 }
 
@@ -93,9 +87,9 @@ func (p *Plugin) DefaultOutputDir() string {
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/nvim/colors"
+		return ".config/alacritty"
 	}
-	return filepath.Join(home, ".config", "nvim", "colors")
+	return filepath.Join(home, ".config", "alacritty")
 }
 
 // Generate creates the theme file.
@@ -106,9 +100,8 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	}
 
 	// Populate template metadata fields.
-	filename := fmt.Sprintf("%s.lua", p.themeName)
 	themeData.OutputDir = p.DefaultOutputDir()
-	themeData.ColorFileName = filename
+	themeData.ColorFileName = "tinct-colors.toml"
 
 	files := make(map[string][]byte)
 
@@ -118,7 +111,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
 
-	files[filename] = themeContent
+	files["tinct-colors.toml"] = themeContent
 
 	return files, nil
 }
@@ -126,27 +119,24 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
-	loader := tmplloader.New("neovim", templates)
+	loader := tmplloader.New("alacritty", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
 	}
-	tmplContent, fromCustom, err := loader.Load("theme.lua.tmpl")
+	tmplContent, fromCustom, err := loader.Load("tinct-colors.toml.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
 	// Log if using custom template.
 	if p.verbose && fromCustom {
-		fmt.Fprintf(os.Stderr, "   Using custom template for theme.lua.tmpl\n")
+		fmt.Fprintf(os.Stderr, "   Using custom template for tinct-colors.toml.tmpl\n")
 	}
 
 	tmpl, err := template.New("theme").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}
-
-	// Set plugin-specific themeName for template.
-	themeData.ThemeName = p.themeName
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
@@ -156,45 +146,47 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if neovim config directory exists before generating the theme.
+// PreExecute checks if alacritty is available before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if nvim executable exists on PATH.
-	_, err = exec.LookPath("nvim")
+	// Check if alacritty executable exists on PATH.
+	_, err = exec.LookPath("alacritty")
 	if err != nil {
-		return true, "nvim executable not found on $PATH", nil
+		return true, "alacritty executable not found on $PATH", nil
 	}
 
 	// Check if config directory exists, create if it doesn't.
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the directory.
+		// Try to create the config directory.
 		if err := os.MkdirAll(configDir, 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
-			return true, fmt.Sprintf("neovim colors directory not found and could not be created: %s", configDir), nil
+			return true, fmt.Sprintf("failed to create alacritty config directory: %s", configDir), nil
 		}
 		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Created neovim colors directory: %s\n", configDir)
+			fmt.Fprintf(os.Stderr, "   Created alacritty config directory: %s\n", configDir)
 		}
 	}
 
 	return false, "", nil
 }
 
-// PostExecute provides usage instructions.
+// PostExecute provides usage instructions for applying the theme.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writtenFiles []string) error {
-	if p.verbose && len(writtenFiles) > 0 {
+func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, generatedFiles []string) error {
+	if p.verbose && len(generatedFiles) > 0 {
 		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Neovim colorscheme generated successfully!\n")
+		fmt.Fprintf(os.Stderr, "   Alacritty theme generated successfully!\n")
 		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   To use this theme, add to your init.lua:\n")
-		fmt.Fprintf(os.Stderr, "   vim.cmd('colorscheme %s')\n", p.themeName)
+		fmt.Fprintf(os.Stderr, "   To use this theme, add to your alacritty.toml:\n")
 		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Or in init.vim:\n")
-		fmt.Fprintf(os.Stderr, "   colorscheme %s\n", p.themeName)
+		fmt.Fprintf(os.Stderr, "   import = [\n")
+		fmt.Fprintf(os.Stderr, "     \"%s\"\n", filepath.Join(p.DefaultOutputDir(), "tinct-colors.toml"))
+		fmt.Fprintf(os.Stderr, "   ]\n")
 		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Note: The colorscheme will auto-reload when tinct updates it.\n")
-		fmt.Fprintf(os.Stderr, "   This works via a file system watcher built into the theme.\n")
+		fmt.Fprintf(os.Stderr, "   Note: Alacritty automatically reloads config when files change.\n")
+		fmt.Fprintf(os.Stderr, "   New colors will apply immediately to all open terminals.\n")
+		fmt.Fprintf(os.Stderr, "\n")
 	}
+
 	return nil
 }

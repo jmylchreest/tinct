@@ -22,6 +22,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	"github.com/jmylchreest/tinct/internal/plugin/output/alacritty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
 	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
@@ -144,6 +145,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.inputRegistry.Register(remotecss.New())
 
 	// Register output plugins.
+	m.outputRegistry.Register(alacritty.New())
 	m.outputRegistry.Register(dunst.New())
 	m.outputRegistry.Register(fuzzel.New())
 	m.outputRegistry.Register(hyprland.New())

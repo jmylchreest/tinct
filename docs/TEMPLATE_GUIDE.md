@@ -215,6 +215,25 @@ Returns `r,g,b` decimal format (for Hyprland, no alpha).
 # Output: 137,180,250
 ```
 
+#### `rgbaDecimal <color>`
+Returns `r,g,b,a` decimal format with alpha channel (for Hyprlock and other tools that need decimal RGBA).
+
+```go
+{{ get . "background" | withAlpha 0.93 | rgbaDecimal }}
+# Output: 30,30,46,0.93
+
+{{ get . "accent1" | rgbaDecimal }}
+# Output: 137,180,250,1.0
+```
+
+#### `rgbSpaces <color>`
+Returns `r g b` space-separated format (for Zellij KDL format).
+
+```go
+{{ get . "accent1" | rgbSpaces }}
+# Output: 137 180 250
+```
+
 ### Alpha Manipulation
 
 #### `withAlpha <color> <alpha>`
@@ -319,12 +338,14 @@ border {{ get . "outline" | hex }}
 {{- $bg := get . "background" }}
 
 # Different representations
-HEX:       {{ $bg | hex }}
-HEX_ALPHA: {{ $bg | hexAlpha }}
-RGB:       {{ $bg | rgb }}
-RGBA:      {{ $bg | rgba }}
-NO_HASH:   {{ $bg | hexNoHash }}
-DECIMAL:   {{ $bg | rgbDecimal }}
+HEX:         {{ $bg | hex }}
+HEX_ALPHA:   {{ $bg | hexAlpha }}
+RGB:         {{ $bg | rgb }}
+RGBA:        {{ $bg | rgba }}
+NO_HASH:     {{ $bg | hexNoHash }}
+RGB_DECIMAL: {{ $bg | rgbDecimal }}
+RGBA_DECIMAL: {{ $bg | rgbaDecimal }}
+RGB_SPACES:  {{ $bg | rgbSpaces }}
 ```
 
 ### Platform-Specific Formats
@@ -333,9 +354,11 @@ DECIMAL:   {{ $bg | rgbDecimal }}
 # Kitty/Alacritty (hex)
 background {{ get . "background" | hex }}
 
-# Hyprland (rgb decimal or rgba)
+# Hyprland (rgb decimal)
 $background = rgb({{ get . "background" | rgbDecimal }})
-$backgroundAlpha = rgba({{ get . "background" | rgbDecimal }}, {{ (get . "background").AlphaFloat }})
+
+# Hyprlock (rgba decimal with alpha)
+$backgroundAlpha = rgba({{ get . "background" | withAlpha 0.93 | rgbaDecimal }})
 
 # CSS (rgba)
 background-color: {{ get . "background" | rgba }};
@@ -780,9 +803,9 @@ $background = rgb({{ $bg | rgbDecimal }})
 $foreground = rgb({{ $fg | rgbDecimal }})
 $accent = rgb({{ $accent | rgbDecimal }})
 
-# With alpha
-$backgroundAlpha = rgba({{ $bg | rgbDecimal }}, 0.85)
-$overlay = rgba({{ get . "scrim" | rgbDecimal }}, {{ (get . "scrim").AlphaFloat }})
+# With alpha (using rgbaDecimal)
+$backgroundAlpha = rgba({{ $bg | withAlpha 0.85 | rgbaDecimal }})
+$overlay = rgba({{ get . "scrim" | rgbaDecimal }})
 ```
 
 ### CSS Stylesheet
