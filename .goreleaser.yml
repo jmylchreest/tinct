@@ -379,7 +379,7 @@ checksum:
 # Snapshots (non-tagged builds)
 # Format: v0.1.2-abc1234 (next version after tag with git short hash)
 snapshot:
-  version_template: "{{ incpatch .Version }}-{{ .ShortCommit }}"
+  version_template: "{{ incpatch .Version }}-{{ .ShortCommit }}-SNAPSHOT"
 
 # ============================================================================
 # CHANGELOG
@@ -692,10 +692,12 @@ release:
     name: tinct
 
   draft: false
-  # Mark as prerelease if tag is "preview" or contains prerelease identifiers
+  # Auto-detect prereleases (versions with -SNAPSHOT, -rc, -alpha, -beta, etc.)
   prerelease: auto
-  make_latest: false
-  mode: replace
+  # Don't mark snapshots as latest, but do mark regular releases as latest
+  make_latest: "{{ if .IsSnapshot }}false{{ else }}true{{ end }}"
+  # Replace assets for snapshots, append for regular releases
+  mode: "{{ if .IsSnapshot }}replace{{ else }}append{{ end }}"
 
   name_template: "{{.ProjectName}} {{.Tag}}"
 
