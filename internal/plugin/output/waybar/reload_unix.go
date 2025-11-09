@@ -12,7 +12,7 @@ import (
 
 // PostExecute reloads waybar configuration if requested.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
+func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, _ []string) error {
 	if !p.reloadConfig {
 		return nil
 	}

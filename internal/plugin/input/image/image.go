@@ -80,7 +80,9 @@ func New() *Plugin {
 	// Check environment variables for cache settings.
 	cacheEnabled := false
 	if val := os.Getenv("TINCT_IMAGE_CACHE"); val != "" {
-		cacheEnabled, _ = strconv.ParseBool(val)
+		if parsed, err := strconv.ParseBool(val); err == nil {
+			cacheEnabled = parsed
+		}
 	}
 
 	cacheDir := os.Getenv("TINCT_IMAGE_CACHE_DIR")
@@ -88,7 +90,9 @@ func New() *Plugin {
 
 	cacheOverwrite := false
 	if val := os.Getenv("TINCT_IMAGE_CACHE_OVERWRITE"); val != "" {
-		cacheOverwrite, _ = strconv.ParseBool(val)
+		if parsed, err := strconv.ParseBool(val); err == nil {
+			cacheOverwrite = parsed
+		}
 	}
 
 	return &Plugin{

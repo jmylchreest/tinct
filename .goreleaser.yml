@@ -511,11 +511,6 @@ aurs:
       # license
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-templater/LICENSE"
 
-      # example config and templates
-      install -Dm644 "./example-config.yaml" "${pkgdir}/usr/share/doc/tinct-plugin-templater/example-config.yaml"
-      mkdir -p "${pkgdir}/usr/share/tinct-plugin-templater/templates"
-      install -Dm644 ./templates/*.tmpl "${pkgdir}/usr/share/tinct-plugin-templater/templates/"
-
   # Plugin: wob
   - ids:
       - plugin-wob-archive
@@ -643,12 +638,6 @@ nfpms:
     contents:
       - src: ./LICENSE
         dst: /usr/share/licenses/tinct-plugin-templater/LICENSE
-
-      - src: ./example-config.yaml
-        dst: /usr/share/doc/tinct-plugin-templater/example-config.yaml
-
-      - src: ./templates/*.tmpl
-        dst: /usr/share/tinct-plugin-templater/templates/
 
     deb:
       lintian_overrides:
