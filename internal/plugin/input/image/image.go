@@ -199,6 +199,11 @@ func (p *Plugin) WallpaperPath() string {
 // Generate creates a raw colour palette by extracting colours from the image.
 // Returns only the extracted colors - categorization happens separately.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+	// Validate the backend first before doing any expensive operations.
+	if opts.Backend != "kmeans" {
+		return nil, fmt.Errorf("invalid backend: %s (only kmeans is currently supported)", opts.Backend)
+	}
+
 	// Resolve the path - if it's a directory, select a random image.
 	resolvedPath, err := image.ResolveImagePath(p.path)
 	if err != nil {
@@ -253,11 +258,6 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	seed, err := p.calculateSeed(img, resolvedPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate seed: %w", err)
-	}
-
-	// Validate the backend.
-	if opts.Backend != "kmeans" {
-		return nil, fmt.Errorf("invalid backend: %s (only kmeans is currently supported)", opts.Backend)
 	}
 
 	// Extract palette using k-means with deterministic seed.
