@@ -24,13 +24,14 @@ func TemplateFuncs() template.FuncMap {
 		"ansiSafe": ansiSafeFunc,
 
 		// Format conversion.
-		"hex":        hexFunc,
-		"hexAlpha":   hexAlphaFunc,
-		"hexNoHash":  hexNoHashFunc,
-		"rgb":        rgbFunc,
-		"rgba":       rgbaFunc,
-		"rgbDecimal": rgbDecimalFunc,
-		"rgbSpaces":  rgbSpacesFunc,
+		"hex":         hexFunc,
+		"hexAlpha":    hexAlphaFunc,
+		"hexNoHash":   hexNoHashFunc,
+		"rgb":         rgbFunc,
+		"rgba":        rgbaFunc,
+		"rgbDecimal":  rgbDecimalFunc,
+		"rgbaDecimal": rgbaDecimalFunc,
+		"rgbSpaces":   rgbSpacesFunc,
 
 		// Alpha manipulation.
 		"withAlpha": withAlphaFunc,
@@ -132,6 +133,11 @@ func rgbaFunc(cv colour.ColorValue) string {
 // rgbDecimalFunc returns color in "r,g,b" decimal format (for Hyprland).
 func rgbDecimalFunc(cv colour.ColorValue) string {
 	return cv.RGBDecimal()
+}
+
+// rgbaDecimalFunc returns color in "r,g,b,a" decimal format with alpha (for Hyprland/Hyprlock).
+func rgbaDecimalFunc(cv colour.ColorValue) string {
+	return cv.Format(colour.FormatRGBADecimal)
 }
 
 // rgbSpacesFunc returns color in "r g b" space-separated format (for Zellij KDL).

@@ -176,9 +176,19 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	return false, "", nil
 }
 
-// PostExecute provides instructions for enabling the theme.
+// PostExecute reloads the colorscheme in running Neovim instances.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writtenFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, writtenFiles []string) error {
+	// Try to reload colorscheme in all running Neovim instances via RPC.
+	if err := p.reloadColorscheme(ctx); err != nil {
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Note: Could not reload colorscheme in Neovim instances: %v\n", err)
+			fmt.Fprintf(os.Stderr, "   You can manually reload with: :colorscheme %s\n", p.themeName)
+		}
+	} else if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Colorscheme reloaded in all Neovim instances\n")
+	}
+
 	if p.verbose && len(writtenFiles) > 0 {
 		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "   To use this theme in Neovim, add to your init.lua:\n")
@@ -188,4 +198,61 @@ func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writt
 		fmt.Fprintf(os.Stderr, "   colorscheme %s\n", p.themeName)
 	}
 	return nil
+}
+
+// reloadColorscheme reloads the colorscheme in all running Neovim instances.
+func (p *Plugin) reloadColorscheme(ctx context.Context) error {
+	// Find all Neovim server sockets in /tmp or XDG_RUNTIME_DIR.
+	sockets, err := p.findNvimSockets()
+	if err != nil {
+		return err
+	}
+
+	if len(sockets) == 0 {
+		return fmt.Errorf("no running Neovim instances found")
+	}
+
+	// Send reload command to each instance.
+	for _, socket := range sockets {
+		cmd := exec.CommandContext(ctx, "nvim", "--server", socket, "--remote-send",
+			fmt.Sprintf("<Cmd>colorscheme %s<CR>", p.themeName))
+		// Ignore errors - some sockets might be stale.
+		_ = cmd.Run()
+	}
+
+	return nil
+}
+
+// findNvimSockets finds all Neovim server sockets.
+func (p *Plugin) findNvimSockets() ([]string, error) {
+	var sockets []string
+
+	// Check common socket locations.
+	searchDirs := []string{
+		os.TempDir(),
+	}
+
+	// Add XDG_RUNTIME_DIR if set.
+	if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
+		searchDirs = append(searchDirs, runtimeDir)
+	}
+
+	for _, dir := range searchDirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		for _, entry := range entries {
+			name := entry.Name()
+			// Look for nvim socket files (typically named like nvim.12345.0 or nvim.user.sock).
+			if (filepath.Ext(name) == "" && len(name) > 5 && name[:5] == "nvim.") ||
+				(filepath.Ext(name) == ".sock" && len(name) > 5 && name[:5] == "nvim.") {
+				fullPath := filepath.Join(dir, name)
+				sockets = append(sockets, fullPath)
+			}
+		}
+	}
+
+	return sockets, nil
 }

@@ -17,7 +17,7 @@ $tinct_wallpaper = {{ .WallpaperPath }}
 {{- end }}
 
 # ============================================================================
-# Tinct Color Variables
+# Tinct Color Variables (RGB format)
 # ============================================================================
 
 $tinct_background = rgb({{ get . "background" | rgbDecimal }})
@@ -36,23 +36,42 @@ $tinct_success = rgb({{ get . "success" | rgbDecimal }})
 $tinct_info = rgb({{ get . "info" | rgbDecimal }})
 
 # ============================================================================
+# Hex Variants (without # prefix, for hyprlock compatibility)
+# ============================================================================
+
+$tinct_background_hex = {{ get . "background" | hexNoHash }}
+$tinct_background_muted_hex = {{ get . "backgroundMuted" | hexNoHash }}
+$tinct_foreground_hex = {{ get . "foreground" | hexNoHash }}
+$tinct_foreground_muted_hex = {{ get . "foregroundMuted" | hexNoHash }}
+
+$tinct_accent1_hex = {{ get . "accent1" | hexNoHash }}
+$tinct_accent2_hex = {{ get . "accent2" | hexNoHash }}
+$tinct_accent3_hex = {{ get . "accent3" | hexNoHash }}
+$tinct_accent4_hex = {{ get . "accent4" | hexNoHash }}
+
+$tinct_danger_hex = {{ get . "danger" | hexNoHash }}
+$tinct_warning_hex = {{ get . "warning" | hexNoHash }}
+$tinct_success_hex = {{ get . "success" | hexNoHash }}
+$tinct_info_hex = {{ get . "info" | hexNoHash }}
+
+# ============================================================================
 # RGBA Variants (with alpha channel)
 # ============================================================================
 
-$tinct_background_rgba = rgba({{ withAlpha (get . "background") 0.93 | rgbDecimal }})
-$tinct_background_muted_rgba = rgba({{ withAlpha (get . "backgroundMuted") 0.80 | rgbDecimal }})
-$tinct_foreground_rgba = rgba({{ get . "foreground" | rgbDecimal }})
-$tinct_foreground_muted_rgba = rgba({{ withAlpha (get . "foregroundMuted") 0.87 | rgbDecimal }})
+$tinct_background_rgba = rgba({{ withAlpha (get . "background") 0.93 | rgbaDecimal }})
+$tinct_background_muted_rgba = rgba({{ withAlpha (get . "backgroundMuted") 0.80 | rgbaDecimal }})
+$tinct_foreground_rgba = rgba({{ get . "foreground" | rgbaDecimal }})
+$tinct_foreground_muted_rgba = rgba({{ withAlpha (get . "foregroundMuted") 0.87 | rgbaDecimal }})
 
-$tinct_accent1_rgba = rgba({{ get . "accent1" | rgbDecimal }})
-$tinct_accent2_rgba = rgba({{ get . "accent2" | rgbDecimal }})
-$tinct_accent3_rgba = rgba({{ get . "accent3" | rgbDecimal }})
-$tinct_accent4_rgba = rgba({{ get . "accent4" | rgbDecimal }})
+$tinct_accent1_rgba = rgba({{ get . "accent1" | rgbaDecimal }})
+$tinct_accent2_rgba = rgba({{ get . "accent2" | rgbaDecimal }})
+$tinct_accent3_rgba = rgba({{ get . "accent3" | rgbaDecimal }})
+$tinct_accent4_rgba = rgba({{ get . "accent4" | rgbaDecimal }})
 
-$tinct_danger_rgba = rgba({{ get . "danger" | rgbDecimal }})
-$tinct_warning_rgba = rgba({{ get . "warning" | rgbDecimal }})
-$tinct_success_rgba = rgba({{ get . "success" | rgbDecimal }})
-$tinct_info_rgba = rgba({{ get . "info" | rgbDecimal }})
+$tinct_danger_rgba = rgba({{ get . "danger" | rgbaDecimal }})
+$tinct_warning_rgba = rgba({{ get . "warning" | rgbaDecimal }})
+$tinct_success_rgba = rgba({{ get . "success" | rgbaDecimal }})
+$tinct_info_rgba = rgba({{ get . "info" | rgbaDecimal }})
 
 # ============================================================================
 # Usage Examples (commented out - uncomment to use)
