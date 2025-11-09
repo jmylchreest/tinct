@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -105,6 +106,11 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
+	// Populate template metadata fields.
+	filename := fmt.Sprintf("%s.lua", p.themeName)
+	themeData.OutputDir = p.DefaultOutputDir()
+	themeData.ColorFileName = filename
+
 	files := make(map[string][]byte)
 
 	// Generate theme file.
@@ -113,7 +119,6 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
 
-	filename := fmt.Sprintf("%s.lua", p.themeName)
 	files[filename] = themeContent
 
 	return files, nil
@@ -202,25 +207,67 @@ func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, wri
 
 // reloadColorscheme reloads the colorscheme in all running Neovim instances.
 func (p *Plugin) reloadColorscheme(ctx context.Context) error {
-	// Find all Neovim server sockets in /tmp or XDG_RUNTIME_DIR.
+	// Check if nvr (neovim-remote) is available.
+	nvrPath, err := exec.LookPath("nvr")
+	if err != nil {
+		// nvr not available, try to find sockets and reload via RPC manually.
+		return p.reloadViaSocketList(ctx)
+	}
+
+	// Use nvr --serverlist to find all instances and reload them.
+	return p.reloadViaNvr(ctx, nvrPath)
+}
+
+// reloadViaNvr uses neovim-remote to reload colorscheme in all instances.
+func (p *Plugin) reloadViaNvr(ctx context.Context, nvrPath string) error {
+	// Get list of all nvim servers.
+	listCmd := exec.CommandContext(ctx, nvrPath, "--serverlist")
+	output, err := listCmd.Output()
+	if err != nil {
+		return fmt.Errorf("no running Neovim instances found")
+	}
+
+	servers := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(servers) == 0 || (len(servers) == 1 && servers[0] == "") {
+		return fmt.Errorf("no running Neovim instances found")
+	}
+
+	// Send colorscheme command to each server.
+	for _, server := range servers {
+		if server == "" {
+			continue
+		}
+		cmd := exec.CommandContext(ctx, nvrPath, "--servername", server, "-c",
+			fmt.Sprintf("colorscheme %s", p.themeName))
+		// Ignore errors - some servers might be stale.
+		_ = cmd.Run()
+	}
+
+	return nil
+}
+
+// reloadViaSocketList finds sockets manually and attempts reload.
+// This is a fallback when nvr is not available.
+func (p *Plugin) reloadViaSocketList(ctx context.Context) error {
 	sockets, err := p.findNvimSockets()
 	if err != nil {
 		return err
 	}
 
 	if len(sockets) == 0 {
-		return fmt.Errorf("no running Neovim instances found")
+		return fmt.Errorf("no running Neovim instances found (install 'nvr' for better support)")
 	}
 
-	// Send reload command to each instance.
+	// Try using NVIM_LISTEN_ADDRESS environment variable approach.
+	// This won't work for all instances, but might work for the current one.
 	for _, socket := range sockets {
-		cmd := exec.CommandContext(ctx, "nvim", "--server", socket, "--remote-send",
-			fmt.Sprintf("<Cmd>colorscheme %s<CR>", p.themeName))
-		// Ignore errors - some sockets might be stale.
+		cmd := exec.CommandContext(ctx, "nvim", "--headless", "--server", socket,
+			"-c", fmt.Sprintf("colorscheme %s | qa", p.themeName))
+		// Ignore errors - this approach is unreliable.
 		_ = cmd.Run()
 	}
 
-	return nil
+	return fmt.Errorf("colorscheme reload attempted but may not have worked (install 'nvr' for reliable reloading)")
 }
 
 // findNvimSockets finds all Neovim server sockets.

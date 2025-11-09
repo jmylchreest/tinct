@@ -331,3 +331,36 @@ vim.g.terminal_color_12 = colors.bright_blue
 vim.g.terminal_color_13 = colors.bright_magenta
 vim.g.terminal_color_14 = colors.bright_cyan
 vim.g.terminal_color_15 = colors.bright_white
+
+-- Auto-reload colorscheme when this file changes (externally by tinct)
+-- Uses libuv file system event watcher to detect external modifications
+local colorscheme_file = vim.fn.expand("{{ .OutputDir }}/{{ .ColorFileName }}")
+local fs_event = vim.uv.new_fs_event()
+
+if fs_event then
+  fs_event:start(colorscheme_file, {}, vim.schedule_wrap(function(err, filename, events)
+    if err then
+      return
+    end
+
+    -- Debounce: wait a bit for file write to complete
+    vim.defer_fn(function()
+      -- Only reload if this colorscheme is currently active
+      if vim.g.colors_name == "{{ .ThemeName }}" then
+        vim.cmd("highlight clear")
+        -- Re-source the colorscheme file
+        vim.cmd("source " .. vim.fn.fnameescape(colorscheme_file))
+      end
+    end, 100)
+  end))
+
+  -- Clean up the watcher when Neovim exits
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    callback = function()
+      if fs_event then
+        fs_event:stop()
+      end
+    end,
+    desc = "Stop {{ .ThemeName }} colorscheme file watcher"
+  })
+end
