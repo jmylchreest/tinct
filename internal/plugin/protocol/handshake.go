@@ -15,7 +15,7 @@ import (
 //
 // This means:
 // - go-plugin handshake: Major version must match exactly (e.g., both 0)
-// - Semantic version check: Full MAJOR.MINOR.PATCH validation with MinCompatibleVersion
+// - Semantic version check: Full MAJOR.MINOR.PATCH validation with MinCompatibleVersion.
 var Handshake = plugin.HandshakeConfig{
 	ProtocolVersion:  uint(GetCurrentVersion().Major),
 	MagicCookieKey:   "TINCT_PLUGIN",

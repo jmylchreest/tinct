@@ -221,7 +221,7 @@ func (p *Plugin) checkForConflictingTheme() {
 		if strings.Contains(trimmed, "include") && strings.Contains(trimmed, "tinct.conf") {
 			hasTinctInclude = true
 			// Check if current-theme.conf appears before this line
-			for j := 0; j < i; j++ {
+			for j := range i {
 				if strings.Contains(lines[j], "current-theme.conf") {
 					tinctAfterCurrent = true
 					break

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image/color"
 	"io"
@@ -27,7 +28,7 @@ type PluginExecutor struct {
 	path              string
 	protocolType      protocol.PluginType
 	client            *plugin.Client
-	rpcClient         interface{} // Either *protocol.InputPluginRPCClient or *protocol.OutputPluginRPCClient
+	rpcClient         any // Either *protocol.InputPluginRPCClient or *protocol.OutputPluginRPCClient
 	verbose           bool
 	lastWallpaperPath string // Stores wallpaper path from JSON stdio plugins
 }
@@ -193,7 +194,10 @@ func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*protocol.Input
 		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
 	}
 
-	client := raw.(*protocol.InputPluginRPCClient)
+	client, ok := raw.(*protocol.InputPluginRPCClient)
+	if !ok {
+		return nil, fmt.Errorf("unexpected plugin type")
+	}
 	e.rpcClient = client
 
 	return client, nil
@@ -248,7 +252,10 @@ func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*protocol.Outp
 		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
 	}
 
-	client := raw.(*protocol.OutputPluginRPCClient)
+	client, ok := raw.(*protocol.OutputPluginRPCClient)
+	if !ok {
+		return nil, fmt.Errorf("unexpected plugin type")
+	}
 	e.rpcClient = client
 
 	return client, nil
@@ -418,7 +425,8 @@ func (e *PluginExecutor) preExecuteJSON(ctx context.Context) (bool, string, erro
 	err := cmd.Run()
 
 	// Exit code 0 = continue, 1 = skip, 2+ = error.
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		exitCode := exitErr.ExitCode()
 
 		if exitCode == 1 {

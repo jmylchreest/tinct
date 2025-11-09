@@ -83,12 +83,12 @@ type InputPluginRPC struct {
 }
 
 // Server returns an RPC server for this plugin.
-func (p *InputPluginRPC) Server(*plugin.MuxBroker) (interface{}, error) {
+func (p *InputPluginRPC) Server(*plugin.MuxBroker) (any, error) {
 	return &InputPluginRPCServer{Impl: p.Impl}, nil
 }
 
 // Client returns an RPC client for this plugin.
-func (p *InputPluginRPC) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+func (p *InputPluginRPC) Client(b *plugin.MuxBroker, c *rpc.Client) (any, error) {
 	return &InputPluginRPCClient{client: c}, nil
 }
 
@@ -125,13 +125,13 @@ func (s *InputPluginRPCServer) Generate(opts InputOptions, resp *[]byte) error {
 }
 
 // GetMetadata implements the RPC method for fetching plugin metadata.
-func (s *InputPluginRPCServer) GetMetadata(_ interface{}, resp *PluginInfo) error {
+func (s *InputPluginRPCServer) GetMetadata(_ any, resp *PluginInfo) error {
 	*resp = s.Impl.GetMetadata()
 	return nil
 }
 
 // WallpaperPath implements the RPC method for fetching wallpaper path.
-func (s *InputPluginRPCServer) WallpaperPath(_ interface{}, resp *string) error {
+func (s *InputPluginRPCServer) WallpaperPath(_ any, resp *string) error {
 	*resp = s.Impl.WallpaperPath()
 	return nil
 }
@@ -170,14 +170,14 @@ func (c *InputPluginRPCClient) Generate(ctx context.Context, opts InputOptions) 
 // GetMetadata calls the remote GetMetadata method.
 func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
-	err := c.client.Call("Plugin.GetMetadata", new(interface{}), &info)
+	err := c.client.Call("Plugin.GetMetadata", new(any), &info)
 	return info, err
 }
 
 // WallpaperPath calls the remote WallpaperPath method.
 func (c *InputPluginRPCClient) WallpaperPath() string {
 	var path string
-	err := c.client.Call("Plugin.WallpaperPath", new(interface{}), &path)
+	err := c.client.Call("Plugin.WallpaperPath", new(any), &path)
 	if err != nil {
 		return ""
 	}
@@ -191,12 +191,12 @@ type OutputPluginRPC struct {
 }
 
 // Server returns an RPC server for this plugin.
-func (p *OutputPluginRPC) Server(*plugin.MuxBroker) (interface{}, error) {
+func (p *OutputPluginRPC) Server(*plugin.MuxBroker) (any, error) {
 	return &OutputPluginRPCServer{Impl: p.Impl}, nil
 }
 
 // Client returns an RPC client for this plugin.
-func (p *OutputPluginRPC) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+func (p *OutputPluginRPC) Client(b *plugin.MuxBroker, c *rpc.Client) (any, error) {
 	return &OutputPluginRPCClient{client: c}, nil
 }
 
@@ -216,11 +216,12 @@ func (s *OutputPluginRPCServer) Generate(palette PaletteData, resp *map[string][
 }
 
 // PreExecute implements the RPC method for pre-execution hooks.
-func (s *OutputPluginRPCServer) PreExecute(_ interface{}, resp *struct {
+func (s *OutputPluginRPCServer) PreExecute(_ any, resp *struct {
 	Skip   bool
 	Reason string
 	Error  string
 }) error {
+
 	skip, reason, err := s.Impl.PreExecute(context.Background())
 	resp.Skip = skip
 	resp.Reason = reason
@@ -241,7 +242,7 @@ func (s *OutputPluginRPCServer) PostExecute(files []string, resp *string) error 
 }
 
 // GetMetadata implements the RPC method for fetching plugin metadata.
-func (s *OutputPluginRPCServer) GetMetadata(_ interface{}, resp *PluginInfo) error {
+func (s *OutputPluginRPCServer) GetMetadata(_ any, resp *PluginInfo) error {
 	*resp = s.Impl.GetMetadata()
 	return nil
 }
@@ -265,7 +266,7 @@ func (c *OutputPluginRPCClient) PreExecute(ctx context.Context) (bool, string, e
 		Reason string
 		Error  string
 	}
-	err := c.client.Call("Plugin.PreExecute", new(interface{}), &resp)
+	err := c.client.Call("Plugin.PreExecute", new(any), &resp)
 	if err != nil {
 		return false, "", err
 	}
@@ -291,7 +292,7 @@ func (c *OutputPluginRPCClient) PostExecute(ctx context.Context, files []string)
 // GetMetadata calls the remote GetMetadata method.
 func (c *OutputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
-	err := c.client.Call("Plugin.GetMetadata", new(interface{}), &info)
+	err := c.client.Call("Plugin.GetMetadata", new(any), &info)
 	return info, err
 }
 

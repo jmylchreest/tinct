@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	_ "golang.org/x/image/webp" // Register WebP format
@@ -132,12 +133,7 @@ func SupportedImageExtensions() []string {
 // isImageFile checks if a file has a supported image extension.
 func isImageFile(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
-	for _, supported := range SupportedImageExtensions() {
-		if ext == supported {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(SupportedImageExtensions(), ext)
 }
 
 // ScanDirectoryForImages scans a directory and returns all valid image files.

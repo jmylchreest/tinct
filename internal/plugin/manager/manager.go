@@ -547,8 +547,9 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 
 	// Debug: show what's being sent to plugin.
 	if opts.Verbose {
-		optsJSON, _ := json.Marshal(protocolOpts)
-		fmt.Fprintf(os.Stderr, "   Sending to plugin: %s\n", string(optsJSON))
+		if optsJSON, err := json.Marshal(protocolOpts); err == nil {
+			fmt.Fprintf(os.Stderr, "   Sending to plugin: %s\n", string(optsJSON))
+		}
 	}
 
 	// Execute input plugin.

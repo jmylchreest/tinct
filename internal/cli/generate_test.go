@@ -23,7 +23,7 @@ func setupTests(t *testing.T) (string, func()) {
 
 	// Create a dummy image file.
 	dummyImagePath := filepath.Join(tempDir, "test.png")
-	if err := os.WriteFile(dummyImagePath, []byte("dummy image data"), 0600); err != nil {
+	if err := os.WriteFile(dummyImagePath, []byte("dummy image data"), 0o600); err != nil {
 		t.Fatalf("Failed to create dummy image file: %v", err)
 	}
 
