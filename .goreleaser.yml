@@ -412,44 +412,44 @@ changelog:
 # PACKAGE MANAGERS
 # ============================================================================
 # Package managers
-# Migrated from deprecated 'brews' to 'homebrew_casks' (v2.10+)
-homebrew_casks:
-  - name: tinct
-    ids:
-      - tinct-archive
-    repository:
-      owner: jmylchreest
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-
-    directory: Casks
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Generate colour palettes from images and apply system-wide theming"
-    license: MIT
-
-    # Cask installation (artifacts are automatically installed)
-    # Shell completions need to be handled via post-install hooks
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            # Install shell completions
-            bash_completion = "#{Dir.home}/.bash_completion.d"
-            zsh_completion = "#{Dir.home}/.zsh/completion"
-            fish_completion = "#{Dir.home}/.config/fish/completions"
-
-            FileUtils.mkdir_p(bash_completion) rescue nil
-            FileUtils.mkdir_p(zsh_completion) rescue nil
-            FileUtils.mkdir_p(fish_completion) rescue nil
-
-            FileUtils.cp("#{staged_path}/completions/tinct.bash", "#{bash_completion}/tinct") rescue nil
-            FileUtils.cp("#{staged_path}/completions/_tinct", "#{zsh_completion}/_tinct") rescue nil
-            FileUtils.cp("#{staged_path}/completions/tinct.fish", "#{fish_completion}/tinct.fish") rescue nil
-          end
+# Commented out - not currently used
+# homebrew_casks:
+#   - name: tinct
+#     ids:
+#       - tinct-archive
+#     repository:
+#       owner: jmylchreest
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#
+#     commit_author:
+#       name: goreleaserbot
+#       email: bot@goreleaser.com
+#
+#     directory: Casks
+#     homepage: "https://github.com/jmylchreest/tinct"
+#     description: "Generate colour palettes from images and apply system-wide theming"
+#     license: MIT
+#
+#     # Cask installation (artifacts are automatically installed)
+#     # Shell completions need to be handled via post-install hooks
+#     hooks:
+#       post:
+#         install: |
+#           if OS.mac?
+#             # Install shell completions
+#             bash_completion = "#{Dir.home}/.bash_completion.d"
+#             zsh_completion = "#{Dir.home}/.zsh/completion"
+#             fish_completion = "#{Dir.home}/.config/fish/completions"
+#
+#             FileUtils.mkdir_p(bash_completion) rescue nil
+#             FileUtils.mkdir_p(zsh_completion) rescue nil
+#             FileUtils.mkdir_p(fish_completion) rescue nil
+#
+#             FileUtils.cp("#{staged_path}/completions/tinct.bash", "#{bash_completion}/tinct") rescue nil
+#             FileUtils.cp("#{staged_path}/completions/_tinct", "#{zsh_completion}/_tinct") rescue nil
+#             FileUtils.cp("#{staged_path}/completions/tinct.fish", "#{fish_completion}/tinct.fish") rescue nil
+#           end
 
 # AUR (Arch User Repository) packages
 aurs:
@@ -529,156 +529,158 @@ aurs:
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-wob/LICENSE"
 
 # Nix packages
-nix:
-  - repository:
-      owner: jmylchreest
-      name: nur-packages
-      token: "{{ .Env.NIX_GITHUB_TOKEN }}"
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Generate colour palettes from images and apply system-wide theming"
-    license: mit
-    install: |-
-      mkdir -p $out/bin
-      cp tinct $out/bin/
+# Commented out - not currently used
+# nix:
+#   - repository:
+#       owner: jmylchreest
+#       name: nur-packages
+#       token: "{{ .Env.NIX_GITHUB_TOKEN }}"
+#     homepage: "https://github.com/jmylchreest/tinct"
+#     description: "Generate colour palettes from images and apply system-wide theming"
+#     license: mit
+#     install: |-
+#       mkdir -p $out/bin
+#       cp tinct $out/bin/
 
 # Linux packages
-nfpms:
-  - id: tinct
-    ids:
-      - tinct
-    package_name: tinct
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Generate colour palettes from images and apply system-wide theming"
-    maintainer: "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-
-    formats:
-      - deb
-      - rpm
-      - apk
-      - archlinux
-
-    bindir: /usr/bin
-
-    contents:
-      - src: ./LICENSE
-        dst: /usr/share/licenses/tinct/LICENSE
-
-      # Completions
-      - src: ./completions/tinct.bash
-        dst: /usr/share/bash-completion/completions/tinct
-
-      - src: ./completions/_tinct
-        dst: /usr/share/zsh/site-functions/_tinct
-
-      - src: ./completions/tinct.fish
-        dst: /usr/share/fish/vendor_completions.d/tinct.fish
-
-    # Debian/RPM specific
-    deb:
-      lintian_overrides:
-        - statically-linked-binary
-        - changelog-file-missing-in-native-package
-
-    rpm:
-      summary: Colour palette generator with system-wide theming
-      group: Applications/System
-
-  # Plugin: random
-  - id: plugin-random
-    ids:
-      - plugin-random
-    package_name: tinct-plugin-random
-    file_name_template: "tinct-plugin-random_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Random color palette generator plugin for Tinct"
-    maintainer: "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-
-    formats:
-      - deb
-      - rpm
-      - apk
-      - archlinux
-
-    bindir: /usr/bin
-
-    contents:
-      - src: ./LICENSE
-        dst: /usr/share/licenses/tinct-plugin-random/LICENSE
-
-    deb:
-      lintian_overrides:
-        - statically-linked-binary
-        - changelog-file-missing-in-native-package
-
-    rpm:
-      summary: Random color palette generator plugin for Tinct
-      group: Applications/System
-
-  # Plugin: templater
-  - id: plugin-templater
-    ids:
-      - plugin-templater
-    package_name: tinct-plugin-templater
-    file_name_template: "tinct-plugin-templater_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Template-based output plugin for Tinct"
-    maintainer: "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-
-    formats:
-      - deb
-      - rpm
-      - apk
-      - archlinux
-
-    bindir: /usr/bin
-
-    contents:
-      - src: ./LICENSE
-        dst: /usr/share/licenses/tinct-plugin-templater/LICENSE
-
-    deb:
-      lintian_overrides:
-        - statically-linked-binary
-        - changelog-file-missing-in-native-package
-
-    rpm:
-      summary: Template-based output plugin for Tinct
-      group: Applications/System
-
-  # Plugin: wob
-  - id: plugin-wob
-    ids:
-      - plugin-wob
-    package_name: tinct-plugin-wob
-    file_name_template: "tinct-plugin-wob_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Wob (Wayland Overlay Bar) output plugin for Tinct"
-    maintainer: "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-
-    formats:
-      - deb
-      - rpm
-      - apk
-      - archlinux
-
-    bindir: /usr/bin
-
-    contents:
-      - src: ./LICENSE
-        dst: /usr/share/licenses/tinct-plugin-wob/LICENSE
-
-    deb:
-      lintian_overrides:
-        - statically-linked-binary
-        - changelog-file-missing-in-native-package
-
-    rpm:
-      summary: Wob (Wayland Overlay Bar) output plugin for Tinct
-      group: Applications/System
+# Commented out - not currently used (using AUR only)
+# nfpms:
+#   - id: tinct
+#     ids:
+#       - tinct
+#     package_name: tinct
+#     homepage: "https://github.com/jmylchreest/tinct"
+#     description: "Generate colour palettes from images and apply system-wide theming"
+#     maintainer: "John Mylchreest <jmylchreest@gmail.com>"
+#     license: MIT
+#
+#     formats:
+#       - deb
+#       - rpm
+#       - apk
+#       - archlinux
+#
+#     bindir: /usr/bin
+#
+#     contents:
+#       - src: ./LICENSE
+#         dst: /usr/share/licenses/tinct/LICENSE
+#
+#       # Completions
+#       - src: ./completions/tinct.bash
+#         dst: /usr/share/bash-completion/completions/tinct
+#
+#       - src: ./completions/_tinct
+#         dst: /usr/share/zsh/site-functions/_tinct
+#
+#       - src: ./completions/tinct.fish
+#         dst: /usr/share/fish/vendor_completions.d/tinct.fish
+#
+#     # Debian/RPM specific
+#     deb:
+#       lintian_overrides:
+#         - statically-linked-binary
+#         - changelog-file-missing-in-native-package
+#
+#     rpm:
+#       summary: Colour palette generator with system-wide theming
+#       group: Applications/System
+#
+#   # Plugin: random
+#   - id: plugin-random
+#     ids:
+#       - plugin-random
+#     package_name: tinct-plugin-random
+#     file_name_template: "tinct-plugin-random_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+#     homepage: "https://github.com/jmylchreest/tinct"
+#     description: "Random color palette generator plugin for Tinct"
+#     maintainer: "John Mylchreest <jmylchreest@gmail.com>"
+#     license: MIT
+#
+#     formats:
+#       - deb
+#       - rpm
+#       - apk
+#       - archlinux
+#
+#     bindir: /usr/bin
+#
+#     contents:
+#       - src: ./LICENSE
+#         dst: /usr/share/licenses/tinct-plugin-random/LICENSE
+#
+#     deb:
+#       lintian_overrides:
+#         - statically-linked-binary
+#         - changelog-file-missing-in-native-package
+#
+#     rpm:
+#       summary: Random color palette generator plugin for Tinct
+#       group: Applications/System
+#
+#   # Plugin: templater
+#   - id: plugin-templater
+#     ids:
+#       - plugin-templater
+#     package_name: tinct-plugin-templater
+#     file_name_template: "tinct-plugin-templater_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+#     homepage: "https://github.com/jmylchreest/tinct"
+#     description: "Template-based output plugin for Tinct"
+#     maintainer: "John Mylchreest <jmylchreest@gmail.com>"
+#     license: MIT
+#
+#     formats:
+#       - deb
+#       - rpm
+#       - apk
+#       - archlinux
+#
+#     bindir: /usr/bin
+#
+#     contents:
+#       - src: ./LICENSE
+#         dst: /usr/share/licenses/tinct-plugin-templater/LICENSE
+#
+#     deb:
+#       lintian_overrides:
+#         - statically-linked-binary
+#         - changelog-file-missing-in-native-package
+#
+#     rpm:
+#       summary: Template-based output plugin for Tinct
+#       group: Applications/System
+#
+#   # Plugin: wob
+#   - id: plugin-wob
+#     ids:
+#       - plugin-wob
+#     package_name: tinct-plugin-wob
+#     file_name_template: "tinct-plugin-wob_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+#     homepage: "https://github.com/jmylchreest/tinct"
+#     description: "Wob (Wayland Overlay Bar) output plugin for Tinct"
+#     maintainer: "John Mylchreest <jmylchreest@gmail.com>"
+#     license: MIT
+#
+#     formats:
+#       - deb
+#       - rpm
+#       - apk
+#       - archlinux
+#
+#     bindir: /usr/bin
+#
+#     contents:
+#       - src: ./LICENSE
+#         dst: /usr/share/licenses/tinct-plugin-wob/LICENSE
+#
+#     deb:
+#       lintian_overrides:
+#         - statically-linked-binary
+#         - changelog-file-missing-in-native-package
+#
+#     rpm:
+#       summary: Wob (Wayland Overlay Bar) output plugin for Tinct
+#       group: Applications/System
 
 # ============================================================================
 # GITHUB RELEASE
@@ -690,10 +692,12 @@ release:
     name: tinct
 
   draft: false
+  # Mark as prerelease if tag is "preview" or contains prerelease identifiers
   prerelease: auto
-  mode: append
+  make_latest: false
+  mode: replace
 
-  name_template: "{{.ProjectName}} v{{.Version}}"
+  name_template: "{{.ProjectName}} {{.Tag}}"
 
   header: |
     ## Tinct {{.Version}}
