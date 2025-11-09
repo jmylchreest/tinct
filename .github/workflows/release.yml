@@ -204,7 +204,7 @@ jobs:
             dist/*.tar.gz \
             dist/*.zip \
             dist/checksums.txt \
-            dist/*_sbom.json
+            dist/*.sbom.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
