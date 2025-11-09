@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -23,11 +24,12 @@ import (
 
 // PluginExecutor provides a unified interface for executing plugins.
 type PluginExecutor struct {
-	path         string
-	protocolType protocol.PluginType
-	client       *plugin.Client
-	rpcClient    interface{} // Either *protocol.InputPluginRPCClient or *protocol.OutputPluginRPCClient
-	verbose      bool
+	path              string
+	protocolType      protocol.PluginType
+	client            *plugin.Client
+	rpcClient         interface{} // Either *protocol.InputPluginRPCClient or *protocol.OutputPluginRPCClient
+	verbose           bool
+	lastWallpaperPath string // Stores wallpaper path from JSON stdio plugins
 }
 
 // New creates a new PluginExecutor by detecting the plugin's protocol.
@@ -115,6 +117,31 @@ func (e *PluginExecutor) Close() {
 	}
 }
 
+// GetWallpaperPath retrieves the wallpaper path from an input plugin if available.
+// Works for both go-plugin RPC and JSON stdio protocols.
+func (e *PluginExecutor) GetWallpaperPath() string {
+	switch e.protocolType {
+	case protocol.PluginTypeGoPlugin:
+		// For RPC plugins, query via RPC
+		if e.rpcClient == nil {
+			return ""
+		}
+
+		if inputClient, ok := e.rpcClient.(*protocol.InputPluginRPCClient); ok {
+			return inputClient.WallpaperPath()
+		}
+
+		return ""
+
+	case protocol.PluginTypeJSON:
+		// For JSON stdio plugins, return stored value
+		return e.lastWallpaperPath
+
+	default:
+		return ""
+	}
+}
+
 // --- Go-Plugin RPC implementations ---
 
 func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*protocol.InputPluginRPCClient, error) {
@@ -149,6 +176,7 @@ func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*protocol.Input
 		Cmd:              exec.Command(e.path),
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolNetRPC},
 		Logger:           logger,
+		SyncStderr:       os.Stderr, // Forward plugin stderr to parent
 	})
 
 	// Connect via RPC.
@@ -203,6 +231,7 @@ func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*protocol.Outp
 		Cmd:              exec.Command(e.path),
 		AllowedProtocols: []plugin.Protocol{plugin.ProtocolNetRPC},
 		Logger:           logger,
+		SyncStderr:       os.Stderr, // Forward plugin stderr to parent
 	})
 
 	// Connect via RPC.
@@ -282,7 +311,27 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts protocol.Inp
 		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
 	}
 
-	// Parse output - try simple color array first.
+	// Parse output - try new format with wallpaper path first
+	var response struct {
+		Colors []struct {
+			R uint8 `json:"r"`
+			G uint8 `json:"g"`
+			B uint8 `json:"b"`
+		} `json:"colors"`
+		WallpaperPath string `json:"wallpaper_path,omitempty"`
+	}
+
+	if err := json.Unmarshal(stdout.Bytes(), &response); err == nil && len(response.Colors) > 0 {
+		colors := make([]color.Color, len(response.Colors))
+		for i, rgb := range response.Colors {
+			colors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
+		}
+		// Store wallpaper path if provided
+		e.lastWallpaperPath = response.WallpaperPath
+		return colors, nil
+	}
+
+	// Try simple color array (backwards compatibility).
 	var rawColors []struct {
 		R uint8 `json:"r"`
 		G uint8 `json:"g"`

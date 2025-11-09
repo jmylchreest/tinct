@@ -18,6 +18,9 @@ type GenerateOptions struct {
 	// DryRun generates output without side effects.
 	DryRun bool
 
+	// Backend is the colour extraction backend to use.
+	Backend string
+
 	// ColourOverrides are manual colour specifications (role=hex).
 	ColourOverrides []string
 

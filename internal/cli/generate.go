@@ -43,6 +43,7 @@ var (
 	generateSavePalette string
 	generateVerbose     bool
 	generatePluginArgs  map[string]string
+	generateBackend     string
 )
 
 // generateCmd represents the generate command.
@@ -67,6 +68,7 @@ func init() {
 	generateCmd.Flags().BoolVar(&generateDryRun, "dry-run", false, "Preview without writing files")
 	generateCmd.Flags().BoolVar(&generatePreview, "preview", false, "Show colour palette preview")
 	generateCmd.Flags().StringVar(&generateSavePalette, "save-palette", "", "Save palette to file (JSON)")
+	generateCmd.Flags().StringVar(&generateBackend, "backend", "kmeans", "Colour extraction backend (kmeans)")
 	generateCmd.Flags().BoolVarP(&generateVerbose, "verbose", "v", false, "Verbose output")
 	generateCmd.Flags().StringToStringVar(&generatePluginArgs, "plugin-args", nil, "Plugin-specific arguments (key=value format, repeatable for multiple plugins)")
 

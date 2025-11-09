@@ -66,7 +66,7 @@ func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description
 	fullName := fmt.Sprintf("%s:%s", pluginType, name)
 	status := c.determinePluginStatus(pluginType, name)
 	isExternal := c.isExternalPlugin(name, pluginType)
-	source := c.getPluginSource(name, pluginType)
+	source := c.getPluginPath(name, pluginType)
 
 	return pluginInfo{
 		fullName:    fullName,
@@ -126,18 +126,16 @@ func (c *pluginCollector) isExternalPlugin(name, pluginType string) bool {
 	return false
 }
 
-// getPluginSource retrieves the source information for an external plugin.
-func (c *pluginCollector) getPluginSource(name, pluginType string) string {
+// getPluginPath retrieves the actual path for an external plugin.
+func (c *pluginCollector) getPluginPath(name, pluginType string) string {
 	if c.lock == nil || c.lock.ExternalPlugins == nil {
 		return ""
 	}
 
 	for _, meta := range c.lock.ExternalPlugins {
 		if meta.Name == name && meta.Type == pluginType {
-			if meta.Source != nil {
-				return formatPluginSourceString(meta.Source)
-			}
-			return meta.SourceLegacy
+			// Return the actual plugin path being used, not the original source
+			return meta.Path
 		}
 	}
 	return ""
@@ -190,7 +188,7 @@ func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPlugi
 		version:     version,
 		description: description,
 		isExternal:  true,
-		source:      formatPluginSourceString(meta.Source),
+		source:      meta.Path, // Show actual plugin path, not original source
 	}
 }
 
@@ -242,7 +240,7 @@ func addPluginToTable(tbl *Table, p pluginInfo) {
 	tbl.AddRow([]string{marker, p.fullName, p.status, p.version, p.description})
 
 	if p.isExternal && p.source != "" {
-		tbl.AddRow([]string{"", "", "", "", "  src: " + p.source})
+		tbl.AddRow([]string{"", "", "", "", "  path: " + p.source})
 	}
 }
 

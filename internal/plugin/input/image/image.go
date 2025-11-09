@@ -51,9 +51,8 @@ type SeedConfig struct {
 
 // Plugin implements the input.Plugin interface for image-based colour extraction.
 type Plugin struct {
-	path      string
-	algorithm string
-	colours   int
+	path    string
+	colours int
 
 	// Region extraction (ambient lighting).
 	extractAmbience bool   // Whether to extract edge/corner regions (default: false)
@@ -96,7 +95,6 @@ func New() *Plugin {
 	}
 
 	return &Plugin{
-		algorithm:       "kmeans",
 		colours:         16,
 		extractAmbience: false,
 		regions:         8,
@@ -129,7 +127,6 @@ func (p *Plugin) Version() string {
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&p.path, "image.path", "p", "", "Path to image file, directory, or HTTP(S) URL (required, directories will select a random image)")
-	cmd.Flags().StringVarP(&p.algorithm, "image.algorithm", "a", "kmeans", "Extraction algorithm (kmeans)")
 	cmd.Flags().IntVarP(&p.colours, "image.colours", "c", 16, "Number of colours to extract (1-256)")
 
 	// Region extraction flags (for ambient lighting).
@@ -258,6 +255,11 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		return nil, fmt.Errorf("failed to calculate seed: %w", err)
 	}
 
+	// Validate the backend.
+	if opts.Backend != "kmeans" {
+		return nil, fmt.Errorf("invalid backend: %s (only kmeans is currently supported)", opts.Backend)
+	}
+
 	// Extract palette using k-means with deterministic seed.
 	// Create the colour extractor with seed configuration.
 	extractorOpts := colour.ExtractorOptions{}
@@ -266,7 +268,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		extractorOpts.Seed = &seed
 	}
 
-	extractor, err := colour.NewExtractor(colour.Algorithm(p.algorithm), extractorOpts)
+	extractor, err := colour.NewExtractor(colour.Algorithm(opts.Backend), extractorOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create extractor: %w", err)
 	}

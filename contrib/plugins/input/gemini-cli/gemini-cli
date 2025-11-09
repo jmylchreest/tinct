@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+# gemini-cli - AI Image Generation Input Plugin (Tinct)
+#
+# Generates images using Google's Gemini CLI with the nanobanana extension,
+# then uses tinct's image input plugin to extract colors.
+#
+# Prerequisites:
+#   - gemini-cli (Arch Linux: pacman -S gemini-cli)
+#   - nanobanana extension for gemini-cli
+#   - Gemini API key configured
+#   - jq (for JSON parsing)
+#   - ImageMagick (for color extraction)
+#
+# Usage:
+#   tinct plugins add ./gemini-cli --type input
+#   tinct plugins enable gemini-cli
+#   tinct generate -i gemini-cli -o kitty \
+#     --plugin-args='{"prompt":"sunset over mountains"}'
+
+set -euo pipefail
+
+# Plugin info handler
+if [[ "${1:-}" == "--plugin-info" ]]; then
+    cat <<EOF
+{
+  "name": "gemini-cli",
+  "type": "input",
+  "version": "0.0.1",
+  "protocol_version": "1.0.0",
+  "description": "Generate images using Google Gemini CLI and extract color palettes",
+  "plugin_protocol": "json-stdio"
+}
+EOF
+    exit 0
+fi
+
+# Read input options from stdin (JSON)
+input=$(cat)
+
+# Parse configuration
+prompt=$(echo "$input" | jq -r '.plugin_args.prompt // empty')
+cache_enabled=$(echo "$input" | jq -r '.plugin_args.cache // true')
+cache_dir=$(echo "$input" | jq -r '.plugin_args.cache_dir // empty')
+cache_filename=$(echo "$input" | jq -r '.plugin_args.cache_filename // empty')
+cache_overwrite=$(echo "$input" | jq -r '.plugin_args.cache_overwrite // false')
+color_count=$(echo "$input" | jq -r '.plugin_args.count // 16')
+verbose=$(echo "$input" | jq -r '.verbose // false')
+dry_run=$(echo "$input" | jq -r '.dry_run // false')
+
+# Validate prompt
+if [[ -z "$prompt" ]]; then
+    echo "Error: prompt is required" >&2
+    exit 1
+fi
+
+# Set default cache directory
+if [[ -z "$cache_dir" ]]; then
+    cache_dir="${HOME}/.cache/tinct/gemini-cli"
+fi
+
+# Expand tilde in cache_dir
+cache_dir="${cache_dir/#\~/$HOME}"
+
+# Verbose logging
+log() {
+    if [[ "$verbose" == "true" ]]; then
+        echo "$@" >&2
+    fi
+}
+
+# Handle dry-run
+if [[ "$dry_run" == "true" ]]; then
+    log "DRY-RUN MODE: Would generate image with prompt: $prompt"
+    echo "[]"
+    exit 0
+fi
+
+# Check dependencies
+if ! command -v gemini &> /dev/null; then
+    echo "Error: gemini-cli not found - install with: pacman -S gemini-cli" >&2
+    exit 1
+fi
+
+if ! command -v jq &> /dev/null; then
+    echo "Error: jq not found - install with: pacman -S jq" >&2
+    exit 1
+fi
+
+if ! command -v convert &> /dev/null; then
+    echo "Error: ImageMagick not found - install with: pacman -S imagemagick" >&2
+    exit 1
+fi
+
+# Determine image filename
+if [[ "$cache_enabled" == "true" ]]; then
+    # Create cache directory
+    mkdir -p "$cache_dir"
+
+    if [[ -n "$cache_filename" ]]; then
+        image_path="$cache_dir/$cache_filename"
+    else
+        # Generate filename from prompt hash
+        prompt_hash=$(echo -n "$prompt" | sha256sum | cut -d' ' -f1 | cut -c1-16)
+        image_path="$cache_dir/gemini-${prompt_hash}.png"
+    fi
+else
+    # Use temporary file
+    image_path=$(mktemp /tmp/tinct-gemini-XXXXXX.png)
+fi
+
+log "Configuration:"
+log "  Prompt: $prompt"
+log "  Cache: $cache_enabled (dir: $cache_dir)"
+log "  Image path: $image_path"
+log "  Colors: $color_count"
+
+# Generate image if it doesn't exist or cache_overwrite is true
+if [[ "$cache_overwrite" == "true" ]] || [[ ! -f "$image_path" ]]; then
+    log "Generating image with Gemini CLI..."
+
+    # Call gemini with nanobanana /generate command
+    # The output will contain the path to the generated image
+    gemini_output=$(gemini --non-interactive "/generate \"$prompt\" --count=1" 2>&1 || true)
+
+    log "Gemini CLI output:"
+    log "$gemini_output"
+
+    # Extract image path from gemini output
+    # Nanobanana typically outputs paths to generated images
+    generated_image=""
+    while IFS= read -r line; do
+        if [[ "$line" =~ \.png$ ]] || [[ "$line" =~ \.jpg$ ]] || [[ "$line" =~ \.jpeg$ ]]; then
+            # Check if line contains a valid path
+            if [[ -f "$line" ]]; then
+                generated_image="$line"
+                break
+            fi
+            # Try extracting path after common keywords
+            for keyword in "Generated" "Saved" "Image:" "Path:"; do
+                if [[ "$line" =~ $keyword ]]; then
+                    path_part="${line#*$keyword}"
+                    path_part=$(echo "$path_part" | tr -d '"' | tr -d "'" | xargs)
+                    if [[ -f "$path_part" ]]; then
+                        generated_image="$path_part"
+                        break 2
+                    fi
+                fi
+            done
+        fi
+    done <<< "$gemini_output"
+
+    if [[ -z "$generated_image" ]] || [[ ! -f "$generated_image" ]]; then
+        echo "Error: Failed to find generated image from Gemini CLI output" >&2
+        echo "Output was: $gemini_output" >&2
+        exit 1
+    fi
+
+    log "Gemini generated image at: $generated_image"
+
+    # Copy to cache location if different
+    if [[ "$generated_image" != "$image_path" ]]; then
+        cp "$generated_image" "$image_path"
+        log "Copied to: $image_path"
+    fi
+else
+    log "Using cached image: $image_path"
+fi
+
+# Extract colors using ImageMagick
+log "Extracting $color_count colors from image..."
+
+# Use ImageMagick's color quantization to extract dominant colors
+# -colors N: reduce to N colors
+# -unique-colors: get unique colors
+# txt:- : output in text format
+colors_output=$(convert "$image_path" +dither -colors "$color_count" -unique-colors txt:- 2>/dev/null)
+
+# Parse ImageMagick output to extract RGB values
+# Format: 0,0: (255,128,64) #FF8040 srgb(255,128,64)
+colors_json="["
+first=true
+
+while IFS= read -r line; do
+    # Skip header line
+    [[ "$line" =~ ^# ]] && continue
+
+    # Extract RGB values using regex
+    if [[ "$line" =~ \(([0-9]+),([0-9]+),([0-9]+)\) ]]; then
+        r="${BASH_REMATCH[1]}"
+        g="${BASH_REMATCH[2]}"
+        b="${BASH_REMATCH[3]}"
+
+        if [[ "$first" == "true" ]]; then
+            first=false
+        else
+            colors_json+=","
+        fi
+
+        colors_json+="{\"r\":$r,\"g\":$g,\"b\":$b}"
+    fi
+done <<< "$colors_output"
+
+colors_json+="]"
+
+log "Extracted colors: $colors_json"
+
+# Output JSON array of RGB colors
+echo "$colors_json"

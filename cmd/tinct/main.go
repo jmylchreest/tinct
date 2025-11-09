@@ -7,8 +7,14 @@
 // Licensed under the MIT License
 package main
 
-import "github.com/jmylchreest/tinct/internal/cli"
+import (
+	"os"
+
+	"github.com/jmylchreest/tinct/internal/cli"
+)
 
 func main() {
-	cli.Execute()
+	if err := cli.NewRootCmd().Execute(); err != nil {
+		os.Exit(1)
+	}
 }

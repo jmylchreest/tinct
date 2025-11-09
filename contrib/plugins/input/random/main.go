@@ -100,6 +100,12 @@ func (p *RandomPlugin) GetMetadata() protocol.PluginInfo {
 	}
 }
 
+// WallpaperPath returns an empty string as random plugin doesn't provide wallpapers.
+// This implements the required InputPlugin interface method.
+func (p *RandomPlugin) WallpaperPath() string {
+	return ""
+}
+
 // generateRandomColors creates n random colors.
 func generateRandomColors(n int, rng *mathrand.Rand) []color.Color {
 	colors := make([]color.Color, n)

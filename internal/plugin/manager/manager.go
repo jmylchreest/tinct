@@ -454,11 +454,12 @@ func (m *Manager) SetEnabled(pluginType, name string) {
 
 // ExternalInputPlugin wraps an external executable as an input plugin.
 type ExternalInputPlugin struct {
-	name        string
-	description string
-	path        string
-	args        map[string]any
-	dryRun      bool
+	name         string
+	description  string
+	path         string
+	args         map[string]any
+	dryRun       bool
+	lastExecutor *executor.PluginExecutor // Store last executor to query wallpaper path
 }
 
 // NewExternalInputPlugin creates a new external input plugin wrapper.
@@ -517,12 +518,19 @@ func (p *ExternalInputPlugin) GetDryRun() bool {
 // Uses the hybrid executor which automatically detects and uses the appropriate
 // protocol (go-plugin RPC or JSON-stdio).
 func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+	// Close previous executor if it exists
+	if p.lastExecutor != nil {
+		p.lastExecutor.Close()
+	}
+
 	// Create executor (detects protocol automatically).
 	exec, err := executor.NewWithVerbose(p.path, opts.Verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
 	}
-	defer exec.Close()
+
+	// Store the executor so we can query wallpaper path later
+	p.lastExecutor = exec
 
 	// Merge plugin args from opts with plugin's own args.
 	mergedArgs := make(map[string]any)
@@ -563,6 +571,15 @@ func (p *ExternalInputPlugin) Validate() error {
 	// Check if plugin file exists and is executable.
 	// This is a basic check - the plugin might fail at runtime.
 	return nil
+}
+
+// WallpaperPath returns the wallpaper path from the last plugin execution.
+// Implements the input.WallpaperProvider interface for external plugins.
+func (p *ExternalInputPlugin) WallpaperPath() string {
+	if p.lastExecutor == nil {
+		return ""
+	}
+	return p.lastExecutor.GetWallpaperPath()
 }
 
 // ExternalOutputPlugin wraps an external executable as an output plugin.

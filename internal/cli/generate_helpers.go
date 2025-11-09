@@ -97,6 +97,7 @@ func buildInputOptions() input.GenerateOptions {
 	inputOpts := input.GenerateOptions{
 		Verbose:         generateVerbose,
 		DryRun:          generateDryRun,
+		Backend:         generateBackend,
 		ColourOverrides: []string{},
 		PluginArgs:      make(map[string]any),
 	}

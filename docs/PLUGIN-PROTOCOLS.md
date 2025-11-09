@@ -202,7 +202,7 @@ func (p *MyPlugin) PreExecute(ctx context.Context) (bool, string, error) {
 }
 
 func (p *MyPlugin) PostExecute(ctx context.Context, files []string) error {
-    // Optional: post-generation actions
+    // Optional: post-execution actions
     return nil
 }
 
@@ -373,6 +373,121 @@ tinct generate --verbose --input image --output my-plugin
 ### How to force a specific protocol?
 
 You can't force it - the plugin declares its protocol via `--plugin-info`. This is intentional to ensure plugins work correctly.
+
+## Wallpaper Support for Input Plugins
+
+Input plugins can optionally provide wallpaper images to output plugins. This allows output plugins to set desktop wallpapers alongside theme colors.
+
+### Go-Plugin RPC Protocol
+
+For RPC plugins, implement the `WallpaperPath()` method:
+
+```go
+// WallpaperPath returns the path to the generated/source wallpaper image.
+// Returns empty string if no wallpaper is available.
+func (p *MyInputPlugin) WallpaperPath() string {
+    return p.imagePath  // Path to your wallpaper image
+}
+```
+
+**Example: Image-generating plugin**
+
+```go
+type ImagePlugin struct {
+    lastImagePath string
+}
+
+func (p *ImagePlugin) Generate(ctx context.Context, opts protocol.InputOptions) ([]color.Color, error) {
+    // Generate or load image
+    imagePath := "/path/to/generated/image.png"
+    
+    // Store the path for WallpaperPath()
+    p.lastImagePath = imagePath
+    
+    // Extract colors from image
+    colors := extractColorsFromImage(imagePath)
+    
+    return colors, nil
+}
+
+func (p *ImagePlugin) WallpaperPath() string {
+    return p.lastImagePath
+}
+```
+
+**Example: Plugin without wallpaper**
+
+```go
+func (p *RandomPlugin) WallpaperPath() string {
+    return ""  // No wallpaper available
+}
+```
+
+### JSON-stdio Protocol
+
+For JSON-stdio plugins, return a response object with a `wallpaper_path` field:
+
+**New format (with wallpaper):**
+```json
+{
+  "colors": [
+    {"r": 255, "g": 100, "b": 50},
+    {"r": 50, "g": 100, "b": 255}
+  ],
+  "wallpaper_path": "/home/user/.cache/my-plugin/generated.png"
+}
+```
+
+**Backward compatible format (no wallpaper):**
+```json
+[
+  {"r": 255, "g": 100, "b": 50},
+  {"r": 50, "g": 100, "b": 255}
+]
+```
+
+**Example: Shell script with wallpaper**
+
+```bash
+#!/bin/bash
+
+# Generate image
+image_path="/tmp/wallpaper-$$.png"
+generate_image "$image_path"
+
+# Extract colors
+colors=$(extract_colors "$image_path")
+
+# Return new format with wallpaper path
+cat <<EOF
+{
+  "colors": $colors,
+  "wallpaper_path": "$image_path"
+}
+EOF
+```
+
+### How Output Plugins Receive Wallpaper Paths
+
+Output plugins that support wallpapers receive the path via `ExecutionContext`:
+
+```go
+func (p *MyOutputPlugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+    if execCtx.WallpaperPath != "" {
+        // Set wallpaper using the provided image
+        return setWallpaper(execCtx.WallpaperPath)
+    }
+    return nil
+}
+```
+
+### Wallpaper Notes
+
+- Wallpaper paths are **optional** - plugins without images can return empty strings
+- Paths must be **absolute** file paths to existing images
+- Common formats: PNG, JPG, JPEG
+- Output plugins should handle missing/invalid wallpaper paths gracefully
+- The wallpaper path is passed to **all** output plugins via `ExecutionContext`
 
 ## See Also
 

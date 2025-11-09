@@ -19,6 +19,10 @@ type InputPlugin interface {
 
 	// GetMetadata returns plugin metadata.
 	GetMetadata() PluginInfo
+
+	// WallpaperPath returns the path to a wallpaper image, if available.
+	// Returns empty string if no wallpaper is available.
+	WallpaperPath() string
 }
 
 // OutputPlugin is the interface that output plugins must implement for go-plugin RPC.
@@ -126,6 +130,12 @@ func (s *InputPluginRPCServer) GetMetadata(_ interface{}, resp *PluginInfo) erro
 	return nil
 }
 
+// WallpaperPath implements the RPC method for fetching wallpaper path.
+func (s *InputPluginRPCServer) WallpaperPath(_ interface{}, resp *string) error {
+	*resp = s.Impl.WallpaperPath()
+	return nil
+}
+
 // InputPluginRPCClient is the RPC client implementation for input plugins.
 type InputPluginRPCClient struct {
 	client *rpc.Client
@@ -162,6 +172,16 @@ func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
 	err := c.client.Call("Plugin.GetMetadata", new(interface{}), &info)
 	return info, err
+}
+
+// WallpaperPath calls the remote WallpaperPath method.
+func (c *InputPluginRPCClient) WallpaperPath() string {
+	var path string
+	err := c.client.Call("Plugin.WallpaperPath", new(interface{}), &path)
+	if err != nil {
+		return ""
+	}
+	return path
 }
 
 // OutputPluginRPC implements the go-plugin Plugin interface for output plugins.

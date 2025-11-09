@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -123,6 +124,26 @@ func main() {
 			fmt.Println("wob is not running")
 			os.Exit(1)
 		}
+
+	case "--pre-execute":
+		// Tinct plugin protocol: check if plugin can run
+		p := &WobPlugin{}
+		skip, reason, err := p.PreExecute(context.Background())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(2)
+		}
+		if skip {
+			fmt.Println(reason)
+			os.Exit(1)
+		}
+		os.Exit(0)
+
+	case "--post-execute":
+		// Tinct plugin protocol: run post-execution hook
+		// This is handled by the plugin mode, not wrapper mode
+		fmt.Fprintf(os.Stderr, "post-execute not supported in wrapper mode\n")
+		os.Exit(1)
 
 	case "help", "-h", "--help":
 		printUsage()

@@ -96,7 +96,7 @@ func (p *WobPlugin) GetMetadata() protocol.PluginInfo {
 		Version:         pluginVersion,
 		ProtocolVersion: protocol.ProtocolVersion,
 		Description:     pluginDescription,
-		PluginProtocol:  "go-plugin",
+		PluginProtocol:  "json-stdio",
 	}
 }
 
