@@ -181,16 +181,11 @@ func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ [
 	// Check for conflicting current-theme.conf that might override tinct theme.
 	p.checkForConflictingTheme()
 
-	// Reload kitty config using kitten @ load-config (cross-platform).
-	// This works on Linux, macOS, and Windows.
-	cmd := exec.CommandContext(ctx, "kitten", "@", "load-config")
-	if err := cmd.Run(); err != nil {
-		// Don't treat this as a fatal error - theme file was still generated successfully.
-		// This can fail if no kitty instances are running or remote control is not enabled.
+	// Reload all kitty instances by sending SIGUSR1 signal.
+	// This works on Unix-like systems (Linux, macOS, BSD).
+	if err := p.reloadAllKittyInstances(); err != nil {
 		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Note: Could not reload kitty config (no running instances or remote control not enabled)\n")
-			fmt.Fprintf(os.Stderr, "   To enable auto-reload, add 'allow_remote_control yes' to your kitty.conf\n")
-			fmt.Fprintf(os.Stderr, "   and fully restart kitty (closing all windows)\n")
+			fmt.Fprintf(os.Stderr, "   Note: Could not reload kitty instances: %v\n", err)
 		}
 		return nil
 	}
