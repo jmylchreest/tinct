@@ -207,19 +207,40 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create preview tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f preview
-          git push -f origin preview
-
-      - name: Run GoReleaser (preview)
+      - name: Run GoReleaser (snapshot)
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          args: release --snapshot --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from dist metadata
+        id: version
+        run: |
+          VERSION=$(jq -r '.version' dist/metadata.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create preview release
+        run: |
+          gh release create preview \
+            --title "Preview Release ${{ steps.version.outputs.version }}" \
+            --notes "Automated preview release from commit ${{ github.sha }}
+
+          This is a pre-release build from the main branch for testing purposes.
+
+          **Commit**: ${{ github.sha }}
+          **Version**: ${{ steps.version.outputs.version }}
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          Download the appropriate binary for your system from the assets below." \
+            --prerelease \
+            --target main \
+            dist/*.tar.gz \
+            dist/*.zip \
+            dist/checksums.txt \
+            dist/*_sbom.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
