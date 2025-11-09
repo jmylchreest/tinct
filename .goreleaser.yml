@@ -762,7 +762,7 @@ announce:
       Download: {{.ReleaseURL}}
 
 # ============================================================================
-# SBOMS & SIGNING
+# SBOMS
 # ============================================================================
 # SBOMs (Software Bill of Materials)
 sboms:
@@ -770,38 +770,3 @@ sboms:
     artifacts: archive
   - id: source
     artifacts: source
-# Signs artifacts using cosign (v3.0+)
-# Supports both key-based and keyless signing:
-# - If cosign.key exists: Uses key-based signing
-# - Otherwise: Uses keyless signing (interactive or CI OIDC)
-#
-# To use key-based signing:
-#   cosign generate-key-pair  # Creates cosign.key and cosign.pub
-#   echo "cosign.key" >> .gitignore  # Keep private key local
-#   export COSIGN_PASSWORD="your-password"  # Set password in environment
-#
-# For CI/CD with key-based signing, set these secrets:
-#   COSIGN_PRIVATE_KEY: base64-encoded cosign.key content
-#   COSIGN_PASSWORD: key password
-#
-signs:
-  - cmd: bash
-    signature: "${artifact}.sig"
-    args:
-      - -c
-      - |
-        set -e
-        # Inherit COSIGN_PASSWORD from environment if set
-        if [ -f cosign.key ]; then
-          # Key-based signing
-          echo "Signing with key: ${artifact}"
-          # Cosign v3+ requires --bundle for all operations
-          cosign sign-blob --key=cosign.key --bundle="${signature}" "${artifact}" --yes
-        else
-          # Keyless signing (interactive locally, OIDC in CI)
-          echo "Signing keyless: ${artifact}"
-          export COSIGN_EXPERIMENTAL=1
-          cosign sign-blob --bundle="${signature}" "${artifact}" --yes
-        fi
-    artifacts: all
-    output: true
