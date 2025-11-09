@@ -59,6 +59,7 @@ builds:
 
     flags:
       - -trimpath
+      - -mod=mod
 
     ldflags:
       - -s -w
@@ -68,7 +69,6 @@ builds:
 
     # Ensure we use Go 1.25+
     mod_timestamp: "{{ .CommitTimestamp }}"
-
 
   # --------------------------------------------------------------------------
   # INPUT PLUGINS
@@ -111,12 +111,12 @@ builds:
 
     flags:
       - -trimpath
+      - -mod=mod
 
     ldflags:
       - -s -w
 
     mod_timestamp: "{{ .CommitTimestamp }}"
-
 
   # --------------------------------------------------------------------------
   # OUTPUT PLUGINS
@@ -145,6 +145,7 @@ builds:
 
     flags:
       - -trimpath
+      - -mod=mod
 
     ldflags:
       - -s -w
@@ -189,6 +190,7 @@ builds:
 
     flags:
       - -trimpath
+      - -mod=mod
 
     ldflags:
       - -s -w
@@ -219,12 +221,12 @@ builds:
 
     flags:
       - -trimpath
+      - -mod=mod
 
     ldflags:
       - -s -w
 
     mod_timestamp: "{{ .CommitTimestamp }}"
-
 
 # ============================================================================
 # ARCHIVES
@@ -366,7 +368,6 @@ archives:
     # Only build once (platform-independent scripts)
     meta: true
 
-
 # ============================================================================
 # CHECKSUMS & SNAPSHOTS
 # ============================================================================
@@ -379,7 +380,6 @@ checksum:
 # Format: v0.1.2-abc1234 (next version after tag with git short hash)
 snapshot:
   version_template: "{{ incpatch .Version }}-{{ .ShortCommit }}"
-
 
 # ============================================================================
 # CHANGELOG
@@ -407,7 +407,6 @@ changelog:
       order: 2
     - title: Others
       order: 999
-
 
 # ============================================================================
 # PACKAGE MANAGERS
@@ -528,7 +527,6 @@ nfpms:
       summary: Colour palette generator with system-wide theming
       group: Applications/System
 
-
 # ============================================================================
 # GITHUB RELEASE
 # ============================================================================
@@ -594,7 +592,6 @@ release:
     -  [Report Issues](https://github.com/jmylchreest/tinct/issues)
     -  [Discussions](https://github.com/jmylchreest/tinct/discussions)
 
-
 # ============================================================================
 # ANNOUNCEMENTS
 # ============================================================================
@@ -610,7 +607,6 @@ announce:
       {{.ReleaseNotes}}
 
       Download: {{.ReleaseURL}}
-
 
 # ============================================================================
 # SBOMS & SIGNING
