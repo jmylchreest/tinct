@@ -11,10 +11,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/hashicorp/go-plugin"
-
-	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
 // isValidPath checks if a path is safe to use in commands.
@@ -80,16 +76,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	// If no arguments, run as go-plugin server (Tinct integration)
-	if len(os.Args) == 1 {
-		plugin.Serve(&plugin.ServeConfig{
-			HandshakeConfig: protocol.Handshake,
-			Plugins: map[string]plugin.Plugin{
-				"output": &protocol.OutputPluginRPC{
-					Impl: &WobPlugin{},
-				},
-			},
-		})
+	// If no arguments or "plugin" command, run as JSON stdio plugin (Tinct integration)
+	if len(os.Args) == 1 || (len(os.Args) > 1 && os.Args[1] == "plugin") {
+		if err := runPlugin(); err != nil {
+			fmt.Fprintf(os.Stderr, "Plugin error: %v\n", err)
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -97,13 +89,6 @@ func main() {
 	command := os.Args[1]
 
 	switch command {
-	case "plugin":
-		// Legacy JSON-stdio plugin mode (deprecated, use go-plugin instead)
-		if err := runPlugin(); err != nil {
-			fmt.Fprintf(os.Stderr, "Plugin error: %v\n", err)
-			os.Exit(1)
-		}
-
 	case "start":
 		// Wrapper mode: start wob
 		if err := runStart(os.Args[2:]); err != nil {
