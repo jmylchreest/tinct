@@ -210,7 +210,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	if p.cacheOverwrite || !fileExists(imagePath) {
 		enhancedPrompt := p.enhancePromptForWallpaper(p.prompt)
 		additionalPrompt := enhancedPrompt[len(p.prompt):]
-		fmt.Fprintf(os.Stderr, "[google-genai] backend=%s model=%s prompt=\"%s\" (additional: \"%s\")\n",
+		fmt.Fprintf(os.Stderr, "[google-genai] backend=%s model=%s prompt=\"%s\" additional=\"%s\"\n",
 			p.backend, p.model, p.prompt, additionalPrompt)
 		fmt.Fprintf(os.Stderr, "Waiting for response...\n")
 
