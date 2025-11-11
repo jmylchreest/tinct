@@ -9,6 +9,7 @@ import (
 	"image"
 	"math/rand"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -149,10 +150,8 @@ func ValidModes() []Mode {
 // Returns an error if the string is not a valid mode.
 func ParseMode(s string) (Mode, error) {
 	mode := Mode(s)
-	for _, valid := range ValidModes() {
-		if mode == valid {
-			return mode, nil
-		}
+	if slices.Contains(ValidModes(), mode) {
+		return mode, nil
 	}
 	return "", fmt.Errorf("invalid seed mode: %s (valid: content, filepath, manual, random)", s)
 }

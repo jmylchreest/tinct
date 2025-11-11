@@ -17,19 +17,20 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
+	goplug "github.com/hashicorp/go-plugin"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
 // PluginExecutor provides a unified interface for executing plugins.
 type PluginExecutor struct {
 	path              string
 	protocolType      protocol.PluginType
-	client            *plugin.Client
-	rpcClient         any // Either *protocol.InputPluginRPCClient or *protocol.OutputPluginRPCClient
+	client            *goplug.Client
+	rpcClient         any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
 	verbose           bool
 	lastWallpaperPath string // Stores wallpaper path from JSON stdio plugins
 }
@@ -63,7 +64,7 @@ func NewWithVerbose(pluginPath string, verbose bool) (*PluginExecutor, error) {
 }
 
 // ExecuteInput runs an input plugin and returns colors.
-func (e *PluginExecutor) ExecuteInput(ctx context.Context, opts protocol.InputOptions) ([]color.Color, error) {
+func (e *PluginExecutor) ExecuteInput(ctx context.Context, opts plugin.InputOptions) ([]color.Color, error) {
 	switch e.protocolType {
 	case protocol.PluginTypeGoPlugin:
 		return e.executeInputGoPlugin(ctx, opts)
@@ -75,7 +76,7 @@ func (e *PluginExecutor) ExecuteInput(ctx context.Context, opts protocol.InputOp
 }
 
 // ExecuteOutput runs an output plugin and returns generated files.
-func (e *PluginExecutor) ExecuteOutput(ctx context.Context, palette protocol.PaletteData) (map[string][]byte, error) {
+func (e *PluginExecutor) ExecuteOutput(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
 	switch e.protocolType {
 	case protocol.PluginTypeGoPlugin:
 		return e.executeOutputGoPlugin(ctx, palette)
@@ -142,7 +143,7 @@ func (e *PluginExecutor) GetWallpaperPath() string {
 			return ""
 		}
 
-		if inputClient, ok := e.rpcClient.(*protocol.InputPluginRPCClient); ok {
+		if inputClient, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
 			return inputClient.WallpaperPath()
 		}
 
@@ -159,9 +160,9 @@ func (e *PluginExecutor) GetWallpaperPath() string {
 
 // --- Go-Plugin RPC implementations ---
 
-func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*protocol.InputPluginRPCClient, error) {
+func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*plugin.InputPluginRPCClient, error) {
 	if e.rpcClient != nil {
-		if client, ok := e.rpcClient.(*protocol.InputPluginRPCClient); ok {
+		if client, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
 			return client, nil
 		}
 	}
@@ -183,13 +184,13 @@ func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*protocol.Input
 	}
 
 	// Initialize go-plugin client.
-	e.client = plugin.NewClient(&plugin.ClientConfig{
+	e.client = goplug.NewClient(&goplug.ClientConfig{
 		HandshakeConfig: protocol.Handshake,
-		Plugins: map[string]plugin.Plugin{
-			"input": &protocol.InputPluginRPC{},
+		Plugins: map[string]goplug.Plugin{
+			"input": &plugin.InputPluginRPC{},
 		},
 		Cmd:              exec.Command(e.path),
-		AllowedProtocols: []plugin.Protocol{plugin.ProtocolNetRPC},
+		AllowedProtocols: []goplug.Protocol{goplug.ProtocolNetRPC},
 		Logger:           logger,
 		SyncStderr:       os.Stderr, // Forward plugin stderr to parent
 	})
@@ -208,7 +209,7 @@ func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*protocol.Input
 		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
 	}
 
-	client, ok := raw.(*protocol.InputPluginRPCClient)
+	client, ok := raw.(*plugin.InputPluginRPCClient)
 	if !ok {
 		return nil, fmt.Errorf("unexpected plugin type")
 	}
@@ -217,9 +218,9 @@ func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*protocol.Input
 	return client, nil
 }
 
-func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*protocol.OutputPluginRPCClient, error) {
+func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*plugin.OutputPluginRPCClient, error) {
 	if e.rpcClient != nil {
-		if client, ok := e.rpcClient.(*protocol.OutputPluginRPCClient); ok {
+		if client, ok := e.rpcClient.(*plugin.OutputPluginRPCClient); ok {
 			return client, nil
 		}
 	}
@@ -241,13 +242,13 @@ func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*protocol.Outp
 	}
 
 	// Initialize go-plugin client.
-	e.client = plugin.NewClient(&plugin.ClientConfig{
+	e.client = goplug.NewClient(&goplug.ClientConfig{
 		HandshakeConfig: protocol.Handshake,
-		Plugins: map[string]plugin.Plugin{
-			"output": &protocol.OutputPluginRPC{},
+		Plugins: map[string]goplug.Plugin{
+			"output": &plugin.OutputPluginRPC{},
 		},
 		Cmd:              exec.Command(e.path),
-		AllowedProtocols: []plugin.Protocol{plugin.ProtocolNetRPC},
+		AllowedProtocols: []goplug.Protocol{goplug.ProtocolNetRPC},
 		Logger:           logger,
 		SyncStderr:       os.Stderr, // Forward plugin stderr to parent
 	})
@@ -266,7 +267,7 @@ func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*protocol.Outp
 		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
 	}
 
-	client, ok := raw.(*protocol.OutputPluginRPCClient)
+	client, ok := raw.(*plugin.OutputPluginRPCClient)
 	if !ok {
 		return nil, fmt.Errorf("unexpected plugin type")
 	}
@@ -275,7 +276,7 @@ func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*protocol.Outp
 	return client, nil
 }
 
-func (e *PluginExecutor) executeInputGoPlugin(ctx context.Context, opts protocol.InputOptions) ([]color.Color, error) {
+func (e *PluginExecutor) executeInputGoPlugin(ctx context.Context, opts plugin.InputOptions) ([]color.Color, error) {
 	client, err := e.getInputRPCClient(ctx)
 	if err != nil {
 		return nil, err
@@ -284,7 +285,7 @@ func (e *PluginExecutor) executeInputGoPlugin(ctx context.Context, opts protocol
 	return client.Generate(ctx, opts)
 }
 
-func (e *PluginExecutor) executeOutputGoPlugin(ctx context.Context, palette protocol.PaletteData) (map[string][]byte, error) {
+func (e *PluginExecutor) executeOutputGoPlugin(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
 	client, err := e.getOutputRPCClient(ctx)
 	if err != nil {
 		return nil, err
@@ -327,7 +328,7 @@ func (e *PluginExecutor) getFlagHelpGoPlugin(ctx context.Context) ([]input.FlagH
 
 // --- JSON-stdio implementations ---
 
-func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts protocol.InputOptions) ([]color.Color, error) {
+func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.InputOptions) ([]color.Color, error) {
 	// Convert to JSON.
 	optsJSON, err := json.Marshal(opts)
 	if err != nil {
@@ -412,7 +413,7 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts protocol.Inp
 	return nil, fmt.Errorf("failed to parse plugin output\nOutput: %s", stdout.String())
 }
 
-func (e *PluginExecutor) executeOutputJSON(ctx context.Context, palette protocol.PaletteData) (map[string][]byte, error) {
+func (e *PluginExecutor) executeOutputJSON(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
 	// Convert to JSON.
 	paletteJSON, err := json.Marshal(palette)
 	if err != nil {

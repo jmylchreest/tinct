@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/version"
 )
@@ -224,94 +225,115 @@ func getVersion() string {
 
 // customGenerateHelp provides dynamic help that filters flags based on selected plugins.
 func customGenerateHelp(cmd *cobra.Command, args []string) {
-
 	// Parse which input and output plugins are requested
-	inputPlugin, _ := cmd.Flags().GetString("input")
-	outputPlugins, _ := cmd.Flags().GetStringSlice("outputs")
+	inputPlugin, err := cmd.Flags().GetString("input")
+	if err != nil {
+		inputPlugin = "" // fallback to showing all plugins
+	}
+	outputPlugins, err := cmd.Flags().GetStringSlice("outputs")
+	if err != nil {
+		outputPlugins = []string{} // fallback to showing all plugins
+	}
 
 	// If specific plugins are selected, show plugin-specific help and filter flags
 	if inputPlugin != "" || (len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll) {
-		// Build plugin-specific help text
-		cmd.Long = buildPluginSpecificHelp(inputPlugin, outputPlugins)
-
-		// Create a filtered flag set
-		filteredFlags := make(map[string]bool)
-
-		// Build a set of ALL plugin flags from ALL plugins
-		allPluginFlags := make(map[string]bool)
-		for _, plugin := range sharedPluginManager.AllInputPlugins() {
-			for _, fh := range plugin.GetFlagHelp() {
-				allPluginFlags[fh.Name] = true
-				if fh.Shorthand != "" {
-					allPluginFlags[fh.Shorthand] = true
-				}
-			}
-		}
-		for _, plugin := range sharedPluginManager.AllOutputPlugins() {
-			for _, fh := range plugin.GetFlagHelp() {
-				allPluginFlags[fh.Name] = true
-				if fh.Shorthand != "" {
-					allPluginFlags[fh.Shorthand] = true
-				}
-			}
-		}
-
-		// Add core command flags (any flag that's not a plugin flag)
-		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if !allPluginFlags[flag.Name] {
-				filteredFlags[flag.Name] = true
-			}
-		})
-
-		// Add selected input plugin flags
-		if inputPlugin != "" {
-			if plugin, ok := sharedPluginManager.GetInputPlugin(inputPlugin); ok {
-				flagHelp := plugin.GetFlagHelp()
-				for _, fh := range flagHelp {
-					filteredFlags[fh.Name] = true
-					if fh.Shorthand != "" {
-						filteredFlags[fh.Shorthand] = true
-					}
-				}
-			}
-		}
-
-		// Add selected output plugin flags
-		if len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll {
-			for _, outputName := range outputPlugins {
-				if plugin, ok := sharedPluginManager.GetOutputPlugin(outputName); ok {
-					flagHelp := plugin.GetFlagHelp()
-					for _, fh := range flagHelp {
-						filteredFlags[fh.Name] = true
-						if fh.Shorthand != "" {
-							filteredFlags[fh.Shorthand] = true
-						}
-					}
-				}
-			}
-		}
-
-		// Temporarily hide flags that aren't in our filtered set
-		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			if !filteredFlags[flag.Name] {
-				flag.Hidden = true
-			}
-		})
-
-		// Call default help with filtered flags
-		cmd.Parent().HelpFunc()(cmd, args)
-
-		// Restore all flags to visible (for next help invocation)
-		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-			flag.Hidden = false
-		})
-
+		showPluginSpecificHelp(cmd, args, inputPlugin, outputPlugins)
 		return
 	}
 
 	// No specific plugins selected - show general help with plugin lists and examples
 	cmd.Long = buildGeneralHelp()
 	cmd.Parent().HelpFunc()(cmd, args)
+}
+
+// showPluginSpecificHelp displays help for specific plugins with filtered flags.
+func showPluginSpecificHelp(cmd *cobra.Command, args []string, inputPlugin string, outputPlugins []string) {
+	cmd.Long = buildPluginSpecificHelp(inputPlugin, outputPlugins)
+
+	// Build filtered flag set for selected plugins
+	filteredFlags := buildFilteredFlagSet(inputPlugin, outputPlugins)
+
+	// Temporarily hide non-relevant flags
+	hideNonMatchingFlags(cmd, filteredFlags)
+
+	// Show help with filtered flags
+	cmd.Parent().HelpFunc()(cmd, args)
+
+	// Restore all flags to visible
+	restoreAllFlags(cmd)
+}
+
+// buildFilteredFlagSet creates a set of flags that should be shown for selected plugins.
+func buildFilteredFlagSet(inputPlugin string, outputPlugins []string) map[string]bool {
+	filteredFlags := make(map[string]bool)
+
+	// Add selected input plugin flags
+	if inputPlugin != "" {
+		if plugin, ok := sharedPluginManager.GetInputPlugin(inputPlugin); ok {
+			addFlagHelpToSet(filteredFlags, plugin.GetFlagHelp())
+		}
+	}
+
+	// Add selected output plugin flags
+	if len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll {
+		for _, outputName := range outputPlugins {
+			if plugin, ok := sharedPluginManager.GetOutputPlugin(outputName); ok {
+				addFlagHelpToSet(filteredFlags, plugin.GetFlagHelp())
+			}
+		}
+	}
+
+	return filteredFlags
+}
+
+// getAllPluginFlags returns a set of all flags from all plugins.
+func getAllPluginFlags() map[string]bool {
+	allPluginFlags := make(map[string]bool)
+
+	// Add input plugin flags
+	for _, plugin := range sharedPluginManager.AllInputPlugins() {
+		addFlagHelpToSet(allPluginFlags, plugin.GetFlagHelp())
+	}
+
+	// Add output plugin flags
+	for _, plugin := range sharedPluginManager.AllOutputPlugins() {
+		addFlagHelpToSet(allPluginFlags, plugin.GetFlagHelp())
+	}
+
+	return allPluginFlags
+}
+
+// addFlagHelpToSet adds flag names and shorthands from FlagHelp to a set.
+func addFlagHelpToSet(flagSet map[string]bool, flagHelp []input.FlagHelp) {
+	for _, fh := range flagHelp {
+		flagSet[fh.Name] = true
+		if fh.Shorthand != "" {
+			flagSet[fh.Shorthand] = true
+		}
+	}
+}
+
+// hideNonMatchingFlags temporarily hides flags not in the filtered set.
+func hideNonMatchingFlags(cmd *cobra.Command, filteredFlags map[string]bool) {
+	allPluginFlags := getAllPluginFlags()
+
+	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		// Core flags (not plugin-specific) are always shown
+		if !allPluginFlags[flag.Name] {
+			return
+		}
+		// Hide plugin flags that aren't in the filtered set
+		if !filteredFlags[flag.Name] {
+			flag.Hidden = true
+		}
+	})
+}
+
+// restoreAllFlags makes all flags visible again.
+func restoreAllFlags(cmd *cobra.Command) {
+	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		flag.Hidden = false
+	})
 }
 
 // buildPluginSpecificHelp builds help text for specific plugin(s).
@@ -342,35 +364,36 @@ func buildPluginSpecificHelp(inputPlugin string, outputPlugins []string) string 
 
 // buildGeneralHelp builds the general help text with plugin lists and examples.
 func buildGeneralHelp() string {
-	help := `Generate configuration files for various applications from a colour palette.
+	var help strings.Builder
+	help.WriteString(`Generate configuration files for various applications from a colour palette.
 
 The palette can be created from an image, loaded from a file, or built from
 command-line colour specifications. Generated files are written to their
 default locations or a custom output directory.
 
 Input Plugins:
-`
+`)
 
 	// List available input plugins
 	for _, pluginName := range sharedPluginManager.ListInputPlugins() {
 		if plugin, ok := sharedPluginManager.GetInputPlugin(pluginName); ok {
-			help += fmt.Sprintf("  %-12s - %s\n", plugin.Name(), plugin.Description())
+			fmt.Fprintf(&help, "  %-12s - %s\n", plugin.Name(), plugin.Description())
 		}
 	}
 
-	help += "\nOutput Plugins:\n"
+	help.WriteString("\nOutput Plugins:\n")
 
 	// List enabled output plugins
 	enabledPlugins := sharedPluginManager.FilterOutputPlugins()
 	if len(enabledPlugins) > 0 {
 		for _, plugin := range enabledPlugins {
-			help += fmt.Sprintf("  %-12s - %s\n", plugin.Name(), plugin.Description())
+			fmt.Fprintf(&help, "  %-12s - %s\n", plugin.Name(), plugin.Description())
 		}
 	} else {
-		help += "  (no enabled plugins)\n"
+		help.WriteString("  (no enabled plugins)\n")
 	}
 
-	help += `  all          - Run all available output plugins (default)
+	help.WriteString(`  all          - Run all available output plugins (default)
 
 Examples:
   # From image - generate all outputs
@@ -392,9 +415,9 @@ Examples:
   # Extract from image with custom colour count
   tinct generate -i image -p wallpaper.jpg -c 32 --preview
 
-Use 'tinct generate -i <plugin> --help' to see plugin-specific options.`
+Use 'tinct generate -i <plugin> --help' to see plugin-specific options.`)
 
-	return help
+	return help.String()
 }
 
 // savePalette saves a categorised palette to a JSON file.

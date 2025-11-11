@@ -36,6 +36,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
 const (
@@ -540,7 +541,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 	maps.Copy(mergedArgs, opts.PluginArgs)
 
 	// Convert to protocol format.
-	protocolOpts := protocol.InputOptions{
+	protocolOpts := plugin.InputOptions{
 		Verbose:         opts.Verbose,
 		DryRun:          opts.DryRun || p.dryRun,
 		ColourOverrides: opts.ColourOverrides,
@@ -826,12 +827,12 @@ func ExecuteExternalPlugin(ctx context.Context, path string, palette *colour.Cat
 	return result, nil
 }
 
-// convertCategorisedPaletteToProtocol converts a CategorisedPalette to protocol.PaletteData.
-func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool) protocol.PaletteData {
-	colours := make(map[string]protocol.CategorisedColour)
+// convertCategorisedPaletteToProtocol converts a CategorisedPalette to plugin.PaletteData.
+func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool) plugin.PaletteData {
+	colours := make(map[string]plugin.CategorisedColour)
 	for role, colour := range palette.Colours {
-		colours[string(role)] = protocol.CategorisedColour{
-			RGB: protocol.RGBColour{
+		colours[string(role)] = plugin.CategorisedColour{
+			RGB: plugin.RGBColour{
 				R: colour.RGB.R,
 				G: colour.RGB.G,
 				B: colour.RGB.B,
@@ -846,10 +847,10 @@ func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, plu
 		}
 	}
 
-	allColours := make([]protocol.CategorisedColour, len(palette.AllColours))
+	allColours := make([]plugin.CategorisedColour, len(palette.AllColours))
 	for i, colour := range palette.AllColours {
-		allColours[i] = protocol.CategorisedColour{
-			RGB: protocol.RGBColour{
+		allColours[i] = plugin.CategorisedColour{
+			RGB: plugin.RGBColour{
 				R: colour.RGB.R,
 				G: colour.RGB.G,
 				B: colour.RGB.B,
@@ -869,7 +870,7 @@ func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, plu
 		themeType = "light"
 	}
 
-	return protocol.PaletteData{
+	return plugin.PaletteData{
 		Colours:    colours,
 		AllColours: allColours,
 		ThemeType:  themeType,

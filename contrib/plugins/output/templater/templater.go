@@ -6,15 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
-// TemplaterPlugin implements the protocol.OutputPlugin interface
+// TemplaterPlugin implements the plugin.OutputPlugin interface
 type TemplaterPlugin struct{}
 
 // Generate processes templates and returns generated files
-func (p *TemplaterPlugin) Generate(ctx context.Context, palette protocol.PaletteData) (map[string][]byte, error) {
-	// Convert protocol.PaletteData to internal PaletteInput format
+func (p *TemplaterPlugin) Generate(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
+	// Convert plugin.PaletteData to internal PaletteInput format
 	input := convertProtocolPalette(palette)
 
 	// Get config path from plugin args or use default
@@ -111,19 +111,53 @@ func (p *TemplaterPlugin) PostExecute(ctx context.Context, writtenFiles []string
 }
 
 // GetMetadata returns plugin metadata
-func (p *TemplaterPlugin) GetMetadata() protocol.PluginInfo {
-	return protocol.PluginInfo{
+func (p *TemplaterPlugin) GetMetadata() plugin.PluginInfo {
+	return plugin.PluginInfo{
 		Name:            Name,
 		Type:            "output",
 		Version:         Version,
-		ProtocolVersion: protocol.ProtocolVersion,
+		ProtocolVersion: plugin.ProtocolVersion,
 		Description:     "Templater for custom configuration files",
 		PluginProtocol:  "go-plugin",
 	}
 }
 
-// convertProtocolPalette converts protocol.PaletteData to internal PaletteInput
-func convertProtocolPalette(palette protocol.PaletteData) PaletteInput {
+// GetFlagHelp returns help information for plugin flags
+func (p *TemplaterPlugin) GetFlagHelp() []plugin.FlagHelp {
+	return []plugin.FlagHelp{
+		{
+			Name:        "config",
+			Type:        "string",
+			Default:     "~/.config/tinct/templater.yaml",
+			Description: "Path to templater configuration file",
+			Required:    false,
+		},
+		{
+			Name:        "templates",
+			Type:        "[]string",
+			Default:     "",
+			Description: "Filter to only process specified templates by name",
+			Required:    false,
+		},
+		{
+			Name:        "skip",
+			Type:        "[]string",
+			Default:     "",
+			Description: "Skip specified templates by name",
+			Required:    false,
+		},
+		{
+			Name:        "verbose",
+			Type:        "bool",
+			Default:     "false",
+			Description: "Enable verbose output",
+			Required:    false,
+		},
+	}
+}
+
+// convertProtocolPalette converts plugin.PaletteData to internal PaletteInput
+func convertProtocolPalette(palette plugin.PaletteData) PaletteInput {
 	colours := make(map[string]CategorisedColour)
 	for role, color := range palette.Colours {
 		colours[role] = CategorisedColour{

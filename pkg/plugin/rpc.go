@@ -82,7 +82,7 @@ type InputPluginRPCClient struct {
 }
 
 // Generate calls the remote Generate method.
-func (c *InputPluginRPCClient) Generate(ctx context.Context, opts InputOptions) ([]color.Color, error) {
+func (c *InputPluginRPCClient) Generate(_ context.Context, opts InputOptions) ([]color.Color, error) {
 	var respBytes []byte
 	err := c.client.Call("Plugin.Generate", opts, &respBytes)
 	if err != nil {
@@ -146,7 +146,7 @@ func (p *OutputPluginRPC) Server(*plugin.MuxBroker) (any, error) {
 }
 
 // Client returns an RPC client for this plugin.
-func (p *OutputPluginRPC) Client(b *plugin.MuxBroker, c *rpc.Client) (any, error) {
+func (p *OutputPluginRPC) Client(_ *plugin.MuxBroker, c *rpc.Client) (any, error) {
 	return &OutputPluginRPCClient{client: c}, nil
 }
 
@@ -209,14 +209,14 @@ type OutputPluginRPCClient struct {
 }
 
 // Generate calls the remote Generate method.
-func (c *OutputPluginRPCClient) Generate(ctx context.Context, palette PaletteData) (map[string][]byte, error) {
+func (c *OutputPluginRPCClient) Generate(_ context.Context, palette PaletteData) (map[string][]byte, error) {
 	var result map[string][]byte
 	err := c.client.Call("Plugin.Generate", palette, &result)
 	return result, err
 }
 
 // PreExecute calls the remote PreExecute method.
-func (c *OutputPluginRPCClient) PreExecute(ctx context.Context) (bool, string, error) {
+func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (bool, string, error) {
 	var resp struct {
 		Skip   bool
 		Reason string
@@ -233,7 +233,7 @@ func (c *OutputPluginRPCClient) PreExecute(ctx context.Context) (bool, string, e
 }
 
 // PostExecute calls the remote PostExecute method.
-func (c *OutputPluginRPCClient) PostExecute(ctx context.Context, files []string) error {
+func (c *OutputPluginRPCClient) PostExecute(_ context.Context, files []string) error {
 	var errMsg string
 	err := c.client.Call("Plugin.PostExecute", files, &errMsg)
 	if err != nil {

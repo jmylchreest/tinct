@@ -7,14 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
-// WobPlugin implements the protocol.OutputPlugin interface
+// WobPlugin implements the plugin.OutputPlugin interface
 type WobPlugin struct{}
 
 // Generate creates wob theme files
-func (p *WobPlugin) Generate(ctx context.Context, palette protocol.PaletteData) (map[string][]byte, error) {
+func (p *WobPlugin) Generate(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
 	// Generate theme content
 	themeContent, err := generateWobTheme(palette)
 	if err != nil {
@@ -89,15 +89,21 @@ func (p *WobPlugin) PostExecute(ctx context.Context, writtenFiles []string) erro
 }
 
 // GetMetadata returns plugin metadata
-func (p *WobPlugin) GetMetadata() protocol.PluginInfo {
-	return protocol.PluginInfo{
+func (p *WobPlugin) GetMetadata() plugin.PluginInfo {
+	return plugin.PluginInfo{
 		Name:            pluginName,
 		Type:            "output",
 		Version:         pluginVersion,
-		ProtocolVersion: protocol.ProtocolVersion,
+		ProtocolVersion: plugin.ProtocolVersion,
 		Description:     pluginDescription,
 		PluginProtocol:  "json-stdio",
 	}
+}
+
+// GetFlagHelp returns help information for plugin flags
+func (p *WobPlugin) GetFlagHelp() []plugin.FlagHelp {
+	// Wob plugin doesn't accept any command-line flags
+	return []plugin.FlagHelp{}
 }
 
 // installWrapper copies self to scripts directory
@@ -139,7 +145,7 @@ func (p *WobPlugin) installWrapper() error {
 }
 
 // generateWobTheme creates wob INI content from palette
-func generateWobTheme(palette protocol.PaletteData) (string, error) {
+func generateWobTheme(palette plugin.PaletteData) (string, error) {
 	// Helper to get hex color
 	getColor := func(key string) string {
 		if color, ok := palette.Colours[key]; ok {

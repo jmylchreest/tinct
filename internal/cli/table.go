@@ -50,87 +50,156 @@ func (t *Table) Render() string {
 		return ""
 	}
 
-	// Wrap cells that exceed max width.
+	// Wrap cells that exceed max width
+	wrappedRows := t.wrapAllCells()
+
+	// Calculate column widths based on content and constraints
+	colWidths := t.calculateColumnWidths(wrappedRows)
+
+	// Build the table string
+	return t.buildTableString(wrappedRows, colWidths)
+}
+
+// wrapAllCells wraps text in all cells according to max width constraints.
+func (t *Table) wrapAllCells() [][][]string {
 	wrappedRows := make([][][]string, len(t.rows))
 	for rowIdx, row := range t.rows {
 		wrappedRows[rowIdx] = make([][]string, len(row))
 		for colIdx, cell := range row {
-			if maxWidth, hasLimit := t.maxWidths[colIdx]; hasLimit && maxWidth > 0 {
-				wrappedRows[rowIdx][colIdx] = wrapText(cell, maxWidth)
-			} else {
-				wrappedRows[rowIdx][colIdx] = []string{cell}
-			}
+			wrappedRows[rowIdx][colIdx] = t.wrapCell(cell, colIdx)
 		}
 	}
+	return wrappedRows
+}
 
-	// Calculate column widths (respecting max widths).
+// wrapCell wraps a single cell's text based on column max width.
+func (t *Table) wrapCell(cell string, colIdx int) []string {
+	if maxWidth, hasLimit := t.maxWidths[colIdx]; hasLimit && maxWidth > 0 {
+		return wrapText(cell, maxWidth)
+	}
+	return []string{cell}
+}
+
+// calculateColumnWidths determines the width of each column.
+func (t *Table) calculateColumnWidths(wrappedRows [][][]string) []int {
+	colWidths := t.getHeaderWidths()
+	t.updateWidthsFromContent(colWidths, wrappedRows)
+	return colWidths
+}
+
+// getHeaderWidths returns initial column widths based on header lengths.
+func (t *Table) getHeaderWidths() []int {
 	colWidths := make([]int, len(t.headers))
 	for i, h := range t.headers {
 		colWidths[i] = len(h)
 	}
+	return colWidths
+}
 
+// updateWidthsFromContent adjusts column widths based on wrapped cell content.
+func (t *Table) updateWidthsFromContent(colWidths []int, wrappedRows [][][]string) {
 	for _, wrappedRow := range wrappedRows {
-		for i, wrappedCell := range wrappedRow {
-			if i < len(colWidths) {
-				for _, line := range wrappedCell {
-					if len(line) > colWidths[i] {
-						if maxWidth, hasLimit := t.maxWidths[i]; hasLimit && maxWidth > 0 {
-							if maxWidth > colWidths[i] {
-								colWidths[i] = maxWidth
-							}
-						} else {
-							colWidths[i] = len(line)
-						}
-					}
-				}
+		for colIdx, wrappedCell := range wrappedRow {
+			if colIdx >= len(colWidths) {
+				continue
 			}
+			t.updateColumnWidth(colWidths, colIdx, wrappedCell)
 		}
 	}
+}
 
+// updateColumnWidth updates a single column's width based on cell content.
+func (t *Table) updateColumnWidth(colWidths []int, colIdx int, wrappedCell []string) {
+	for _, line := range wrappedCell {
+		if len(line) <= colWidths[colIdx] {
+			continue
+		}
+
+		// Check if we have a max width constraint
+		if maxWidth, hasLimit := t.maxWidths[colIdx]; hasLimit && maxWidth > 0 {
+			if maxWidth > colWidths[colIdx] {
+				colWidths[colIdx] = maxWidth
+			}
+		} else {
+			colWidths[colIdx] = len(line)
+		}
+	}
+}
+
+// buildTableString constructs the final table string with headers, separator, and rows.
+func (t *Table) buildTableString(wrappedRows [][][]string, colWidths []int) string {
 	var result strings.Builder
 
-	// Format header.
+	t.writeHeader(&result, colWidths)
+	t.writeSeparator(&result, colWidths)
+	t.writeRows(&result, wrappedRows, colWidths)
+
+	return result.String()
+}
+
+// writeHeader writes the table header line.
+func (t *Table) writeHeader(result *strings.Builder, colWidths []int) {
 	headerParts := make([]string, len(t.headers))
 	for i, h := range t.headers {
 		headerParts[i] = padRight(h, colWidths[i])
 	}
 	result.WriteString(strings.Join(headerParts, strings.Repeat(" ", t.padding)))
 	result.WriteString("\n")
+}
 
-	// Format separator.
+// writeSeparator writes the separator line between header and data.
+func (t *Table) writeSeparator(result *strings.Builder, colWidths []int) {
 	sepParts := make([]string, len(t.headers))
 	for i, w := range colWidths {
 		sepParts[i] = strings.Repeat("-", w)
 	}
 	result.WriteString(strings.Join(sepParts, strings.Repeat(" ", t.padding)))
 	result.WriteString("\n")
+}
 
-	// Format data rows (with wrapping support).
+// writeRows writes all data rows with multi-line support.
+func (t *Table) writeRows(result *strings.Builder, wrappedRows [][][]string, colWidths []int) {
 	for _, wrappedRow := range wrappedRows {
-		// Find max lines in this row.
-		maxLines := 1
-		for _, wrappedCell := range wrappedRow {
-			if len(wrappedCell) > maxLines {
-				maxLines = len(wrappedCell)
-			}
-		}
+		t.writeMultiLineRow(result, wrappedRow, colWidths)
+	}
+}
 
-		// Print each line of the row.
-		for lineIdx := 0; lineIdx < maxLines; lineIdx++ {
-			rowParts := make([]string, len(t.headers))
-			for colIdx := range t.headers {
-				if colIdx < len(wrappedRow) && lineIdx < len(wrappedRow[colIdx]) {
-					rowParts[colIdx] = padRight(wrappedRow[colIdx][lineIdx], colWidths[colIdx])
-				} else {
-					rowParts[colIdx] = padRight("", colWidths[colIdx])
-				}
-			}
-			result.WriteString(strings.Join(rowParts, strings.Repeat(" ", t.padding)))
-			result.WriteString("\n")
+// writeMultiLineRow writes a single row that may span multiple lines.
+func (t *Table) writeMultiLineRow(result *strings.Builder, wrappedRow [][]string, colWidths []int) {
+	maxLines := t.getMaxLines(wrappedRow)
+
+	for lineIdx := 0; lineIdx < maxLines; lineIdx++ {
+		t.writeRowLine(result, wrappedRow, colWidths, lineIdx)
+	}
+}
+
+// getMaxLines returns the maximum number of lines needed for a wrapped row.
+func (t *Table) getMaxLines(wrappedRow [][]string) int {
+	maxLines := 1
+	for _, wrappedCell := range wrappedRow {
+		if len(wrappedCell) > maxLines {
+			maxLines = len(wrappedCell)
 		}
 	}
+	return maxLines
+}
 
-	return result.String()
+// writeRowLine writes a single line of a potentially multi-line row.
+func (t *Table) writeRowLine(result *strings.Builder, wrappedRow [][]string, colWidths []int, lineIdx int) {
+	rowParts := make([]string, len(t.headers))
+	for colIdx := range t.headers {
+		rowParts[colIdx] = t.getCellLine(wrappedRow, colIdx, lineIdx, colWidths[colIdx])
+	}
+	result.WriteString(strings.Join(rowParts, strings.Repeat(" ", t.padding)))
+	result.WriteString("\n")
+}
+
+// getCellLine gets a specific line from a wrapped cell, or empty string if line doesn't exist.
+func (t *Table) getCellLine(wrappedRow [][]string, colIdx, lineIdx, colWidth int) string {
+	if colIdx < len(wrappedRow) && lineIdx < len(wrappedRow[colIdx]) {
+		return padRight(wrappedRow[colIdx][lineIdx], colWidth)
+	}
+	return padRight("", colWidth)
 }
 
 // padRight pads a string with spaces on the right to reach the desired width.

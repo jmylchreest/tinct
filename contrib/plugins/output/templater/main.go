@@ -6,9 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hashicorp/go-plugin"
-
-	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	goplug "github.com/hashicorp/go-plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
 const (
@@ -42,10 +41,10 @@ func main() {
 
 	// If no arguments, run as go-plugin server (Tinct integration)
 	if len(os.Args) == 1 {
-		plugin.Serve(&plugin.ServeConfig{
-			HandshakeConfig: protocol.Handshake,
-			Plugins: map[string]plugin.Plugin{
-				"output": &protocol.OutputPluginRPC{
+		goplug.Serve(&goplug.ServeConfig{
+			HandshakeConfig: plugin.Handshake,
+			Plugins: map[string]goplug.Plugin{
+				"output": &plugin.OutputPluginRPC{
 					Impl: &TemplaterPlugin{},
 				},
 			},
