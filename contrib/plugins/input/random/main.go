@@ -39,15 +39,14 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 
-	"github.com/jmylchreest/tinct/internal/plugin/input"
-	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 )
 
-// RandomPlugin implements the protocol.InputPlugin interface.
+// RandomPlugin implements the tinctplugin.InputPlugin interface.
 type RandomPlugin struct{}
 
 // Generate creates a random color palette.
-func (p *RandomPlugin) Generate(ctx context.Context, opts protocol.InputOptions) ([]color.Color, error) {
+func (p *RandomPlugin) Generate(ctx context.Context, opts tinctplugin.InputOptions) ([]color.Color, error) {
 	// Extract configuration from plugin args
 	seed := uint64(0)
 	if seedArg, ok := opts.PluginArgs["seed"].(float64); ok {
@@ -90,12 +89,12 @@ func (p *RandomPlugin) Generate(ctx context.Context, opts protocol.InputOptions)
 }
 
 // GetMetadata returns plugin metadata.
-func (p *RandomPlugin) GetMetadata() protocol.PluginInfo {
-	return protocol.PluginInfo{
+func (p *RandomPlugin) GetMetadata() tinctplugin.PluginInfo {
+	return tinctplugin.PluginInfo{
 		Name:            "random",
 		Type:            "input",
 		Version:         "0.0.1",
-		ProtocolVersion: protocol.ProtocolVersion,
+		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate random color palettes with configurable seed and color count",
 		PluginProtocol:  "go-plugin",
 	}
@@ -109,8 +108,8 @@ func (p *RandomPlugin) WallpaperPath() string {
 
 // GetFlagHelp returns help information for plugin flags.
 // This implements the required InputPlugin interface method.
-func (p *RandomPlugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{
+func (p *RandomPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
+	return []tinctplugin.FlagHelp{
 		{
 			Name:        "count",
 			Type:        "int",
@@ -164,9 +163,9 @@ func main() {
 
 	// Serve the plugin using go-plugin
 	plugin.Serve(&plugin.ServeConfig{
-		HandshakeConfig: protocol.Handshake,
+		HandshakeConfig: tinctplugin.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"input": &protocol.InputPluginRPC{
+			"input": &tinctplugin.InputPluginRPC{
 				Impl: &RandomPlugin{},
 			},
 		},

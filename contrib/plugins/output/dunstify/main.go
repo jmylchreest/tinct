@@ -32,8 +32,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 
-	"github.com/jmylchreest/tinct/internal/plugin/input"
-	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 )
 
 // DunstifyPlugin sends desktop notifications when themes are generated.
@@ -43,7 +42,7 @@ type DunstifyPlugin struct{}
 // Generate is a no-op for notification plugins.
 // Notification plugins typically don't generate files, they only act in PostExecute.
 // This demonstrates that not all plugin methods need complex implementations.
-func (p *DunstifyPlugin) Generate(ctx context.Context, palette protocol.PaletteData) (map[string][]byte, error) {
+func (p *DunstifyPlugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
 	// Notification plugins don't generate files
 	return map[string][]byte{}, nil
 }
@@ -95,12 +94,12 @@ func (p *DunstifyPlugin) PostExecute(ctx context.Context, writtenFiles []string)
 }
 
 // GetMetadata returns plugin metadata.
-func (p *DunstifyPlugin) GetMetadata() protocol.PluginInfo {
-	return protocol.PluginInfo{
+func (p *DunstifyPlugin) GetMetadata() tinctplugin.PluginInfo {
+	return tinctplugin.PluginInfo{
 		Name:            "dunstify",
 		Type:            "output",
 		Version:         "0.0.1",
-		ProtocolVersion: protocol.ProtocolVersion,
+		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Send desktop notifications via dunstify or notify-send",
 		PluginProtocol:  "go-plugin",
 	}
@@ -108,8 +107,8 @@ func (p *DunstifyPlugin) GetMetadata() protocol.PluginInfo {
 
 // GetFlagHelp returns help information for plugin flags.
 // This plugin doesn't have any configurable flags, so return an empty slice.
-func (p *DunstifyPlugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{}
+func (p *DunstifyPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
+	return []tinctplugin.FlagHelp{}
 }
 
 // sendDunstifyNotification sends notification via dunstify (supports more features).
@@ -173,9 +172,9 @@ func main() {
 	// This starts the RPC server that Tinct will communicate with.
 	// The process stays alive for multiple invocations (6.5x faster than JSON-stdio).
 	plugin.Serve(&plugin.ServeConfig{
-		HandshakeConfig: protocol.Handshake,
+		HandshakeConfig: tinctplugin.Handshake,
 		Plugins: map[string]plugin.Plugin{
-			"output": &protocol.OutputPluginRPC{
+			"output": &tinctplugin.OutputPluginRPC{
 				Impl: &DunstifyPlugin{},
 			},
 		},

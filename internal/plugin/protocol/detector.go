@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os/exec"
 	"time"
+
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
 // DetectorResult contains information about a detected plugin protocol.
@@ -22,19 +24,9 @@ type DetectorResult struct {
 	PluginInfo PluginInfo
 }
 
-// PluginInfo holds metadata returned by a plugin's --plugin-info command.
-type PluginInfo struct {
-	Name            string `json:"name"`
-	Type            string `json:"type"`
-	Version         string `json:"version"`
-	ProtocolVersion string `json:"protocol_version"`
-	Description     string `json:"description"`
-
-	// PluginProtocol indicates which communication protocol the plugin uses.
-	// Values: "go-plugin" or "json-stdio".
-	// If empty, defaults to json-stdio for backward compatibility.
-	PluginProtocol string `json:"plugin_protocol,omitempty"`
-}
+// PluginInfo is a type alias to the public plugin.PluginInfo type.
+// External plugins should import github.com/jmylchreest/tinct/pkg/plugin directly.
+type PluginInfo = plugin.PluginInfo
 
 // DetectProtocol detects which protocol a plugin uses by querying it.
 func DetectProtocol(pluginPath string) (*DetectorResult, error) {

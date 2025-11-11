@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
 // GenerateOptions holds options passed to input plugins during generation.
@@ -38,15 +39,9 @@ type GenerateResult struct {
 	WallpaperPath string
 }
 
-// FlagHelp represents help information for a single flag.
-type FlagHelp struct {
-	Name        string // Flag name (e.g., "prompt", "model")
-	Shorthand   string // Short flag (e.g., "p")
-	Type        string // Type (e.g., "string", "int", "bool")
-	Default     string // Default value as string
-	Description string // Help text
-	Required    bool   // Is this flag required?
-}
+// FlagHelp is a type alias to protocol.FlagHelp for backward compatibility.
+// Internal plugins can use input.FlagHelp, while external plugins should use protocol.FlagHelp.
+type FlagHelp = protocol.FlagHelp
 
 // ThemeHinter is an optional interface that input plugins can implement.
 // to provide hints about theme detection to the categorizer.

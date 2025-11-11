@@ -5,19 +5,15 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
-const (
-	// ProtocolVersion defines the current plugin API version.
-	// Format: MAJOR.MINOR.PATCH.
-	// - Increment MAJOR for breaking changes (incompatible API changes).
-	// - Increment MINOR for backward-compatible additions.
-	// - Increment PATCH for backward-compatible bug fixes.
-	ProtocolVersion = "0.0.1"
+// ProtocolVersion is an alias to the public plugin protocol version.
+const ProtocolVersion = plugin.ProtocolVersion
 
-	// MinCompatibleVersion is the oldest protocol version this tinct version can work with.
-	MinCompatibleVersion = "0.0.1"
-)
+// MinCompatibleVersion is an alias to the public minimum compatible version.
+const MinCompatibleVersion = plugin.MinCompatibleVersion
 
 // Version represents a parsed protocol version.
 type Version struct {
@@ -117,3 +113,7 @@ func GetCurrentVersion() Version {
 	}
 	return v
 }
+
+// FlagHelp is a type alias to the public plugin.FlagHelp type.
+// External plugins should import github.com/jmylchreest/tinct/pkg/plugin directly.
+type FlagHelp = plugin.FlagHelp
