@@ -769,64 +769,6 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 	return exec.PostExecute(ctx, writtenFiles)
 }
 
-// GetExternalPluginInfo queries an external plugin for its metadata.
-func GetExternalPluginInfo(path string) (name, description string, err error) {
-	// #nosec G204 -- Path comes from validated plugin installation or user's explicit plugin add command
-	cmd := exec.Command(path, "--plugin-info")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get plugin info: %w", err)
-	}
-
-	var info struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-	}
-
-	if err := json.Unmarshal(output, &info); err != nil {
-		return "", "", fmt.Errorf("failed to parse plugin info: %w", err)
-	}
-
-	return info.Name, info.Description, nil
-}
-
-// ExecuteExternalPlugin runs an external plugin with the given palette.
-// Uses the hybrid executor which automatically detects and uses the appropriate
-// protocol (go-plugin RPC or JSON-stdio).
-// This is a utility function that may be used by external code.
-func ExecuteExternalPlugin(ctx context.Context, path string, palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool) ([]byte, error) {
-	// Create executor (detects protocol automatically).
-	exec, err := executor.New(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
-	}
-	defer exec.Close()
-
-	// Convert palette to protocol format.
-	paletteData := convertCategorisedPaletteToProtocol(palette, pluginArgs, dryRun)
-
-	// Execute output plugin.
-	files, err := exec.ExecuteOutput(ctx, paletteData)
-	if err != nil {
-		return nil, fmt.Errorf("plugin execution failed: %w", err)
-	}
-
-	// For backward compatibility, if the plugin generated files,
-	// return them as JSON. If no files (like notification plugins),
-	// return empty JSON object.
-	if len(files) == 0 {
-		return []byte("{}"), nil
-	}
-
-	// Return files as JSON map.
-	result, err := json.Marshal(files)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal plugin output: %w", err)
-	}
-
-	return result, nil
-}
-
 // convertCategorisedPaletteToProtocol converts a CategorisedPalette to plugin.PaletteData.
 func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool) plugin.PaletteData {
 	colours := make(map[string]plugin.CategorisedColour)

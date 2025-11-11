@@ -271,15 +271,3 @@ type RPCError struct {
 func (e *RPCError) Error() string {
 	return e.Message
 }
-
-// ConvertCategorisedPalette is a helper to convert internal palette types to PaletteData.
-// This is kept for backward compatibility but external plugins typically don't need it.
-func ConvertCategorisedPalette(colours map[string]CategorisedColour, allColours []CategorisedColour, themeType string, pluginArgs map[string]any, dryRun bool) PaletteData {
-	return PaletteData{
-		Colours:    colours,
-		AllColours: allColours,
-		ThemeType:  themeType,
-		PluginArgs: pluginArgs,
-		DryRun:     dryRun,
-	}
-}

@@ -2,7 +2,6 @@
 package protocol
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -63,37 +62,4 @@ func DetectProtocol(pluginPath string) (*DetectorResult, error) {
 	}
 
 	return result, nil
-}
-
-// IsGoPlugin checks if a plugin uses the go-plugin protocol.
-// This is a quick check that just looks at the plugin_protocol field.
-func IsGoPlugin(pluginPath string) bool {
-	result, err := DetectProtocol(pluginPath)
-	if err != nil {
-		return false
-	}
-	return result.Type == PluginTypeGoPlugin
-}
-
-// QueryPluginInfo queries a plugin for its metadata without full protocol detection.
-// This is useful when you just need basic info without determining the communication protocol.
-func QueryPluginInfo(pluginPath string) (PluginInfo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, pluginPath, "--plugin-info")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return PluginInfo{}, fmt.Errorf("failed to query plugin: %w\nStderr: %s", err, stderr.String())
-	}
-
-	var info PluginInfo
-	if err := json.Unmarshal(stdout.Bytes(), &info); err != nil {
-		return PluginInfo{}, fmt.Errorf("failed to parse plugin info: %w", err)
-	}
-
-	return info, nil
 }

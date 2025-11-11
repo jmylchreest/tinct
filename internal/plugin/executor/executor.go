@@ -35,11 +35,6 @@ type PluginExecutor struct {
 	lastWallpaperPath string // Stores wallpaper path from JSON stdio plugins
 }
 
-// New creates a new PluginExecutor by detecting the plugin's protocol.
-func New(pluginPath string) (*PluginExecutor, error) {
-	return NewWithVerbose(pluginPath, false)
-}
-
 // NewWithVerbose creates a new PluginExecutor with verbose logging control.
 func NewWithVerbose(pluginPath string, verbose bool) (*PluginExecutor, error) {
 	// Detect protocol.

@@ -104,16 +104,6 @@ func IsCompatible(pluginVersionStr string) (bool, error) {
 	return true, nil
 }
 
-// GetCurrentVersion returns the current protocol version as a Version struct.
-func GetCurrentVersion() Version {
-	v, err := Parse(ProtocolVersion)
-	if err != nil {
-		// This should never happen since ProtocolVersion is a constant with valid format.
-		panic(fmt.Sprintf("invalid ProtocolVersion constant: %v", err))
-	}
-	return v
-}
-
 // FlagHelp is a type alias to the public plugin.FlagHelp type.
 // External plugins should import github.com/jmylchreest/tinct/pkg/plugin directly.
 type FlagHelp = plugin.FlagHelp
