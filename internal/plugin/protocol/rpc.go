@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 )
 
 // InputPlugin is the interface that input plugins must implement for go-plugin RPC.
@@ -23,6 +24,9 @@ type InputPlugin interface {
 	// WallpaperPath returns the path to a wallpaper image, if available.
 	// Returns empty string if no wallpaper is available.
 	WallpaperPath() string
+
+	// GetFlagHelp returns help information for plugin flags.
+	GetFlagHelp() []input.FlagHelp
 }
 
 // OutputPlugin is the interface that output plugins must implement for go-plugin RPC.
@@ -38,6 +42,9 @@ type OutputPlugin interface {
 
 	// GetMetadata returns plugin metadata.
 	GetMetadata() PluginInfo
+
+	// GetFlagHelp returns help information for plugin flags.
+	GetFlagHelp() []input.FlagHelp
 }
 
 // InputOptions holds options for input plugin generation (matches input.GenerateOptions).
@@ -136,6 +143,12 @@ func (s *InputPluginRPCServer) WallpaperPath(_ any, resp *string) error {
 	return nil
 }
 
+// GetFlagHelp implements the RPC method for fetching flag help.
+func (s *InputPluginRPCServer) GetFlagHelp(_ any, resp *[]input.FlagHelp) error {
+	*resp = s.Impl.GetFlagHelp()
+	return nil
+}
+
 // InputPluginRPCClient is the RPC client implementation for input plugins.
 type InputPluginRPCClient struct {
 	client *rpc.Client
@@ -182,6 +195,16 @@ func (c *InputPluginRPCClient) WallpaperPath() string {
 		return ""
 	}
 	return path
+}
+
+// GetFlagHelp calls the remote GetFlagHelp method.
+func (c *InputPluginRPCClient) GetFlagHelp() []input.FlagHelp {
+	var help []input.FlagHelp
+	err := c.client.Call("Plugin.GetFlagHelp", new(any), &help)
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+	return help
 }
 
 // OutputPluginRPC implements the go-plugin Plugin interface for output plugins.
@@ -247,6 +270,12 @@ func (s *OutputPluginRPCServer) GetMetadata(_ any, resp *PluginInfo) error {
 	return nil
 }
 
+// GetFlagHelp implements the RPC method for fetching flag help.
+func (s *OutputPluginRPCServer) GetFlagHelp(_ any, resp *[]input.FlagHelp) error {
+	*resp = s.Impl.GetFlagHelp()
+	return nil
+}
+
 // OutputPluginRPCClient is the RPC client implementation for output plugins.
 type OutputPluginRPCClient struct {
 	client *rpc.Client
@@ -294,6 +323,16 @@ func (c *OutputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
 	err := c.client.Call("Plugin.GetMetadata", new(any), &info)
 	return info, err
+}
+
+// GetFlagHelp calls the remote GetFlagHelp method.
+func (c *OutputPluginRPCClient) GetFlagHelp() []input.FlagHelp {
+	var help []input.FlagHelp
+	err := c.client.Call("Plugin.GetFlagHelp", new(any), &help)
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+	return help
 }
 
 // RPCError represents an error returned from an RPC call.

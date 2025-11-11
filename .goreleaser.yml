@@ -118,51 +118,6 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
-  # Plugin: gemini-cli (Go)
-  - id: plugin-gemini-cli
-    main: .
-    binary: gemini-cli
-    dir: ./contrib/plugins/input/gemini-cli
-
-    # Build for multiple platforms
-    goos:
-      - linux
-      - darwin
-      - windows
-      - freebsd
-
-    goarch:
-      - amd64
-      - arm64
-      - arm
-
-    goarm:
-      - "7"
-
-    # Ignore specific combinations
-    ignore:
-      - goos: darwin
-        goarch: arm
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: arm64
-      - goos: freebsd
-        goarch: arm
-
-    # Build flags
-    env:
-      - CGO_ENABLED=0
-
-    flags:
-      - -trimpath
-      - -mod=mod
-
-    ldflags:
-      - -s -w
-
-    mod_timestamp: "{{ .CommitTimestamp }}"
-
   # --------------------------------------------------------------------------
   # OUTPUT PLUGINS
   # --------------------------------------------------------------------------
@@ -320,29 +275,6 @@ archives:
 
     files:
       - src: contrib/plugins/input/random/README.md
-        dst: README.md
-      - src: LICENSE
-        dst: LICENSE
-
-  - id: plugin-gemini-cli-archive
-    ids:
-      - plugin-gemini-cli
-    name_template: >-
-      tinct-plugin-gemini-cli_
-      {{- .Version }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-
-    formats: [tar.gz]
-    format_overrides:
-      - goos: windows
-        formats: [zip]
-
-    files:
-      - src: contrib/plugins/input/gemini-cli/README.md
         dst: README.md
       - src: LICENSE
         dst: LICENSE
@@ -596,23 +528,6 @@ aurs:
       # license
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-wob/LICENSE"
 
-  # Plugin: gemini-cli
-  - ids:
-      - plugin-gemini-cli-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Gemini CLI AI image generation input plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-gemini-cli-bin.git"
-    package: |-
-      # bin
-      install -Dm755 "./gemini-cli" "${pkgdir}/usr/bin/tinct-plugin-gemini-cli"
-
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-gemini-cli/LICENSE"
-
 # Nix packages
 # Commented out - not currently used
 # nix:
@@ -813,7 +728,6 @@ release:
     ```bash
     # Install compiled Go plugins
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-random_{{.Version}}_Linux_x86_64.tar.gz:random
-    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-gemini-cli_{{.Version}}_Linux_x86_64.tar.gz:gemini-cli
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-wob_{{.Version}}_Linux_x86_64.tar.gz:wob-tinct
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-templater_{{.Version}}_Linux_x86_64.tar.gz:templater
 
@@ -825,7 +739,6 @@ release:
     Or download manually from the assets below and add locally:
     ```bash
     tinct plugins add ./random
-    tinct plugins add ./gemini-cli
     tinct plugins add ./wob-tinct
     tinct plugins add ./templater
     tinct plugins add ./notify-send

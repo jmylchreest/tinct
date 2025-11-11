@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
@@ -72,11 +73,8 @@ func init() {
 	generateCmd.Flags().BoolVarP(&generateVerbose, "verbose", "v", false, "Verbose output")
 	generateCmd.Flags().StringToStringVar(&generatePluginArgs, "plugin-args", nil, "Plugin-specific arguments (key=value format, repeatable for multiple plugins)")
 
-	// Override Help method to generate dynamic help text.
-	generateCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		cmd.Long = buildGenerateHelp()
-		cmd.Parent().HelpFunc()(cmd, args)
-	})
+	// Override Help method to generate dynamic help text with filtered flags.
+	generateCmd.SetHelpFunc(customGenerateHelp)
 }
 
 // runGenerate executes the generate command.
@@ -224,8 +222,126 @@ func getVersion() string {
 	return version.Short()
 }
 
-// buildGenerateHelp dynamically builds the help text with enabled plugins.
-func buildGenerateHelp() string {
+// customGenerateHelp provides dynamic help that filters flags based on selected plugins.
+func customGenerateHelp(cmd *cobra.Command, args []string) {
+
+	// Parse which input and output plugins are requested
+	inputPlugin, _ := cmd.Flags().GetString("input")
+	outputPlugins, _ := cmd.Flags().GetStringSlice("outputs")
+
+	// If specific plugins are selected, show plugin-specific help and filter flags
+	if inputPlugin != "" || (len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll) {
+		// Build plugin-specific help text
+		cmd.Long = buildPluginSpecificHelp(inputPlugin, outputPlugins)
+
+		// Create a filtered flag set
+		filteredFlags := make(map[string]bool)
+
+		// Build a set of ALL plugin flags from ALL plugins
+		allPluginFlags := make(map[string]bool)
+		for _, plugin := range sharedPluginManager.AllInputPlugins() {
+			for _, fh := range plugin.GetFlagHelp() {
+				allPluginFlags[fh.Name] = true
+				if fh.Shorthand != "" {
+					allPluginFlags[fh.Shorthand] = true
+				}
+			}
+		}
+		for _, plugin := range sharedPluginManager.AllOutputPlugins() {
+			for _, fh := range plugin.GetFlagHelp() {
+				allPluginFlags[fh.Name] = true
+				if fh.Shorthand != "" {
+					allPluginFlags[fh.Shorthand] = true
+				}
+			}
+		}
+
+		// Add core command flags (any flag that's not a plugin flag)
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			if !allPluginFlags[flag.Name] {
+				filteredFlags[flag.Name] = true
+			}
+		})
+
+		// Add selected input plugin flags
+		if inputPlugin != "" {
+			if plugin, ok := sharedPluginManager.GetInputPlugin(inputPlugin); ok {
+				flagHelp := plugin.GetFlagHelp()
+				for _, fh := range flagHelp {
+					filteredFlags[fh.Name] = true
+					if fh.Shorthand != "" {
+						filteredFlags[fh.Shorthand] = true
+					}
+				}
+			}
+		}
+
+		// Add selected output plugin flags
+		if len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll {
+			for _, outputName := range outputPlugins {
+				if plugin, ok := sharedPluginManager.GetOutputPlugin(outputName); ok {
+					flagHelp := plugin.GetFlagHelp()
+					for _, fh := range flagHelp {
+						filteredFlags[fh.Name] = true
+						if fh.Shorthand != "" {
+							filteredFlags[fh.Shorthand] = true
+						}
+					}
+				}
+			}
+		}
+
+		// Temporarily hide flags that aren't in our filtered set
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			if !filteredFlags[flag.Name] {
+				flag.Hidden = true
+			}
+		})
+
+		// Call default help with filtered flags
+		cmd.Parent().HelpFunc()(cmd, args)
+
+		// Restore all flags to visible (for next help invocation)
+		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+			flag.Hidden = false
+		})
+
+		return
+	}
+
+	// No specific plugins selected - show general help with plugin lists and examples
+	cmd.Long = buildGeneralHelp()
+	cmd.Parent().HelpFunc()(cmd, args)
+}
+
+// buildPluginSpecificHelp builds help text for specific plugin(s).
+func buildPluginSpecificHelp(inputPlugin string, outputPlugins []string) string {
+	var help strings.Builder
+
+	// Show input plugin description if specified
+	if inputPlugin != "" {
+		if plugin, ok := sharedPluginManager.GetInputPlugin(inputPlugin); ok {
+			help.WriteString(fmt.Sprintf("Input Plugin: %s\n", plugin.Name()))
+			help.WriteString(fmt.Sprintf("%s\n\n", plugin.Description()))
+		}
+	}
+
+	// Show output plugin descriptions if specified
+	if len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll {
+		help.WriteString("Output Plugins:\n")
+		for _, outputName := range outputPlugins {
+			if plugin, ok := sharedPluginManager.GetOutputPlugin(outputName); ok {
+				help.WriteString(fmt.Sprintf("  %s - %s\n", plugin.Name(), plugin.Description()))
+			}
+		}
+		help.WriteString("\n")
+	}
+
+	return help.String()
+}
+
+// buildGeneralHelp builds the general help text with plugin lists and examples.
+func buildGeneralHelp() string {
 	help := `Generate configuration files for various applications from a colour palette.
 
 The palette can be created from an image, loaded from a file, or built from
@@ -233,22 +349,23 @@ command-line colour specifications. Generated files are written to their
 default locations or a custom output directory.
 
 Input Plugins:
-  image        - Extract colours from an image file
-  file         - Load palette from file or build from colour specifications
-  remote-json  - Fetch colour palette from remote JSON source with optional JSONPath queries
-  remote-css   - Fetch colour palette from remote CSS source (extracts CSS variables and color values)
-
-Output Plugins:
 `
 
-	// List enabled plugins (filtered by shared manager).
-	enabledPlugins := []string{}
-	for _, plugin := range sharedPluginManager.FilterOutputPlugins() {
-		enabledPlugins = append(enabledPlugins, fmt.Sprintf("  %-12s - %s", plugin.Name(), plugin.Description()))
+	// List available input plugins
+	for _, pluginName := range sharedPluginManager.ListInputPlugins() {
+		if plugin, ok := sharedPluginManager.GetInputPlugin(pluginName); ok {
+			help += fmt.Sprintf("  %-12s - %s\n", plugin.Name(), plugin.Description())
+		}
 	}
 
+	help += "\nOutput Plugins:\n"
+
+	// List enabled output plugins
+	enabledPlugins := sharedPluginManager.FilterOutputPlugins()
 	if len(enabledPlugins) > 0 {
-		help += strings.Join(enabledPlugins, "\n") + "\n"
+		for _, plugin := range enabledPlugins {
+			help += fmt.Sprintf("  %-12s - %s\n", plugin.Name(), plugin.Description())
+		}
 	} else {
 		help += "  (no enabled plugins)\n"
 	}
@@ -264,13 +381,18 @@ Examples:
 
   # From colours - generate for specific app
   tinct generate --input file \
-    --file.background '#1e1e2e' \
-    --file.foreground '#cdd6f4' \
-    --file.accent1 '#89b4fa' \
+    --colour background=#1e1e2e \
+    --colour foreground=#cdd6f4 \
+    --colour accent1=#89b4fa \
     --outputs hyprland
 
+  # Generate image with Google Imagen and extract colors
+  tinct generate -i google-genai --prompt "sunset over mountains"
+
   # Extract from image with custom colour count
-  tinct generate -i image -p wallpaper.jpg -c 32 --preview`
+  tinct generate -i image -p wallpaper.jpg -c 32 --preview
+
+Use 'tinct generate -i <plugin> --help' to see plugin-specific options.`
 
 	return help
 }

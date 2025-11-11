@@ -67,6 +67,14 @@ func (p *Plugin) Validate() error {
 	return nil
 }
 
+// GetFlagHelp returns help information for all plugin flags.
+func (p *Plugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{
+		{Name: "file.path", Type: "string", Default: "", Description: "Path to palette file (JSON or text, optional)", Required: false},
+		{Name: "colour", Type: "stringArray", Default: "[]", Description: "Colour override (role=hex, repeatable)", Required: false},
+	}
+}
+
 // Generate creates a raw colour palette from file and/or manual specifications.
 // Returns only the colors - categorization happens separately.
 // If role-based colors are provided (role=hex), they are stored as metadata for later categorization.

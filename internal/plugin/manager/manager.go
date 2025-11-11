@@ -18,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/executor"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/file"
+	"github.com/jmylchreest/tinct/internal/plugin/input/googlegenai"
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
@@ -143,6 +144,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.inputRegistry.Register(file.New())
 	m.inputRegistry.Register(remotejson.New())
 	m.inputRegistry.Register(remotecss.New())
+	m.inputRegistry.Register(googlegenai.New())
 
 	// Register output plugins.
 	m.outputRegistry.Register(alacritty.New())
@@ -574,6 +576,24 @@ func (p *ExternalInputPlugin) Validate() error {
 	return nil
 }
 
+// GetFlagHelp returns help information for plugin flags.
+// For external plugins, this queries the plugin executable via RPC.
+func (p *ExternalInputPlugin) GetFlagHelp() []input.FlagHelp {
+	// Query the external plugin for its flag help
+	exec, err := executor.NewWithVerbose(p.path, false)
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+	defer exec.Close()
+
+	flagHelp, err := exec.GetFlagHelp(context.Background())
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+
+	return flagHelp
+}
+
 // WallpaperPath returns the wallpaper path from the last plugin execution.
 // Implements the input.WallpaperProvider interface for external plugins.
 func (p *ExternalInputPlugin) WallpaperPath() string {
@@ -714,6 +734,24 @@ func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reaso
 
 	// Execute pre-execute hook.
 	return exec.PreExecute(ctx)
+}
+
+// GetFlagHelp returns help information for plugin flags.
+// For external plugins, this queries the plugin executable via RPC.
+func (p *ExternalOutputPlugin) GetFlagHelp() []input.FlagHelp {
+	// Query the external plugin for its flag help
+	exec, err := executor.NewWithVerbose(p.path, false)
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+	defer exec.Close()
+
+	flagHelp, err := exec.GetFlagHelp(context.Background())
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+
+	return flagHelp
 }
 
 // PostExecute calls the external plugin's post-execute hook.

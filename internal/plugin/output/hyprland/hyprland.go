@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
@@ -80,6 +81,16 @@ func (p *Plugin) SetVerbose(verbose bool) {
 // Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() any {
 	return templates
+}
+
+// GetFlagHelp returns help information for all plugin flags.
+func (p *Plugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{
+		{Name: "hyprland.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/hypr/themes)", Required: false},
+		{Name: "hyprland.generate-stub", Type: "bool", Default: "true", Description: "Generate example config stub", Required: false},
+		{Name: "hyprland.stub-path", Type: "string", Default: "", Description: "Custom path for stub file", Required: false},
+		{Name: "hyprland.reload", Type: "bool", Default: "false", Description: "Reload hyprland config after generation", Required: false},
+	}
 }
 
 // Validate checks if the plugin configuration is valid.

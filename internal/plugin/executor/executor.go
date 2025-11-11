@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
@@ -115,6 +116,19 @@ func (e *PluginExecutor) Close() {
 		e.client.Kill()
 		e.client = nil
 		e.rpcClient = nil
+	}
+}
+
+// GetFlagHelp retrieves flag help information from a plugin.
+// Works for both go-plugin RPC and JSON stdio protocols.
+func (e *PluginExecutor) GetFlagHelp(ctx context.Context) ([]input.FlagHelp, error) {
+	switch e.protocolType {
+	case protocol.PluginTypeGoPlugin:
+		return e.getFlagHelpGoPlugin(ctx)
+	case protocol.PluginTypeJSON:
+		return e.getFlagHelpJSON(ctx)
+	default:
+		return nil, fmt.Errorf("unsupported protocol type: %s", e.protocolType)
 	}
 }
 
@@ -297,6 +311,20 @@ func (e *PluginExecutor) postExecuteGoPlugin(ctx context.Context, writtenFiles [
 	return client.PostExecute(ctx, writtenFiles)
 }
 
+func (e *PluginExecutor) getFlagHelpGoPlugin(ctx context.Context) ([]input.FlagHelp, error) {
+	// Try input client first
+	if inputClient, err := e.getInputRPCClient(ctx); err == nil {
+		return inputClient.GetFlagHelp(), nil
+	}
+
+	// Try output client
+	if outputClient, err := e.getOutputRPCClient(ctx); err == nil {
+		return outputClient.GetFlagHelp(), nil
+	}
+
+	return []input.FlagHelp{}, nil
+}
+
 // --- JSON-stdio implementations ---
 
 func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts protocol.InputOptions) ([]color.Color, error) {
@@ -475,4 +503,12 @@ func (e *PluginExecutor) postExecuteJSON(ctx context.Context, writtenFiles []str
 	}
 
 	return nil
+}
+
+func (e *PluginExecutor) getFlagHelpJSON(ctx context.Context) ([]input.FlagHelp, error) {
+	// For JSON stdio plugins, we don't have a standard way to query flag help
+	// This would require the plugin to support a --flag-help or similar command
+	// For now, return empty array
+	// TODO: Implement JSON stdio flag help protocol if needed
+	return []input.FlagHelp{}, nil
 }

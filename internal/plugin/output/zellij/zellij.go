@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
@@ -75,6 +76,14 @@ func (p *Plugin) SetVerbose(verbose bool) {
 // Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() any {
 	return templates
+}
+
+// GetFlagHelp returns help information for all plugin flags.
+func (p *Plugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{
+		{Name: "zellij.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/zellij/themes)", Required: false},
+		{Name: "zellij.theme-name", Type: "string", Default: "tinct", Description: "Theme name for the theme file", Required: false},
+	}
 }
 
 // Validate checks if the plugin configuration is valid.

@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 )
@@ -77,6 +78,15 @@ func (p *Plugin) SetVerbose(verbose bool) {
 // Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() any {
 	return templates
+}
+
+// GetFlagHelp returns help information for all plugin flags.
+func (p *Plugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{
+		{Name: "waybar.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/waybar/themes)", Required: false},
+		{Name: "waybar.generate-stub", Type: "bool", Default: "true", Description: "Generate example CSS stub", Required: false},
+		{Name: "waybar.reload", Type: "bool", Default: "true", Description: "Reload waybar after generation", Required: false},
+	}
 }
 
 // Validate checks if the plugin configuration is valid.

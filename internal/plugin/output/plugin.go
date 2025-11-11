@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
+	// For FlagHelp type
 )
 
 // Plugin represents an output plugin that can generate configuration files.
@@ -34,6 +36,10 @@ type Plugin interface {
 
 	// DefaultOutputDir returns the default output directory for this plugin.
 	DefaultOutputDir() string
+
+	// GetFlagHelp returns help information for plugin-specific flags.
+	// This allows dynamic help generation based on selected plugins.
+	GetFlagHelp() []input.FlagHelp
 }
 
 // PreExecuteHook is an optional interface that plugins can implement to perform.

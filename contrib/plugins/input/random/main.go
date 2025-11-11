@@ -39,6 +39,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
@@ -104,6 +105,27 @@ func (p *RandomPlugin) GetMetadata() protocol.PluginInfo {
 // This implements the required InputPlugin interface method.
 func (p *RandomPlugin) WallpaperPath() string {
 	return ""
+}
+
+// GetFlagHelp returns help information for plugin flags.
+// This implements the required InputPlugin interface method.
+func (p *RandomPlugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{
+		{
+			Name:        "count",
+			Type:        "int",
+			Default:     "32",
+			Description: "Number of colors to generate",
+			Required:    false,
+		},
+		{
+			Name:        "seed",
+			Type:        "uint64",
+			Default:     "random",
+			Description: "Random seed for reproducible generation",
+			Required:    false,
+		},
+	}
 }
 
 // generateRandomColors creates n random colors.

@@ -38,6 +38,16 @@ type GenerateResult struct {
 	WallpaperPath string
 }
 
+// FlagHelp represents help information for a single flag.
+type FlagHelp struct {
+	Name        string // Flag name (e.g., "prompt", "model")
+	Shorthand   string // Short flag (e.g., "p")
+	Type        string // Type (e.g., "string", "int", "bool")
+	Default     string // Default value as string
+	Description string // Help text
+	Required    bool   // Is this flag required?
+}
+
 // ThemeHinter is an optional interface that input plugins can implement.
 // to provide hints about theme detection to the categorizer.
 // This is purely advisory - the categorizer makes the final decision.
@@ -77,6 +87,10 @@ type Plugin interface {
 
 	// Validate checks if the plugin has all required inputs configured.
 	Validate() error
+
+	// GetFlagHelp returns help information for plugin-specific flags.
+	// This allows dynamic help generation based on selected plugins.
+	GetFlagHelp() []FlagHelp
 }
 
 // Registry holds all registered input plugins.

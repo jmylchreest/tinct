@@ -70,6 +70,16 @@ func (p *Plugin) Validate() error {
 	return nil
 }
 
+// GetFlagHelp returns help information for all plugin flags.
+func (p *Plugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{
+		{Name: "remote-json.url", Type: "string", Default: "", Description: "URL to fetch JSON palette from (required)", Required: true},
+		{Name: "remote-json.query", Type: "string", Default: "", Description: "JSONPath query to extract colors (e.g. '$.colors')", Required: false},
+		{Name: "remote-json.timeout", Type: "duration", Default: "10s", Description: "HTTP timeout", Required: false},
+		{Name: "remote-json.map", Type: "stringToString", Default: "map[]", Description: "Map colors to roles (e.g. base=background,text=foreground)", Required: false},
+	}
+}
+
 // Generate fetches and parses a remote JSON colour palette.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
 	if opts.Verbose {

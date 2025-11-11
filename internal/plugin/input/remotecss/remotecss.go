@@ -69,6 +69,15 @@ func (p *Plugin) Validate() error {
 	return nil
 }
 
+// GetFlagHelp returns help information for all plugin flags.
+func (p *Plugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{
+		{Name: "remote-css.url", Type: "string", Default: "", Description: "URL to fetch CSS palette from (required)", Required: true},
+		{Name: "remote-css.timeout", Type: "duration", Default: "10s", Description: "HTTP timeout", Required: false},
+		{Name: "remote-css.map", Type: "stringToString", Default: "map[]", Description: "Map colors to roles (e.g. primary=background,secondary=foreground)", Required: false},
+	}
+}
+
 // Generate fetches and parses a remote CSS colour palette.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
 	if opts.Verbose {

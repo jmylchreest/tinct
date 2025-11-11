@@ -32,6 +32,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
@@ -103,6 +104,12 @@ func (p *DunstifyPlugin) GetMetadata() protocol.PluginInfo {
 		Description:     "Send desktop notifications via dunstify or notify-send",
 		PluginProtocol:  "go-plugin",
 	}
+}
+
+// GetFlagHelp returns help information for plugin flags.
+// This plugin doesn't have any configurable flags, so return an empty slice.
+func (p *DunstifyPlugin) GetFlagHelp() []input.FlagHelp {
+	return []input.FlagHelp{}
 }
 
 // sendDunstifyNotification sends notification via dunstify (supports more features).
