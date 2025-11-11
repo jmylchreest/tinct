@@ -912,11 +912,7 @@ func registerExternalPlugin(meta *ExternalPluginMeta, resolveAbsolutePaths, _ bo
 	}
 
 	// Register the plugin.
-	if err := sharedPluginManager.RegisterExternalPlugin(pluginName, meta.Type, pluginPath, desc); err != nil {
-		return err
-	}
-
-	return nil
+	return sharedPluginManager.RegisterExternalPlugin(pluginName, meta.Type, pluginPath, desc)
 }
 
 // configureExternalPlugin applies additional configuration to an external plugin

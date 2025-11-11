@@ -9,7 +9,7 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
-	// For FlagHelp type
+	// For FlagHelp type.
 )
 
 // Plugin represents an output plugin that can generate configuration files.

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// Mock implementations for testing
+// Mock implementations for testing.
 type mockInputPlugin struct {
 	colors      []color.Color
 	metadata    PluginInfo
@@ -71,7 +71,7 @@ func (m *mockOutputPlugin) GetFlagHelp() []FlagHelp {
 	return m.flagHelp
 }
 
-// TestInputPluginRPC tests the input plugin RPC wrapper
+// TestInputPluginRPC tests the input plugin RPC wrapper.
 func TestInputPluginRPC(t *testing.T) {
 	mock := &mockInputPlugin{
 		colors: []color.Color{
@@ -124,7 +124,7 @@ func TestInputPluginRPC(t *testing.T) {
 	})
 }
 
-// TestOutputPluginRPC tests the output plugin RPC wrapper
+// TestOutputPluginRPC tests the output plugin RPC wrapper.
 func TestOutputPluginRPC(t *testing.T) {
 	mock := &mockOutputPlugin{
 		files: map[string][]byte{
@@ -174,7 +174,7 @@ func TestOutputPluginRPC(t *testing.T) {
 	})
 }
 
-// TestInputPluginRPCServer tests the RPC server methods
+// TestInputPluginRPCServer tests the RPC server methods.
 func TestInputPluginRPCServer(t *testing.T) {
 	mock := &mockInputPlugin{
 		colors: []color.Color{
@@ -241,7 +241,7 @@ func TestInputPluginRPCServer(t *testing.T) {
 	})
 }
 
-// TestOutputPluginRPCServer tests the output RPC server methods
+// TestOutputPluginRPCServer tests the output RPC server methods.
 func TestOutputPluginRPCServer(t *testing.T) {
 	mock := &mockOutputPlugin{
 		files: map[string][]byte{
@@ -320,7 +320,7 @@ func TestOutputPluginRPCServer(t *testing.T) {
 	})
 }
 
-// TestRPCError tests the RPCError type
+// TestRPCError tests the RPCError type.
 func TestRPCError(t *testing.T) {
 	err := &RPCError{Message: "test error"}
 	if err.Error() != "test error" {
@@ -328,7 +328,7 @@ func TestRPCError(t *testing.T) {
 	}
 }
 
-// TestPluginInfo tests PluginInfo structure
+// TestPluginInfo tests PluginInfo structure.
 func TestPluginInfo(t *testing.T) {
 	info := PluginInfo{
 		Name:            "test-plugin",
@@ -350,7 +350,7 @@ func TestPluginInfo(t *testing.T) {
 	}
 }
 
-// TestFlagHelp tests FlagHelp structure
+// TestFlagHelp tests FlagHelp structure.
 func TestFlagHelp(t *testing.T) {
 	flag := FlagHelp{
 		Name:        "test-flag",

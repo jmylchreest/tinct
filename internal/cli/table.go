@@ -25,7 +25,7 @@ func NewTable(headers []string) *Table {
 
 // SetColumnMaxWidth sets a maximum width for a specific column.
 // Text longer than this will be wrapped to multiple lines.
-func (t *Table) SetColumnMaxWidth(colIndex int, maxWidth int) {
+func (t *Table) SetColumnMaxWidth(colIndex, maxWidth int) {
 	t.maxWidths[colIndex] = maxWidth
 }
 
@@ -168,7 +168,7 @@ func (t *Table) writeRows(result *strings.Builder, wrappedRows [][][]string, col
 func (t *Table) writeMultiLineRow(result *strings.Builder, wrappedRow [][]string, colWidths []int) {
 	maxLines := t.getMaxLines(wrappedRow)
 
-	for lineIdx := 0; lineIdx < maxLines; lineIdx++ {
+	for lineIdx := range maxLines {
 		t.writeRowLine(result, wrappedRow, colWidths, lineIdx)
 	}
 }
@@ -229,7 +229,6 @@ func wrapText(text string, width int) []string {
 		if len(word) > width {
 			if currentLine != "" {
 				lines = append(lines, currentLine)
-				currentLine = ""
 			}
 			// Split long word across multiple lines.
 			for len(word) > width {
