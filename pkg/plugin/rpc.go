@@ -4,6 +4,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"image/color"
 	"net/rpc"
 
@@ -33,14 +34,14 @@ type InputPluginRPCServer struct {
 
 // Generate implements the RPC method for palette generation.
 func (s *InputPluginRPCServer) Generate(opts InputOptions, resp *[]byte) error {
-	colors, err := s.Impl.Generate(context.Background(), opts)
+	colours, err := s.Impl.Generate(context.Background(), opts)
 	if err != nil {
 		return err
 	}
 
 	// Convert to JSON-compatible format.
-	result := make([]map[string]uint8, len(colors))
-	for i, c := range colors {
+	result := make([]map[string]uint8, len(colours))
+	for i, c := range colours {
 		r, g, b, _ := c.RGBA()
 		result[i] = map[string]uint8{
 			"r": uint8(r >> 8),
@@ -51,7 +52,7 @@ func (s *InputPluginRPCServer) Generate(opts InputOptions, resp *[]byte) error {
 
 	data, err := json.Marshal(result)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal colours: %w", err)
 	}
 
 	*resp = data
@@ -86,7 +87,7 @@ func (c *InputPluginRPCClient) Generate(_ context.Context, opts InputOptions) ([
 	var respBytes []byte
 	err := c.client.Call("Plugin.Generate", opts, &respBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("RPC call failed: %w", err)
 	}
 
 	var result []struct {
@@ -96,22 +97,25 @@ func (c *InputPluginRPCClient) Generate(_ context.Context, opts InputOptions) ([
 	}
 
 	if err := json.Unmarshal(respBytes, &result); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal colours: %w", err)
 	}
 
-	colors := make([]color.Color, len(result))
+	colours := make([]color.Color, len(result))
 	for i, rgb := range result {
-		colors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
+		colours[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
 	}
 
-	return colors, nil
+	return colours, nil
 }
 
 // GetMetadata calls the remote GetMetadata method.
 func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
 	err := c.client.Call("Plugin.GetMetadata", new(any), &info)
-	return info, err
+	if err != nil {
+		return info, fmt.Errorf("RPC call failed: %w", err)
+	}
+	return info, nil
 }
 
 // WallpaperPath calls the remote WallpaperPath method.
@@ -212,7 +216,10 @@ type OutputPluginRPCClient struct {
 func (c *OutputPluginRPCClient) Generate(_ context.Context, palette PaletteData) (map[string][]byte, error) {
 	var result map[string][]byte
 	err := c.client.Call("Plugin.Generate", palette, &result)
-	return result, err
+	if err != nil {
+		return result, fmt.Errorf("RPC call failed: %w", err)
+	}
+	return result, nil
 }
 
 // PreExecute calls the remote PreExecute method.
@@ -224,7 +231,7 @@ func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (bool, string, err
 	}
 	err := c.client.Call("Plugin.PreExecute", new(any), &resp)
 	if err != nil {
-		return false, "", err
+		return false, "", fmt.Errorf("RPC call failed: %w", err)
 	}
 	if resp.Error != "" {
 		return resp.Skip, resp.Reason, &RPCError{Message: resp.Error}
@@ -237,7 +244,7 @@ func (c *OutputPluginRPCClient) PostExecute(_ context.Context, files []string) e
 	var errMsg string
 	err := c.client.Call("Plugin.PostExecute", files, &errMsg)
 	if err != nil {
-		return err
+		return fmt.Errorf("RPC call failed: %w", err)
 	}
 	if errMsg != "" {
 		return &RPCError{Message: errMsg}
@@ -249,7 +256,10 @@ func (c *OutputPluginRPCClient) PostExecute(_ context.Context, files []string) e
 func (c *OutputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
 	err := c.client.Call("Plugin.GetMetadata", new(any), &info)
-	return info, err
+	if err != nil {
+		return info, fmt.Errorf("RPC call failed: %w", err)
+	}
+	return info, nil
 }
 
 // GetFlagHelp calls the remote GetFlagHelp method.

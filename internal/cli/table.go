@@ -330,12 +330,9 @@ func (t *Table) applyTerminalAwareWidth(colWidths []int) {
 	usedWidth += (len(colWidths) - 1) * t.padding
 
 	// Calculate available width for terminal-aware column
-	availableWidth := termWidth - usedWidth
-
-	// Ensure we don't go below minimum width
-	if availableWidth < t.terminalAwareMinW {
-		availableWidth = t.terminalAwareMinW
-	}
+	availableWidth := max(
+		// Ensure we don't go below minimum width
+		termWidth-usedWidth, t.terminalAwareMinW)
 
 	// Set the max width for wrapping and update column width
 	t.maxWidths[t.terminalAwareCol] = availableWidth

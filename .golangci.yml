@@ -257,7 +257,7 @@ output:
   # Output format
   # Options: colored-line-number, line-number, json, tab, checkstyle, code-climate, html, junit-xml, github-actions
   formats:
-    - format: colored-line-number
+    colored-line-number:
       path: stdout
 
   # Show statistics per linter

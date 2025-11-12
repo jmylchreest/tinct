@@ -32,7 +32,7 @@ type pluginMetadata struct {
 }
 
 // resolvePluginSource resolves a plugin source path and determines if it's already installed.
-// Returns: (sourcePath, isAlreadyInstalled, error)
+// Returns: (sourcePath, isAlreadyInstalled, error).
 func resolvePluginSource(source, pluginDir, forcedSourceType string, verbose bool) (string, bool, error) {
 	// For local files, resolve to absolute path
 	if !strings.HasPrefix(source, "http://") && !strings.HasPrefix(source, "https://") && !strings.HasSuffix(source, ".git") {
@@ -185,7 +185,7 @@ func determinePluginAction(lock *PluginLock, pluginInfo *pluginMetadata, force b
 }
 
 // compareVersions compares two semantic version strings.
-// Returns: >0 if v1 > v2, <0 if v1 < v2, 0 if equal
+// Returns: >0 if v1 > v2, <0 if v1 < v2, 0 if equal.
 func compareVersions(v1, v2 string) (int, error) {
 	ver1, err := protocol.Parse(v1)
 	if err != nil {

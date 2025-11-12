@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os/exec"
 )
@@ -24,7 +25,8 @@ func (r *RealProcessRunner) Run(ctx context.Context, path string, args []string,
 	stdout, err := cmd.Output()
 	if err != nil {
 		// Output() returns stderr in the error if it's an ExitError
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr := &exec.ExitError{}
+		if errors.As(err, &exitErr) {
 			return stdout, exitErr.Stderr, err
 		}
 		return stdout, nil, err

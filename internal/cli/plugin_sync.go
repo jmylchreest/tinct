@@ -559,27 +559,6 @@ func calculateChecksum(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// copyFile copies a file from src to dst.
-func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src) // #nosec G304 - Plugin source path controlled by application
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destFile, err := os.Create(dst) // #nosec G304 - Plugin destination path controlled by application
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	if _, err := io.Copy(destFile, sourceFile); err != nil {
-		return err
-	}
-
-	return destFile.Sync()
-}
-
 // getPluginDirectory returns the plugin installation directory.
 func getPluginDirectory() (string, error) {
 	dataDir, err := os.UserHomeDir()

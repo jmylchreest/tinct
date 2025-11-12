@@ -69,13 +69,13 @@ func installPluginFromSource(source, pluginName, pluginDir, forcedSourceType str
 }
 
 // getArchiveBaseName extracts the base name from an archive filename.
-// For example: "tinct-plugin-wob_0.0.1_Linux_x86_64.tar.gz" -> "tinct-plugin-wob"
+// For example: "tinct-plugin-wob_0.0.1_Linux_x86_64.tar.gz" -> "tinct-plugin-wob".
 func getArchiveBaseName(filename string) string {
 	// Remove extension
 	base := filename
 	for _, ext := range []string{".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz", ".tbz2", ".zip"} {
-		if strings.HasSuffix(base, ext) {
-			base = strings.TrimSuffix(base, ext)
+		if before, ok := strings.CutSuffix(base, ext); ok {
+			base = before
 			break
 		}
 	}
@@ -202,6 +202,27 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 	return sourceTypeLocal, info
 }
 
+// copyFile copies a file from src to dst.
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src) // #nosec G304 - Plugin source path controlled by application
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst) // #nosec G304 - Plugin destination path controlled by application
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	if _, err := io.Copy(destFile, sourceFile); err != nil {
+		return err
+	}
+
+	return destFile.Sync()
+}
+
 // installFromLocal installs a plugin from a local file.
 func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (string, error) {
 	absSource, err := filepath.Abs(info.FilePath)
@@ -323,12 +344,12 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 			return extractFromTarBz2(data, info.FilePath, archiveName, pluginDir, verbose)
 		} else if strings.HasSuffix(info.URL, ".zip") {
 			return extractFromZip(data, info.FilePath, archiveName, pluginDir, verbose)
-		} else if strings.HasSuffix(filename, ".gz") {
-			return decompressGz(data, strings.TrimSuffix(filename, ".gz"), pluginDir, verbose)
-		} else if strings.HasSuffix(filename, ".xz") {
-			return decompressXz(data, strings.TrimSuffix(filename, ".xz"), pluginDir, verbose)
-		} else if strings.HasSuffix(filename, ".bz2") {
-			return decompressBz2(data, strings.TrimSuffix(filename, ".bz2"), pluginDir, verbose)
+		} else if before, ok := strings.CutSuffix(filename, ".gz"); ok {
+			return decompressGz(data, before, pluginDir, verbose)
+		} else if before, ok := strings.CutSuffix(filename, ".xz"); ok {
+			return decompressXz(data, before, pluginDir, verbose)
+		} else if before, ok := strings.CutSuffix(filename, ".bz2"); ok {
+			return decompressBz2(data, before, pluginDir, verbose)
 		}
 	}
 
@@ -366,24 +387,24 @@ func extractFromTarGz(data []byte, targetFile, archiveName, pluginDir string, ve
 		priority int
 	}
 
-	selectFile := func(name string, mode os.FileMode) (selected bool, priority int) {
+	selectFile := func(name string, mode os.FileMode) int {
 		// Priority 1: Explicit target file (highest priority)
 		if targetFile != "" && (name == targetFile || strings.HasSuffix(name, "/"+targetFile)) {
-			return true, 100
+			return 100
 		}
 
 		// Priority 2: File matching archive name
 		if filepath.Base(name) == archiveName {
-			return true, 90
+			return 90
 		}
 
 		// Priority 3: Executable file
 		if mode&0o111 != 0 {
-			return true, 80
+			return 80
 		}
 
 		// Priority 4: Any regular file (fallback)
-		return true, 10
+		return 10
 	}
 
 	var best *candidate
@@ -403,9 +424,9 @@ func extractFromTarGz(data []byte, targetFile, archiveName, pluginDir string, ve
 		}
 
 		foundFiles = append(foundFiles, header.Name)
-		selected, priority := selectFile(header.Name, header.FileInfo().Mode())
+		priority := selectFile(header.Name, header.FileInfo().Mode())
 
-		if selected && (best == nil || priority > best.priority) {
+		if best == nil || priority > best.priority {
 			best = &candidate{path: header.Name, priority: priority}
 			// If we found explicit target or archive match, stop searching
 			if priority >= 90 {
@@ -498,17 +519,17 @@ func extractFromZip(data []byte, targetFile, archiveName, pluginDir string, verb
 		priority int
 	}
 
-	selectFile := func(name string, mode os.FileMode) (selected bool, priority int) {
+	selectFile := func(name string, mode os.FileMode) int {
 		if targetFile != "" && (name == targetFile || strings.HasSuffix(name, "/"+targetFile)) {
-			return true, 100
+			return 100
 		}
 		if filepath.Base(name) == archiveName {
-			return true, 90
+			return 90
 		}
 		if mode&0o111 != 0 {
-			return true, 80
+			return 80
 		}
-		return true, 10
+		return 10
 	}
 
 	var best *candidate
@@ -520,9 +541,9 @@ func extractFromZip(data []byte, targetFile, archiveName, pluginDir string, verb
 		}
 
 		foundFiles = append(foundFiles, f.Name)
-		selected, priority := selectFile(f.Name, f.FileInfo().Mode())
+		priority := selectFile(f.Name, f.FileInfo().Mode())
 
-		if selected && (best == nil || priority > best.priority) {
+		if best == nil || priority > best.priority {
 			best = &candidate{file: f, priority: priority}
 			if priority >= 90 {
 				break
@@ -679,17 +700,17 @@ func extractFromTarXz(data []byte, targetFile, archiveName, pluginDir string, ve
 		priority int
 	}
 
-	selectFile := func(name string, mode os.FileMode) (selected bool, priority int) {
+	selectFile := func(name string, mode os.FileMode) int {
 		if targetFile != "" && (name == targetFile || strings.HasSuffix(name, "/"+targetFile)) {
-			return true, 100
+			return 100
 		}
 		if filepath.Base(name) == archiveName {
-			return true, 90
+			return 90
 		}
 		if mode&0o111 != 0 {
-			return true, 80
+			return 80
 		}
-		return true, 10
+		return 10
 	}
 
 	var best *candidate
@@ -709,9 +730,9 @@ func extractFromTarXz(data []byte, targetFile, archiveName, pluginDir string, ve
 		}
 
 		foundFiles = append(foundFiles, header.Name)
-		selected, priority := selectFile(header.Name, header.FileInfo().Mode())
+		priority := selectFile(header.Name, header.FileInfo().Mode())
 
-		if selected && (best == nil || priority > best.priority) {
+		if best == nil || priority > best.priority {
 			best = &candidate{path: header.Name, priority: priority}
 			if priority >= 90 {
 				break
@@ -799,17 +820,17 @@ func extractFromTarBz2(data []byte, targetFile, archiveName, pluginDir string, v
 		priority int
 	}
 
-	selectFile := func(name string, mode os.FileMode) (selected bool, priority int) {
+	selectFile := func(name string, mode os.FileMode) int {
 		if targetFile != "" && (name == targetFile || strings.HasSuffix(name, "/"+targetFile)) {
-			return true, 100
+			return 100
 		}
 		if filepath.Base(name) == archiveName {
-			return true, 90
+			return 90
 		}
 		if mode&0o111 != 0 {
-			return true, 80
+			return 80
 		}
-		return true, 10
+		return 10
 	}
 
 	var best *candidate
@@ -829,9 +850,9 @@ func extractFromTarBz2(data []byte, targetFile, archiveName, pluginDir string, v
 		}
 
 		foundFiles = append(foundFiles, header.Name)
-		selected, priority := selectFile(header.Name, header.FileInfo().Mode())
+		priority := selectFile(header.Name, header.FileInfo().Mode())
 
-		if selected && (best == nil || priority > best.priority) {
+		if best == nil || priority > best.priority {
 			best = &candidate{path: header.Name, priority: priority}
 			if priority >= 90 {
 				break
