@@ -29,7 +29,7 @@ Examples:
   tinct-repo-manager validate
   tinct-repo-manager validate --manifest /path/to/repository.json
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			fmt.Printf("Validating manifest: %s\n\n", manifestPath)
 
 			// Load manifest (this validates JSON syntax)

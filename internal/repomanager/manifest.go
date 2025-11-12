@@ -74,7 +74,7 @@ func (m *ManifestManager) Save() error {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	if err := os.WriteFile(m.path, buf.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(m.path, buf.Bytes(), 0600); err != nil {
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
@@ -179,9 +179,13 @@ func CompareVersions(a, b string) int {
 		var aNum, bNum int
 
 		if i < len(aParts) {
+			// Ignore error - invalid numbers default to 0
+			//nolint:errcheck // Intentionally ignoring error - invalid numbers default to 0
 			fmt.Sscanf(aParts[i], "%d", &aNum)
 		}
 		if i < len(bParts) {
+			// Ignore error - invalid numbers default to 0
+			//nolint:errcheck // Intentionally ignoring error - invalid numbers default to 0
 			fmt.Sscanf(bParts[i], "%d", &bNum)
 		}
 

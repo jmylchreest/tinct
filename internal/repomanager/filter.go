@@ -79,7 +79,11 @@ func isPluginAsset(name string) bool {
 
 // matchPattern performs glob-style pattern matching.
 func matchPattern(name, pattern string) bool {
-	matched, _ := filepath.Match(pattern, name)
+	matched, err := filepath.Match(pattern, name)
+	if err != nil {
+		// Invalid pattern, treat as no match
+		return false
+	}
 	return matched
 }
 

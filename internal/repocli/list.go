@@ -32,7 +32,7 @@ Examples:
   # Output as JSON
   tinct-repo-manager list --format json
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// Load manifest
 			mgr, err := repomanager.LoadManifest(manifestPath)
 			if err != nil {

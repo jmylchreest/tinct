@@ -46,7 +46,7 @@ Examples:
     --url "https://github.com/user/repo/releases/download/v1.0.0/plugin.tar.gz" \
     --platform linux_amd64 --version 1.0.0
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// Validate inputs
 			if filePath == "" && url == "" {
 				return fmt.Errorf("either --file or --url must be specified")

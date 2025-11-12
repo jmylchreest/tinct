@@ -61,7 +61,7 @@ Examples:
   tinct-repo-manager sync --github jmylchreest/tinct --version all \
     --plugin-filter "tinct-plugin-*" --min-protocol-version 0.0.1
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// Validate mode selection
 			if configPath == "" && githubRepo == "" {
 				return fmt.Errorf("must specify either --config or --github")

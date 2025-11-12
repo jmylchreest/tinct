@@ -46,7 +46,7 @@ Examples:
   # Dry run to preview changes (deprecated)
   tinct-repo-manager prune --verify-all --dry-run
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// Load manifest
 			mgr, err := repomanager.LoadManifest(manifestPath)
 			if err != nil {

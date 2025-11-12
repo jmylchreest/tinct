@@ -29,7 +29,7 @@ Examples:
   # Remove all versions of a plugin
   tinct-repo-manager remove --plugin old-plugin --all-versions
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			if pluginName == "" {
 				return fmt.Errorf("--plugin is required")
 			}
