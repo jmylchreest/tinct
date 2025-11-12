@@ -252,24 +252,6 @@ issues:
   # only those changes are analyzed, else only changes in HEAD~ are analyzed.
   new: false
 
-# Output configuration
-output:
-  # Output format
-  # Options: colored-line-number, line-number, json, tab, checkstyle, code-climate, html, junit-xml, github-actions
-  formats:
-    colored-line-number:
-      path: stdout
-
-  # Show statistics per linter
-  show-stats: true
-
-  # Sort results
-  sort-results: true
-  sort-order:
-    - linter
-    - severity
-    - file
-
 # Options for analysis running
 run:
   # Timeout for analysis

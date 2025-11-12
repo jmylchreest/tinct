@@ -115,7 +115,17 @@ jobs:
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
-          args: "-fmt sarif -out gosec-results.sarif ./..."
+          args: "-fmt sarif -out gosec-results.sarif -no-fail ./..."
+        continue-on-error: true
+
+      - name: Filter SARIF fixes field
+        if: always() && hashFiles('gosec-results.sarif') != ''
+        run: |
+          # Remove the 'fixes' field from SARIF to avoid validation errors
+          if [ -f gosec-results.sarif ]; then
+            jq 'del(.runs[].results[].fixes)' gosec-results.sarif > gosec-results-filtered.sarif
+            mv gosec-results-filtered.sarif gosec-results.sarif
+          fi
         continue-on-error: true
 
       - name: Upload Gosec results to GitHub Security tab
