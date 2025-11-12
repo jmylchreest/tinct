@@ -67,11 +67,12 @@ type ExternalPluginMeta struct {
 
 var (
 	// Plugin command flags.
-	pluginLockPath string
-	pluginType     string
-	pluginForce    bool
-	pluginClear    bool
-	pluginYes      bool
+	pluginLockPath   string
+	pluginType       string
+	pluginForce      bool
+	pluginClear      bool
+	pluginYes        bool
+	pluginSourceType string
 )
 
 // pluginsCmd represents the plugins command.
@@ -227,6 +228,7 @@ func init() {
 	pluginDisableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
 	pluginAddCmd.Flags().StringVar(&pluginType, "type", "output", "plugin type (input or output)")
 	pluginAddCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force overwrite if plugin already exists")
+	pluginAddCmd.Flags().StringVar(&pluginSourceType, "source-type", "", "force source type (local, http, git) - auto-detected if not specified")
 	pluginDeleteCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force deletion without confirmation")
 
 	// Add subcommands.
@@ -307,7 +309,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Stage 1: Resolve source path and check if it's already in the plugin directory
-	sourcePath, isAlreadyInstalled, err := resolvePluginSource(source, pluginDir, verbose)
+	sourcePath, isAlreadyInstalled, err := resolvePluginSource(source, pluginDir, pluginSourceType, verbose)
 	if err != nil {
 		return err
 	}
@@ -496,7 +498,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Updating plugin '%s' from %s...\n", name, sourceStr)
 
 		// Install plugin from source.
-		pluginPath, err := installPluginFromSource(sourceStr, name, pluginDir, verbose)
+		pluginPath, err := installPluginFromSource(sourceStr, name, pluginDir, "", verbose)
 		if err != nil {
 			fmt.Printf("   %v\n", err)
 			failCount++

@@ -33,7 +33,7 @@ type pluginMetadata struct {
 
 // resolvePluginSource resolves a plugin source path and determines if it's already installed.
 // Returns: (sourcePath, isAlreadyInstalled, error)
-func resolvePluginSource(source, pluginDir string, verbose bool) (string, bool, error) {
+func resolvePluginSource(source, pluginDir, forcedSourceType string, verbose bool) (string, bool, error) {
 	// For local files, resolve to absolute path
 	if !strings.HasPrefix(source, "http://") && !strings.HasPrefix(source, "https://") && !strings.HasSuffix(source, ".git") {
 		absSource, err := filepath.Abs(source)
@@ -69,7 +69,7 @@ func resolvePluginSource(source, pluginDir string, verbose bool) (string, bool, 
 	}
 	// Note: Caller is responsible for cleanup if needed
 
-	tmpPath, err := installPluginFromSource(source, "", tmpDir, verbose)
+	tmpPath, err := installPluginFromSource(source, "", tmpDir, forcedSourceType, verbose)
 	if err != nil {
 		os.RemoveAll(tmpDir)
 		return "", false, err
