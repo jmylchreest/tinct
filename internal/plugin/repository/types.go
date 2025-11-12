@@ -56,9 +56,7 @@ type Download struct {
 type Repository struct {
 	Name     string    `json:"name"`
 	URL      string    `json:"url"`
-	Enabled  bool      `json:"enabled"`
-	Priority int       `json:"priority,omitempty"` // Lower numbers = higher priority
-	Manifest *Manifest `json:"-"`                  // Cached manifest (not persisted)
+	Manifest *Manifest `json:"-"` // Cached manifest (not persisted)
 }
 
 // Config contains all configured repositories.

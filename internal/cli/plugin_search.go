@@ -106,7 +106,8 @@ func runPluginSearch(_ *cobra.Command, args []string) error {
 	fmt.Print(table.Render())
 
 	fmt.Printf("\nFound %d plugin(s) in repositories\n", len(results))
-	fmt.Println("Install with: tinct plugins install <name>")
+	fmt.Println("\nInstall with: tinct plugins install <plugin-name>")
+	fmt.Println("Example: tinct plugins install", results[0].Plugin.Name)
 
 	return nil
 }

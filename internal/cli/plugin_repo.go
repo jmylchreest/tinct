@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -15,7 +14,6 @@ import (
 
 var (
 	repoManager    *repository.Manager
-	repoPriority   int
 	repoConfigPath string
 	repoCachePath  string
 )
@@ -96,9 +94,6 @@ func init() {
 
 	// Add repo command to plugins.
 	pluginsCmd.AddCommand(pluginRepoCmd)
-
-	// Flags.
-	pluginRepoAddCmd.Flags().IntVar(&repoPriority, "priority", 10, "Repository priority (lower = higher priority)")
 }
 
 func getRepoManager() (*repository.Manager, error) {
@@ -144,12 +139,11 @@ func runPluginRepoAdd(_ *cobra.Command, args []string) error {
 	fmt.Printf("Adding repository %q...\n", name)
 	fmt.Printf("  URL: %s\n", url)
 
-	if err := mgr.AddRepository(name, url, repoPriority); err != nil {
+	if err := mgr.AddRepository(name, url); err != nil {
 		return fmt.Errorf("failed to add repository: %w", err)
 	}
 
 	fmt.Printf(" Repository %q added successfully\n", name)
-	fmt.Printf("  Priority: %d\n", repoPriority)
 	fmt.Printf("\nRun 'tinct plugins search' to discover available plugins.\n")
 
 	return nil
@@ -173,18 +167,11 @@ func runPluginRepoList(_ *cobra.Command, _ []string) error {
 	fmt.Println("Configured Repositories:")
 	fmt.Println()
 
-	table := NewTable([]string{"NAME", "STATUS", "PRIORITY", "URL"})
+	table := NewTable([]string{"NAME", "URL"})
 
 	for _, repo := range repos {
-		status := "enabled"
-		if !repo.Enabled {
-			status = "disabled"
-		}
-
 		table.AddRow([]string{
 			repo.Name,
-			status,
-			strconv.Itoa(repo.Priority),
 			repo.URL,
 		})
 	}
@@ -238,10 +225,6 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 	}
 
 	for _, repo := range repos {
-		if !repo.Enabled {
-			continue
-		}
-
 		fmt.Printf("\n%s...\n", repo.Name)
 		if err := mgr.UpdateRepository(repo.Name); err != nil {
 			fmt.Printf("   Failed: %v\n", err)
@@ -281,8 +264,6 @@ func runPluginRepoInfo(_ *cobra.Command, args []string) error {
 
 	fmt.Printf("Repository: %s\n", repo.Name)
 	fmt.Printf("URL: %s\n", repo.URL)
-	fmt.Printf("Status: %s\n", map[bool]string{true: "enabled", false: "disabled"}[repo.Enabled])
-	fmt.Printf("Priority: %d\n", repo.Priority)
 
 	if repo.Manifest == nil {
 		return nil

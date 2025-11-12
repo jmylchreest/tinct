@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -485,6 +486,72 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// updatePluginFromRepository updates a plugin from a repository source.
+func updatePluginFromRepository(meta *ExternalPluginMeta, pluginDir string, verbose bool) (string, error) {
+	// Get repository manager.
+	mgr, err := getRepoManager()
+	if err != nil {
+		return "", fmt.Errorf("failed to get repository manager: %w", err)
+	}
+
+	// Find the plugin in the repository.
+	// If Source.Version is empty, update to latest. Otherwise respect the pinned version.
+	version := "latest"
+	if meta.Source.Version != "" {
+		version = meta.Source.Version
+	}
+
+	result, err := mgr.FindPluginInRepository(
+		meta.Source.Repository,
+		meta.Source.Plugin,
+		version,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to find plugin in repository: %w", err)
+	}
+
+	// Determine current platform.
+	platform := repository.NormalizePlatform(runtime.GOOS, runtime.GOARCH)
+
+	// Find download for current platform.
+	download, ok := result.Version.Downloads[platform]
+	if !ok {
+		return "", fmt.Errorf("plugin not available for platform %s", platform)
+	}
+
+	if !download.Available {
+		reason := "unknown reason"
+		if download.UnavailableReason != "" {
+			reason = download.UnavailableReason
+		}
+		return "", fmt.Errorf("plugin unavailable: %s", reason)
+	}
+
+	// Check if we need to update by comparing repository versions.
+	// Use the source's checksum to detect if we already have this exact version.
+	if meta.Source.Checksum != "" && download.Checksum == meta.Source.Checksum {
+		// Same checksum = same file, no update needed.
+		return "", fmt.Errorf("already up to date (version %s)", result.Version.Version)
+	}
+
+	// If pinned to a specific version and it matches, no update needed.
+	if meta.Source.Version != "" && result.Version.Version == meta.Source.Version {
+		return "", fmt.Errorf("already up to date (version %s)", meta.Source.Version)
+	}
+
+	// Download and install from URL.
+	pluginPath, err := installPluginFromSource(download.URL, "", pluginDir, sourceTypeHTTP, verbose)
+	if err != nil {
+		return "", fmt.Errorf("failed to download plugin: %w", err)
+	}
+
+	// Update the source metadata with the new checksum.
+	// This is critical so next update can detect we already have this version.
+	meta.Source.Checksum = download.Checksum
+
+	return pluginPath, nil
+}
+
 // runPluginUpdate updates external plugins from lock file sources.
 func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	verbose, err := cmd.Flags().GetBool("verbose")
@@ -542,11 +609,40 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Printf("Updating plugin '%s' from %s...\n", name, sourceStr)
 
-		// Install plugin from source.
-		pluginPath, err := installPluginFromSource(sourceStr, name, pluginDir, "", verbose)
+		// Handle repository sources specially.
+		var pluginPath string
+		var err error
+		var skipUpdate bool
+		if meta.Source != nil && meta.Source.Type == sourceTypeRepository {
+			pluginPath, err = updatePluginFromRepository(meta, pluginDir, verbose)
+			// Check if error is "already up to date"
+			if err != nil && strings.Contains(err.Error(), "already up to date") {
+				skipUpdate = true
+				err = nil
+			}
+		} else {
+			// Install plugin from other source types (HTTP, local, git).
+			var sourceForInstall string
+			if meta.Source != nil && meta.Source.URL != "" {
+				sourceForInstall = meta.Source.URL
+			} else if meta.SourceLegacy != "" {
+				sourceForInstall = meta.SourceLegacy
+			} else {
+				fmt.Printf("   no source information available (reinstall with 'tinct plugins install %s' to enable updates)\n", name)
+				failCount++
+				continue
+			}
+			pluginPath, err = installPluginFromSource(sourceForInstall, name, pluginDir, "", verbose)
+		}
+
 		if err != nil {
 			fmt.Printf("   %v\n", err)
 			failCount++
+			continue
+		}
+
+		if skipUpdate {
+			fmt.Printf("   already up to date\n")
 			continue
 		}
 

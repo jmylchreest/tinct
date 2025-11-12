@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -51,7 +50,7 @@ func NewManager(configPath, cachePath string) (*Manager, error) {
 }
 
 // AddRepository adds a new repository.
-func (m *Manager) AddRepository(name, url string, priority int) error {
+func (m *Manager) AddRepository(name, url string) error {
 	// Check if repository already exists.
 	for _, repo := range m.config.Repositories {
 		if repo.Name == name {
@@ -71,13 +70,10 @@ func (m *Manager) AddRepository(name, url string, priority int) error {
 	repo := &Repository{
 		Name:     name,
 		URL:      url,
-		Enabled:  true,
-		Priority: priority,
 		Manifest: manifest,
 	}
 
 	m.config.Repositories = append(m.config.Repositories, repo)
-	m.sortRepositories()
 
 	return m.saveConfig()
 }
@@ -149,15 +145,11 @@ func (m *Manager) UpdateRepository(name string) error {
 	return m.saveConfig()
 }
 
-// UpdateAllRepositories refreshes all enabled repositories.
+// UpdateAllRepositories refreshes all repositories.
 func (m *Manager) UpdateAllRepositories() error {
 	var errors []error
 
 	for _, repo := range m.config.Repositories {
-		if !repo.Enabled {
-			continue
-		}
-
 		if err := m.UpdateRepository(repo.Name); err != nil {
 			errors = append(errors, fmt.Errorf("%s: %w", repo.Name, err))
 		}
@@ -170,7 +162,7 @@ func (m *Manager) UpdateAllRepositories() error {
 	return nil
 }
 
-// Search searches for plugins across all enabled repositories.
+// Search searches for plugins across all repositories.
 func (m *Manager) Search(filter SearchFilter) ([]*SearchResult, error) {
 	if err := m.ensureManifestsLoaded(); err != nil {
 		return nil, err
@@ -179,7 +171,7 @@ func (m *Manager) Search(filter SearchFilter) ([]*SearchResult, error) {
 	var results []*SearchResult
 
 	for _, repo := range m.config.Repositories {
-		if !repo.Enabled || repo.Manifest == nil {
+		if repo.Manifest == nil {
 			continue
 		}
 
@@ -210,7 +202,7 @@ func (m *Manager) FindPlugin(name, version string) (*SearchResult, error) {
 	}
 
 	for _, repo := range m.config.Repositories {
-		if !repo.Enabled || repo.Manifest == nil {
+		if repo.Manifest == nil {
 			continue
 		}
 
@@ -338,10 +330,6 @@ func (m *Manager) matchesFilter(plugin *Plugin, filter SearchFilter) bool {
 // ensureManifestsLoaded ensures all repository manifests are loaded.
 func (m *Manager) ensureManifestsLoaded() error {
 	for _, repo := range m.config.Repositories {
-		if !repo.Enabled {
-			continue
-		}
-
 		if err := m.ensureManifestLoaded(repo); err != nil {
 			return err
 		}
@@ -432,7 +420,6 @@ func (m *Manager) loadConfig() error {
 	}
 
 	m.config = &config
-	m.sortRepositories()
 
 	return nil
 }
@@ -497,11 +484,4 @@ func (m *Manager) loadManifestCache(repoName string) (*Manifest, error) {
 	}
 
 	return &manifest, nil
-}
-
-// sortRepositories sorts repositories by priority (lower = higher priority).
-func (m *Manager) sortRepositories() {
-	sort.Slice(m.config.Repositories, func(i, j int) bool {
-		return m.config.Repositories[i].Priority < m.config.Repositories[j].Priority
-	})
 }
