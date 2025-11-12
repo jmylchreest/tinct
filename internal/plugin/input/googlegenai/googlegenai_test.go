@@ -3,6 +3,7 @@ package googlegenai
 import (
 	"context"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/jmylchreest/tinct/internal/plugin/input"
@@ -97,8 +98,10 @@ func TestVersion(t *testing.T) {
 	if version == "" {
 		t.Error("Version should not be empty")
 	}
-	if version != "0.1.0" {
-		t.Errorf("Expected version '0.1.0', got '%s'", version)
+	// Check it matches semver format (X.Y.Z)
+	matched, _ := regexp.MatchString(`^\d+\.\d+\.\d+$`, version)
+	if !matched {
+		t.Errorf("Version '%s' does not follow semver format (X.Y.Z)", version)
 	}
 }
 

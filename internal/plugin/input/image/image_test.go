@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -107,6 +108,11 @@ func TestVersion(t *testing.T) {
 	version := plugin.Version()
 	if version == "" {
 		t.Error("Version should not be empty")
+	}
+	// Check it matches semver format (X.Y.Z)
+	matched, _ := regexp.MatchString(`^\d+\.\d+\.\d+$`, version)
+	if !matched {
+		t.Errorf("Version '%s' does not follow semver format (X.Y.Z)", version)
 	}
 }
 
