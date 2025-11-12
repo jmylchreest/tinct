@@ -38,7 +38,8 @@ from typing import Dict, List, Any
 PLUGIN_INFO = {
     "name": "notify-send",
     "type": "output",
-    "version": "1.0.1",
+    "version": "0.0.1",
+    "protocol_version": "0.0.1",
     "description": "Send desktop notifications with colour palette information",
     "enabled": False,
     "author": "Tinct Contributors",

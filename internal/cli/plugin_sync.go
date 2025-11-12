@@ -16,11 +16,6 @@ import (
 	"github.com/jmylchreest/tinct/internal/security"
 )
 
-const (
-	statusMissing  = "missing"
-	statusMismatch = "mismatch"
-)
-
 var (
 	syncForce       bool
 	syncVerify      bool
@@ -56,21 +51,6 @@ Examples:
 	RunE: runPluginSync,
 }
 
-// pluginVerifyCmd verifies installed plugins.
-var pluginVerifyCmd = &cobra.Command{
-	Use:   "verify",
-	Short: "Verify installed plugins match lock file",
-	Long: `Check that installed plugins match the lock file checksums and versions.
-
-This command verifies:
-  - Plugin files exist at expected paths
-  - Checksums match (if available)
-  - Plugin metadata is correct
-
-Use this to detect if plugins have been modified or corrupted.`,
-	RunE: runPluginVerify,
-}
-
 // pluginCleanCmd removes plugins not in lock file.
 var pluginCleanCmd = &cobra.Command{
 	Use:   "clean",
@@ -85,7 +65,6 @@ with the lock file.`,
 func init() {
 	// Add sync command to plugins.
 	pluginsCmd.AddCommand(pluginSyncCmd)
-	pluginsCmd.AddCommand(pluginVerifyCmd)
 	pluginsCmd.AddCommand(pluginCleanCmd)
 
 	// Sync flags.
@@ -201,80 +180,6 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginVerify(_ *cobra.Command, _ []string) error {
-	// Read lock file.
-	lock, _, err := loadPluginLock()
-	if err != nil {
-		return fmt.Errorf("failed to read lock file: %w", err)
-	}
-
-	if len(lock.ExternalPlugins) == 0 {
-		fmt.Println("No external plugins in lock file.")
-		return nil
-	}
-
-	fmt.Printf("Verifying plugins against lock file...\n\n")
-
-	results := []repository.VerifyResult{}
-
-	for name, meta := range lock.ExternalPlugins {
-		result := repository.VerifyResult{
-			Name: name,
-		}
-
-		// Check existence.
-		if meta.Path == "" {
-			result.Status = "no_path"
-			results = append(results, result)
-			continue
-		}
-
-		if _, err := os.Stat(meta.Path); os.IsNotExist(err) {
-			result.Status = statusMissing
-			results = append(results, result)
-			continue
-		}
-
-		// Verify checksum if available.
-		if meta.Source == nil || meta.Source.Checksum == "" {
-			result.Status = "no_checksum"
-			results = append(results, result)
-			continue
-		}
-
-		err := verifyPluginChecksum(meta.Path, meta.Source.Checksum)
-		if err != nil {
-			result.Status = statusMismatch
-			result.Error = err
-			result.Expected = meta.Source.Checksum
-
-			// Calculate actual checksum.
-			if actual, err := calculateChecksum(meta.Path); err == nil {
-				result.Got = "sha256:" + actual
-			}
-			results = append(results, result)
-			continue
-		}
-
-		result.Status = "valid"
-		result.Expected = meta.Source.Checksum
-
-		results = append(results, result)
-	}
-
-	// Print results.
-	printVerifyResults(results)
-
-	// Return error if any mismatches.
-	for _, result := range results {
-		if result.Status == statusMismatch || result.Status == statusMissing {
-			return fmt.Errorf("\nverification failed. Run 'tinct plugins sync --force' to reinstall plugins")
-		}
-	}
-
-	return nil
-}
-
 func runPluginClean(cmd *cobra.Command, args []string) error {
 	// Read lock file.
 	lock, _, err := loadPluginLock()
@@ -287,9 +192,6 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	// Scan plugin directory.
-	fmt.Printf("Scanning plugin directory: %s\n\n", pluginDir)
 
 	entries, err := os.ReadDir(pluginDir)
 	if err != nil {
@@ -316,21 +218,18 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		if inLockFile {
-			fmt.Printf("   %s - in lock file\n", name)
-		} else {
-			fmt.Printf("   %s - not in lock file\n", name)
+		if !inLockFile {
 			toRemove = append(toRemove, path)
 		}
 	}
 
 	if len(toRemove) == 0 {
-		fmt.Println("\nNo plugins to remove.")
+		fmt.Println("No plugins to remove.")
 		return nil
 	}
 
-	// Confirm removal.
-	fmt.Printf("\nPlugins to remove:\n")
+	// Show plugins to remove.
+	fmt.Printf("Plugins not in lock file:\n")
 	for _, path := range toRemove {
 		fmt.Printf("  - %s\n", filepath.Base(path))
 	}
@@ -350,17 +249,21 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 	// Remove plugins.
 	fmt.Println()
 	removed := 0
+	failed := 0
 	for _, path := range toRemove {
-		fmt.Printf("Removing %s...\n", filepath.Base(path))
 		if err := os.Remove(path); err != nil {
-			fmt.Printf("   Failed: %v\n", err)
+			fmt.Printf("Failed to remove %s: %v\n", filepath.Base(path), err)
+			failed++
 		} else {
-			fmt.Printf("   Deleted\n")
 			removed++
 		}
 	}
 
-	fmt.Printf("\nDone! Removed %d plugin(s).\n", removed)
+	if failed == 0 {
+		fmt.Printf("Removed %d plugin(s).\n", removed)
+	} else {
+		fmt.Printf("Removed %d plugin(s), %d failed.\n", removed, failed)
+	}
 	return nil
 }
 
@@ -642,59 +545,5 @@ func printSyncSummary(stats repository.SyncStats) {
 	}
 	if stats.Skipped > 0 {
 		fmt.Printf("   %d skipped\n", stats.Skipped)
-	}
-}
-
-// printVerifyResults prints verification results.
-func printVerifyResults(results []repository.VerifyResult) {
-	validCount := 0
-	mismatchCount := 0
-	missingCount := 0
-	noChecksumCount := 0
-
-	for _, result := range results {
-		switch result.Status {
-		case "valid":
-			fmt.Printf(" %s\n", result.Name)
-			fmt.Printf("  Checksum: %s [VALID]\n", result.Expected)
-			validCount++
-		case statusMismatch:
-			fmt.Printf(" %s\n", result.Name)
-			fmt.Printf("  Checksum: [MISMATCH]\n")
-			if result.Expected != "" {
-				fmt.Printf("  Expected: %s\n", result.Expected)
-			}
-			if result.Got != "" {
-				fmt.Printf("  Got: %s\n", result.Got)
-			}
-			mismatchCount++
-		case statusMissing:
-			fmt.Printf(" %s\n", result.Name)
-			fmt.Printf("  Status: [MISSING]\n")
-			missingCount++
-		case "no_checksum":
-			fmt.Printf(" %s\n", result.Name)
-			fmt.Printf("  Checksum: [NOT AVAILABLE]\n")
-			noChecksumCount++
-		case "no_path":
-			fmt.Printf(" %s\n", result.Name)
-			fmt.Printf("  Status: [NO PATH]\n")
-			noChecksumCount++
-		}
-		fmt.Println()
-	}
-
-	fmt.Println("Summary:")
-	if validCount > 0 {
-		fmt.Printf("   %d valid\n", validCount)
-	}
-	if mismatchCount > 0 {
-		fmt.Printf("   %d checksum mismatch\n", mismatchCount)
-	}
-	if missingCount > 0 {
-		fmt.Printf("   %d missing\n", missingCount)
-	}
-	if noChecksumCount > 0 {
-		fmt.Printf("   %d no checksum\n", noChecksumCount)
 	}
 }

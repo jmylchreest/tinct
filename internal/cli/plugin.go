@@ -91,7 +91,14 @@ Plugins can be controlled via:
 Priority order: lock file > environment variables > plugin defaults
 
 When TINCT_ENABLED_PLUGINS is set, only those plugins are enabled (whitelist mode).
-When TINCT_DISABLED_PLUGINS is set, those plugins are disabled (blacklist mode).`,
+When TINCT_DISABLED_PLUGINS is set, those plugins are disabled (blacklist mode).
+
+Commands that modify the lock file:
+  - add: Adds external plugin and updates lock file
+  - delete: Removes external plugin and updates lock file
+  - enable: Updates lock file to enable plugin
+  - disable: Updates lock file to disable plugin
+  - clear: Updates lock file to clear plugin configuration`,
 }
 
 // pluginListCmd lists all available plugins.
@@ -110,13 +117,12 @@ var pluginEnableCmd = &cobra.Command{
 	Short: "Enable a plugin",
 	Long: `Enable a plugin by adding it to the plugin lock file.
 
-Format: plugin-name or type:plugin-name
 Examples:
-  tinct plugins enable tailwind
-  tinct plugins enable output:tailwind
-  tinct plugins enable input:image
+  tinct plugins enable hyprland
+  tinct plugins enable waybar
+  tinct plugins enable image
   tinct plugins enable all
-  tinct plugins enable tailwind --clear  # Remove from disabled list only`,
+  tinct plugins enable hyprland --clear  # Remove from disabled list only`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPluginEnable,
 }
@@ -127,13 +133,12 @@ var pluginDisableCmd = &cobra.Command{
 	Short: "Disable a plugin",
 	Long: `Disable a plugin by adding it to the disabled list in the plugin lock file.
 
-Format: plugin-name or type:plugin-name
 Examples:
-  tinct plugins disable tailwind
-  tinct plugins disable output:tailwind
-  tinct plugins disable input:image
+  tinct plugins disable hyprland
+  tinct plugins disable waybar
+  tinct plugins disable image
   tinct plugins disable all
-  tinct plugins disable tailwind --clear  # Remove from enabled list only`,
+  tinct plugins disable hyprland --clear  # Remove from enabled list only`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPluginDisable,
 }
@@ -148,9 +153,9 @@ If a plugin name is provided, clears that plugin's configuration.
 If no plugin name is provided, clears all plugin configuration.
 
 Examples:
-  tinct plugins clear tailwind        # Clear tailwind config
-  tinct plugins clear output:hyprland # Clear hyprland config
-  tinct plugins clear                 # Clear all plugin config`,
+  tinct plugins clear hyprland  # Clear hyprland config
+  tinct plugins clear waybar    # Clear waybar config
+  tinct plugins clear           # Clear all plugin config`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runPluginClear,
 }
@@ -445,13 +450,29 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Delete plugin file.
-	if err := os.Remove(meta.Path); err != nil && !os.IsNotExist(err) {
-		if verbose {
-			fmt.Fprintf(os.Stderr, "Warning: failed to delete plugin file: %v\n", err)
+	// Delete plugin file only if it's in the plugin directory.
+	// Plugins added with --no-copy are not deleted from disk.
+	pluginDir, err := getPluginDir()
+	if err != nil {
+		return fmt.Errorf("failed to get plugin directory: %w", err)
+	}
+
+	// Check if plugin is in the plugin directory.
+	pluginPathDir := filepath.Dir(meta.Path)
+	if pluginPathDir == pluginDir {
+		// Plugin is in plugin directory, safe to delete.
+		if err := os.Remove(meta.Path); err != nil && !os.IsNotExist(err) {
+			if verbose {
+				fmt.Fprintf(os.Stderr, "Warning: failed to delete plugin file: %v\n", err)
+			}
+		} else if verbose {
+			fmt.Fprintf(os.Stderr, "Deleted plugin file: %s\n", meta.Path)
 		}
-	} else if verbose {
-		fmt.Fprintf(os.Stderr, "Deleted plugin file: %s\n", meta.Path)
+	} else {
+		// Plugin is outside plugin directory (--no-copy), don't delete.
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Plugin file not deleted (outside plugin directory): %s\n", meta.Path)
+		}
 	}
 
 	// Remove from lock file.

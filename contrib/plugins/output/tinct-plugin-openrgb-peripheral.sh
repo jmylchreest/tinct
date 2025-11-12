@@ -20,7 +20,8 @@ if [ "$1" = "--plugin-info" ]; then
 {
   "name": "openrgb-peripheral",
   "type": "output",
-  "version": "1.0.0",
+  "version": "0.0.1",
+  "protocol_version": "0.0.1",
   "description": "OpenRGB peripheral lighting using theme background colour",
   "enabled": false,
   "author": "Tinct Contributors"

@@ -54,6 +54,20 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 		parsedType = pluginType
 	}
 
+	if verbose {
+		fmt.Fprintf(os.Stderr, "DEBUG: parsed type='%s', name='%s'\n", parsedType, parsedName)
+	}
+
+	// Restrict to output plugins only.
+	if parsedType != "" && parsedType != "output" {
+		return fmt.Errorf("only output plugins can be enabled/disabled (input plugins are always on-demand)")
+	}
+
+	// Default to output type if not specified.
+	if parsedType == "" {
+		parsedType = "output"
+	}
+
 	// Format full plugin name.
 	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
 
@@ -126,6 +140,16 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 	parsedType, parsedName := parsePluginName(pluginName)
 	if pluginType != "" {
 		parsedType = pluginType
+	}
+
+	// Restrict to output plugins only.
+	if parsedType != "" && parsedType != "output" {
+		return fmt.Errorf("only output plugins can be enabled/disabled (input plugins are always on-demand)")
+	}
+
+	// Default to output type if not specified.
+	if parsedType == "" {
+		parsedType = "output"
 	}
 
 	// Format full plugin name.

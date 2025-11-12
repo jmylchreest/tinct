@@ -22,7 +22,8 @@ if [ "$1" = "--plugin-info" ]; then
 {
   "name": "wled-ambient",
   "type": "output",
-  "version": "1.0.0",
+  "version": "0.0.1",
+  "protocol_version": "0.0.1",
   "description": "WLED ambient monitor lighting using positional colours",
   "enabled": false,
   "author": "Tinct Contributors"
