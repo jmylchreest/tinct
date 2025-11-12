@@ -449,7 +449,7 @@ func (m *Manager) saveConfig() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(m.configPath, data, 0o644); err != nil { // #nosec G306 - Config file needs standard read permissions
+	if err := os.WriteFile(m.configPath, data, 0o644); err != nil { //nolint:gosec // G306: Config file needs standard read permissions
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 
@@ -475,7 +475,7 @@ func (m *Manager) saveManifestCache(repoName string, manifest *Manifest) error {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	if err := os.WriteFile(cachePath, data, 0o644); err != nil { // #nosec G306 - Cache file needs standard read permissions
+	if err := os.WriteFile(cachePath, data, 0o644); err != nil { //nolint:gosec // G306: Cache file needs standard read permissions
 		return fmt.Errorf("failed to write cache: %w", err)
 	}
 

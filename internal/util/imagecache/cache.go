@@ -109,7 +109,7 @@ func DownloadAndCache(ctx context.Context, url string, opts CacheOptions) (strin
 	}
 
 	// Write to cache file.
-	if err := os.WriteFile(cachedPath, data, 0o644); err != nil { // #nosec G306 - Cache files need standard read permissions
+	if err := os.WriteFile(cachedPath, data, 0o644); err != nil { //nolint:gosec // G306: Cache files need standard read permissions
 		return "", fmt.Errorf("failed to write cached image: %w", err)
 	}
 

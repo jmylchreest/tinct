@@ -150,7 +150,7 @@ func (l *Loader) DumpTemplate(filename string, force bool) error {
 	}
 
 	// Write file.
-	if err := os.WriteFile(outputPath, content, 0o644); err != nil { // #nosec G306 - Template file needs standard read permissions
+	if err := os.WriteFile(outputPath, content, 0o644); err != nil { //nolint:gosec // G306: Template file needs standard read permissions
 		return fmt.Errorf("failed to write template to %q: %w", outputPath, err)
 	}
 
