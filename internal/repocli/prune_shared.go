@@ -23,6 +23,7 @@ func PruneManifest(
 	dryRun bool,
 	verbose bool,
 ) *PruneStats {
+
 	manifest := mgr.GetManifest()
 	verifier := repomanager.NewVerifier()
 	validator := repomanager.NewPruneValidator()

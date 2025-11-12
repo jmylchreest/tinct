@@ -105,7 +105,7 @@ func queryPluginInfo(pluginPath string) (*PluginMetadata, error) {
 	}
 
 	// Parse JSON (use map to handle variations)
-	var info map[string]interface{}
+	var info map[string]any
 	if err := json.Unmarshal(output, &info); err != nil {
 		return nil, fmt.Errorf("invalid plugin-info JSON: %w", err)
 	}
@@ -158,7 +158,7 @@ func CalculateCompatibility(protocolVersion string) string {
 
 // Helper functions
 
-func getStringField(m map[string]interface{}, key string) string {
+func getStringField(m map[string]any, key string) string {
 	if val, ok := m[key]; ok {
 		if str, ok := val.(string); ok {
 			return str
@@ -167,7 +167,7 @@ func getStringField(m map[string]interface{}, key string) string {
 	return ""
 }
 
-func getBoolField(m map[string]interface{}, key string) bool {
+func getBoolField(m map[string]any, key string) bool {
 	if val, ok := m[key]; ok {
 		if b, ok := val.(bool); ok {
 			return b
@@ -176,9 +176,9 @@ func getBoolField(m map[string]interface{}, key string) bool {
 	return false
 }
 
-func getStringSliceField(m map[string]interface{}, key string) []string {
+func getStringSliceField(m map[string]any, key string) []string {
 	if val, ok := m[key]; ok {
-		if arr, ok := val.([]interface{}); ok {
+		if arr, ok := val.([]any); ok {
 			result := make([]string, 0, len(arr))
 			for _, item := range arr {
 				if str, ok := item.(string); ok {

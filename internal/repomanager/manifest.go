@@ -173,10 +173,7 @@ func CompareVersions(a, b string) int {
 	aParts := strings.Split(strings.TrimPrefix(a, "v"), ".")
 	bParts := strings.Split(strings.TrimPrefix(b, "v"), ".")
 
-	maxLen := len(aParts)
-	if len(bParts) > maxLen {
-		maxLen = len(bParts)
-	}
+	maxLen := max(len(bParts), len(aParts))
 
 	for i := 0; i < maxLen; i++ {
 		var aNum, bNum int

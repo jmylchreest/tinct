@@ -50,6 +50,7 @@ func isPluginAsset(name string) bool {
 	if !strings.HasSuffix(name, ".tar.gz") &&
 		!strings.HasSuffix(name, ".tar.bz2") &&
 		!strings.HasSuffix(name, ".zip") {
+
 		return false
 	}
 
@@ -83,7 +84,7 @@ func matchPattern(name, pattern string) bool {
 }
 
 // extractPluginName extracts the plugin name from an artifact name.
-// "tinct-plugin-random_1.2.3_Linux_x86_64.tar.gz" -> "random"
+// "tinct-plugin-random_1.2.3_Linux_x86_64.tar.gz" -> "random".
 func extractPluginName(assetName string) string {
 	// Remove prefix (tinct-plugin-)
 	name := strings.TrimPrefix(assetName, "tinct-plugin-")
@@ -103,7 +104,7 @@ func extractPluginName(assetName string) string {
 }
 
 // ParseAssetName extracts version and platform from asset name.
-// "tinct-plugin-random_1.2.3_Linux_x86_64.tar.gz" -> ("1.2.3", "linux_amd64")
+// "tinct-plugin-random_1.2.3_Linux_x86_64.tar.gz" -> ("1.2.3", "linux_amd64").
 func ParseAssetName(assetName string) (version, platform string) {
 	// Remove extension
 	name := strings.TrimSuffix(assetName, ".tar.gz")
@@ -129,7 +130,7 @@ func ParseAssetName(assetName string) (version, platform string) {
 }
 
 // normalizePlatform converts OS/arch to standard platform identifiers.
-// "Linux", "x86_64" -> "linux_amd64"
+// "Linux", "x86_64" -> "linux_amd64".
 func normalizePlatform(os, arch string) string {
 	// Normalize arch
 	switch arch {

@@ -4,6 +4,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/spf13/cobra"
 )
@@ -212,12 +213,7 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 
 // containsPlugin checks if a plugin is in a list.
 func containsPlugin(list []string, name string) bool {
-	for _, item := range list {
-		if item == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, name)
 }
 
 // removeFromList removes a plugin from a list.

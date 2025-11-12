@@ -55,6 +55,7 @@ func (c *MetadataHydrationCache) SetMetadata(
 	dryRun bool,
 	verbose bool,
 ) int {
+
 	key := fmt.Sprintf("%s:%s", pluginName, version)
 	c.metadata[key] = metadata
 
@@ -362,6 +363,7 @@ func ProcessURLSourceWithProtocol(
 	dryRun bool,
 	verbose bool,
 ) (added int, errors int) {
+
 	fmt.Printf("  URL: %s\n", source.URL)
 	fmt.Printf("  Plugin: %s (%s)\n", source.Plugin, source.PluginType)
 	fmt.Printf("  Platform: %s\n", source.Platform)
