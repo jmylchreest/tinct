@@ -218,6 +218,40 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prune old preview releases
+        run: |
+          # Keep at least 3 most recent preview releases
+          # Also delete any previews older than the most recent tagged release
+          MIN_KEEP=3
+
+          echo "Finding most recent tagged release..."
+          LATEST_TAG_DATE=$(gh release list --limit 100 --json tagName,isPrerelease,createdAt \
+            --jq '[.[] | select(.isPrerelease == false)] | sort_by(.createdAt) | reverse | .[0].createdAt' || echo "")
+
+          echo "Latest tagged release date: $LATEST_TAG_DATE"
+
+          echo "Fetching preview releases to prune..."
+          gh release list --limit 100 --json tagName,isPrerelease,createdAt \
+            --jq '.[] | select(.isPrerelease == true) | {tag: .tagName, date: .createdAt}' | \
+          jq -s 'sort_by(.date) | reverse' | \
+          jq -r --arg latest_tag_date "$LATEST_TAG_DATE" --argjson min_keep "$MIN_KEEP" '
+            to_entries |
+            map(select(
+              (.key >= $min_keep) and
+              (if $latest_tag_date != "" then .value.date < $latest_tag_date else true end)
+            )) |
+            .[].value.tag
+          ' | \
+          while IFS= read -r old_tag; do
+            if [ -n "$old_tag" ]; then
+              echo "Deleting old preview release: $old_tag"
+              gh release delete "$old_tag" --yes || true
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
   # Release job - only runs on tags
   release:
     name: Release
@@ -254,4 +288,6 @@ jobs:
       - name: Attest build artifacts
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "dist/**/*.{tar.gz,zip,deb,rpm,apk}"
+          subject-path: |
+            dist/**/*.tar.gz
+            dist/**/*.zip
