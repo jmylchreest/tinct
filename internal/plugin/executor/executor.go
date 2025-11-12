@@ -32,11 +32,18 @@ type PluginExecutor struct {
 	client            *goplug.Client
 	rpcClient         any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
 	verbose           bool
-	lastWallpaperPath string // Stores wallpaper path from JSON stdio plugins
+	lastWallpaperPath string        // Stores wallpaper path from JSON stdio plugins
+	processRunner     ProcessRunner // Abstraction for running external processes
 }
 
 // NewWithVerbose creates a new PluginExecutor with verbose logging control.
 func NewWithVerbose(pluginPath string, verbose bool) (*PluginExecutor, error) {
+	return NewWithVerboseAndRunner(pluginPath, verbose, NewRealProcessRunner())
+}
+
+// NewWithVerboseAndRunner creates a new PluginExecutor with a custom process runner.
+// This constructor is primarily used for testing with mock process runners.
+func NewWithVerboseAndRunner(pluginPath string, verbose bool, runner ProcessRunner) (*PluginExecutor, error) {
 	// Detect protocol.
 	result, err := protocol.DetectProtocol(pluginPath)
 	if err != nil {
@@ -44,9 +51,10 @@ func NewWithVerbose(pluginPath string, verbose bool) (*PluginExecutor, error) {
 	}
 
 	executor := &PluginExecutor{
-		path:         pluginPath,
-		protocolType: result.Type,
-		verbose:      verbose,
+		path:          pluginPath,
+		protocolType:  result.Type,
+		verbose:       verbose,
+		processRunner: runner,
 	}
 
 	// If it's a go-plugin, initialize the RPC client.
@@ -330,16 +338,10 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 		return nil, fmt.Errorf("failed to marshal options: %w", err)
 	}
 
-	// Execute plugin.
-	cmd := exec.CommandContext(ctx, e.path)
-	cmd.Stdin = bytes.NewReader(optsJSON)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
+	// Execute plugin using the process runner.
+	stdoutBytes, stderrBytes, err := e.processRunner.Run(ctx, e.path, nil, bytes.NewReader(optsJSON))
+	if err != nil {
+		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, string(stderrBytes))
 	}
 
 	// Parse output - try new format with wallpaper path first
@@ -352,7 +354,7 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 		WallpaperPath string `json:"wallpaper_path,omitempty"`
 	}
 
-	if err := json.Unmarshal(stdout.Bytes(), &response); err == nil && len(response.Colors) > 0 {
+	if err := json.Unmarshal(stdoutBytes, &response); err == nil && len(response.Colors) > 0 {
 		colors := make([]color.Color, len(response.Colors))
 		for i, rgb := range response.Colors {
 			colors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
@@ -369,7 +371,7 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 		B uint8 `json:"b"`
 	}
 
-	if err := json.Unmarshal(stdout.Bytes(), &rawColors); err == nil {
+	if err := json.Unmarshal(stdoutBytes, &rawColors); err == nil {
 		colors := make([]color.Color, len(rawColors))
 		for i, rgb := range rawColors {
 			colors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
@@ -379,7 +381,7 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 
 	// Try categorised palette format (backwards compatibility).
 	var categorised colour.CategorisedPalette
-	if err := json.Unmarshal(stdout.Bytes(), &categorised); err == nil {
+	if err := json.Unmarshal(stdoutBytes, &categorised); err == nil {
 		colors := make([]color.Color, 0)
 
 		if len(categorised.AllColours) > 0 {
@@ -405,7 +407,7 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 		return colors, nil
 	}
 
-	return nil, fmt.Errorf("failed to parse plugin output\nOutput: %s", stdout.String())
+	return nil, fmt.Errorf("failed to parse plugin output\nOutput: %s", string(stdoutBytes))
 }
 
 func (e *PluginExecutor) executeOutputJSON(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
@@ -415,22 +417,16 @@ func (e *PluginExecutor) executeOutputJSON(ctx context.Context, palette plugin.P
 		return nil, fmt.Errorf("failed to marshal palette: %w", err)
 	}
 
-	// Execute plugin.
-	cmd := exec.CommandContext(ctx, e.path)
-	cmd.Stdin = bytes.NewReader(paletteJSON)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, stderr.String())
+	// Execute plugin using the process runner.
+	stdoutBytes, stderrBytes, err := e.processRunner.Run(ctx, e.path, nil, bytes.NewReader(paletteJSON))
+	if err != nil {
+		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, string(stderrBytes))
 	}
 
 	// Return stdout as virtual file.
 	result := make(map[string][]byte)
-	if stdout.Len() > 0 {
-		result["output.txt"] = stdout.Bytes()
+	if len(stdoutBytes) > 0 {
+		result["output.txt"] = stdoutBytes
 	}
 
 	return result, nil
@@ -440,13 +436,7 @@ func (e *PluginExecutor) preExecuteJSON(ctx context.Context) (bool, string, erro
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(execCtx, e.path, "--pre-execute")
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
+	stdoutBytes, stderrBytes, err := e.processRunner.Run(execCtx, e.path, []string{"--pre-execute"}, nil)
 
 	// Exit code 0 = continue, 1 = skip, 2+ = error.
 	var exitErr *exec.ExitError
@@ -454,14 +444,14 @@ func (e *PluginExecutor) preExecuteJSON(ctx context.Context) (bool, string, erro
 		exitCode := exitErr.ExitCode()
 
 		if exitCode == 1 {
-			reason := strings.TrimSpace(stdout.String())
+			reason := strings.TrimSpace(string(stdoutBytes))
 			if reason == "" {
 				reason = "plugin requested skip"
 			}
 			return true, reason, nil
 		}
 
-		errMsg := strings.TrimSpace(stderr.String())
+		errMsg := strings.TrimSpace(string(stderrBytes))
 		if errMsg == "" {
 			errMsg = fmt.Sprintf("exit code %d", exitCode)
 		}
@@ -482,16 +472,9 @@ func (e *PluginExecutor) postExecuteJSON(ctx context.Context, writtenFiles []str
 		return fmt.Errorf("failed to marshal files: %w", err)
 	}
 
-	cmd := exec.CommandContext(execCtx, e.path, "--post-execute")
-	cmd.Stdin = bytes.NewReader(filesJSON)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err = cmd.Run()
+	_, stderrBytes, err := e.processRunner.Run(execCtx, e.path, []string{"--post-execute"}, bytes.NewReader(filesJSON))
 	if err != nil {
-		errMsg := strings.TrimSpace(stderr.String())
+		errMsg := strings.TrimSpace(string(stderrBytes))
 		if errMsg == "" {
 			errMsg = err.Error()
 		}

@@ -430,14 +430,14 @@ func createTestImage(t *testing.T, path string) {
 	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
 
 	// Top-left: dark blue
-	for y := 0; y < 50; y++ {
-		for x := 0; x < 50; x++ {
+	for y := range 50 {
+		for x := range 50 {
 			img.Set(x, y, color.RGBA{R: 26, G: 27, B: 38, A: 255})
 		}
 	}
 
 	// Top-right: light blue
-	for y := 0; y < 50; y++ {
+	for y := range 50 {
 		for x := 50; x < 100; x++ {
 			img.Set(x, y, color.RGBA{R: 122, G: 162, B: 247, A: 255})
 		}
@@ -445,7 +445,7 @@ func createTestImage(t *testing.T, path string) {
 
 	// Bottom-left: light gray
 	for y := 50; y < 100; y++ {
-		for x := 0; x < 50; x++ {
+		for x := range 50 {
 			img.Set(x, y, color.RGBA{R: 192, G: 202, B: 245, A: 255})
 		}
 	}

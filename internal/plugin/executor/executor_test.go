@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,24 +17,7 @@ import (
 
 // TestNewWithVerbose tests creating a new executor.
 func TestNewWithVerbose(t *testing.T) {
-	// Create a simple test plugin script.
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	// Create a script that returns plugin-info.
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"input","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "basic-input.sh")
 
 	// Test creating executor.
 	executor, err := NewWithVerbose(pluginPath, false)
@@ -55,22 +39,7 @@ fi
 
 // TestNewWithVerboseVerboseMode tests creating executor with verbose mode.
 func TestNewWithVerboseVerboseMode(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"input","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "basic-input.sh")
 
 	executor, err := NewWithVerbose(pluginPath, true)
 	if err != nil {
@@ -93,34 +62,7 @@ func TestNewWithVerboseInvalidPlugin(t *testing.T) {
 
 // TestExecuteInputJSONSuccess tests executing a JSON stdio input plugin.
 func TestExecuteInputJSONSuccess(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	// Create a script that returns colors via JSON stdio.
-	script := `#!/bin/sh
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-
-# Read JSON input from stdin
-read -r input
-
-# Return colors
-cat <<'EOF'
-{
-  "colors": [
-    {"r": 255, "g": 0, "b": 0, "a": 255},
-    {"r": 0, "g": 255, "b": 0, "a": 255},
-    {"r": 0, "g": 0, "b": 255, "a": 255}
-  ],
-  "wallpaper_path": "/tmp/test.jpg"
-}
-EOF
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "input-with-colors.sh")
 
 	executor, err := NewWithVerbose(pluginPath, false)
 	if err != nil {
@@ -154,26 +96,7 @@ EOF
 
 // TestExecuteInputJSONError tests handling JSON stdio input plugin errors.
 func TestExecuteInputJSONError(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	// Create a script that exits with an error.
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"input","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-
-echo '{"error": "test error"}' >&2
-exit 1
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "input-error.sh")
 
 	executor, err := NewWithVerbose(pluginPath, false)
 	if err != nil {
@@ -194,30 +117,7 @@ exit 1
 
 // TestExecuteOutputJSONSuccess tests executing a JSON stdio output plugin.
 func TestExecuteOutputJSONSuccess(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	// Create a script that returns output via stdout.
-	// Note: JSON stdio output plugins return stdout as a single file named "output.txt"
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"output","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-
-# Read JSON input from stdin
-read -r input
-
-# Return output to stdout - this becomes "output.txt"
-echo "theme configuration content"
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "basic-output.sh")
 
 	executor, err := NewWithVerbose(pluginPath, false)
 	if err != nil {
@@ -255,28 +155,7 @@ echo "theme configuration content"
 
 // TestPreExecuteJSONSkip tests PreExecute returning skip=true.
 func TestPreExecuteJSONSkip(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	// Create a script that returns skip via exit code 1 with reason on stdout.
-	// JSON stdio pre-execute uses exit codes: 0=continue, 1=skip, 2+=error
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"output","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-if [ "$1" = "--pre-execute" ]; then
-  echo "test skip reason"
-  exit 1
-fi
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "output-preexecute-skip.sh")
 
 	executor, err := NewWithVerbose(pluginPath, false)
 	if err != nil {
@@ -302,29 +181,7 @@ fi
 
 // TestPostExecuteJSONSuccess tests PostExecute hook.
 func TestPostExecuteJSONSuccess(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	// Create a script that handles post-execute.
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"output","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-if [ "$1" = "--post-execute" ]; then
-  # Read and echo the request for verification
-  read -r input
-  echo '{"success": true}'
-  exit 0
-fi
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "output-postexecute.sh")
 
 	executor, err := NewWithVerbose(pluginPath, false)
 	if err != nil {
@@ -344,24 +201,7 @@ fi
 
 // TestGetFlagHelpJSON tests retrieving flag help from JSON stdio plugin.
 func TestGetFlagHelpJSON(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	// Create a script for JSON stdio plugin.
-	// Note: JSON stdio plugins don't currently support --flag-help, so this returns empty.
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"input","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "basic-input.sh")
 
 	executor, err := NewWithVerbose(pluginPath, false)
 	if err != nil {
@@ -385,22 +225,7 @@ fi
 
 // TestClose tests closing the executor.
 func TestClose(t *testing.T) {
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
-
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"input","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	pluginPath := copyTestScript(t, "basic-input.sh")
 
 	executor, err := NewWithVerbose(pluginPath, false)
 	if err != nil {
@@ -481,34 +306,20 @@ func TestConvertInputOpts(t *testing.T) {
 	}
 }
 
-// TestExecuteInputJSONTimeout tests timeout handling.
+// TestExecuteInputJSONTimeout tests timeout handling using a mock process runner.
 func TestExecuteInputJSONTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping timeout test in short mode")
 	}
 
-	tmpDir := t.TempDir()
-	pluginPath := filepath.Join(tmpDir, "test-plugin.sh")
+	// Create a mock process runner that simulates a timeout by blocking until context is cancelled
+	mockRunner := NewTimeoutMockProcessRunner()
 
-	// Create a script that hangs.
-	script := `#!/bin/sh
-if [ "$1" = "--plugin-info" ]; then
-  echo '{"name":"test","type":"input","version":"1.0.0","protocol_version":"1.0.0"}'
-  exit 0
-fi
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
-  exit 0
-fi
+	// Create executor with the mock runner
+	// Note: We still need a valid plugin path for protocol detection
+	pluginPath := copyTestScript(t, "basic-input.sh")
 
-# Hang indefinitely
-sleep 3600
-`
-	if err := os.WriteFile(pluginPath, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	executor, err := NewWithVerbose(pluginPath, false)
+	executor, err := NewWithVerboseAndRunner(pluginPath, false, mockRunner)
 	if err != nil {
 		t.Fatalf("Failed to create executor: %v", err)
 	}
@@ -516,7 +327,7 @@ sleep 3600
 
 	opts := plugin.InputOptions{}
 
-	// Use a very short timeout.
+	// Use a short timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
@@ -524,10 +335,37 @@ sleep 3600
 	if err == nil {
 		t.Error("Expected timeout error")
 	}
+
+	// Verify the error is a context timeout error
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("Expected context.DeadlineExceeded error, got: %v", err)
+	}
 }
 
 // Helper function to check if a command exists.
 func commandExists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	return err == nil
+}
+
+// copyTestScript copies a test script from testdata to a temporary directory.
+// Returns the path to the copied script with execute permissions set.
+func copyTestScript(t *testing.T, scriptName string) string {
+	t.Helper()
+
+	// Read the testdata script
+	scriptPath := filepath.Join("testdata", "scripts", scriptName)
+	scriptContent, err := os.ReadFile(scriptPath)
+	if err != nil {
+		t.Fatalf("Failed to read testdata script %s: %v", scriptName, err)
+	}
+
+	// Create temp directory and copy script
+	tmpDir := t.TempDir()
+	pluginPath := filepath.Join(tmpDir, scriptName)
+	if err := os.WriteFile(pluginPath, scriptContent, 0755); err != nil {
+		t.Fatalf("Failed to write test script: %v", err)
+	}
+
+	return pluginPath
 }
