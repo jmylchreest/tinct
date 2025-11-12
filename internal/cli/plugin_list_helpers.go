@@ -52,8 +52,7 @@ func (c *pluginCollector) addInputPlugins() {
 		protocolVersion := c.getPluginProtocolVersion(name, "input")
 		info := c.buildPluginInfo("input", name, plugin.Version(), plugin.Description(), protocolVersion)
 		c.plugins = append(c.plugins, info)
-		fullName := fmt.Sprintf("%s:%s", info.pluginType, info.name)
-		c.seenPlugins[fullName] = true
+		c.seenPlugins[name] = true
 	}
 }
 
@@ -63,8 +62,7 @@ func (c *pluginCollector) addOutputPlugins() {
 		protocolVersion := c.getPluginProtocolVersion(name, "output")
 		info := c.buildPluginInfo("output", name, plugin.Version(), plugin.Description(), protocolVersion)
 		c.plugins = append(c.plugins, info)
-		fullName := fmt.Sprintf("%s:%s", info.pluginType, info.name)
-		c.seenPlugins[fullName] = true
+		c.seenPlugins[name] = true
 	}
 }
 
@@ -92,16 +90,14 @@ func (c *pluginCollector) determinePluginStatus(pluginType, pluginName string) s
 		return "O" // on-demand
 	}
 
-	fullName := fmt.Sprintf("%s:%s", pluginType, pluginName)
-
 	// Check disabled list.
-	if c.isInList(c.lock.DisabledPlugins, pluginName, fullName) {
+	if c.isInList(c.lock.DisabledPlugins, pluginName) {
 		return "D" // disabled
 	}
 
 	// Check enabled list.
 	if len(c.lock.EnabledPlugins) > 0 {
-		if c.isInList(c.lock.EnabledPlugins, pluginName, fullName) {
+		if c.isInList(c.lock.EnabledPlugins, pluginName) {
 			return "E" // enabled
 		}
 		return "O" // on-demand
@@ -110,10 +106,10 @@ func (c *pluginCollector) determinePluginStatus(pluginType, pluginName string) s
 	return "O" // on-demand
 }
 
-// isInList checks if a plugin name or full name is in a list.
-func (c *pluginCollector) isInList(list []string, name, fullName string) bool {
+// isInList checks if a plugin name is in a list.
+func (c *pluginCollector) isInList(list []string, name string) bool {
 	for _, item := range list {
-		if item == fullName || item == name || item == pluginTypeAll {
+		if item == name || item == pluginTypeAll {
 			return true
 		}
 	}
@@ -161,7 +157,7 @@ func (c *pluginCollector) getPluginProtocolVersion(name, pluginType string) stri
 					return protocolVersion
 				}
 				// If query failed, print warning and return "unknown"
-				fmt.Printf("Warning: Failed to query protocol version from external plugin '%s:%s' at %s\n", pluginType, name, meta.Path)
+				fmt.Printf("Warning: Failed to query protocol version from external plugin '%s' (%s) at %s\n", name, pluginType, meta.Path)
 				return "unknown"
 			}
 		}
@@ -183,8 +179,7 @@ func (c *pluginCollector) addExternalOnlyPlugins() {
 			pluginName = lockKey
 		}
 
-		fullName := fmt.Sprintf("%s:%s", meta.Type, pluginName)
-		if c.seenPlugins[fullName] {
+		if c.seenPlugins[pluginName] {
 			continue // Already added from manager
 		}
 
@@ -222,7 +217,7 @@ func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPlugi
 
 	protocolVersion := queryProtocolVersion
 	if protocolVersion == "" {
-		fmt.Printf("Warning: Failed to query protocol version from external plugin '%s:%s' at %s\n", meta.Type, name, meta.Path)
+		fmt.Printf("Warning: Failed to query protocol version from external plugin '%s' (%s) at %s\n", name, meta.Type, meta.Path)
 		protocolVersion = "unknown"
 	}
 

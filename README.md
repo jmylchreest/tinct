@@ -257,7 +257,7 @@ tinct plugins repo add <name> <url>
 tinct plugins sync
 
 # Enable/disable plugins
-export TINCT_ENABLED_PLUGINS="output:hyprland,output:kitty"
+export TINCT_ENABLED_PLUGINS="hyprland,kitty"
 ```
 
 ### Plugin Lock File Configuration
@@ -272,12 +272,12 @@ Tinct uses a lock file (`.tinct-plugins.json`) to manage plugin state and config
 {
   "version": "1",
   "enabled_plugins": [
-    "input:image",
-    "output:hyprland",
-    "output:kitty"
+    "image",
+    "hyprland",
+    "kitty"
   ],
   "disabled_plugins": [
-    "output:waybar"
+    "waybar"
   ],
   "external_plugins": {
     "notify-send": {
@@ -301,8 +301,8 @@ Tinct uses a lock file (`.tinct-plugins.json`) to manage plugin state and config
 | Field | Type | Description |
 |-------|------|-------------|
 | `version` | string | Lock file format version |
-| `enabled_plugins` | array | List of explicitly enabled plugins (format: `type:name`) |
-| `disabled_plugins` | array | List of explicitly disabled plugins (format: `type:name`) |
+| `enabled_plugins` | array | List of explicitly enabled plugins by name |
+| `disabled_plugins` | array | List of explicitly disabled plugins by name |
 | `external_plugins` | object | Map of external plugin names to their metadata |
 
 **External Plugin Metadata:**
@@ -396,10 +396,10 @@ tinct generate -i image -p wallpaper.jpg --image.seed-mode random
 
 ```bash
 # Enable only specific plugins (whitelist mode)
-export TINCT_ENABLED_PLUGINS="input:image,output:hyprland,output:kitty"
+export TINCT_ENABLED_PLUGINS="image,hyprland,kitty"
 
 # Disable specific plugins (blacklist mode)
-export TINCT_DISABLED_PLUGINS="output:waybar,output:dunst"
+export TINCT_DISABLED_PLUGINS="waybar,dunst"
 ```
 
 ## Documentation

@@ -415,12 +415,6 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
 	}
 
-	// Parse plugin name to support both "name" and "type:name" formats
-	_, parsedName := parsePluginName(pluginName)
-	if parsedName == "" {
-		parsedName = pluginName
-	}
-
 	// Load plugin lock.
 	lock, lockPath, err := loadPluginLock()
 	if err != nil {
@@ -431,15 +425,15 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no external plugins found")
 	}
 
-	// Check if plugin exists (using parsed name)
-	meta, exists := lock.ExternalPlugins[parsedName]
+	// Check if plugin exists.
+	meta, exists := lock.ExternalPlugins[pluginName]
 	if !exists {
-		return fmt.Errorf("plugin '%s' not found", parsedName)
+		return fmt.Errorf("plugin '%s' not found", pluginName)
 	}
 
 	// Confirm deletion if not forced.
 	if !pluginForce {
-		fmt.Printf("Are you sure you want to delete plugin '%s'? (y/N): ", parsedName)
+		fmt.Printf("Are you sure you want to delete plugin '%s'? (y/N): ", pluginName)
 		var response string
 		if _, err := fmt.Scanln(&response); err != nil {
 			return fmt.Errorf("failed to read user input: %w", err)
@@ -476,19 +470,18 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 	}
 
 	// Remove from lock file.
-	delete(lock.ExternalPlugins, parsedName)
+	delete(lock.ExternalPlugins, pluginName)
 
 	// Remove from enabled/disabled lists.
-	fullName := fmt.Sprintf("%s:%s", meta.Type, parsedName)
-	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
-	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
+	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, pluginName)
+	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, pluginName)
 
 	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
 
-	fmt.Printf("Plugin '%s' deleted successfully\n", parsedName)
+	fmt.Printf("Plugin '%s' deleted successfully\n", pluginName)
 	return nil
 }
 

@@ -4,7 +4,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -24,11 +23,18 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
 	}
 
+	// Check if plugin is an input plugin (only allow output plugins to be enabled/disabled).
+	if pluginName != pluginTypeAll {
+		if pluginType := getPluginType(lock, pluginName); pluginType == "input" {
+			return fmt.Errorf("only output plugins can be enabled/disabled (input plugins are always on-demand)")
+		}
+	}
+
 	// Handle "all" pseudo-plugin.
 	if pluginName == pluginTypeAll {
 		if pluginClear {
 			// Just remove "all" from disabled list.
-			lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all", "all")
+			lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all")
 		} else {
 			// Clear disabled list.
 			lock.DisabledPlugins = []string{}
@@ -48,39 +54,17 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Parse plugin name.
-	parsedType, parsedName := parsePluginName(pluginName)
-	if pluginType != "" {
-		parsedType = pluginType
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "DEBUG: parsed type='%s', name='%s'\n", parsedType, parsedName)
-	}
-
-	// Restrict to output plugins only.
-	if parsedType != "" && parsedType != "output" {
-		return fmt.Errorf("only output plugins can be enabled/disabled (input plugins are always on-demand)")
-	}
-
-	// Default to output type if not specified.
-	if parsedType == "" {
-		parsedType = "output"
-	}
-
-	// Format full plugin name.
-	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
-
+	// Use plugin name directly (no type prefix).
 	if pluginClear {
 		// Just remove from disabled list.
-		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
+		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, pluginName)
 	} else {
 		// Remove from disabled list.
-		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
+		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, pluginName)
 
 		// Add to enabled list if not already there.
-		if !containsPlugin(lock.EnabledPlugins, parsedName, fullName) {
-			lock.EnabledPlugins = append(lock.EnabledPlugins, fullName)
+		if !containsPlugin(lock.EnabledPlugins, pluginName) {
+			lock.EnabledPlugins = append(lock.EnabledPlugins, pluginName)
 		}
 	}
 
@@ -90,9 +74,9 @@ func runPluginEnable(cmd *cobra.Command, args []string) error {
 	}
 
 	if pluginClear {
-		fmt.Printf("Cleared '%s' from disabled list\n", fullName)
+		fmt.Printf("Cleared '%s' from disabled list\n", pluginName)
 	} else {
-		fmt.Printf("Plugin '%s' enabled\n", fullName)
+		fmt.Printf("Plugin '%s' enabled\n", pluginName)
 	}
 	return nil
 }
@@ -112,11 +96,18 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
 	}
 
+	// Check if plugin is an input plugin (only allow output plugins to be enabled/disabled).
+	if pluginName != pluginTypeAll && pluginName != "all" {
+		if pluginType := getPluginType(lock, pluginName); pluginType == "input" {
+			return fmt.Errorf("only output plugins can be enabled/disabled (input plugins are always on-demand)")
+		}
+	}
+
 	// Handle "all" pseudo-plugin.
 	if pluginName == "all" {
 		if pluginClear {
 			// Just remove "all" from enabled list.
-			lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all", "all")
+			lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all")
 		} else {
 			// Clear enabled list.
 			lock.EnabledPlugins = []string{}
@@ -136,35 +127,17 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Parse plugin name.
-	parsedType, parsedName := parsePluginName(pluginName)
-	if pluginType != "" {
-		parsedType = pluginType
-	}
-
-	// Restrict to output plugins only.
-	if parsedType != "" && parsedType != "output" {
-		return fmt.Errorf("only output plugins can be enabled/disabled (input plugins are always on-demand)")
-	}
-
-	// Default to output type if not specified.
-	if parsedType == "" {
-		parsedType = "output"
-	}
-
-	// Format full plugin name.
-	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
-
+	// Use plugin name directly (no type prefix).
 	if pluginClear {
 		// Just remove from enabled list.
-		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
+		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, pluginName)
 	} else {
 		// Remove from enabled list.
-		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
+		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, pluginName)
 
 		// Add to disabled list if not already there.
-		if !containsPlugin(lock.DisabledPlugins, parsedName, fullName) {
-			lock.DisabledPlugins = append(lock.DisabledPlugins, fullName)
+		if !containsPlugin(lock.DisabledPlugins, pluginName) {
+			lock.DisabledPlugins = append(lock.DisabledPlugins, pluginName)
 		}
 	}
 
@@ -174,9 +147,9 @@ func runPluginDisable(cmd *cobra.Command, args []string) error {
 	}
 
 	if pluginClear {
-		fmt.Printf("Cleared '%s' from enabled list\n", fullName)
+		fmt.Printf("Cleared '%s' from enabled list\n", pluginName)
 	} else {
-		fmt.Printf("Plugin '%s' disabled\n", fullName)
+		fmt.Printf("Plugin '%s' disabled\n", pluginName)
 	}
 	return nil
 }
@@ -212,8 +185,8 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 
 	// Handle "all" pseudo-plugin.
 	if pluginName == "all" {
-		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all", "all")
-		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all", "all")
+		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all")
+		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all")
 
 		if err := savePluginLock(lockPath, lock); err != nil {
 			return fmt.Errorf("failed to save plugin lock: %w", err)
@@ -223,32 +196,24 @@ func runPluginClear(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Parse plugin name.
-	parsedType, parsedName := parsePluginName(pluginName)
-	if pluginType != "" {
-		parsedType = pluginType
-	}
-
-	// Format full plugin name.
-	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
-
+	// Use plugin name directly (no type prefix).
 	// Remove from both lists.
-	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
-	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
+	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, pluginName)
+	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, pluginName)
 
 	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
 
-	fmt.Printf("Cleared configuration for '%s'\n", fullName)
+	fmt.Printf("Cleared configuration for '%s'\n", pluginName)
 	return nil
 }
 
 // containsPlugin checks if a plugin is in a list.
-func containsPlugin(list []string, name, fullName string) bool {
+func containsPlugin(list []string, name string) bool {
 	for _, item := range list {
-		if item == name || item == fullName {
+		if item == name {
 			return true
 		}
 	}
@@ -256,21 +221,38 @@ func containsPlugin(list []string, name, fullName string) bool {
 }
 
 // removeFromList removes a plugin from a list.
-func removeFromList(list []string, name, fullName string) []string {
+func removeFromList(list []string, name string) []string {
 	result := make([]string, 0, len(list))
 	for _, item := range list {
-		if item != name && item != fullName {
+		if item != name {
 			result = append(result, item)
 		}
 	}
 	return result
 }
 
-// parsePluginName parses a plugin name into type and name.
-func parsePluginName(name string) (pluginType, pluginName string) {
-	parts := strings.Split(name, ":")
-	if len(parts) == 2 {
-		return parts[0], parts[1]
+// getPluginType returns the type of a plugin by checking the lock file's external plugins.
+// Returns "input", "output", or empty string if not found.
+func getPluginType(lock *PluginLock, pluginName string) string {
+	// Check external plugins first.
+	if lock != nil && lock.ExternalPlugins != nil {
+		if meta, exists := lock.ExternalPlugins[pluginName]; exists {
+			return meta.Type
+		}
 	}
-	return "", name
+
+	// Check built-in plugins via the shared manager.
+	mgr := createManagerFromLock(lock)
+
+	// Try to find in input plugins.
+	if _, exists := mgr.GetInputPlugin(pluginName); exists {
+		return "input"
+	}
+
+	// Try to find in output plugins.
+	if _, exists := mgr.GetOutputPlugin(pluginName); exists {
+		return "output"
+	}
+
+	return ""
 }
