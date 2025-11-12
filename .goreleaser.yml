@@ -487,15 +487,7 @@ aurs:
       if [ -f *.sbom.json ]; then
         install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-random/sbom.json"
       fi
-    install: |-
-      post_install() {
-        echo "==> To register the plugin with tinct, run:"
-        echo "    tinct plugins add /usr/bin/tinct-plugin-random --no-copy"
-      }
-
-      post_upgrade() {
-        post_install
-      }
+    install: .goreleaser/aur-install-scripts/plugin-random.install
 
   # Plugin: templater
   - name: tinct-plugin-templater-bin
@@ -522,15 +514,7 @@ aurs:
       if [ -f *.sbom.json ]; then
         install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-templater/sbom.json"
       fi
-    install: |-
-      post_install() {
-        echo "==> To register the plugin with tinct, run:"
-        echo "    tinct plugins add /usr/bin/tinct-plugin-templater --no-copy"
-      }
-
-      post_upgrade() {
-        post_install
-      }
+    install: .goreleaser/aur-install-scripts/plugin-templater.install
 
   # Plugin: wob
   - name: tinct-plugin-wob-bin
@@ -557,15 +541,7 @@ aurs:
       if [ -f *.sbom.json ]; then
         install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-wob/sbom.json"
       fi
-    install: |-
-      post_install() {
-        echo "==> To register the plugin with tinct, run:"
-        echo "    tinct plugins add /usr/bin/tinct-plugin-wob --no-copy"
-      }
-
-      post_upgrade() {
-        post_install
-      }
+    install: .goreleaser/aur-install-scripts/plugin-wob.install
 
   # Plugin: dunstify
   - name: tinct-plugin-dunstify-bin
@@ -592,15 +568,7 @@ aurs:
       if [ -f *.sbom.json ]; then
         install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-dunstify/sbom.json"
       fi
-    install: |-
-      post_install() {
-        echo "==> To register the plugin with tinct, run:"
-        echo "    tinct plugins add /usr/bin/tinct-plugin-dunstify --no-copy"
-      }
-
-      post_upgrade() {
-        post_install
-      }
+    install: .goreleaser/aur-install-scripts/plugin-dunstify.install
 # ============================================================================
 # GITHUB RELEASE
 # ============================================================================
