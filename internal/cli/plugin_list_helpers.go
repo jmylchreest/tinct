@@ -9,10 +9,6 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
-const (
-	pluginStatusOnDemand = "on-demand"
-)
-
 // pluginInfo holds information about a plugin for display.
 type pluginInfo struct {
 	pluginType      string // input or output
@@ -85,7 +81,7 @@ func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description
 }
 
 // determinePluginStatus determines the status of a plugin (enabled/disabled/on-demand).
-func (c *pluginCollector) determinePluginStatus(pluginType, pluginName string) string {
+func (c *pluginCollector) determinePluginStatus(_ /* pluginType */, pluginName string) string {
 	if c.lock == nil {
 		return "O" // on-demand
 	}

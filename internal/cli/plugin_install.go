@@ -69,26 +69,6 @@ func installPluginFromSource(source, pluginName, pluginDir, forcedSourceType str
 	}
 }
 
-// getArchiveBaseName extracts the base name from an archive filename.
-// For example: "tinct-plugin-wob_0.0.1_Linux_x86_64.tar.gz" -> "tinct-plugin-wob".
-func getArchiveBaseName(filename string) string {
-	// Remove extension
-	base := filename
-	for _, ext := range []string{".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz", ".tbz2", ".zip"} {
-		if before, ok := strings.CutSuffix(base, ext); ok {
-			base = before
-			break
-		}
-	}
-
-	// Find the part before the first underscore
-	if idx := strings.Index(base, "_"); idx > 0 {
-		return base[:idx]
-	}
-
-	return base
-}
-
 // isDownloadableFile performs a HEAD request to check if the URL points to a downloadable file.
 func isDownloadableFile(url string) bool {
 	// Perform HEAD request to check Content-Type
@@ -313,35 +293,6 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 	}
 
 	return result.Path, nil
-}
-
-// extractByFileExtension extracts or decompresses based on file extension.
-func extractByFileExtension(data []byte, url, filename, targetFile, archiveName, pluginDir string, verbose bool) (string, error) {
-	// Check for tar archives
-	switch {
-	case strings.HasSuffix(url, ".tar.gz"), strings.HasSuffix(url, ".tgz"):
-		return extractFromTarGz(data, targetFile, archiveName, pluginDir, verbose)
-	case strings.HasSuffix(url, ".tar.xz"), strings.HasSuffix(url, ".txz"):
-		return extractFromTarXz(data, targetFile, archiveName, pluginDir, verbose)
-	case strings.HasSuffix(url, ".tar.bz2"), strings.HasSuffix(url, ".tbz"), strings.HasSuffix(url, ".tbz2"):
-		return extractFromTarBz2(data, targetFile, archiveName, pluginDir, verbose)
-	case strings.HasSuffix(url, ".zip"):
-		return extractFromZip(data, targetFile, archiveName, pluginDir, verbose)
-	}
-
-	// Check for standalone compressed files
-	if before, ok := strings.CutSuffix(filename, ".gz"); ok {
-		return decompressGz(data, before, pluginDir, verbose)
-	}
-	if before, ok := strings.CutSuffix(filename, ".xz"); ok {
-		return decompressXz(data, before, pluginDir, verbose)
-	}
-	if before, ok := strings.CutSuffix(filename, ".bz2"); ok {
-		return decompressBz2(data, before, pluginDir, verbose)
-	}
-
-	// Not a recognized archive format - will be handled by caller
-	return "", nil
 }
 
 // extractFromTarGz extracts a plugin from a tar.gz archive.
@@ -895,107 +846,4 @@ func extractFromTarBz2(data []byte, targetFile, archiveName, pluginDir string, v
 
 		return destPath, nil
 	}
-}
-
-// decompressGz decompresses a single gzipped file.
-func decompressGz(data []byte, filename, pluginDir string, verbose bool) (string, error) {
-	gzr, err := gzip.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return "", fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzr.Close()
-
-	destPath := filepath.Join(pluginDir, filename)
-	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
-	if err != nil {
-		return "", fmt.Errorf("failed to create plugin file: %w", err)
-	}
-
-	limitedReader := security.NewLimitedReader(gzr, 100*1024*1024)
-	_, copyErr := io.Copy(out, limitedReader)
-	closeErr := out.Close()
-
-	if copyErr != nil {
-		return "", fmt.Errorf("failed to decompress plugin: %w", copyErr)
-	}
-	if closeErr != nil {
-		return "", fmt.Errorf("failed to close plugin file: %w", closeErr)
-	}
-
-	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-		return "", fmt.Errorf("failed to make plugin executable: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Decompressed plugin to: %s\n", destPath)
-	}
-
-	return destPath, nil
-}
-
-// decompressXz decompresses a single xz-compressed file.
-func decompressXz(data []byte, filename, pluginDir string, verbose bool) (string, error) {
-	xzr, err := xz.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return "", fmt.Errorf("failed to create xz reader: %w", err)
-	}
-
-	destPath := filepath.Join(pluginDir, filename)
-	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
-	if err != nil {
-		return "", fmt.Errorf("failed to create plugin file: %w", err)
-	}
-
-	limitedReader := security.NewLimitedReader(xzr, 100*1024*1024)
-	_, copyErr := io.Copy(out, limitedReader)
-	closeErr := out.Close()
-
-	if copyErr != nil {
-		return "", fmt.Errorf("failed to decompress plugin: %w", copyErr)
-	}
-	if closeErr != nil {
-		return "", fmt.Errorf("failed to close plugin file: %w", closeErr)
-	}
-
-	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-		return "", fmt.Errorf("failed to make plugin executable: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Decompressed plugin to: %s\n", destPath)
-	}
-
-	return destPath, nil
-}
-
-// decompressBz2 decompresses a single bzip2-compressed file.
-func decompressBz2(data []byte, filename, pluginDir string, verbose bool) (string, error) {
-	bzr := bzip2.NewReader(bytes.NewReader(data))
-
-	destPath := filepath.Join(pluginDir, filename)
-	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
-	if err != nil {
-		return "", fmt.Errorf("failed to create plugin file: %w", err)
-	}
-
-	limitedReader := security.NewLimitedReader(bzr, 100*1024*1024)
-	_, copyErr := io.Copy(out, limitedReader)
-	closeErr := out.Close()
-
-	if copyErr != nil {
-		return "", fmt.Errorf("failed to decompress plugin: %w", copyErr)
-	}
-	if closeErr != nil {
-		return "", fmt.Errorf("failed to close plugin file: %w", closeErr)
-	}
-
-	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-		return "", fmt.Errorf("failed to make plugin executable: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Decompressed plugin to: %s\n", destPath)
-	}
-
-	return destPath, nil
 }

@@ -25,14 +25,18 @@ func LoadManifest(path string) (*ManifestManager, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Create new manifest
+			// Create new manifest with placeholder metadata
 			return &ManifestManager{
 				manifest: &repository.Manifest{
-					Version:     "1",
+					Version:     "1.0",
+					Name:        "New Plugin Repository",
+					Description: "A new Tinct plugin repository",
+					URL:         "https://example.com/repository.json",
 					Plugins:     make(map[string]*repository.Plugin),
 					LastUpdated: time.Now(),
 				},
-				path: path,
+				path:  path,
+				dirty: true, // Mark dirty so it will be saved with metadata
 			}, nil
 		}
 		return nil, fmt.Errorf("failed to read manifest: %w", err)
