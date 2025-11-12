@@ -33,6 +33,7 @@ go.work
 
 # Build artifacts
 /tinct
+/tinct-repo-manager
 *.tar.gz
 *.zip
 

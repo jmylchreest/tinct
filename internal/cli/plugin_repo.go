@@ -40,7 +40,7 @@ var pluginRepoAddCmd = &cobra.Command{
 The manifest URL should point to a JSON file containing plugin metadata.
 
 Example:
-  tinct plugins repo add official https://raw.githubusercontent.com/jmylchreest/tinct-plugins/main/repository.json`,
+  tinct plugins repo add official ` + repository.OfficialRepoURL + ``,
 	Args: cobra.ExactArgs(2),
 	RunE: runPluginRepoAdd,
 }
@@ -163,7 +163,7 @@ func runPluginRepoList(_ *cobra.Command, _ []string) error {
 	if len(repos) == 0 {
 		fmt.Println("No repositories configured.")
 		fmt.Println("\nAdd a repository with:")
-		fmt.Println("  tinct plugins repo add official https://raw.githubusercontent.com/jmylchreest/tinct-plugins/main/repository.json")
+		fmt.Printf("  tinct plugins repo add official %s\n", repository.OfficialRepoURL)
 		return nil
 	}
 

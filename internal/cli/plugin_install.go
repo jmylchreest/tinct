@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmylchreest/tinct/internal/compression"
 	"github.com/jmylchreest/tinct/internal/security"
 	"github.com/ulikunitz/xz"
 )
@@ -283,78 +284,35 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 	}
 
 	// Determine archive name (for finding plugin binary)
-	archiveName := getArchiveBaseName(filename)
+	archiveName := compression.GetArchiveBaseName(filename)
 
 	// Get Content-Type from response header
 	contentType := resp.Header.Get("Content-Type")
 
-	// Detect format by Content-Type first, then fall back to filename extension
-	switch {
-	// Tar+gzip archives
-	case strings.Contains(contentType, "application/gzip") || strings.Contains(contentType, "application/x-gzip"):
-		// Could be tar.gz or plain .gz - check filename
-		if strings.HasSuffix(info.URL, ".tar.gz") || strings.HasSuffix(info.URL, ".tgz") {
-			return extractFromTarGz(data, info.FilePath, archiveName, pluginDir, verbose)
-		}
-		// Plain gzip file
-		return decompressGz(data, strings.TrimSuffix(filename, ".gz"), pluginDir, verbose)
-
-	// Tar+xz archives
-	case strings.Contains(contentType, "application/x-xz"):
-		// Could be tar.xz or plain .xz - check filename
-		if strings.HasSuffix(info.URL, ".tar.xz") || strings.HasSuffix(info.URL, ".txz") {
-			return extractFromTarXz(data, info.FilePath, archiveName, pluginDir, verbose)
-		}
-		// Plain xz file
-		return decompressXz(data, strings.TrimSuffix(filename, ".xz"), pluginDir, verbose)
-
-	// Tar+bzip2 archives
-	case strings.Contains(contentType, "application/x-bzip2"):
-		// Could be tar.bz2 or plain .bz2 - check filename
-		if strings.HasSuffix(info.URL, ".tar.bz2") || strings.HasSuffix(info.URL, ".tbz") || strings.HasSuffix(info.URL, ".tbz2") {
-			return extractFromTarBz2(data, info.FilePath, archiveName, pluginDir, verbose)
-		}
-		// Plain bzip2 file
-		return decompressBz2(data, strings.TrimSuffix(filename, ".bz2"), pluginDir, verbose)
-
-	// Zip archives
-	case strings.Contains(contentType, "application/zip") || strings.Contains(contentType, "application/x-zip-compressed"):
-		return extractFromZip(data, info.FilePath, archiveName, pluginDir, verbose)
-
-	// Tar archives (uncompressed)
-	case strings.Contains(contentType, "application/x-tar"):
-		// Assume it's compressed based on filename
-		if strings.HasSuffix(info.URL, ".tar.gz") || strings.HasSuffix(info.URL, ".tgz") {
-			return extractFromTarGz(data, info.FilePath, archiveName, pluginDir, verbose)
-		} else if strings.HasSuffix(info.URL, ".tar.xz") || strings.HasSuffix(info.URL, ".txz") {
-			return extractFromTarXz(data, info.FilePath, archiveName, pluginDir, verbose)
-		} else if strings.HasSuffix(info.URL, ".tar.bz2") || strings.HasSuffix(info.URL, ".tbz") || strings.HasSuffix(info.URL, ".tbz2") {
-			return extractFromTarBz2(data, info.FilePath, archiveName, pluginDir, verbose)
-		}
-		return "", fmt.Errorf("uncompressed tar archives are not supported")
-
-	// Generic binary/octet-stream - fall back to filename detection
-	case strings.Contains(contentType, "application/octet-stream") || contentType == "":
-		if path, err := extractByFileExtension(data, info.URL, filename, info.FilePath, archiveName, pluginDir, verbose); path != "" || err != nil {
-			return path, err
-		}
-		// Fall through to treat as direct plugin file
-	}
-
-	// Not an archive - treat as direct plugin file.
-	destPath := filepath.Join(pluginDir, filename)
-
-	// Write file.
-	// #nosec G306 -- Plugin executable needs exec permissions.
-	if err := os.WriteFile(destPath, data, 0o755); err != nil {
-		return "", fmt.Errorf("failed to write plugin file: %w", err)
+	// Use shared compression utilities for extraction
+	result, err := compression.ExtractPlugin(
+		data,
+		info.URL,      // url for format detection
+		filename,      // filename for fallback detection
+		info.FilePath, // targetFile (specific file to extract from archive)
+		archiveName,   // archiveName for matching plugin binary
+		pluginDir,     // destination directory
+		contentType,   // HTTP Content-Type for detection
+		verbose,       // verbose output
+	)
+	if err != nil {
+		return "", err
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Downloaded plugin to: %s\n", destPath)
+		if result.WasArchive {
+			fmt.Fprintf(os.Stderr, "Extracted plugin to: %s\n", result.Path)
+		} else {
+			fmt.Fprintf(os.Stderr, "Downloaded plugin to: %s\n", result.Path)
+		}
 	}
 
-	return destPath, nil
+	return result.Path, nil
 }
 
 // extractByFileExtension extracts or decompresses based on file extension.

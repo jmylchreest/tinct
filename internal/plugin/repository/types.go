@@ -3,6 +3,9 @@ package repository
 
 import "time"
 
+// OfficialRepoURL is the URL for the official Tinct plugin repository.
+const OfficialRepoURL = "https://raw.githubusercontent.com/jmylchreest/tinct/refs/heads/main/contrib/repository/repository.json"
+
 // Manifest represents a plugin repository manifest.
 type Manifest struct {
 	Version      string             `json:"version"`
@@ -11,6 +14,7 @@ type Manifest struct {
 	URL          string             `json:"url"`
 	MaintainedBy string             `json:"maintained_by,omitempty"`
 	LastUpdated  time.Time          `json:"last_updated"`
+	LastPruned   *time.Time         `json:"last_pruned,omitempty"`
 	Plugins      map[string]*Plugin `json:"plugins"`
 }
 
@@ -37,11 +41,15 @@ type Version struct {
 
 // Download represents a downloadable artifact for a specific platform.
 type Download struct {
-	URL          string   `json:"url"`
-	Checksum     string   `json:"checksum"` // Format: "sha256:..."
-	Size         int64    `json:"size,omitempty"`
-	Runtime      string   `json:"runtime,omitempty"`      // e.g., "python3", "bash"
-	Dependencies []string `json:"dependencies,omitempty"` // Runtime dependencies
+	URL               string     `json:"url"`
+	Checksum          string     `json:"checksum"` // Format: "sha256:..."
+	Size              int64      `json:"size,omitempty"`
+	Runtime           string     `json:"runtime,omitempty"`      // e.g., "python3", "bash"
+	Dependencies      []string   `json:"dependencies,omitempty"` // Runtime dependencies
+	Available         bool       `json:"available"`
+	LastVerified      *time.Time `json:"last_verified,omitempty"`
+	UnavailableSince  *time.Time `json:"unavailable_since,omitempty"`
+	UnavailableReason string     `json:"unavailable_reason,omitempty"`
 }
 
 // Repository represents a configured plugin repository.

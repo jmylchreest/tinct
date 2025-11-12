@@ -61,6 +61,35 @@ builds:
     # Ensure we use Go 1.25+
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Repository manager tool
+  - id: tinct-repo-manager
+    main: ./cmd/tinct-repo-manager
+    binary: tinct-repo-manager
+
+    # Build for multiple platforms
+    goos:
+      - linux
+      - darwin
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm64
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
   # --------------------------------------------------------------------------
   # INPUT PLUGINS
   # --------------------------------------------------------------------------
@@ -240,6 +269,30 @@ archives:
       - README.md
       - LICENSE
       - docs/**/*
+
+  # Repository manager tool archive
+  - id: tinct-repo-manager-archive
+    ids:
+      - tinct-repo-manager
+    name_template: >-
+      tinct-repo-manager_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    files:
+      - src: contrib/repository/README.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
 
   # Plugin archives - separate downloadable packages
   - id: tinct-plugin-random-archive

@@ -55,7 +55,7 @@ func runPluginSearch(_ *cobra.Command, args []string) error {
 	if len(repos) == 0 {
 		fmt.Println("No repositories configured.")
 		fmt.Println("\nAdd a repository with:")
-		fmt.Println("  tinct plugins repo add official https://raw.githubusercontent.com/jmylchreest/tinct-plugins/main/repository.json")
+		fmt.Printf("  tinct plugins repo add official %s\n", repository.OfficialRepoURL)
 		return nil
 	}
 
