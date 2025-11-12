@@ -23,7 +23,7 @@ func (p *InputPluginRPC) Server(*plugin.MuxBroker) (any, error) {
 }
 
 // Client returns an RPC client for this plugin.
-func (p *InputPluginRPC) Client(b *plugin.MuxBroker, c *rpc.Client) (any, error) {
+func (p *InputPluginRPC) Client(_ *plugin.MuxBroker, c *rpc.Client) (any, error) {
 	return &InputPluginRPCClient{client: c}, nil
 }
 

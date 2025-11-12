@@ -356,7 +356,7 @@ func copyTestScript(t *testing.T, scriptName string) string {
 	// Create temp directory and copy script
 	tmpDir := t.TempDir()
 	pluginPath := filepath.Join(tmpDir, scriptName)
-	if err := os.WriteFile(pluginPath, scriptContent, 0755); err != nil {
+	if err := os.WriteFile(pluginPath, scriptContent, 0o755); err != nil {
 		t.Fatalf("Failed to write test script: %v", err)
 	}
 

@@ -279,7 +279,7 @@ c0caf5
 7aa2f7
 bb9af7
 `
-	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(textFile, []byte(content), 0o600); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -314,7 +314,7 @@ foreground=#c0caf5
 accent1=#7aa2f7
 danger=#f7768e
 `
-	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(textFile, []byte(content), 0o600); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -366,7 +366,7 @@ func TestGenerateWithFileAndOverrides(t *testing.T) {
 	content := `background=#1a1b26
 foreground=#c0caf5
 `
-	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(textFile, []byte(content), 0o600); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -421,7 +421,7 @@ func TestGenerateWithInvalidHexInFile(t *testing.T) {
 	content := `1a1b26
 GGGGGG
 `
-	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(textFile, []byte(content), 0o600); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
@@ -466,7 +466,7 @@ func TestGenerateWithShorthandHex(t *testing.T) {
 000
 f00
 `
-	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(textFile, []byte(content), 0o600); err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 

@@ -57,11 +57,8 @@ func NewWithVerboseAndRunner(pluginPath string, verbose bool, runner ProcessRunn
 		processRunner: runner,
 	}
 
-	// If it's a go-plugin, initialize the RPC client.
-	if result.Type == protocol.PluginTypeGoPlugin {
-		// We'll initialize the client lazily on first use to avoid keeping
-		// connections open unnecessarily.
-	}
+	// For go-plugins, we initialize the RPC client lazily on first use
+	// to avoid keeping connections open unnecessarily.
 
 	return executor, nil
 }
@@ -163,7 +160,7 @@ func (e *PluginExecutor) GetWallpaperPath() string {
 
 // --- Go-Plugin RPC implementations ---
 
-func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*plugin.InputPluginRPCClient, error) {
+func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPluginRPCClient, error) {
 	if e.rpcClient != nil {
 		if client, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
 			return client, nil
@@ -221,7 +218,7 @@ func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*plugin.InputPl
 	return client, nil
 }
 
-func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*plugin.OutputPluginRPCClient, error) {
+func (e *PluginExecutor) getOutputRPCClient(_ context.Context) (*plugin.OutputPluginRPCClient, error) {
 	if e.rpcClient != nil {
 		if client, ok := e.rpcClient.(*plugin.OutputPluginRPCClient); ok {
 			return client, nil
@@ -484,7 +481,7 @@ func (e *PluginExecutor) postExecuteJSON(ctx context.Context, writtenFiles []str
 	return nil
 }
 
-func (e *PluginExecutor) getFlagHelpJSON(ctx context.Context) ([]input.FlagHelp, error) {
+func (e *PluginExecutor) getFlagHelpJSON(_ context.Context) ([]input.FlagHelp, error) {
 	// For JSON stdio plugins, we don't have a standard way to query flag help
 	// This would require the plugin to support a --flag-help or similar command
 	// For now, return empty array

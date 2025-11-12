@@ -185,7 +185,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 
 // PostExecute applies the theme to all running kitty instances.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
+func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, _ []string) error {
 	// Check for conflicting current-theme.conf that might override tinct theme.
 	p.checkForConflictingTheme()
 

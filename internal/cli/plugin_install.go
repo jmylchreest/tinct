@@ -93,7 +93,7 @@ func isDownloadableFile(url string) bool {
 	// Perform HEAD request to check Content-Type
 	client := &http.Client{
 		Timeout: 5 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
 			// Allow up to 10 redirects
 			if len(via) >= 10 {
 				return fmt.Errorf("too many redirects")

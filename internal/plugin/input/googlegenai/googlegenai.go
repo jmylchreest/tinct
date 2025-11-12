@@ -7,8 +7,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"image/color"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/jpeg" // Required for JPEG image decoding
+	_ "image/png"  // Required for PNG image decoding
 	"os"
 	"path/filepath"
 	"strings"

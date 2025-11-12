@@ -15,7 +15,7 @@ type mockInputPlugin struct {
 	generateErr error
 }
 
-func (m *mockInputPlugin) Generate(_ context.Context, opts InputOptions) ([]color.Color, error) {
+func (m *mockInputPlugin) Generate(_ context.Context, _ InputOptions) ([]color.Color, error) {
 	if m.generateErr != nil {
 		return nil, m.generateErr
 	}
@@ -45,7 +45,7 @@ type mockOutputPlugin struct {
 	postExecErr error
 }
 
-func (m *mockOutputPlugin) Generate(_ context.Context, palette PaletteData) (map[string][]byte, error) {
+func (m *mockOutputPlugin) Generate(_ context.Context, _ PaletteData) (map[string][]byte, error) {
 	if m.generateErr != nil {
 		return nil, m.generateErr
 	}
@@ -59,7 +59,7 @@ func (m *mockOutputPlugin) PreExecute(_ context.Context) (bool, string, error) {
 	return m.skipPreExec, m.skipReason, nil
 }
 
-func (m *mockOutputPlugin) PostExecute(_ context.Context, writtenFiles []string) error {
+func (m *mockOutputPlugin) PostExecute(_ context.Context, _ []string) error {
 	return m.postExecErr
 }
 

@@ -781,7 +781,7 @@ func TestRegisterExternalPluginUnknownType(t *testing.T) {
 
 	// Create a dummy file for testing.
 	tmpFile := filepath.Join(t.TempDir(), "plugin.sh")
-	if err := os.WriteFile(tmpFile, []byte("#!/bin/sh\necho test"), 0755); err != nil {
+	if err := os.WriteFile(tmpFile, []byte("#!/bin/sh\necho test"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 

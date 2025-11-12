@@ -80,7 +80,7 @@ func NewDelayMockProcessRunner(delay time.Duration) *MockProcessRunner {
 // NewErrorMockProcessRunner creates a mock that returns an error.
 func NewErrorMockProcessRunner(errMsg string) *MockProcessRunner {
 	return &MockProcessRunner{
-		RunFunc: func(ctx context.Context, path string, args []string, stdin io.Reader) ([]byte, []byte, error) {
+		RunFunc: func(_ context.Context, _ string, _ []string, _ io.Reader) ([]byte, []byte, error) {
 			return nil, []byte(errMsg), errors.New(errMsg)
 		},
 	}
@@ -89,7 +89,7 @@ func NewErrorMockProcessRunner(errMsg string) *MockProcessRunner {
 // NewSuccessMockProcessRunner creates a mock that returns successful JSON output.
 func NewSuccessMockProcessRunner(stdout []byte) *MockProcessRunner {
 	return &MockProcessRunner{
-		RunFunc: func(ctx context.Context, path string, args []string, stdin io.Reader) ([]byte, []byte, error) {
+		RunFunc: func(_ context.Context, _ string, _ []string, _ io.Reader) ([]byte, []byte, error) {
 			return stdout, nil, nil
 		},
 	}

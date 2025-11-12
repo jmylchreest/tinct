@@ -180,8 +180,8 @@ func trimSuffixFunc(suffix, s string) string {
 // Unlike strings.ReplaceAll, this takes old and new first so it works in pipes:
 //
 //	{{ value | replace "_" "-" }}
-func replaceFunc(old, new, s string) string {
-	return strings.ReplaceAll(s, old, new)
+func replaceFunc(old, newStr, s string) string {
+	return strings.ReplaceAll(s, old, newStr)
 }
 
 // themeTypeFunc returns the theme type string ("dark" or "light").

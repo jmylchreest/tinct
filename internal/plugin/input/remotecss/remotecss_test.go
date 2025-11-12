@@ -56,7 +56,7 @@ func TestValidateAcceptsHTTPSScheme(t *testing.T) {
 
 // TestGenerateWithCSSVariables tests generating palette from CSS custom properties.
 func TestGenerateWithCSSVariables(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -89,7 +89,7 @@ func TestGenerateWithCSSVariables(t *testing.T) {
 
 // TestGenerateWithColorProperties tests extracting colors from CSS color properties.
 func TestGenerateWithColorProperties(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`.class {
@@ -118,7 +118,7 @@ func TestGenerateWithColorProperties(t *testing.T) {
 
 // TestGenerateWithRGBColors tests parsing RGB color format.
 func TestGenerateWithRGBColors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -146,7 +146,7 @@ func TestGenerateWithRGBColors(t *testing.T) {
 
 // TestGenerateWithHSLColors tests parsing HSL color format.
 func TestGenerateWithHSLColors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -174,7 +174,7 @@ func TestGenerateWithHSLColors(t *testing.T) {
 
 // TestGenerateWithOKLCHColors tests parsing OKLCH color format.
 func TestGenerateWithOKLCHColors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -202,7 +202,7 @@ func TestGenerateWithOKLCHColors(t *testing.T) {
 
 // TestGenerateWithOKLABColors tests parsing OKLAB color format.
 func TestGenerateWithOKLABColors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -230,7 +230,7 @@ func TestGenerateWithOKLABColors(t *testing.T) {
 
 // TestGenerateWithColorMapping tests mapping colors to roles.
 func TestGenerateWithColorMapping(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -282,7 +282,7 @@ func TestGenerateWithColorMapping(t *testing.T) {
 
 // TestGenerateWithMixedFormats tests parsing multiple color formats in one CSS.
 func TestGenerateWithMixedFormats(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -311,7 +311,7 @@ func TestGenerateWithMixedFormats(t *testing.T) {
 
 // TestGenerateWithShorthandHex tests parsing shorthand hex colors.
 func TestGenerateWithShorthandHex(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -340,7 +340,7 @@ func TestGenerateWithShorthandHex(t *testing.T) {
 
 // TestGenerateWithNoColors tests error handling when no colors are found.
 func TestGenerateWithNoColors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`.class {
@@ -364,7 +364,7 @@ func TestGenerateWithNoColors(t *testing.T) {
 
 // TestGenerateWithInvalidColorMapping tests error handling for invalid role mapping.
 func TestGenerateWithInvalidColorMapping(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {
@@ -390,7 +390,7 @@ func TestGenerateWithInvalidColorMapping(t *testing.T) {
 
 // TestGenerateWithHTTPError tests error handling for HTTP errors.
 func TestGenerateWithHTTPError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer server.Close()
@@ -409,7 +409,7 @@ func TestGenerateWithHTTPError(t *testing.T) {
 
 // TestGenerateWithRGBAColors tests parsing RGBA color format (alpha is ignored).
 func TestGenerateWithRGBAColors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`:root {

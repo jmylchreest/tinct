@@ -57,7 +57,7 @@ func TestValidateAcceptsHTTPSScheme(t *testing.T) {
 // TestGenerateWithSimpleJSON tests generating palette from simple JSON.
 func TestGenerateWithSimpleJSON(t *testing.T) {
 	// Create test HTTP server.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
@@ -90,7 +90,7 @@ func TestGenerateWithSimpleJSON(t *testing.T) {
 
 // TestGenerateWithNestedJSON tests generating palette from nested JSON.
 func TestGenerateWithNestedJSON(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
@@ -126,7 +126,7 @@ func TestGenerateWithNestedJSON(t *testing.T) {
 
 // TestGenerateWithJSONPathQuery tests applying JSONPath query.
 func TestGenerateWithJSONPathQuery(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
@@ -162,7 +162,7 @@ func TestGenerateWithJSONPathQuery(t *testing.T) {
 
 // TestGenerateWithColorMapping tests mapping colors to roles.
 func TestGenerateWithColorMapping(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
@@ -214,7 +214,7 @@ func TestGenerateWithColorMapping(t *testing.T) {
 
 // TestGenerateWithCatppuccinFormat tests Catppuccin-style JSON format.
 func TestGenerateWithCatppuccinFormat(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
@@ -248,7 +248,7 @@ func TestGenerateWithCatppuccinFormat(t *testing.T) {
 
 // TestGenerateWithInvalidJSON tests error handling for invalid JSON.
 func TestGenerateWithInvalidJSON(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{invalid json`))
@@ -269,7 +269,7 @@ func TestGenerateWithInvalidJSON(t *testing.T) {
 
 // TestGenerateWithInvalidQuery tests error handling for invalid JSONPath query.
 func TestGenerateWithInvalidQuery(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"colors": {"bg": "#1a1b26"}}`))
@@ -291,7 +291,7 @@ func TestGenerateWithInvalidQuery(t *testing.T) {
 
 // TestGenerateWithNoColors tests error handling when no colors are extracted.
 func TestGenerateWithNoColors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"metadata": {"name": "test"}}`))
@@ -312,7 +312,7 @@ func TestGenerateWithNoColors(t *testing.T) {
 
 // TestGenerateWithInvalidColorMapping tests error handling for invalid role mapping.
 func TestGenerateWithInvalidColorMapping(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"base": "#1a1b26"}`))
@@ -336,7 +336,7 @@ func TestGenerateWithInvalidColorMapping(t *testing.T) {
 
 // TestGenerateWithHTTPError tests error handling for HTTP errors.
 func TestGenerateWithHTTPError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer server.Close()
@@ -355,7 +355,7 @@ func TestGenerateWithHTTPError(t *testing.T) {
 
 // TestGenerateWithShorthandHex tests parsing shorthand hex colors.
 func TestGenerateWithShorthandHex(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
