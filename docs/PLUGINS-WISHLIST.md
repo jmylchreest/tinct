@@ -50,13 +50,6 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 
 ### Text Editors
 
-#### Vim
-- **Format**: VimScript
-- **Config Location**: `~/.vim/colours/` or `~/.config/vim/colours/`
-- **Popularity**: Very High - ubiquitous editor
-- **Complexity**: Medium - requires syntax group definitions
-- **Reference**: https://vimhelp.org/syntax.txt.html#:colour scheme
-
 #### Helix
 - **Format**: TOML
 - **Config Location**: `~/.config/helix/themes/`
@@ -133,6 +126,13 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 - **Popularity**: High - bootloader theming
 - **Complexity**: Medium - custom image-based format
 - **Reference**: https://www.gnu.org/software/grub/manual/grub/grub.html#Theme-file-format
+
+#### reFINd Theme
+- **Format**: reFINd theme format
+- **Config Location**: `/boot/efi/EFI/refind/themes/`
+- **Popularity**: High - EFI boot theming
+- **Complexity**: Medium - custom image-based format
+- **Reference**: https://refind.sourceforge.io/
 
 ## Specialized
 
