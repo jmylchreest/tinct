@@ -151,11 +151,18 @@ func (c *pluginCollector) getPluginPath(name, pluginType string) string {
 
 // getPluginProtocolVersion retrieves the protocol version for a plugin.
 func (c *pluginCollector) getPluginProtocolVersion(name, pluginType string) string {
-	// Check if it's an external plugin with protocol version in lock
+	// Check if it's an external plugin and query it directly
 	if c.lock != nil && c.lock.ExternalPlugins != nil {
 		for _, meta := range c.lock.ExternalPlugins {
-			if meta.Name == name && meta.Type == pluginType && meta.ProtocolVersion != "" {
-				return meta.ProtocolVersion
+			if meta.Name == name && meta.Type == pluginType {
+				// Query the plugin directly for its protocol version
+				_, _, _, _, protocolVersion := queryPluginMetadata(meta.Path)
+				if protocolVersion != "" {
+					return protocolVersion
+				}
+				// If query failed, print warning and return "unknown"
+				fmt.Printf("Warning: Failed to query protocol version from external plugin '%s:%s' at %s\n", pluginType, name, meta.Path)
+				return "unknown"
 			}
 		}
 	}
@@ -190,7 +197,13 @@ func (c *pluginCollector) addExternalOnlyPlugins() {
 func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPluginMeta) pluginInfo {
 	status := c.determinePluginStatus(meta.Type, name)
 
-	description := meta.Description
+	// Query the plugin directly for current metadata
+	_, queryDescription, _, queryVersion, queryProtocolVersion := queryPluginMetadata(meta.Path)
+
+	description := queryDescription
+	if description == "" {
+		description = meta.Description
+	}
 	if description == "" {
 		sourceStr := formatPluginSourceString(meta.Source)
 		if sourceStr == "" {
@@ -199,13 +212,17 @@ func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPlugi
 		description = fmt.Sprintf("External plugin (source: %s)", sourceStr)
 	}
 
-	version := meta.Version
+	version := queryVersion
+	if version == "" {
+		version = meta.Version
+	}
 	if version == "" {
 		version = "unknown"
 	}
 
-	protocolVersion := meta.ProtocolVersion
+	protocolVersion := queryProtocolVersion
 	if protocolVersion == "" {
+		fmt.Printf("Warning: Failed to query protocol version from external plugin '%s:%s' at %s\n", meta.Type, name, meta.Path)
 		protocolVersion = "unknown"
 	}
 
@@ -279,7 +296,10 @@ func addPluginToTable(tbl *Table, p pluginInfo) {
 
 	// Check protocol compatibility
 	compatible := "Y"
-	if p.protocolVersion != "" && p.protocolVersion != "unknown" {
+	if p.protocolVersion == "" || p.protocolVersion == "unknown" {
+		// Plugin query failed or protocol version unavailable
+		compatible = "N"
+	} else {
 		isCompat, _ := protocol.IsCompatible(p.protocolVersion)
 		if !isCompat {
 			compatible = "N"
