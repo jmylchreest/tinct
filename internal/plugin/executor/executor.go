@@ -189,7 +189,7 @@ func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPlug
 		Plugins: map[string]goplug.Plugin{
 			"input": &plugin.InputPluginRPC{},
 		},
-		Cmd:              exec.Command(e.path),
+		Cmd:              exec.Command(e.path), //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
 		AllowedProtocols: []goplug.Protocol{goplug.ProtocolNetRPC},
 		Logger:           logger,
 		SyncStderr:       os.Stderr, // Forward plugin stderr to parent
@@ -247,7 +247,7 @@ func (e *PluginExecutor) getOutputRPCClient(_ context.Context) (*plugin.OutputPl
 		Plugins: map[string]goplug.Plugin{
 			"output": &plugin.OutputPluginRPC{},
 		},
-		Cmd:              exec.Command(e.path),
+		Cmd:              exec.Command(e.path), //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
 		AllowedProtocols: []goplug.Protocol{goplug.ProtocolNetRPC},
 		Logger:           logger,
 		SyncStderr:       os.Stderr, // Forward plugin stderr to parent

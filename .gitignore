@@ -53,6 +53,10 @@ dist/
 *.log
 *.cache
 
+# Example plugin output
+output.txt
+output.txt.backup
+
 # Config files with sensitive data
 *.env
 .env

@@ -44,9 +44,9 @@ func (s *InputPluginRPCServer) Generate(opts InputOptions, resp *[]byte) error {
 	for i, c := range colours {
 		r, g, b, _ := c.RGBA()
 		result[i] = map[string]uint8{
-			"r": uint8(r >> 8),
-			"g": uint8(g >> 8),
-			"b": uint8(b >> 8),
+			"r": uint8(r >> 8), //nolint:gosec // G115: RGBA returns uint32, right-shift by 8 to get 8-bit color value
+			"g": uint8(g >> 8), //nolint:gosec // G115: RGBA returns uint32, right-shift by 8 to get 8-bit color value
+			"b": uint8(b >> 8), //nolint:gosec // G115: RGBA returns uint32, right-shift by 8 to get 8-bit color value
 		}
 	}
 

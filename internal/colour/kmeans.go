@@ -32,7 +32,7 @@ func NewKMeansExtractor() *KMeansExtractor {
 // WithSeed sets the random seed for deterministic k-means clustering.
 func (e *KMeansExtractor) WithSeed(seed int64) *KMeansExtractor {
 	e.seed = &seed
-	e.rng = rand.New(rand.NewSource(seed))
+	e.rng = rand.New(rand.NewSource(seed)) //nolint:gosec // G404: Deterministic seeding required for reproducible k-means clustering
 	return e
 }
 

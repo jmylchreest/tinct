@@ -335,22 +335,10 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 
 	// Generic binary/octet-stream - fall back to filename detection
 	case strings.Contains(contentType, "application/octet-stream") || contentType == "":
-		// Fall back to filename-based detection
-		if strings.HasSuffix(info.URL, ".tar.gz") || strings.HasSuffix(info.URL, ".tgz") {
-			return extractFromTarGz(data, info.FilePath, archiveName, pluginDir, verbose)
-		} else if strings.HasSuffix(info.URL, ".tar.xz") || strings.HasSuffix(info.URL, ".txz") {
-			return extractFromTarXz(data, info.FilePath, archiveName, pluginDir, verbose)
-		} else if strings.HasSuffix(info.URL, ".tar.bz2") || strings.HasSuffix(info.URL, ".tbz") || strings.HasSuffix(info.URL, ".tbz2") {
-			return extractFromTarBz2(data, info.FilePath, archiveName, pluginDir, verbose)
-		} else if strings.HasSuffix(info.URL, ".zip") {
-			return extractFromZip(data, info.FilePath, archiveName, pluginDir, verbose)
-		} else if before, ok := strings.CutSuffix(filename, ".gz"); ok {
-			return decompressGz(data, before, pluginDir, verbose)
-		} else if before, ok := strings.CutSuffix(filename, ".xz"); ok {
-			return decompressXz(data, before, pluginDir, verbose)
-		} else if before, ok := strings.CutSuffix(filename, ".bz2"); ok {
-			return decompressBz2(data, before, pluginDir, verbose)
+		if path, err := extractByFileExtension(data, info.URL, filename, info.FilePath, archiveName, pluginDir, verbose); path != "" || err != nil {
+			return path, err
 		}
+		// Fall through to treat as direct plugin file
 	}
 
 	// Not an archive - treat as direct plugin file.
@@ -367,6 +355,35 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 	}
 
 	return destPath, nil
+}
+
+// extractByFileExtension extracts or decompresses based on file extension.
+func extractByFileExtension(data []byte, url, filename, targetFile, archiveName, pluginDir string, verbose bool) (string, error) {
+	// Check for tar archives
+	switch {
+	case strings.HasSuffix(url, ".tar.gz"), strings.HasSuffix(url, ".tgz"):
+		return extractFromTarGz(data, targetFile, archiveName, pluginDir, verbose)
+	case strings.HasSuffix(url, ".tar.xz"), strings.HasSuffix(url, ".txz"):
+		return extractFromTarXz(data, targetFile, archiveName, pluginDir, verbose)
+	case strings.HasSuffix(url, ".tar.bz2"), strings.HasSuffix(url, ".tbz"), strings.HasSuffix(url, ".tbz2"):
+		return extractFromTarBz2(data, targetFile, archiveName, pluginDir, verbose)
+	case strings.HasSuffix(url, ".zip"):
+		return extractFromZip(data, targetFile, archiveName, pluginDir, verbose)
+	}
+
+	// Check for standalone compressed files
+	if before, ok := strings.CutSuffix(filename, ".gz"); ok {
+		return decompressGz(data, before, pluginDir, verbose)
+	}
+	if before, ok := strings.CutSuffix(filename, ".xz"); ok {
+		return decompressXz(data, before, pluginDir, verbose)
+	}
+	if before, ok := strings.CutSuffix(filename, ".bz2"); ok {
+		return decompressBz2(data, before, pluginDir, verbose)
+	}
+
+	// Not a recognized archive format - will be handled by caller
+	return "", nil
 }
 
 // extractFromTarGz extracts a plugin from a tar.gz archive.

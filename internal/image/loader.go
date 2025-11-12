@@ -189,7 +189,7 @@ func SelectRandomImage(imagePaths []string) (string, error) {
 		if _, err := rand.Read(buf[:]); err != nil {
 			return "", fmt.Errorf("failed to generate random number: %w", err)
 		}
-		index := int(binary.LittleEndian.Uint64(buf[:]) % uint64(len(imagePaths)))
+		index := int(binary.LittleEndian.Uint64(buf[:]) % uint64(len(imagePaths))) //nolint:gosec // G115: len(imagePaths) bounded by filesystem, safe conversion
 		return imagePaths[index], nil
 	}
 
