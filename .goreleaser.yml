@@ -366,7 +366,8 @@ changelog:
 
 # AUR (Arch User Repository) packages
 aurs:
-  - ids:
+  - name: tinct-bin
+    ids:
       - tinct-archive
     homepage: "https://github.com/jmylchreest/tinct"
     description: "Generate colour palettes from images and apply system-wide theming"
@@ -397,7 +398,8 @@ aurs:
       fi
 
   # Plugin: random
-  - ids:
+  - name: tinct-plugin-random-bin
+    ids:
       - tinct-plugin-random-archive
     homepage: "https://github.com/jmylchreest/tinct"
     description: "Random color palette generator plugin for Tinct"
@@ -420,7 +422,8 @@ aurs:
       fi
 
   # Plugin: templater
-  - ids:
+  - name: tinct-plugin-templater-bin
+    ids:
       - tinct-plugin-templater-archive
     homepage: "https://github.com/jmylchreest/tinct"
     description: "Template-based output plugin for Tinct"
@@ -443,7 +446,8 @@ aurs:
       fi
 
   # Plugin: wob
-  - ids:
+  - name: tinct-plugin-wob-bin
+    ids:
       - tinct-plugin-wob-archive
     homepage: "https://github.com/jmylchreest/tinct"
     description: "Wob (Wayland Overlay Bar) output plugin for Tinct"
