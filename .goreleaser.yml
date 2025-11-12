@@ -30,8 +30,6 @@ builds:
     # Build for multiple platforms
     goos:
       - linux
-      - darwin
-      - windows
       - freebsd
 
     goarch:
@@ -42,14 +40,7 @@ builds:
     goarm:
       - "7"
 
-    # Ignore specific combinations
     ignore:
-      - goos: darwin
-        goarch: arm
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: arm64
       - goos: freebsd
         goarch: arm
 
@@ -82,8 +73,6 @@ builds:
     # Build for multiple platforms
     goos:
       - linux
-      - darwin
-      - windows
       - freebsd
 
     goarch:
@@ -94,14 +83,7 @@ builds:
     goarm:
       - "7"
 
-    # Ignore specific combinations
     ignore:
-      - goos: darwin
-        goarch: arm
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: arm64
       - goos: freebsd
         goarch: arm
 
@@ -161,8 +143,6 @@ builds:
     # Build for multiple platforms
     goos:
       - linux
-      - darwin
-      - windows
       - freebsd
 
     goarch:
@@ -175,12 +155,6 @@ builds:
 
     # Ignore specific combinations
     ignore:
-      - goos: darwin
-        goarch: arm
-      - goos: windows
-        goarch: arm
-      - goos: windows
-        goarch: arm64
       - goos: freebsd
         goarch: arm
 
