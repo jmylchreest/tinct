@@ -89,25 +89,25 @@ func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description
 // determinePluginStatus determines the status of a plugin (enabled/disabled/on-demand).
 func (c *pluginCollector) determinePluginStatus(pluginType, pluginName string) string {
 	if c.lock == nil {
-		return pluginStatusOnDemand
+		return "O" // on-demand
 	}
 
 	fullName := fmt.Sprintf("%s:%s", pluginType, pluginName)
 
 	// Check disabled list.
 	if c.isInList(c.lock.DisabledPlugins, pluginName, fullName) {
-		return "disabled"
+		return "D" // disabled
 	}
 
 	// Check enabled list.
 	if len(c.lock.EnabledPlugins) > 0 {
 		if c.isInList(c.lock.EnabledPlugins, pluginName, fullName) {
-			return "enabled"
+			return "E" // enabled
 		}
-		return pluginStatusOnDemand
+		return "O" // on-demand
 	}
 
-	return pluginStatusOnDemand
+	return "O" // on-demand
 }
 
 // isInList checks if a plugin name or full name is in a list.
@@ -261,21 +261,29 @@ func collectAllPlugins(mgr *manager.Manager, lock *PluginLock) []pluginInfo {
 }
 
 // displayPluginTable displays plugins in a formatted table.
-func displayPluginTable(plugins []pluginInfo) {
-	tbl := NewTable([]string{"", "TYPE", "PLUGIN", "STATUS", "VERSION", "C", "DESCRIPTION"})
+func displayPluginTable(plugins []pluginInfo, showPath bool) {
+	var headers []string
+	if showPath {
+		headers = []string{"", "S", "TYPE", "PLUGIN", "VERSION", "C", "PATH"}
+	} else {
+		headers = []string{"", "S", "TYPE", "PLUGIN", "VERSION", "C", "DESCRIPTION"}
+	}
+
+	tbl := NewTable(headers)
 
 	// Enable terminal-aware column sizing
-	// Description column (index 6) will automatically size to fit terminal width
-	tbl.EnableTerminalAwareWidth(6, 40) // Min width of 40 chars for description
+	// Last column (description or path) will automatically size to fit terminal width
+	tbl.EnableTerminalAwareWidth(6, 40) // Min width of 40 chars
 
 	for _, p := range plugins {
-		addPluginToTable(tbl, p)
+		addPluginToTable(tbl, p, showPath)
 	}
 
 	fmt.Print(tbl.Render())
 
+	// Print legends
+	fmt.Println()
 	if hasExternalPlugins(plugins) {
-		fmt.Println()
 		pluginDir, err := getPluginDir()
 		if err == nil {
 			fmt.Printf("* = external plugin (default location: %s)\n", pluginDir)
@@ -283,12 +291,12 @@ func displayPluginTable(plugins []pluginInfo) {
 			fmt.Println("* = external plugin")
 		}
 	}
-
+	fmt.Println("S = Status: O (on-demand), E (enabled), D (disabled)")
 	fmt.Println("C = Compatible with current tinct (Y/N)")
 }
 
 // addPluginToTable adds a single plugin to the table.
-func addPluginToTable(tbl *Table, p pluginInfo) {
+func addPluginToTable(tbl *Table, p pluginInfo, showPath bool) {
 	marker := ""
 	if p.isExternal {
 		marker = "*"
@@ -306,7 +314,17 @@ func addPluginToTable(tbl *Table, p pluginInfo) {
 		}
 	}
 
-	tbl.AddRow([]string{marker, p.pluginType, p.name, p.status, p.version, compatible, p.description})
+	var lastColumn string
+	if showPath {
+		lastColumn = p.source
+		if lastColumn == "" {
+			lastColumn = "(built-in)"
+		}
+	} else {
+		lastColumn = p.description
+	}
+
+	tbl.AddRow([]string{marker, p.status, p.pluginType, p.name, p.version, compatible, lastColumn})
 }
 
 // hasExternalPlugins checks if any plugins in the list are external.

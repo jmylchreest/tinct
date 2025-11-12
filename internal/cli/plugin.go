@@ -73,6 +73,8 @@ var (
 	pluginClear      bool
 	pluginYes        bool
 	pluginSourceType string
+	pluginNoCopy     bool
+	pluginShowPath   bool
 )
 
 // pluginsCmd represents the plugins command.
@@ -172,18 +174,21 @@ The command will:
   2. Query plugin metadata (name, version, type, protocol)
   3. Check protocol compatibility
   4. Check for version conflicts (upgrades proceed automatically)
-  5. Copy plugin to ~/.local/share/tinct/plugins/
+  5. Copy plugin to ~/.local/share/tinct/plugins/ (unless --no-copy is used)
   6. Register plugin in lock file
 
 Plugin upgrades (newer versions) proceed automatically.
 Use --force to downgrade, reinstall same version, or overwrite.
+Use --no-copy to reference the plugin at its current location without copying
+(useful for system-installed packages that manage their own updates).
 
 Examples:
   tinct plugins add ./contrib/notify-send.py
   tinct plugins add https://example.com/plugins/theme.sh
   tinct plugins add https://github.com/user/plugin.git
   tinct plugins add https://github.com/user/plugin.git:path/to/plugin.sh
-  tinct plugins add ./my-plugin.sh --force  # Force overwrite`,
+  tinct plugins add ./my-plugin.sh --force  # Force overwrite
+  tinct plugins add /usr/bin/tinct-plugin-random --no-copy  # System package`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPluginAdd,
 }
@@ -226,9 +231,11 @@ func init() {
 	// Add type flag to relevant commands (no shorthand to avoid conflict with global -t theme flag).
 	pluginEnableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
 	pluginDisableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
+	pluginListCmd.Flags().BoolVar(&pluginShowPath, "show-path", false, "show the actual file path used when loading each plugin")
 	pluginAddCmd.Flags().StringVar(&pluginType, "type", "output", "plugin type (input or output)")
 	pluginAddCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force overwrite if plugin already exists")
 	pluginAddCmd.Flags().StringVar(&pluginSourceType, "source-type", "", "force source type (local, http, git) - auto-detected if not specified")
+	pluginAddCmd.Flags().BoolVar(&pluginNoCopy, "no-copy", false, "register plugin at its current location without copying (useful for system packages)")
 	pluginDeleteCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force deletion without confirmation")
 
 	// Add subcommands.
@@ -268,7 +275,7 @@ func runPluginList(cmd *cobra.Command, _ []string) error {
 	allPlugins := collectAllPlugins(mgr, lock)
 
 	// Display plugins.
-	displayPluginTable(allPlugins)
+	displayPluginTable(allPlugins, pluginShowPath)
 
 	return nil
 }
@@ -345,10 +352,34 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Stage 5: Install plugin to final location (if not already there)
-	finalPath := filepath.Join(pluginDir, filepath.Base(sourcePath))
-	if !isAlreadyInstalled {
-		if err := installPlugin(sourcePath, finalPath, verbose); err != nil {
-			return fmt.Errorf("failed to install plugin: %w", err)
+	var finalPath string
+	if pluginNoCopy {
+		// Use the source path directly without copying
+		finalPath = sourcePath
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Using plugin at: %s (no-copy mode)\n", finalPath)
+		}
+
+		// If we're overwriting an existing plugin that was copied to the plugin dir, clean it up
+		if existingMeta != nil && existingMeta.Path != "" {
+			existingPathDir := filepath.Dir(existingMeta.Path)
+			if existingPathDir == pluginDir {
+				// Old plugin was in the plugin directory, remove it
+				if err := os.Remove(existingMeta.Path); err != nil && !os.IsNotExist(err) {
+					if verbose {
+						fmt.Fprintf(os.Stderr, "Warning: failed to remove old plugin file: %v\n", err)
+					}
+				} else if verbose {
+					fmt.Fprintf(os.Stderr, "Removed old plugin file: %s\n", existingMeta.Path)
+				}
+			}
+		}
+	} else {
+		finalPath = filepath.Join(pluginDir, filepath.Base(sourcePath))
+		if !isAlreadyInstalled {
+			if err := installPlugin(sourcePath, finalPath, verbose); err != nil {
+				return fmt.Errorf("failed to install plugin: %w", err)
+			}
 		}
 	}
 
