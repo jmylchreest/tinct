@@ -42,6 +42,20 @@ import (
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 )
 
+var (
+	// Version is the semantic version of the plugin.
+	// Injected at build time via: -ldflags "-X main.Version=x.y.z"
+	Version = "0.0.0"
+
+	// Commit is the git commit hash of the build.
+	// Injected at build time via: -ldflags "-X main.Commit=$(git rev-parse HEAD)"
+	Commit = "unknown"
+
+	// Date is the build date in RFC3339 format.
+	// Injected at build time via: -ldflags "-X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	Date = "unknown"
+)
+
 // RandomPlugin implements the tinctplugin.InputPlugin interface.
 type RandomPlugin struct{}
 
@@ -93,7 +107,7 @@ func (p *RandomPlugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "random",
 		Type:            "input",
-		Version:         "0.0.1",
+		Version:         Version,
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate random colour palettes with configurable seed and colour count",
 		PluginProtocol:  "go-plugin",

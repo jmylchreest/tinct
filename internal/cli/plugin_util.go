@@ -21,25 +21,26 @@ func getPluginDir() (string, error) {
 }
 
 // queryPluginMetadata queries a plugin for its name, description, type, and version.
-func queryPluginMetadata(pluginPath string) (name, description, pluginType, version string) {
+func queryPluginMetadata(pluginPath string) (name, description, pluginType, version, protocolVersion string) {
 	cmd := exec.Command(pluginPath, "--plugin-info")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", "", "", ""
+		return "", "", "", "", ""
 	}
 
 	var info struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Type        string `json:"type"`
-		Version     string `json:"version"`
+		Name            string `json:"name"`
+		Description     string `json:"description"`
+		Type            string `json:"type"`
+		Version         string `json:"version"`
+		ProtocolVersion string `json:"protocol_version"`
 	}
 
 	if err := json.Unmarshal(output, &info); err != nil {
-		return "", "", "", ""
+		return "", "", "", "", ""
 	}
 
-	return info.Name, info.Description, info.Type, info.Version
+	return info.Name, info.Description, info.Type, info.Version, info.ProtocolVersion
 }
 
 // formatPluginSourceString converts a PluginSource struct to a display string.

@@ -35,6 +35,20 @@ import (
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 )
 
+var (
+	// Version is the semantic version of the plugin.
+	// Injected at build time via: -ldflags "-X main.Version=x.y.z"
+	Version = "0.0.0"
+
+	// Commit is the git commit hash of the build.
+	// Injected at build time via: -ldflags "-X main.Commit=$(git rev-parse HEAD)"
+	Commit = "unknown"
+
+	// Date is the build date in RFC3339 format.
+	// Injected at build time via: -ldflags "-X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	Date = "unknown"
+)
+
 // DunstifyPlugin sends desktop notifications when themes are generated.
 // This is a demonstration of the go-plugin protocol for Tinct plugins.
 type DunstifyPlugin struct{}
@@ -98,7 +112,7 @@ func (p *DunstifyPlugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "dunstify",
 		Type:            "output",
-		Version:         "0.0.1",
+		Version:         Version,
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Send desktop notifications via dunstify or notify-send",
 		PluginProtocol:  "go-plugin",

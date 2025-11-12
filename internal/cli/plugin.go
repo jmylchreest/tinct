@@ -49,6 +49,9 @@ type ExternalPluginMeta struct {
 	// Version is the plugin version if available.
 	Version string `json:"version,omitempty"`
 
+	// ProtocolVersion is the plugin protocol version if available.
+	ProtocolVersion string `json:"protocol_version,omitempty"`
+
 	// Description is the plugin description if available.
 	Description string `json:"description,omitempty"`
 
@@ -354,12 +357,13 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 
 	// Stage 6: Update lock file
 	lock.ExternalPlugins[pluginInfo.Name] = &ExternalPluginMeta{
-		Name:         pluginInfo.Name,
-		Path:         finalPath,
-		Type:         pluginInfo.Type,
-		SourceLegacy: source,
-		Version:      pluginInfo.Version,
-		Description:  pluginInfo.Description,
+		Name:            pluginInfo.Name,
+		Path:            finalPath,
+		Type:            pluginInfo.Type,
+		SourceLegacy:    source,
+		Version:         pluginInfo.Version,
+		ProtocolVersion: pluginInfo.ProtocolVersion,
+		Description:     pluginInfo.Description,
 	}
 
 	if err := savePluginLock(lockPath, lock); err != nil {
@@ -506,7 +510,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		}
 
 		// Query plugin for updated metadata.
-		actualName, pluginDescription, pluginType, version := queryPluginMetadata(pluginPath)
+		actualName, pluginDescription, pluginType, version, protocolVersion := queryPluginMetadata(pluginPath)
 		if actualName == "" {
 			actualName = meta.Name // Keep existing name if query fails
 			if actualName == "" {
@@ -519,12 +523,13 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 
 		// Update metadata in lock file.
 		lock.ExternalPlugins[name] = &ExternalPluginMeta{
-			Name:        actualName,
-			Path:        pluginPath,
-			Type:        pluginType,
-			Source:      meta.Source,
-			Version:     version,
-			Description: pluginDescription,
+			Name:            actualName,
+			Path:            pluginPath,
+			Type:            pluginType,
+			Source:          meta.Source,
+			Version:         version,
+			ProtocolVersion: protocolVersion,
+			Description:     pluginDescription,
 		}
 
 		fmt.Printf("   Updated: %s\n", pluginPath)
@@ -640,7 +645,7 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 			pluginName := meta.Name
 			if pluginName == "" {
 				// Fallback: query the plugin if name is missing.
-				pluginName, _, _, _ = queryPluginMetadata(meta.Path)
+				pluginName, _, _, _, _ = queryPluginMetadata(meta.Path)
 			}
 
 			// Use plugin's description if available.
@@ -702,7 +707,7 @@ func registerExternalPlugin(meta *ExternalPluginMeta, resolveAbsolutePaths, _ bo
 	pluginName := meta.Name
 	if pluginName == "" {
 		// Fallback: query the plugin if name is missing.
-		pluginName, _, _, _ = queryPluginMetadata(meta.Path)
+		pluginName, _, _, _, _ = queryPluginMetadata(meta.Path)
 		if pluginName == "" {
 			return fmt.Errorf("unable to determine plugin name")
 		}

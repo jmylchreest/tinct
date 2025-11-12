@@ -35,12 +35,24 @@ func isValidExecutableName(name string) bool {
 	return name != ""
 }
 
+var (
+	// Version is the semantic version of the plugin.
+	// Injected at build time via: -ldflags "-X main.Version=x.y.z"
+	Version = "0.0.0"
+
+	// Commit is the git commit hash of the build.
+	// Injected at build time via: -ldflags "-X main.Commit=$(git rev-parse HEAD)"
+	Commit = "unknown"
+
+	// Date is the build date in RFC3339 format.
+	// Injected at build time via: -ldflags "-X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	Date = "unknown"
+)
+
 const (
 	// Plugin metadata
 	pluginName        = "wob"
 	pluginDescription = "Generate wob (Wayland Overlay Bar) theme and provide wrapper functionality"
-	pluginVersion     = "0.0.1"
-	protocolVersion   = "0.0.1" // Tinct plugin protocol version
 
 	// Runtime configuration
 	defaultRuntimeDir = "wob" // under $XDG_RUNTIME_DIR
@@ -149,7 +161,7 @@ func main() {
 		printUsage()
 
 	case "version", "-v", "--version":
-		fmt.Printf("wob-tinct %s\n", pluginVersion)
+		fmt.Printf("wob-tinct %s\n", Version)
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)

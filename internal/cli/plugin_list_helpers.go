@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
 const (
@@ -14,13 +15,14 @@ const (
 
 // pluginInfo holds information about a plugin for display.
 type pluginInfo struct {
-	pluginType  string // input or output
-	name        string // plugin name without type prefix
-	status      string
-	version     string
-	description string
-	isExternal  bool
-	source      string
+	pluginType      string // input or output
+	name            string // plugin name without type prefix
+	status          string
+	version         string
+	protocolVersion string // plugin protocol version
+	description     string
+	isExternal      bool
+	source          string
 }
 
 // pluginCollector collects and organizes plugin information.
@@ -47,7 +49,8 @@ func newPluginCollector(mgr *manager.Manager, lock *PluginLock) *pluginCollector
 // addInputPlugins adds all input plugins to the collection.
 func (c *pluginCollector) addInputPlugins() {
 	for name, plugin := range c.mgr.AllInputPlugins() {
-		info := c.buildPluginInfo("input", name, plugin.Version(), plugin.Description())
+		protocolVersion := c.getPluginProtocolVersion(name, "input")
+		info := c.buildPluginInfo("input", name, plugin.Version(), plugin.Description(), protocolVersion)
 		c.plugins = append(c.plugins, info)
 		fullName := fmt.Sprintf("%s:%s", info.pluginType, info.name)
 		c.seenPlugins[fullName] = true
@@ -57,7 +60,8 @@ func (c *pluginCollector) addInputPlugins() {
 // addOutputPlugins adds all output plugins to the collection.
 func (c *pluginCollector) addOutputPlugins() {
 	for name, plugin := range c.mgr.AllOutputPlugins() {
-		info := c.buildPluginInfo("output", name, plugin.Version(), plugin.Description())
+		protocolVersion := c.getPluginProtocolVersion(name, "output")
+		info := c.buildPluginInfo("output", name, plugin.Version(), plugin.Description(), protocolVersion)
 		c.plugins = append(c.plugins, info)
 		fullName := fmt.Sprintf("%s:%s", info.pluginType, info.name)
 		c.seenPlugins[fullName] = true
@@ -65,19 +69,20 @@ func (c *pluginCollector) addOutputPlugins() {
 }
 
 // buildPluginInfo builds plugin information from a managed plugin.
-func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description string) pluginInfo {
+func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description, protocolVersion string) pluginInfo {
 	status := c.determinePluginStatus(pluginType, name)
 	isExternal := c.isExternalPlugin(name, pluginType)
 	source := c.getPluginPath(name, pluginType)
 
 	return pluginInfo{
-		pluginType:  pluginType,
-		name:        name,
-		status:      status,
-		version:     version,
-		description: description,
-		isExternal:  isExternal,
-		source:      source,
+		pluginType:      pluginType,
+		name:            name,
+		status:          status,
+		version:         version,
+		protocolVersion: protocolVersion,
+		description:     description,
+		isExternal:      isExternal,
+		source:          source,
 	}
 }
 
@@ -144,6 +149,21 @@ func (c *pluginCollector) getPluginPath(name, pluginType string) string {
 	return ""
 }
 
+// getPluginProtocolVersion retrieves the protocol version for a plugin.
+func (c *pluginCollector) getPluginProtocolVersion(name, pluginType string) string {
+	// Check if it's an external plugin with protocol version in lock
+	if c.lock != nil && c.lock.ExternalPlugins != nil {
+		for _, meta := range c.lock.ExternalPlugins {
+			if meta.Name == name && meta.Type == pluginType && meta.ProtocolVersion != "" {
+				return meta.ProtocolVersion
+			}
+		}
+	}
+
+	// For built-in plugins, they all use the current protocol version
+	return protocol.ProtocolVersion
+}
+
 // addExternalOnlyPlugins adds plugins that are only in the lock file (not in manager).
 func (c *pluginCollector) addExternalOnlyPlugins() {
 	if c.lock == nil || c.lock.ExternalPlugins == nil {
@@ -184,14 +204,20 @@ func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPlugi
 		version = "unknown"
 	}
 
+	protocolVersion := meta.ProtocolVersion
+	if protocolVersion == "" {
+		protocolVersion = "unknown"
+	}
+
 	return pluginInfo{
-		pluginType:  meta.Type,
-		name:        name,
-		status:      status,
-		version:     version,
-		description: description,
-		isExternal:  true,
-		source:      meta.Path, // Show actual plugin path, not original source
+		pluginType:      meta.Type,
+		name:            name,
+		status:          status,
+		version:         version,
+		protocolVersion: protocolVersion,
+		description:     description,
+		isExternal:      true,
+		source:          meta.Path, // Show actual plugin path, not original source
 	}
 }
 
@@ -219,11 +245,11 @@ func collectAllPlugins(mgr *manager.Manager, lock *PluginLock) []pluginInfo {
 
 // displayPluginTable displays plugins in a formatted table.
 func displayPluginTable(plugins []pluginInfo) {
-	tbl := NewTable([]string{"", "TYPE", "PLUGIN", "STATUS", "VERSION", "DESCRIPTION"})
+	tbl := NewTable([]string{"", "TYPE", "PLUGIN", "STATUS", "VERSION", "C", "DESCRIPTION"})
 
 	// Enable terminal-aware column sizing
-	// Description column (index 5) will automatically size to fit terminal width
-	tbl.EnableTerminalAwareWidth(5, 40) // Min width of 40 chars for description
+	// Description column (index 6) will automatically size to fit terminal width
+	tbl.EnableTerminalAwareWidth(6, 40) // Min width of 40 chars for description
 
 	for _, p := range plugins {
 		addPluginToTable(tbl, p)
@@ -240,6 +266,8 @@ func displayPluginTable(plugins []pluginInfo) {
 			fmt.Println("* = external plugin")
 		}
 	}
+
+	fmt.Println("C = Compatible with current tinct (Y/N)")
 }
 
 // addPluginToTable adds a single plugin to the table.
@@ -249,7 +277,16 @@ func addPluginToTable(tbl *Table, p pluginInfo) {
 		marker = "*"
 	}
 
-	tbl.AddRow([]string{marker, p.pluginType, p.name, p.status, p.version, p.description})
+	// Check protocol compatibility
+	compatible := "Y"
+	if p.protocolVersion != "" && p.protocolVersion != "unknown" {
+		isCompat, _ := protocol.IsCompatible(p.protocolVersion)
+		if !isCompat {
+			compatible = "N"
+		}
+	}
+
+	tbl.AddRow([]string{marker, p.pluginType, p.name, p.status, p.version, compatible, p.description})
 }
 
 // hasExternalPlugins checks if any plugins in the list are external.

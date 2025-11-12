@@ -7,12 +7,25 @@ import (
 	"path/filepath"
 
 	goplug "github.com/hashicorp/go-plugin"
-	"github.com/jmylchreest/tinct/pkg/plugin"
+	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
+)
+
+var (
+	// Version is the semantic version of the plugin.
+	// Injected at build time via: -ldflags "-X main.Version=x.y.z"
+	Version = "0.0.0"
+
+	// Commit is the git commit hash of the build.
+	// Injected at build time via: -ldflags "-X main.Commit=$(git rev-parse HEAD)"
+	Commit = "unknown"
+
+	// Date is the build date in RFC3339 format.
+	// Injected at build time via: -ldflags "-X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	Date = "unknown"
 )
 
 const (
-	Version = "0.0.1"
-	Name    = "templater"
+	Name = "templater"
 )
 
 // PluginInfo represents the plugin metadata for Tinct discovery
@@ -42,9 +55,9 @@ func main() {
 	// If no arguments, run as go-plugin server (Tinct integration)
 	if len(os.Args) == 1 {
 		goplug.Serve(&goplug.ServeConfig{
-			HandshakeConfig: plugin.Handshake,
+			HandshakeConfig: tinctplugin.Handshake,
 			Plugins: map[string]goplug.Plugin{
-				"output": &plugin.OutputPluginRPC{
+				"output": &tinctplugin.OutputPluginRPC{
 					Impl: &TemplaterPlugin{},
 				},
 			},

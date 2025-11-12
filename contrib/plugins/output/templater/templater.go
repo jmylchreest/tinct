@@ -6,15 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jmylchreest/tinct/pkg/plugin"
+	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 )
 
-// TemplaterPlugin implements the plugin.OutputPlugin interface
+// TemplaterPlugin implements the tinctplugin.OutputPlugin interface
 type TemplaterPlugin struct{}
 
 // Generate processes templates and returns generated files
-func (p *TemplaterPlugin) Generate(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
-	// Convert plugin.PaletteData to internal PaletteInput format
+func (p *TemplaterPlugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
+	// Convert tinctplugin.PaletteData to internal PaletteInput format
 	input := convertProtocolPalette(palette)
 
 	// Get config path from plugin args or use default
@@ -111,20 +111,20 @@ func (p *TemplaterPlugin) PostExecute(ctx context.Context, writtenFiles []string
 }
 
 // GetMetadata returns plugin metadata
-func (p *TemplaterPlugin) GetMetadata() plugin.PluginInfo {
-	return plugin.PluginInfo{
+func (p *TemplaterPlugin) GetMetadata() tinctplugin.PluginInfo {
+	return tinctplugin.PluginInfo{
 		Name:            Name,
 		Type:            "output",
 		Version:         Version,
-		ProtocolVersion: plugin.ProtocolVersion,
+		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Templater for custom configuration files",
 		PluginProtocol:  "go-plugin",
 	}
 }
 
 // GetFlagHelp returns help information for plugin flags
-func (p *TemplaterPlugin) GetFlagHelp() []plugin.FlagHelp {
-	return []plugin.FlagHelp{
+func (p *TemplaterPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
+	return []tinctplugin.FlagHelp{
 		{
 			Name:        "config",
 			Type:        "string",
@@ -156,8 +156,8 @@ func (p *TemplaterPlugin) GetFlagHelp() []plugin.FlagHelp {
 	}
 }
 
-// convertProtocolPalette converts plugin.PaletteData to internal PaletteInput
-func convertProtocolPalette(palette plugin.PaletteData) PaletteInput {
+// convertProtocolPalette converts tinctplugin.PaletteData to internal PaletteInput
+func convertProtocolPalette(palette tinctplugin.PaletteData) PaletteInput {
 	colours := make(map[string]CategorisedColour)
 	for role, color := range palette.Colours {
 		colours[role] = CategorisedColour{

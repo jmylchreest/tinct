@@ -34,7 +34,7 @@ func loadAndConfigurePlugins() error {
 		for _, meta := range lock.ExternalPlugins {
 			pluginName := meta.Name
 			if pluginName == "" {
-				pluginName, _, _, _ = queryPluginMetadata(meta.Path)
+				pluginName, _, _, _, _ = queryPluginMetadata(meta.Path)
 			}
 			if pluginName != "" {
 				configureExternalPlugin(pluginName, meta.Type, generateDryRun, generatePluginArgs, generateVerbose)
