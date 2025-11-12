@@ -14,7 +14,7 @@ import (
 )
 
 // TestBasicInterface tests the basic plugin interface methods that all plugins must implement.
-func TestBasicInterface(t *testing.T, p output.Plugin, expectedName string) {
+func TestBasicInterface(t *testing.T, p output.Plugin, expectedName string, expectedDirSubstring string) {
 	t.Run("Name", func(t *testing.T) {
 		if p.Name() != expectedName {
 			t.Errorf("Name() = %s, want %s", p.Name(), expectedName)
@@ -33,8 +33,13 @@ func TestBasicInterface(t *testing.T, p output.Plugin, expectedName string) {
 		if dir == "" {
 			t.Error("DefaultOutputDir() should not be empty")
 		}
-		if !strings.Contains(dir, expectedName) {
-			t.Errorf("DefaultOutputDir() = %s, should contain '%s'", dir, expectedName)
+		// Use expectedDirSubstring if provided, otherwise fall back to expectedName
+		checkString := expectedDirSubstring
+		if checkString == "" {
+			checkString = expectedName
+		}
+		if !strings.Contains(dir, checkString) {
+			t.Errorf("DefaultOutputDir() = %s, should contain '%s'", dir, checkString)
 		}
 	})
 
@@ -172,7 +177,7 @@ func CreateTestPalette(themeType colour.ThemeType) *colour.CategorisedPalette {
 
 // RunAllTests runs all standard tests for a plugin.
 func RunAllTests(t *testing.T, p output.Plugin, config TestConfig) {
-	TestBasicInterface(t, p, config.ExpectedName)
+	TestBasicInterface(t, p, config.ExpectedName, config.ExpectedDirSubstring)
 	TestGeneration(t, p, config.ExpectedFiles)
 	TestVerbosePlugin(t, p)
 	TestFlags(t, p, config.ExpectedName)
@@ -181,7 +186,8 @@ func RunAllTests(t *testing.T, p output.Plugin, config TestConfig) {
 
 // TestConfig holds configuration for running plugin tests.
 type TestConfig struct {
-	ExpectedName       string   // Plugin name
-	ExpectedFiles      []string // Files that Generate() should return
-	ExpectedBinaryName string   // Binary name to check in PreExecute (e.g., "fuzzel", "dunst")
+	ExpectedName         string   // Plugin name
+	ExpectedFiles        []string // Files that Generate() should return
+	ExpectedBinaryName   string   // Binary name to check in PreExecute (e.g., "fuzzel", "dunst")
+	ExpectedDirSubstring string   // Optional: substring to check in DefaultOutputDir (defaults to ExpectedName if empty)
 }

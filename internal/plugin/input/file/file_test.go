@@ -2,9 +2,13 @@
 package file
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 )
 
 func TestParseColourRole(t *testing.T) {
@@ -213,5 +217,294 @@ func TestParseColourRoleNormalisation(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestGenerateWithoutInputs tests that Generate requires either a file or colour overrides.
+func TestGenerateWithoutInputs(t *testing.T) {
+	plugin := New()
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	_, err := plugin.Generate(ctx, opts)
+	if err == nil {
+		t.Error("Expected error when no file or colour overrides provided")
+	}
+}
+
+// TestGenerateWithColourOverrides tests generating palette from colour overrides only.
+func TestGenerateWithColourOverrides(t *testing.T) {
+	plugin := New()
+	plugin.colourOverrides = []string{
+		"background=#1a1b26",
+		"foreground=#c0caf5",
+		"accent1=#7aa2f7",
+	}
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	palette, err := plugin.Generate(ctx, opts)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if palette == nil {
+		t.Fatal("Generate() returned nil palette")
+	}
+
+	if len(palette.Colors) != 3 {
+		t.Errorf("Expected 3 colors, got %d", len(palette.Colors))
+	}
+
+	// Verify role hints are set.
+	if len(palette.RoleHints) != 3 {
+		t.Errorf("Expected 3 role hints, got %d", len(palette.RoleHints))
+	}
+}
+
+// TestGenerateWithTextFile tests generating palette from a simple text file.
+func TestGenerateWithTextFile(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "tinct-file-tests-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create test file with hex colors (without # prefix to avoid comment parsing).
+	textFile := filepath.Join(tempDir, "palette.txt")
+	content := `1a1b26
+c0caf5
+7aa2f7
+bb9af7
+`
+	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	plugin := New()
+	plugin.path = textFile
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	palette, err := plugin.Generate(ctx, opts)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if len(palette.Colors) != 4 {
+		t.Errorf("Expected 4 colors, got %d", len(palette.Colors))
+	}
+}
+
+// TestGenerateWithRoleBasedTextFile tests generating palette from text file with role assignments.
+func TestGenerateWithRoleBasedTextFile(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "tinct-file-tests-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create test file with role=hex format.
+	textFile := filepath.Join(tempDir, "palette-roles.txt")
+	content := `background=#1a1b26
+foreground=#c0caf5
+accent1=#7aa2f7
+danger=#f7768e
+`
+	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	plugin := New()
+	plugin.path = textFile
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	palette, err := plugin.Generate(ctx, opts)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if len(palette.Colors) != 4 {
+		t.Errorf("Expected 4 colors, got %d", len(palette.Colors))
+	}
+
+	// Verify role hints are set.
+	if len(palette.RoleHints) != 4 {
+		t.Errorf("Expected 4 role hints, got %d", len(palette.RoleHints))
+	}
+
+	// Verify specific roles are present.
+	expectedRoles := []colour.Role{
+		colour.RoleBackground,
+		colour.RoleForeground,
+		colour.RoleAccent1,
+		colour.RoleDanger,
+	}
+
+	for _, role := range expectedRoles {
+		if _, ok := palette.RoleHints[role]; !ok {
+			t.Errorf("Expected role %v to be present in role hints", role)
+		}
+	}
+}
+
+// TestGenerateWithFileAndOverrides tests merging file palette with colour overrides.
+func TestGenerateWithFileAndOverrides(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "tinct-file-tests-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create base palette file.
+	textFile := filepath.Join(tempDir, "base.txt")
+	content := `background=#1a1b26
+foreground=#c0caf5
+`
+	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	plugin := New()
+	plugin.path = textFile
+	plugin.colourOverrides = []string{
+		"foreground=#ffffff", // Override existing
+		"accent1=#7aa2f7",    // Add new
+	}
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	palette, err := plugin.Generate(ctx, opts)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Should have 3 colors: background (from file), foreground (overridden), accent1 (new).
+	if len(palette.Colors) != 3 {
+		t.Errorf("Expected 3 colors, got %d", len(palette.Colors))
+	}
+
+	if len(palette.RoleHints) != 3 {
+		t.Errorf("Expected 3 role hints, got %d", len(palette.RoleHints))
+	}
+}
+
+// TestGenerateWithInvalidFile tests error handling for invalid files.
+func TestGenerateWithInvalidFile(t *testing.T) {
+	plugin := New()
+	plugin.path = "/nonexistent/file.txt"
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	_, err := plugin.Generate(ctx, opts)
+	if err == nil {
+		t.Error("Expected error for nonexistent file")
+	}
+}
+
+// TestGenerateWithInvalidHexInFile tests error handling for invalid hex colors in file.
+func TestGenerateWithInvalidHexInFile(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "tinct-file-tests-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	textFile := filepath.Join(tempDir, "invalid.txt")
+	content := `1a1b26
+GGGGGG
+`
+	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	plugin := New()
+	plugin.path = textFile
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	_, err = plugin.Generate(ctx, opts)
+	if err == nil {
+		t.Error("Expected error for invalid hex color")
+	}
+}
+
+// TestGenerateWithInvalidRole tests error handling for invalid role names.
+func TestGenerateWithInvalidRole(t *testing.T) {
+	plugin := New()
+	plugin.colourOverrides = []string{
+		"invalidrole=#1a1b26",
+	}
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	_, err := plugin.Generate(ctx, opts)
+	if err == nil {
+		t.Error("Expected error for invalid role name")
+	}
+}
+
+// TestGenerateWithShorthandHex tests parsing shorthand hex format (#RGB).
+func TestGenerateWithShorthandHex(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "tinct-file-tests-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	textFile := filepath.Join(tempDir, "shorthand.txt")
+	content := `fff
+000
+f00
+`
+	if err := os.WriteFile(textFile, []byte(content), 0600); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	plugin := New()
+	plugin.path = textFile
+
+	ctx := context.Background()
+	opts := input.GenerateOptions{}
+
+	palette, err := plugin.Generate(ctx, opts)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if len(palette.Colors) != 3 {
+		t.Errorf("Expected 3 colors, got %d", len(palette.Colors))
+	}
+}
+
+// TestParseTextFormat tests the parseTextFormat function directly.
+func TestParseTextFormat(t *testing.T) {
+	plugin := New()
+
+	content := `1a1b26
+c0caf5
+7aa2f7
+`
+
+	colors, hints, err := plugin.parseTextFormat(content)
+	if err != nil {
+		t.Fatalf("parseTextFormat() error = %v", err)
+	}
+
+	if len(colors) != 3 {
+		t.Errorf("Expected 3 colors, got %d", len(colors))
+	}
+
+	if len(hints) != 0 {
+		t.Errorf("Expected 0 hints (no roles), got %d", len(hints))
 	}
 }
