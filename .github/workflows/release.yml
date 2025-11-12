@@ -212,7 +212,6 @@ jobs:
             --prerelease \
             --target main \
             dist/*.tar.gz \
-            dist/*.zip \
             dist/checksums.txt \
             dist/*.sbom.json
         env:

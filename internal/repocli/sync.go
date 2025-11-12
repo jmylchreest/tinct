@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/jmylchreest/tinct/internal/repomanager"
 	"github.com/spf13/cobra"
 )
@@ -81,25 +80,8 @@ Examples:
 				return fmt.Errorf("--plugin-filter is required when using --github")
 			}
 
-			// Parse GitHub repo
-			owner, repo, err := repomanager.ParseGitHubRepo(githubRepo)
-			if err != nil {
-				return fmt.Errorf("invalid github repo: %w", err)
-			}
-
 			// Create GitHub client
 			client := repomanager.NewGitHubClient()
-
-			// Resolve version specifier
-			releases, err := client.GetReleases(owner, repo, version)
-			if err != nil {
-				return fmt.Errorf("failed to fetch releases: %w", err)
-			}
-
-			fmt.Printf("Found %d release(s) to process\n", len(releases))
-
-			// Create filter
-			filter := repomanager.NewFilter(pluginFilter, exclude)
 
 			// Load manifest
 			mgr, err := repomanager.LoadManifest(manifestPath)
@@ -107,111 +89,28 @@ Examples:
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
 
-			totalAdded := 0
-			totalSkipped := 0
-			totalErrors := 0
+			// Create protocol version tracker for cascade filtering
+			tracker := NewProtocolVersionTracker()
 
-			// Process each release
-			for i, release := range releases {
-				fmt.Printf("\n[%d/%d] Processing release %s (%d assets)\n",
-					i+1, len(releases), release.TagName, len(release.Assets))
+			// Create metadata hydration cache for retroactive metadata application
+			// This allows us to reuse metadata from one architecture for all others,
+			// even if they failed before we successfully queried one
+			hydrationCache := NewMetadataHydrationCache()
 
-				for _, asset := range release.Assets {
-					match, pluginName := filter.Match(asset.Name)
-					if !match {
-						totalSkipped++
-						if verbose {
-							fmt.Printf("  Skipped: %s (no match)\n", asset.Name)
-						}
-						continue
-					}
-
-					fmt.Printf("  Processing: %s (plugin: %s)\n", asset.Name, pluginName)
-
-					// Parse version and platform from asset name
-					pluginVersion, platform := repomanager.ParseAssetName(asset.Name)
-					if pluginVersion == "" || platform == "" {
-						fmt.Printf("    Warning: could not parse version/platform from asset name\n")
-						totalErrors++
-						continue
-					}
-
-					if verbose {
-						fmt.Printf("    Version: %s, Platform: %s\n", pluginVersion, platform)
-					}
-
-					// Calculate checksum
-					fmt.Printf("    Calculating checksum...\n")
-					checksum, size, err := repomanager.CalculateChecksum(asset.DownloadURL)
-					if err != nil {
-						fmt.Printf("    Error: failed to calculate checksum: %v\n", err)
-						totalErrors++
-						continue
-					}
-
-					if verbose {
-						fmt.Printf("    Checksum: sha256:%s\n", checksum)
-						fmt.Printf("    Size: %d bytes\n", size)
-					}
-
-					// Query plugin metadata (unless skipped)
-					var metadata *repomanager.PluginMetadata
-					var compatibility string
-
-					if !skipQuery {
-						fmt.Printf("    Querying plugin metadata...\n")
-						metadata, err = repomanager.QueryPlugin(asset.DownloadURL)
-						if err != nil {
-							fmt.Printf("    Warning: query failed: %v\n", err)
-							fmt.Printf("    Continuing without metadata...\n")
-						} else {
-							compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
-							if verbose {
-								fmt.Printf("    Name: %s\n", metadata.Name)
-								fmt.Printf("    Type: %s\n", metadata.Type)
-								fmt.Printf("    Protocol: %s\n", metadata.ProtocolVersion)
-								fmt.Printf("    Compatibility: %s\n", compatibility)
-							} else {
-								fmt.Printf("    Protocol: %s, Compatibility: %s\n",
-									metadata.ProtocolVersion, compatibility)
-							}
-
-							// Update plugin metadata
-							if !dryRun {
-								mgr.SetPluginMetadata(pluginName, metadata)
-							}
-						}
-					}
-
-					// Create version entry
-					version := &repository.Version{
-						Version:       pluginVersion,
-						Released:      release.PublishedAt,
-						Compatibility: compatibility,
-						ChangelogURL:  release.URL,
-						Downloads: map[string]*repository.Download{
-							platform: {
-								URL:       asset.DownloadURL,
-								Checksum:  fmt.Sprintf("sha256:%s", checksum),
-								Size:      size,
-								Available: true,
-							},
-						},
-					}
-
-					// Add to manifest
-					if !dryRun {
-						if err := mgr.AddOrUpdatePluginVersion(pluginName, version); err != nil {
-							fmt.Printf("    Error: %v\n", err)
-							totalErrors++
-							continue
-						}
-					}
-
-					fmt.Printf("    ✓ Added: %s %s (%s)\n", pluginName, pluginVersion, platform)
-					totalAdded++
-				}
+			// Create a synthetic source for the shared processing function
+			source := &repomanager.SyncSource{
+				Type:    repomanager.SyncSourceGitHub,
+				Repo:    githubRepo,
+				Version: version,
+				Filter:  pluginFilter,
+				Exclude: exclude,
 			}
+
+			// Process using the shared function
+			totalAdded, totalSkipped, totalErrors := ProcessGitHubSourceWithProtocol(
+				source, client, mgr, minProtocolVersion, tracker, hydrationCache,
+				skipQuery, dryRun, verbose,
+			)
 
 			// Summary
 			fmt.Printf("\n=== Sync Summary ===\n")
@@ -252,7 +151,8 @@ Examples:
 			saveNeeded := totalAdded > 0 || (prune && pruneStats != nil && (pruneStats.Unavailable > 0 || pruneStats.Removed > 0))
 
 			if !dryRun && saveNeeded {
-				if prune {
+				// Only update LastPruned if we actually removed entries
+				if prune && pruneStats != nil && pruneStats.Removed > 0 {
 					now := time.Now()
 					mgr.GetManifest().LastPruned = &now
 				}
@@ -333,6 +233,11 @@ func syncFromConfig(
 	// Create protocol version tracker for cascade filtering
 	tracker := NewProtocolVersionTracker()
 
+	// Create metadata hydration cache for retroactive metadata application
+	// This allows us to reuse metadata from one architecture for all others,
+	// even if they failed before we successfully queried one
+	hydrationCache := NewMetadataHydrationCache()
+
 	totalAdded := 0
 	totalSkipped := 0
 	totalErrors := 0
@@ -344,7 +249,7 @@ func syncFromConfig(
 		switch source.Type {
 		case repomanager.SyncSourceGitHub:
 			added, skipped, errors := ProcessGitHubSourceWithProtocol(
-				&source, client, mgr, minProtocolVersion, tracker,
+				&source, client, mgr, minProtocolVersion, tracker, hydrationCache,
 				skipQuery, dryRun, verbose,
 			)
 			totalAdded += added
@@ -353,7 +258,7 @@ func syncFromConfig(
 
 		case repomanager.SyncSourceURL:
 			added, errors := ProcessURLSourceWithProtocol(
-				&source, mgr, minProtocolVersion, tracker,
+				&source, mgr, minProtocolVersion, tracker, hydrationCache,
 				skipQuery, dryRun, verbose,
 			)
 			totalAdded += added
@@ -408,7 +313,8 @@ func syncFromConfig(
 	saveNeeded := totalAdded > 0 || (prune && pruneStats != nil && (pruneStats.Unavailable > 0 || pruneStats.Removed > 0))
 
 	if !dryRun && saveNeeded {
-		if prune {
+		// Only update LastPruned if we actually removed entries
+		if prune && pruneStats != nil && pruneStats.Removed > 0 {
 			now := time.Now()
 			mgr.GetManifest().LastPruned = &now
 		}

@@ -17,6 +17,7 @@ import (
 type ManifestManager struct {
 	manifest *repository.Manifest
 	path     string
+	dirty    bool // Tracks if manifest has been modified
 }
 
 // LoadManifest loads a manifest from disk or creates a new one if it doesn't exist.
@@ -55,6 +56,12 @@ func LoadManifest(path string) (*ManifestManager, error) {
 
 // Save writes the manifest to disk.
 func (m *ManifestManager) Save() error {
+	// Skip saving if no changes were made
+	if !m.dirty {
+		return nil
+	}
+
+	// Update LastUpdated timestamp
 	m.manifest.LastUpdated = time.Now()
 
 	// Use json.Encoder with SetEscapeHTML(false) to prevent escaping <, >, & in compatibility strings
@@ -71,6 +78,9 @@ func (m *ManifestManager) Save() error {
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
+	// Reset dirty flag after successful save
+	m.dirty = false
+
 	return nil
 }
 
@@ -84,6 +94,7 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 			Versions: []repository.Version{},
 		}
 		m.manifest.Plugins[pluginName] = plugin
+		m.dirty = true // Mark as modified
 	}
 
 	// Ensure Versions is initialized
@@ -99,21 +110,29 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 			if version.Downloads != nil {
 				if v.Downloads == nil {
 					plugin.Versions[i].Downloads = version.Downloads
+					m.dirty = true
 				} else {
 					// Merge platform-specific downloads
 					for platform, download := range version.Downloads {
-						v.Downloads[platform] = download
+						existing, exists := v.Downloads[platform]
+						// Only mark dirty if platform is new or download details changed
+						if !exists || existing.URL != download.URL || existing.Checksum != download.Checksum {
+							v.Downloads[platform] = download
+							m.dirty = true
+						}
 					}
 					plugin.Versions[i].Downloads = v.Downloads
 				}
 			}
 
 			// Update other fields if provided
-			if version.Compatibility != "" {
+			if version.Compatibility != "" && plugin.Versions[i].Compatibility != version.Compatibility {
 				plugin.Versions[i].Compatibility = version.Compatibility
+				m.dirty = true
 			}
-			if version.ChangelogURL != "" {
+			if version.ChangelogURL != "" && plugin.Versions[i].ChangelogURL != version.ChangelogURL {
 				plugin.Versions[i].ChangelogURL = version.ChangelogURL
+				m.dirty = true
 			}
 
 			versionExists = true
@@ -129,6 +148,7 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 		// Add new version and sort (newest first)
 		plugin.Versions = append(plugin.Versions, *version)
 		sortVersionsNewestFirst(plugin.Versions)
+		m.dirty = true
 	}
 
 	return nil
@@ -191,6 +211,7 @@ func (m *ManifestManager) RemovePluginVersion(pluginName, version string) error 
 		if v.Version == version {
 			plugin.Versions = append(plugin.Versions[:i], plugin.Versions[i+1:]...)
 			found = true
+			m.dirty = true
 			break
 		}
 	}
@@ -202,6 +223,7 @@ func (m *ManifestManager) RemovePluginVersion(pluginName, version string) error 
 	// Remove plugin entirely if no versions left
 	if len(plugin.Versions) == 0 {
 		delete(m.manifest.Plugins, pluginName)
+		m.dirty = true
 	}
 
 	return nil
@@ -214,12 +236,19 @@ func (m *ManifestManager) RemovePlugin(pluginName string) error {
 	}
 
 	delete(m.manifest.Plugins, pluginName)
+	m.dirty = true
 	return nil
 }
 
 // GetManifest returns the underlying manifest.
 func (m *ManifestManager) GetManifest() *repository.Manifest {
 	return m.manifest
+}
+
+// MarkDirty marks the manifest as modified.
+// This should be called when external code directly modifies the manifest.
+func (m *ManifestManager) MarkDirty() {
+	m.dirty = true
 }
 
 // SetPluginMetadata updates plugin metadata (description, author, etc.).
@@ -231,40 +260,63 @@ func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginM
 			Versions: []repository.Version{},
 		}
 		m.manifest.Plugins[pluginName] = plugin
+		m.dirty = true
 	}
 
-	if metadata.Type != "" {
+	if metadata.Type != "" && plugin.Type != metadata.Type {
 		plugin.Type = metadata.Type
+		m.dirty = true
 	}
-	if metadata.Description != "" {
+	if metadata.Description != "" && plugin.Description != metadata.Description {
 		plugin.Description = metadata.Description
+		m.dirty = true
 	}
-	if metadata.Author != "" {
+	if metadata.Author != "" && plugin.Author != metadata.Author {
 		plugin.Author = metadata.Author
+		m.dirty = true
 	}
-	if metadata.Repository != "" {
+	if metadata.Repository != "" && plugin.Repository != metadata.Repository {
 		plugin.Repository = metadata.Repository
+		m.dirty = true
 	}
 	if len(metadata.Tags) > 0 {
-		plugin.Tags = metadata.Tags
+		// Check if tags actually changed
+		tagsChanged := len(plugin.Tags) != len(metadata.Tags)
+		if !tagsChanged {
+			for i, tag := range metadata.Tags {
+				if i >= len(plugin.Tags) || plugin.Tags[i] != tag {
+					tagsChanged = true
+					break
+				}
+			}
+		}
+		if tagsChanged {
+			plugin.Tags = metadata.Tags
+			m.dirty = true
+		}
 	}
-	if metadata.License != "" {
+	if metadata.License != "" && plugin.License != metadata.License {
 		plugin.License = metadata.License
+		m.dirty = true
 	}
 }
 
 // SetManifestMetadata updates top-level manifest metadata.
 func (m *ManifestManager) SetManifestMetadata(name, description, url, maintainedBy string) {
-	if name != "" {
+	if name != "" && m.manifest.Name != name {
 		m.manifest.Name = name
+		m.dirty = true
 	}
-	if description != "" {
+	if description != "" && m.manifest.Description != description {
 		m.manifest.Description = description
+		m.dirty = true
 	}
-	if url != "" {
+	if url != "" && m.manifest.URL != url {
 		m.manifest.URL = url
+		m.dirty = true
 	}
-	if maintainedBy != "" {
+	if maintainedBy != "" && m.manifest.MaintainedBy != maintainedBy {
 		m.manifest.MaintainedBy = maintainedBy
+		m.dirty = true
 	}
 }

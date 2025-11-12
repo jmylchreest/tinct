@@ -78,30 +78,44 @@ func PruneManifest(
 
 					// Mark as unavailable with timestamp
 					if !dryRun {
+						// Only mark dirty if availability status changed
+						wasAvailable := download.Available
 						download.Available = false
 						now := time.Now()
 						if download.UnavailableSince == nil {
 							download.UnavailableSince = &now
 						}
 						download.UnavailableReason = reason
+
+						// Mark dirty only if status changed from available to unavailable
+						if wasAvailable {
+							mgr.MarkDirty()
+						}
 					}
 				} else {
 					// Mark as available and clear unavailable fields
 					if !dryRun {
-						download.Available = true
-						now := time.Now()
-						download.LastVerified = &now
-						download.UnavailableSince = nil
-						download.UnavailableReason = ""
+						// Only mark dirty if availability status changed
+						wasUnavailable := !download.Available || download.UnavailableSince != nil
+
+						if wasUnavailable {
+							// Status changed from unavailable to available
+							download.Available = true
+							download.UnavailableSince = nil
+							download.UnavailableReason = ""
+							mgr.MarkDirty()
+						}
+						// Don't update any timestamps if status hasn't changed
 					}
 				}
 			}
 
 			// Remove platforms marked for removal
-			if !dryRun {
+			if !dryRun && len(platformsToRemove) > 0 {
 				for _, platform := range platformsToRemove {
 					delete(version.Downloads, platform)
 				}
+				mgr.MarkDirty()
 
 				// Clean up versions with no downloads
 				if len(version.Downloads) == 0 {
@@ -116,6 +130,7 @@ func PruneManifest(
 		// Clean up plugins with no versions
 		if !dryRun && len(plugin.Versions) == 0 {
 			delete(manifest.Plugins, pluginName)
+			mgr.MarkDirty()
 			if verbose {
 				fmt.Printf("  Removed plugin %s (no versions left)\n", pluginName)
 			}

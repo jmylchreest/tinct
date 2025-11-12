@@ -8,6 +8,116 @@ import (
 	"github.com/jmylchreest/tinct/internal/repomanager"
 )
 
+// PendingPlugin represents a plugin that was processed but couldn't be queried for metadata.
+type PendingPlugin struct {
+	PluginName    string
+	PluginVersion string
+	Platform      string
+	DownloadURL   string
+	Checksum      string
+	Size          int64
+	Released      time.Time
+	ChangelogURL  string
+}
+
+// MetadataHydrationCache tracks plugins waiting for metadata and enables retroactive hydration.
+// When one architecture succeeds in querying metadata, all other architectures of the same
+// plugin+version can reuse that metadata.
+type MetadataHydrationCache struct {
+	// Cached metadata by "pluginName:version"
+	metadata map[string]*repomanager.PluginMetadata
+
+	// Pending plugins that failed metadata query, by "pluginName:version"
+	pending map[string][]*PendingPlugin
+}
+
+// NewMetadataHydrationCache creates a new cache.
+func NewMetadataHydrationCache() *MetadataHydrationCache {
+	return &MetadataHydrationCache{
+		metadata: make(map[string]*repomanager.PluginMetadata),
+		pending:  make(map[string][]*PendingPlugin),
+	}
+}
+
+// GetMetadata retrieves cached metadata for a plugin+version.
+func (c *MetadataHydrationCache) GetMetadata(pluginName, version string) (*repomanager.PluginMetadata, bool) {
+	key := fmt.Sprintf("%s:%s", pluginName, version)
+	metadata, exists := c.metadata[key]
+	return metadata, exists
+}
+
+// SetMetadata stores metadata and hydrates any pending plugins.
+func (c *MetadataHydrationCache) SetMetadata(
+	pluginName string,
+	version string,
+	metadata *repomanager.PluginMetadata,
+	mgr *repomanager.ManifestManager,
+	dryRun bool,
+	verbose bool,
+) int {
+	key := fmt.Sprintf("%s:%s", pluginName, version)
+	c.metadata[key] = metadata
+
+	// Check if there are pending plugins for this key
+	pendingList, hasPending := c.pending[key]
+	if !hasPending {
+		return 0
+	}
+
+	// Hydrate all pending plugins with this metadata
+	hydrated := 0
+	compatibility := repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+
+	for _, pending := range pendingList {
+		if verbose {
+			fmt.Printf("      Hydrating %s %s (%s) with cached metadata\n",
+				pending.PluginName, pending.PluginVersion, pending.Platform)
+		}
+
+		// Create version entry with the metadata
+		version := &repository.Version{
+			Version:       pending.PluginVersion,
+			Released:      pending.Released,
+			Compatibility: compatibility,
+			ChangelogURL:  pending.ChangelogURL,
+			Downloads: map[string]*repository.Download{
+				pending.Platform: {
+					URL:       pending.DownloadURL,
+					Checksum:  pending.Checksum,
+					Size:      pending.Size,
+					Available: true,
+				},
+			},
+		}
+
+		// Add to manifest
+		if !dryRun {
+			if err := mgr.AddOrUpdatePluginVersion(pending.PluginName, version); err != nil {
+				if verbose {
+					fmt.Printf("      Error hydrating: %v\n", err)
+				}
+				continue
+			}
+
+			// Update plugin metadata
+			mgr.SetPluginMetadata(pending.PluginName, metadata)
+		}
+
+		hydrated++
+	}
+
+	// Clear pending list for this key
+	delete(c.pending, key)
+
+	return hydrated
+}
+
+// AddPending adds a plugin that failed metadata query to the pending list.
+func (c *MetadataHydrationCache) AddPending(pending *PendingPlugin) {
+	key := fmt.Sprintf("%s:%s", pending.PluginName, pending.PluginVersion)
+	c.pending[key] = append(c.pending[key], pending)
+}
+
 // ProtocolVersionTracker tracks which plugins have failed protocol checks and at what version.
 // This enables cascade filtering: if version X fails, all versions < X are automatically skipped.
 type ProtocolVersionTracker struct {
@@ -61,6 +171,7 @@ func ProcessGitHubSourceWithProtocol(
 	mgr *repomanager.ManifestManager,
 	minProtocolVersion string,
 	tracker *ProtocolVersionTracker,
+	hydrationCache *MetadataHydrationCache,
 	skipQuery bool,
 	dryRun bool,
 	verbose bool,
@@ -134,21 +245,58 @@ func ProcessGitHubSourceWithProtocol(
 			var compatibility string
 
 			if !skipQuery {
-				if verbose {
-					fmt.Printf("      Querying plugin metadata...\n")
-				}
-				metadata, err = repomanager.QueryPlugin(asset.DownloadURL)
-				if err != nil {
-					fmt.Printf("      Warning: query failed: %v\n", err)
-					fmt.Printf("      Continuing without metadata...\n")
-				} else {
+				// Check cache first for this plugin+version combination
+				cachedMetadata, hasCached := hydrationCache.GetMetadata(pluginName, pluginVersion)
+
+				if hasCached {
+					// Reuse cached metadata from another architecture
+					metadata = cachedMetadata
 					compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
 					if verbose {
+						fmt.Printf("      Using cached metadata from another architecture\n")
 						fmt.Printf("      Protocol: %s, Compatibility: %s\n",
 							metadata.ProtocolVersion, compatibility)
 					}
+				} else {
+					if verbose {
+						fmt.Printf("      Querying plugin metadata...\n")
+					}
+					metadata, err = repomanager.QueryPlugin(asset.DownloadURL)
+					if err != nil {
+						fmt.Printf("      Warning: query failed: %v\n", err)
+						fmt.Printf("      Continuing without metadata...\n")
 
-					// Check protocol version with cascade
+						// Add to pending list for retroactive hydration
+						hydrationCache.AddPending(&PendingPlugin{
+							PluginName:    pluginName,
+							PluginVersion: pluginVersion,
+							Platform:      platform,
+							DownloadURL:   asset.DownloadURL,
+							Checksum:      fmt.Sprintf("sha256:%s", checksum),
+							Size:          size,
+							Released:      release.PublishedAt,
+							ChangelogURL:  release.URL,
+						})
+					} else {
+						compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+						if verbose {
+							fmt.Printf("      Protocol: %s, Compatibility: %s\n",
+								metadata.ProtocolVersion, compatibility)
+						}
+
+						// Store metadata and hydrate any pending plugins
+						hydratedCount := hydrationCache.SetMetadata(pluginName, pluginVersion, metadata, mgr, dryRun, verbose)
+						if hydratedCount > 0 {
+							added += hydratedCount
+							if verbose {
+								fmt.Printf("      Hydrated %d pending plugin(s)\n", hydratedCount)
+							}
+						}
+					}
+				}
+
+				// Check protocol version with cascade if we have metadata
+				if metadata != nil {
 					if shouldSkip, reason := tracker.ShouldSkip(pluginName, pluginVersion, metadata.ProtocolVersion, minProtocolVersion); shouldSkip {
 						if verbose {
 							fmt.Printf("      Skipped: %s\n", reason)
@@ -209,6 +357,7 @@ func ProcessURLSourceWithProtocol(
 	mgr *repomanager.ManifestManager,
 	minProtocolVersion string,
 	tracker *ProtocolVersionTracker,
+	hydrationCache *MetadataHydrationCache,
 	skipQuery bool,
 	dryRun bool,
 	verbose bool,
@@ -234,33 +383,73 @@ func ProcessURLSourceWithProtocol(
 
 	// Auto-detect version if "-" or query for metadata
 	if pluginVersion == "-" || !skipQuery {
-		if verbose {
-			fmt.Printf("  Querying plugin metadata...\n")
-		}
-		metadata, err = repomanager.QueryPlugin(source.URL)
-		if err != nil {
-			if pluginVersion == "-" {
-				fmt.Printf("  Error: version auto-detection failed: %v\n", err)
-				return 0, 1
-			}
-			fmt.Printf("  Warning: query failed: %v\n", err)
-			fmt.Printf("  Continuing without metadata...\n")
-		} else {
-			// Use detected version if auto-detect
-			if pluginVersion == "-" {
-				pluginVersion = metadata.Version
-				if verbose {
-					fmt.Printf("  Detected version: %s\n", pluginVersion)
-				}
-			}
+		// For URL sources, check cache if we have a version
+		var hasCached bool
+		var cachedMetadata *repomanager.PluginMetadata
 
+		if pluginVersion != "-" {
+			cachedMetadata, hasCached = hydrationCache.GetMetadata(source.Plugin, pluginVersion)
+		}
+
+		if hasCached {
+			// Reuse cached metadata from another platform
+			metadata = cachedMetadata
 			compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
 			if verbose {
+				fmt.Printf("  Using cached metadata from another platform\n")
 				fmt.Printf("  Protocol: %s, Compatibility: %s\n",
 					metadata.ProtocolVersion, compatibility)
 			}
+		} else {
+			if verbose {
+				fmt.Printf("  Querying plugin metadata...\n")
+			}
+			metadata, err = repomanager.QueryPlugin(source.URL)
+			if err != nil {
+				if pluginVersion == "-" {
+					fmt.Printf("  Error: version auto-detection failed: %v\n", err)
+					return 0, 1
+				}
+				fmt.Printf("  Warning: query failed: %v\n", err)
+				fmt.Printf("  Continuing without metadata...\n")
 
-			// Check protocol version with cascade
+				// Add to pending list for retroactive hydration (if we have a version)
+				if pluginVersion != "" && pluginVersion != "-" {
+					hydrationCache.AddPending(&PendingPlugin{
+						PluginName:    source.Plugin,
+						PluginVersion: pluginVersion,
+						Platform:      source.Platform,
+						DownloadURL:   source.URL,
+						Checksum:      fmt.Sprintf("sha256:%s", checksum),
+						Size:          size,
+						Released:      time.Now(),
+					})
+				}
+			} else {
+				// Use detected version if auto-detect
+				if pluginVersion == "-" {
+					pluginVersion = metadata.Version
+					if verbose {
+						fmt.Printf("  Detected version: %s\n", pluginVersion)
+					}
+				}
+
+				compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+				if verbose {
+					fmt.Printf("  Protocol: %s, Compatibility: %s\n",
+						metadata.ProtocolVersion, compatibility)
+				}
+
+				// Store metadata and hydrate any pending plugins
+				hydratedCount := hydrationCache.SetMetadata(source.Plugin, pluginVersion, metadata, mgr, dryRun, verbose)
+				if hydratedCount > 0 && verbose {
+					fmt.Printf("  Hydrated %d pending plugin(s)\n", hydratedCount)
+				}
+			}
+		}
+
+		// Check protocol version with cascade if we have metadata
+		if metadata != nil {
 			if shouldSkip, reason := tracker.ShouldSkip(source.Plugin, pluginVersion, metadata.ProtocolVersion, minProtocolVersion); shouldSkip {
 				fmt.Printf("  Skipped: %s\n", reason)
 				return 0, 0
