@@ -346,28 +346,6 @@ archives:
       - src: LICENSE
         dst: LICENSE
 
-  # Script-based plugins archive (platform-independent)
-  - id: plugin-scripts-archive
-    name_template: "tinct-plugin-scripts_{{ .Version }}"
-
-    formats: [tar.gz]
-    format_overrides:
-      - goos: windows
-        formats: [zip]
-
-    files:
-      - src: contrib/plugins/output/example-minimal.sh
-        dst: example-minimal
-      - src: contrib/plugins/output/notify-send.py
-        dst: notify-send
-      - src: contrib/README.md
-        dst: README.md
-      - src: LICENSE
-        dst: LICENSE
-
-    # Only build once (platform-independent scripts)
-    meta: true
-
 # ============================================================================
 # CHECKSUMS & SNAPSHOTS
 # ============================================================================
@@ -730,10 +708,7 @@ release:
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-random_{{.Version}}_Linux_x86_64.tar.gz:random
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-wob_{{.Version}}_Linux_x86_64.tar.gz:wob-tinct
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-templater_{{.Version}}_Linux_x86_64.tar.gz:templater
-
-    # Install script-based plugins
-    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-scripts_{{.Version}}.tar.gz:notify-send
-    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-scripts_{{.Version}}.tar.gz:example-minimal
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-dunstify_{{.Version}}_Linux_x86_64.tar.gz:dunstify
     ```
 
     Or download manually from the assets below and add locally:
@@ -741,7 +716,7 @@ release:
     tinct plugins add ./random
     tinct plugins add ./wob-tinct
     tinct plugins add ./templater
-    tinct plugins add ./notify-send
+    tinct plugins add ./dunstify
     ```
 
     ## What's Next?
