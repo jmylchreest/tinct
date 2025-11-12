@@ -268,7 +268,7 @@ fi
 
 # Update wallpaper if pywal is installed
 if command -v wal >/dev/null 2>&1; then
-    echo "Updating wallpaper colors..."
+    echo "Updating wallpaper colours..."
     wal -i ~/Pictures/current-wallpaper.jpg -q
 fi
 
@@ -583,7 +583,7 @@ The post-execute hook receives JSON on stdin:
 {
   "written_files": [
     "/home/user/.config/myapp/theme.conf",
-    "/home/user/.config/myapp/colors.conf"
+    "/home/user/.config/myapp/colours.conf"
   ]
 }
 ```
@@ -638,7 +638,7 @@ fi
 # Normal execution - generate theme
 palette=$(cat)
 
-# Extract colors and generate config
+# Extract colours and generate config
 echo "$palette" | jq -r '.colours.background.hex' > ~/.config/myapp/bg.txt
 echo "$palette" | jq -r '.colours.foreground.hex' > ~/.config/myapp/fg.txt
 

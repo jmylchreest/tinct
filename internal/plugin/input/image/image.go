@@ -100,7 +100,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Extract colour palette from an image file, directory (random selection), or HTTP(S) URL (optionally includes edge/corner regions for ambient lighting)"
+	return "Extract colours from images (files, directories, URLs) with optional ambient lighting"
 }
 
 // Version returns the plugin version.

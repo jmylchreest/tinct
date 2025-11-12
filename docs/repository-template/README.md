@@ -17,7 +17,7 @@ git add .
 git commit -m "Initial commit"
 ```
 
-### 2. Customize Repository
+### 2. Customise Repository
 
 Edit `repository.json`:
 ```json

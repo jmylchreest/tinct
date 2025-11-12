@@ -62,7 +62,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Hyprpaper wallpaper manager configuration"
+	return "Hyprpaper wallpaper manager config"
 }
 
 // Version returns the plugin version.

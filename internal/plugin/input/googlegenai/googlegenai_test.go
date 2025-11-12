@@ -85,7 +85,7 @@ func TestDescription(t *testing.T) {
 	if desc == "" {
 		t.Error("Description should not be empty")
 	}
-	if desc != "Generate images using Google Imagen models and extract color palettes" {
+	if desc != "Generate images with Google Imagen and extract colours" {
 		t.Errorf("Unexpected description: %s", desc)
 	}
 }

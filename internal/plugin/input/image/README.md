@@ -4,18 +4,18 @@
 **Built-in:** Yes  
 **Language:** Go
 
-Extract color palettes from images using k-means clustering with deterministic seed options and optional ambient region extraction for LED lighting.
+Extract colour palettes from images using k-means clustering with deterministic seed options and optional ambient region extraction for LED lighting.
 
 ## Overview
 
-The `image` plugin is Tinct's primary color extraction plugin. It analyzes images (wallpapers, photos, artwork) and extracts a palette of representative colors using k-means clustering. The plugin supports both local files and remote HTTP(S) URLs, and can optionally extract edge/corner colors for ambient LED lighting setups.
+The `image` plugin is Tinct's primary colour extraction plugin. It analyzes images (wallpapers, photos, artwork) and extracts a palette of representative colours using k-means clustering. The plugin supports both local files and remote HTTP(S) URLs, and can optionally extract edge/corner colours for ambient LED lighting setups.
 
 ## Features
 
-- ✅ **K-means clustering** - Intelligent color extraction with configurable seed
+- ✅ **K-means clustering** - Intelligent colour extraction with configurable seed
 - ✅ **Deterministic generation** - 4 seed modes for reproducible results
 - ✅ **Local and remote sources** - Supports file paths and HTTP(S) URLs
-- ✅ **Ambient region extraction** - Edge/corner colors for LED bias lighting
+- ✅ **Ambient region extraction** - Edge/corner colours for LED bias lighting
 - ✅ **Theme detection** - Auto-detects dark/light themes from image luminance
 - ✅ **Wallpaper provider** - Provides wallpaper path to output plugins
 - ✅ **Smart loading** - Handles JPEG, PNG, GIF, WebP formats
@@ -32,10 +32,10 @@ tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland,kitty
 tinct generate -i image -p https://example.com/wallpaper.jpg -o hyprland
 ```
 
-### With Custom Color Count
+### With Custom Colour Count
 
 ```bash
-# Extract 24 colors instead of default 16
+# Extract 24 colours instead of default 16
 tinct generate -i image -p wallpaper.jpg -c 24 -o hyprland
 ```
 
@@ -79,7 +79,7 @@ tinct generate -i image -p https://example.com/daily-wallpaper.jpg \
 
 **Why caching is needed:** Output plugins like `hyprpaper` and `hyprlock` require local file paths to set wallpapers. Without caching, remote URLs cannot be used as wallpapers.
 
-**Default behavior:** Caching is **disabled by default**. Color extraction works with or without caching.
+**Default behavior:** Caching is **disabled by default**. Colour extraction works with or without caching.
 
 **Cache location:** `~/.cache/tinct/images/` (or custom via `--image.cache-dir`)
 
@@ -90,7 +90,7 @@ tinct generate -i image -p https://example.com/daily-wallpaper.jpg \
 ### Ambient Lighting / LED Extraction
 
 ```bash
-# Extract edge/corner colors for LED bias lighting
+# Extract edge/corner colours for LED bias lighting
 tinct generate -i image -p wallpaper.jpg \
   --image.extractAmbience \
   --image.regions 8 \
@@ -106,10 +106,10 @@ tinct generate -i image -p wallpaper.jpg \
 ### Seed Modes (Deterministic Extraction)
 
 ```bash
-# Content-based seed (default) - Same image → same colors
+# Content-based seed (default) - Same image → same colours
 tinct generate -i image -p wallpaper.jpg --image.seed-mode content -o hyprland
 
-# Filepath-based seed - Same location → same colors
+# Filepath-based seed - Same location → same colours
 tinct generate -i image -p wallpaper.jpg --image.seed-mode filepath -o hyprland
 
 # Manual seed - Reproducible with specific seed
@@ -118,7 +118,7 @@ tinct generate -i image -p wallpaper.jpg \
   --image.seed-value 42 \
   -o hyprland
 
-# Random seed - Different colors each run
+# Random seed - Different colours each run
 tinct generate -i image -p wallpaper.jpg --image.seed-mode random -o hyprland
 ```
 
@@ -128,7 +128,7 @@ tinct generate -i image -p wallpaper.jpg --image.seed-mode random -o hyprland
 |------|-------|---------|-------------|
 | `--image.path` | `-p` | *(required)* | Path to image file, directory, or HTTP(S) URL |
 | `--image.algorithm` | `-a` | `kmeans` | Extraction algorithm (only kmeans supported) |
-| `--image.colours` | `-c` | `16` | Number of colors to extract (1-256) |
+| `--image.colours` | `-c` | `16` | Number of colours to extract (1-256) |
 | `--image.extractAmbience` | | `false` | Extract edge/corner regions for ambient lighting |
 | `--image.regions` | | `8` | Number of regions to extract (4, 8, 12, 16) |
 | `--image.sample-size` | | `10` | Percentage of edge to sample (1-50) |
@@ -148,7 +148,7 @@ The image plugin supports 4 seed modes for k-means clustering, allowing you to c
 
 Generates seed from image pixel data hash.
 
-**Use case:** Same image content → same colors  
+**Use case:** Same image content → same colours  
 **Deterministic:** Yes  
 **Changes if:** Image content changes
 
@@ -160,7 +160,7 @@ tinct generate -i image -p wallpaper.jpg --image.seed-mode content -o hyprland
 
 Generates seed from absolute file path hash.
 
-**Use case:** Same file location → same colors  
+**Use case:** Same file location → same colours  
 **Deterministic:** Yes  
 **Changes if:** File path changes
 
@@ -187,7 +187,7 @@ tinct generate -i image -p wallpaper.jpg \
 
 Uses non-deterministic random seed.
 
-**Use case:** Different colors each run  
+**Use case:** Different colours each run  
 **Deterministic:** No  
 **Changes:** Every time
 
@@ -197,7 +197,7 @@ tinct generate -i image -p wallpaper.jpg --image.seed-mode random -o hyprland
 
 ## Ambient Region Extraction
 
-The image plugin can extract colors from specific edge/corner regions for ambient LED lighting setups.
+The image plugin can extract colours from specific edge/corner regions for ambient LED lighting setups.
 
 ### Region Configurations
 
@@ -236,12 +236,12 @@ tinct generate -i image -p wallpaper.jpg \
 
 ### Sample Methods
 
-- **`average`** (default) - Calculate average color of all pixels in region
-- **`dominant`** - Find most frequent color in region (more vibrant)
+- **`average`** (default) - Calculate average colour of all pixels in region
+- **`dominant`** - Find most frequent colour in region (more vibrant)
 
 ### Weighting
 
-Ambient colors are weighted at 10% of total palette weight to avoid over-representing edge colors in the final categorized palette.
+Ambient colours are weighted at 10% of total palette weight to avoid over-representing edge colours in the final categorized palette.
 
 **See:** [Region Extraction Documentation](../shared/regions/README.md)
 
@@ -279,27 +279,27 @@ Provides wallpaper path to output plugins like `hyprpaper`, `hyprlock` for wallp
 ThemeHint() string  // Returns "dark", "light", or "auto"
 ```
 
-Suggests theme type based on average luminance of extracted colors.
+Suggests theme type based on average luminance of extracted colours.
 
 ## How It Works
 
 1. **Load Image** - From local file or HTTP(S) URL using SmartLoader
 2. **Calculate Seed** - Based on configured seed mode
-3. **K-means Clustering** - Extract N most representative colors
-4. **Extract Regions** (optional) - Sample edge/corner colors if enabled
-5. **Return Palette** - Raw colors (categorization happens separately)
+3. **K-means Clustering** - Extract N most representative colours
+4. **Extract Regions** (optional) - Sample edge/corner colours if enabled
+5. **Return Palette** - Raw colours (categorisation happens separately)
 
 ### K-means Clustering
 
-The plugin uses k-means clustering to find the most representative colors in the image:
+The plugin uses k-means clustering to find the most representative colours in the image:
 
 1. Initialize K random cluster centers (using configured seed)
 2. Assign each pixel to nearest cluster
 3. Recalculate cluster centers
 4. Repeat until convergence
-5. Return cluster centers as palette colors
+5. Return cluster centers as palette colours
 
-**Seed control:** Different seeds produce different cluster initializations, affecting final colors.
+**Seed control:** Different seeds produce different cluster initializations, affecting final colours.
 
 ## Environment Variable Configuration
 
@@ -350,23 +350,23 @@ tinct generate -i image -p https://example.com/wallpaper.jpg \
 ### Extract and Preview
 
 ```bash
-# Extract colors and show preview in terminal
+# Extract colours and show preview in terminal
 tinct extract --preview ~/Pictures/wallpaper.jpg
 
-# Extract with categorization
+# Extract with categorisation
 tinct extract --categorise --preview ~/Pictures/wallpaper.jpg
 ```
 
-### Different Color Counts
+### Different Colour Counts
 
 ```bash
-# Minimal palette (8 colors)
+# Minimal palette (8 colours)
 tinct generate -i image -p wallpaper.jpg -c 8 -o hyprland
 
-# Standard palette (16 colors, default)
+# Standard palette (16 colours, default)
 tinct generate -i image -p wallpaper.jpg -o hyprland
 
-# Large palette (32 colors)
+# Large palette (32 colours)
 tinct generate -i image -p wallpaper.jpg -c 32 -o hyprland
 ```
 
@@ -384,7 +384,7 @@ tinct generate -i image -p wallpaper.jpg \
 
 - **Local files:** Very fast (< 1 second for most images)
 - **Remote URLs:** Depends on download speed + processing
-- **K-means:** O(n * k * i) where n=pixels, k=colors, i=iterations
+- **K-means:** O(n * k * i) where n=pixels, k=colours, i=iterations
 - **Region extraction:** Minimal overhead (~5-10ms)
 
 ## Troubleshooting
@@ -418,7 +418,7 @@ tinct generate -i image -p /path/to/wallpaper.jpg -o hyprland
 
 ### "Colours must be between 1 and 256"
 
-**Problem:** Invalid color count.
+**Problem:** Invalid colour count.
 
 **Solution:**
 ```bash

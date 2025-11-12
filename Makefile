@@ -24,7 +24,7 @@ main:
 	@go build -ldflags="-s -w" -o $(OUT_DIR)/$(BINARY_NAME) ./cmd/tinct
 	@echo "✓ Built: $(OUT_DIR)/$(BINARY_NAME)"
 
-plugins: plugins-input plugins-output plugins-scripts
+plugins: plugins-input plugins-output plugins-scripts force-install-script
 
 plugins-input:
 	@echo "Building input plugins..."
@@ -63,6 +63,23 @@ plugins-scripts:
 			echo "  ✓ $$name"; \
 		fi \
 	done
+
+force-install-script:
+	@echo "Generating force-install-plugins.sh..."
+	@echo '#!/bin/bash' > $(OUT_DIR)/force-install-plugins.sh
+	@echo '# Auto-generated script to force-install all built plugins' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo 'set -e' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo '' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo 'cd "$$(dirname "$$0")/.."' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo '' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo 'for plugin in ./out/plugins/input/* ./out/plugins/output/*; do' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo '  if [ -f "$$plugin" ]; then' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo '    echo "Installing $$plugin..."' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo '    go run ./cmd/tinct plugins add "$$plugin" --force || true' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo '  fi' >> $(OUT_DIR)/force-install-plugins.sh
+	@echo 'done' >> $(OUT_DIR)/force-install-plugins.sh
+	@chmod +x $(OUT_DIR)/force-install-plugins.sh
+	@echo "✓ Generated: $(OUT_DIR)/force-install-plugins.sh"
 
 clean:
 	@echo "Cleaning build artifacts..."

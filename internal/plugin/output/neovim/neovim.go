@@ -52,7 +52,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Neovim colour scheme (Lua format)"
+	return "Neovim colour scheme (Lua)"
 }
 
 // Version returns the plugin version.

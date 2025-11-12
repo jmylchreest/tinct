@@ -4,17 +4,17 @@
 **Built-in:** Yes  
 **Language:** Go
 
-Fetch color palettes from remote JSON APIs with optional JSONPath queries.
+Fetch colour palettes from remote JSON APIs with optional JSONPath queries.
 
 ## Overview
 
-The `remotejson` plugin fetches color palettes from HTTP(S) JSON endpoints. It supports JSONPath queries for extracting colors from complex JSON structures and can map source color names to Tinct's semantic roles.
+The `remotejson` plugin fetches colour palettes from HTTP(S) JSON endpoints. It supports JSONPath queries for extracting colours from complex JSON structures and can map source colour names to Tinct's semantic roles.
 
 ## Features
 
 - ✅ Fetch from any HTTP(S) JSON endpoint
 - ✅ JSONPath queries for complex JSON structures
-- ✅ Color format auto-detection (hex, rgb, hsl)
+- ✅ Colour format auto-detection (hex, rgb, hsl)
 - ✅ Role mapping (map source names to Tinct roles)
 - ✅ Configurable timeout
 - ✅ Perfect for theme repositories (Catppuccin, Dracula, etc.)
@@ -34,7 +34,7 @@ tinct generate -i remote-json \
 ```bash
 tinct generate -i remote-json \
   --remote-json.url "https://api.example.com/themes/dark.json" \
-  --remote-json.query "$.colors" \
+  --remote-json.query "$.colours" \
   -o hyprland
 ```
 
@@ -52,11 +52,11 @@ tinct generate -i remote-json \
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--remote-json.url` | *(required)* | JSON URL to fetch |
-| `--remote-json.query` | *(optional)* | JSONPath query (e.g., `$.colors`) |
+| `--remote-json.query` | *(optional)* | JSONPath query (e.g., `$.colours`) |
 | `--remote-json.timeout` | `10s` | HTTP request timeout |
 | `--remote-json.map` | `{}` | Map source names to roles |
 
-## Supported Color Formats
+## Supported Colour Formats
 
 The plugin auto-detects and parses:
 - **Hex:** `#RRGGBB`, `RRGGBB`, `#RGB`
@@ -70,7 +70,7 @@ The plugin auto-detects and parses:
 ```bash
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "$.mocha.colors" \
+  --remote-json.query "$.mocha.colours" \
   -o hyprland,kitty
 ```
 

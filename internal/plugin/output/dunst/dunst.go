@@ -50,7 +50,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Dunst notification daemon colour theme configuration"
+	return "Dunst notification daemon theme"
 }
 
 // Version returns the plugin version.

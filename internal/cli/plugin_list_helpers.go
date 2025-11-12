@@ -14,7 +14,8 @@ const (
 
 // pluginInfo holds information about a plugin for display.
 type pluginInfo struct {
-	fullName    string
+	pluginType  string // input or output
+	name        string // plugin name without type prefix
 	status      string
 	version     string
 	description string
@@ -48,7 +49,8 @@ func (c *pluginCollector) addInputPlugins() {
 	for name, plugin := range c.mgr.AllInputPlugins() {
 		info := c.buildPluginInfo("input", name, plugin.Version(), plugin.Description())
 		c.plugins = append(c.plugins, info)
-		c.seenPlugins[info.fullName] = true
+		fullName := fmt.Sprintf("%s:%s", info.pluginType, info.name)
+		c.seenPlugins[fullName] = true
 	}
 }
 
@@ -57,19 +59,20 @@ func (c *pluginCollector) addOutputPlugins() {
 	for name, plugin := range c.mgr.AllOutputPlugins() {
 		info := c.buildPluginInfo("output", name, plugin.Version(), plugin.Description())
 		c.plugins = append(c.plugins, info)
-		c.seenPlugins[info.fullName] = true
+		fullName := fmt.Sprintf("%s:%s", info.pluginType, info.name)
+		c.seenPlugins[fullName] = true
 	}
 }
 
 // buildPluginInfo builds plugin information from a managed plugin.
 func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description string) pluginInfo {
-	fullName := fmt.Sprintf("%s:%s", pluginType, name)
 	status := c.determinePluginStatus(pluginType, name)
 	isExternal := c.isExternalPlugin(name, pluginType)
 	source := c.getPluginPath(name, pluginType)
 
 	return pluginInfo{
-		fullName:    fullName,
+		pluginType:  pluginType,
+		name:        name,
 		status:      status,
 		version:     version,
 		description: description,
@@ -165,7 +168,6 @@ func (c *pluginCollector) addExternalOnlyPlugins() {
 
 // buildExternalOnlyInfo builds plugin info for external-only plugins.
 func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPluginMeta) pluginInfo {
-	fullName := fmt.Sprintf("%s:%s", meta.Type, name)
 	status := c.determinePluginStatus(meta.Type, name)
 
 	description := meta.Description
@@ -183,7 +185,8 @@ func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPlugi
 	}
 
 	return pluginInfo{
-		fullName:    fullName,
+		pluginType:  meta.Type,
+		name:        name,
 		status:      status,
 		version:     version,
 		description: description,
@@ -192,10 +195,13 @@ func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPlugi
 	}
 }
 
-// getSortedPlugins returns all collected plugins sorted by name.
+// getSortedPlugins returns all collected plugins sorted by type then name.
 func (c *pluginCollector) getSortedPlugins() []pluginInfo {
 	sort.Slice(c.plugins, func(i, j int) bool {
-		return c.plugins[i].fullName < c.plugins[j].fullName
+		if c.plugins[i].pluginType != c.plugins[j].pluginType {
+			return c.plugins[i].pluginType < c.plugins[j].pluginType
+		}
+		return c.plugins[i].name < c.plugins[j].name
 	})
 	return c.plugins
 }
@@ -213,11 +219,11 @@ func collectAllPlugins(mgr *manager.Manager, lock *PluginLock) []pluginInfo {
 
 // displayPluginTable displays plugins in a formatted table.
 func displayPluginTable(plugins []pluginInfo) {
-	tbl := NewTable([]string{"", "PLUGIN", "STATUS", "VERSION", "DESCRIPTION"})
+	tbl := NewTable([]string{"", "TYPE", "PLUGIN", "STATUS", "VERSION", "DESCRIPTION"})
 
 	// Enable terminal-aware column sizing
-	// Description column (index 4) will automatically size to fit terminal width
-	tbl.EnableTerminalAwareWidth(4, 40) // Min width of 40 chars for description
+	// Description column (index 5) will automatically size to fit terminal width
+	tbl.EnableTerminalAwareWidth(5, 40) // Min width of 40 chars for description
 
 	for _, p := range plugins {
 		addPluginToTable(tbl, p)
@@ -227,7 +233,12 @@ func displayPluginTable(plugins []pluginInfo) {
 
 	if hasExternalPlugins(plugins) {
 		fmt.Println()
-		fmt.Println("* = external plugin")
+		pluginDir, err := getPluginDir()
+		if err == nil {
+			fmt.Printf("* = external plugin (default location: %s)\n", pluginDir)
+		} else {
+			fmt.Println("* = external plugin")
+		}
 	}
 }
 
@@ -238,11 +249,7 @@ func addPluginToTable(tbl *Table, p pluginInfo) {
 		marker = "*"
 	}
 
-	tbl.AddRow([]string{marker, p.fullName, p.status, p.version, p.description})
-
-	if p.isExternal && p.source != "" {
-		tbl.AddRow([]string{"", "", "", "", "  path: " + p.source})
-	}
+	tbl.AddRow([]string{marker, p.pluginType, p.name, p.status, p.version, p.description})
 }
 
 // hasExternalPlugins checks if any plugins in the list are external.

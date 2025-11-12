@@ -1,19 +1,19 @@
 # Regions Package
 
-Internal utility package for extracting colors from specific regions of 2D images for ambient lighting applications.
+Internal utility package for extracting colours from specific regions of 2D images for ambient lighting applications.
 
 ## Overview
 
-This package provides functionality to sample colors from edges and corners of images in various configurations (4, 8, 12, or 16 regions). It's designed to support ambient LED lighting setups where lights are positioned around a monitor and should match colors from the wallpaper edges.
+This package provides functionality to sample colours from edges and corners of images in various configurations (4, 8, 12, or 16 regions). It's designed to support ambient LED lighting setups where lights are positioned around a monitor and should match colours from the wallpaper edges.
 
 ## Features
 
 - **Multiple Configurations:** Support for 4, 8, 12, and 16 region layouts
 - **Flexible Sampling:** Configurable sample size and extraction method
-- **RoleHints Integration:** Automatically maps extracted colors to positional semantic roles
+- **RoleHints Integration:** Automatically maps extracted colours to positional semantic roles
 - **Two Extraction Methods:** 
-  - Average: Calculate average color of all pixels in region (default)
-  - Dominant: Find most frequent color in region (more vibrant)
+  - Average: Calculate average colour of all pixels in region (default)
+  - Dominant: Find most frequent colour in region (more vibrant)
 
 ## Configurations
 
@@ -90,8 +90,8 @@ func main() {
         panic(err)
     }
     
-    // palette.Colors contains the extracted colors
-    // palette.RoleHints maps positional roles to color indices
+    // palette.Colours contains the extracted colours
+    // palette.RoleHints maps positional roles to colour indices
 }
 ```
 
@@ -101,7 +101,7 @@ func main() {
 // Create sampler with custom settings
 sampler := &regions.Sampler{
     SamplePercent: 15,      // Sample 15% of edges (default: 10%)
-    Method:        "dominant", // Use dominant color (default: "average")
+    Method:        "dominant", // Use dominant colour (default: "average")
 }
 
 // Extract 12 regions
@@ -113,16 +113,16 @@ palette, err := sampler.Extract(img, regions.Config12Regions)
 ```go
 palette, _ := sampler.Extract(img, regions.Config8Regions)
 
-// Colors are in the palette
-for i, color := range palette.Colors {
-    rgb := colour.ToRGB(color)
-    fmt.Printf("Color %d: %s\n", i, rgb.Hex())
+// Colours are in the palette
+for i, colour := range palette.Colours {
+    rgb := colour.ToRGB(colour)
+    fmt.Printf("Colour %d: %s\n", i, rgb.Hex())
 }
 
-// RoleHints map positions to color indices
+// RoleHints map positions to colour indices
 for role, index := range palette.RoleHints {
-    color := palette.Colors[index]
-    fmt.Printf("%s -> Color %d: %s\n", role, index, colour.ToRGB(color).Hex())
+    colour := palette.Colours[index]
+    fmt.Printf("%s -> Colour %d: %s\n", role, index, colour.ToRGB(colour).Hex())
 }
 ```
 
@@ -176,13 +176,13 @@ The package uses semantic roles from `internal/colour` to identify positions:
 
 **Average (default):**
 - Calculates arithmetic mean of all pixels in region
-- Produces natural, smooth colors
+- Produces natural, smooth colours
 - Best for most use cases
 
 **Dominant:**
-- Finds most frequent color in region (quantized)
-- Produces more vibrant, saturated colors
-- Better for images with distinct color blocks
+- Finds most frequent colour in region (quantized)
+- Produces more vibrant, saturated colours
+- Better for images with distinct colour blocks
 
 ## Integration with Image Plugin
 
@@ -222,8 +222,8 @@ Performance scales linearly with region count and sample size.
 
 ### Why Sample Percentage?
 - Allows users to control precision vs averaging
-- Larger samples = smoother, more representative colors
-- Smaller samples = more precise, position-specific colors
+- Larger samples = smoother, more representative colours
+- Smaller samples = more precise, position-specific colours
 - Default (10%) works well for most images
 
 ## Testing

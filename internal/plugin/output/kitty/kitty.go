@@ -51,7 +51,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Kitty terminal colour theme configuration"
+	return "Kitty terminal colour theme"
 }
 
 // Version returns the plugin version.

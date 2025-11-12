@@ -4,19 +4,19 @@
 **Built-in:** Yes  
 **Language:** Go
 
-Load color palettes from saved files or build palettes from manual color specifications.
+Load colour palettes from saved files or build palettes from manual colour specifications.
 
 ## Overview
 
-The `file` plugin loads previously saved color palettes or builds palettes from manual color specifications. It supports both JSON (categorized palettes) and simple text formats (hex colors with optional role assignments). This is useful for reusing generated palettes, sharing themes, or manually defining specific colors.
+The `file` plugin loads previously saved colour palettes or builds palettes from manual colour specifications. It supports both JSON (categorized palettes) and simple text formats (hex colours with optional role assignments). This is useful for reusing generated palettes, sharing themes, or manually defining specific colours.
 
 ## Features
 
 - ✅ **Multiple formats** - JSON (categorized palettes) and text (hex lists)
 - ✅ **Role preservation** - Maintains semantic role assignments from saved palettes
-- ✅ **Manual specifications** - Build palettes from command-line color specs
-- ✅ **Flexible syntax** - Supports both `colour` and `color` spelling
-- ✅ **Override support** - Merge file colors with manual overrides
+- ✅ **Manual specifications** - Build palettes from command-line colour specs
+- ✅ **Flexible syntax** - Supports both `colour` and `colour` spelling
+- ✅ **Override support** - Merge file colours with manual overrides
 - ✅ **Fast** - No extraction needed, instant loading
 
 ## Usage
@@ -32,13 +32,13 @@ tinct generate -i file --file.path saved-palette.json -o hyprland,kitty
 
 ```bash
 # Load simple hex list
-tinct generate -i file --file.path colors.txt -o hyprland
+tinct generate -i file --file.path colours.txt -o hyprland
 ```
 
-### Manual Color Specifications
+### Manual Colour Specifications
 
 ```bash
-# Build palette from manual colors (no file)
+# Build palette from manual colours (no file)
 tinct generate -i file \
   --colour "background=#1e1e2e" \
   --colour "foreground=#cdd6f4" \
@@ -56,7 +56,7 @@ tinct generate -i file --file.path base-palette.json \
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--file.path` | *(optional)* | Path to palette file (JSON or text) |
-| `--colour` | *(repeatable)* | Manual color specification (role=hex) |
+| `--colour` | *(repeatable)* | Manual colour specification (role=hex) |
 
 **Note:** Either `--file.path` or `--colour` must be provided (or both).
 
@@ -100,9 +100,9 @@ Load a complete categorized palette with roles and theme metadata:
 
 This is the format output by `tinct extract --categorise`.
 
-### Text Format (Hex Colors)
+### Text Format (Hex Colours)
 
-Simple line-based format with hex colors:
+Simple line-based format with hex colours:
 
 ```
 # My custom palette
@@ -117,7 +117,7 @@ accent1=#f38ba8
 accent2=#89b4fa
 accent3=#a6e3a1
 
-# Or just hex colors without roles
+# Or just hex colours without roles
 #ff5555
 #50fa7b
 #8be9fd
@@ -129,7 +129,7 @@ accent3=#a6e3a1
 - `#comments` - Comments (ignored)
 - Empty lines (ignored)
 
-### Hex Color Formats
+### Hex Colour Formats
 
 All standard hex formats are supported:
 
@@ -148,23 +148,23 @@ When specifying roles, you can use any of these semantic role names:
 
 | Role | Description |
 |------|-------------|
-| `background` | Primary background color |
+| `background` | Primary background colour |
 | `backgroundMuted` | Secondary/muted background |
-| `foreground` | Primary text/foreground color |
+| `foreground` | Primary text/foreground colour |
 | `foregroundMuted` | Secondary/muted foreground |
-| `accent1` | Primary accent color |
+| `accent1` | Primary accent colour |
 | `accent1Muted` | Muted primary accent |
-| `accent2` | Secondary accent color |
+| `accent2` | Secondary accent colour |
 | `accent2Muted` | Muted secondary accent |
-| `accent3` | Tertiary accent color |
+| `accent3` | Tertiary accent colour |
 | `accent3Muted` | Muted tertiary accent |
-| `accent4` | Quaternary accent color |
+| `accent4` | Quaternary accent colour |
 | `accent4Muted` | Muted quaternary accent |
-| `danger` | Error/danger color (red) |
-| `warning` | Warning color (yellow/orange) |
-| `success` | Success color (green) |
-| `info` | Info color (blue) |
-| `notification` | Notification accent color |
+| `danger` | Error/danger colour (red) |
+| `warning` | Warning colour (yellow/orange) |
+| `success` | Success colour (green) |
+| `info` | Info colour (blue) |
+| `notification` | Notification accent colour |
 
 ### Position Roles (Ambient Lighting)
 
@@ -237,20 +237,20 @@ tinct generate -i file \
   -o hyprland,kitty
 ```
 
-### Override Specific Colors
+### Override Specific Colours
 
 ```bash
-# Load base palette but override accent colors
+# Load base palette but override accent colours
 tinct generate -i file --file.path catppuccin-mocha.json \
   --colour "accent1=#ff0000" \
   --colour "accent2=#00ff00" \
   -o hyprland
 ```
 
-### Quick Test Colors
+### Quick Test Colours
 
 ```bash
-# Test a specific color combination
+# Test a specific colour combination
 tinct generate -i file \
   --colour "background=#000000" \
   --colour "foreground=#ffffff" \
@@ -293,7 +293,7 @@ tinct generate -i file \
   --colour "accent2=#89b4fa" \
   --preview
 
-# Adjust colors until satisfied
+# Adjust colours until satisfied
 # Then generate for all apps
 tinct generate -i file \
   --colour "background=#1e1e2e" \
@@ -306,7 +306,7 @@ tinct generate -i file \
 ### 4. Tweak Existing Palettes
 
 ```bash
-# Load base theme and adjust specific colors
+# Load base theme and adjust specific colours
 tinct generate -i file --file.path catppuccin.json \
   --colour "accent1=#ff6b9d" \
   --colour "background=#16161e" \
@@ -334,25 +334,25 @@ Validate() error
    - Try JSON format (categorized palette)
    - Fallback to text format (hex list with optional roles)
    
-2. **Parse Manual Colors** (if `--colour` provided)
+2. **Parse Manual Colours** (if `--colour` provided)
    - Parse role=hex specifications
-   - Create color objects with role hints
+   - Create colour objects with role hints
 
 3. **Merge** (if both provided)
-   - Start with file colors
+   - Start with file colours
    - Override with manual specifications
-   - Role-based overrides replace existing role colors
+   - Role-based overrides replace existing role colours
 
 4. **Return Palette**
-   - Colors with role hints (if roles were specified)
-   - Or raw colors for categorization
+   - Colours with role hints (if roles were specified)
+   - Or raw colours for categorisation
 
 ## Validation
 
 The plugin validates:
-- ✅ At least one source provided (file or manual colors)
-- ✅ Color specifications use `role=hex` format
-- ✅ Hex colors are valid (6 or 3 characters)
+- ✅ At least one source provided (file or manual colours)
+- ✅ Colour specifications use `role=hex` format
+- ✅ Hex colours are valid (6 or 3 characters)
 - ✅ Role names are recognized
 
 ## Error Messages
@@ -370,7 +370,7 @@ tinct generate -i file --colour "background=#000000" -o hyprland
 
 ### "Invalid colour format 'xxx': expected 'role=hex'"
 
-**Problem:** Manual color missing `=` separator.
+**Problem:** Manual colour missing `=` separator.
 
 **Solution:**
 ```bash
@@ -385,7 +385,7 @@ tinct generate -i file --colour "accent1=#ff0000" -o hyprland
 
 ### "Invalid hex colour length"
 
-**Problem:** Hex color is not 3 or 6 characters.
+**Problem:** Hex colour is not 3 or 6 characters.
 
 **Solution:**
 ```bash
@@ -417,7 +417,7 @@ go test ./internal/plugin/input/file/...
 # Test with file
 tinct generate -i file --file.path testdata/palette.json -o hyprland --dry-run
 
-# Test with manual colors
+# Test with manual colours
 tinct generate -i file \
   --colour "background=#000000" \
   --colour "foreground=#ffffff" \

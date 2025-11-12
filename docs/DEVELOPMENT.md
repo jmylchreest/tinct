@@ -76,17 +76,17 @@ type Registry[T any] struct {
 
 // Use slices package for operations
 import "slices"
-colors = slices.Clone(originalColors)
-slices.SortFunc(colors, compareColors)
+colours = slices.Clone(originalColors)
+slices.SortFunc(colours, compareColors)
 
 // Use structured logging
 import "log/slog"
 logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-logger.Info("extracting colors", "algorithm", "kmeans", "count", 16)
+logger.Info("extracting colours", "algorithm", "kmeans", "count", 16)
 
 // Use range over functions for custom iterators
-for color := range palette.Colors() {
-    // process color
+for colour := range palette.Colours() {
+    // process colour
 }
 
 // Use errors.Join for multiple errors
@@ -118,9 +118,9 @@ strings := Map(numbers, strconv.Itoa) // T and U inferred
 **2. Range Over Function Types**
 ```go
 // Custom iterators without explicit interfaces
-func (p *Palette) Colors() func(func(color.Color) bool) {
-    return func(yield func(color.Color) bool) {
-        for _, c := range p.colors {
+func (p *Palette) Colours() func(func(colour.Colour) bool) {
+    return func(yield func(colour.Colour) bool) {
+        for _, c := range p.colours {
             if !yield(c) {
                 return
             }
@@ -129,8 +129,8 @@ func (p *Palette) Colors() func(func(color.Color) bool) {
 }
 
 // Usage with range
-for color := range palette.Colors() {
-    process(color)
+for colour := range palette.Colours() {
+    process(colour)
 }
 ```
 
@@ -138,7 +138,7 @@ for color := range palette.Colors() {
 ```go
 // slices package
 import "slices"
-sorted := slices.Clone(colors)
+sorted := slices.Clone(colours)
 slices.SortFunc(sorted, compareColors)
 unique := slices.Compact(sorted)
 
@@ -177,7 +177,7 @@ logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 }))
 
 // Structured logging with context
-logger.Info("extracting colors",
+logger.Info("extracting colours",
     "algorithm", "kmeans",
     "count", 16,
     "duration", time.Since(start))
@@ -239,7 +239,7 @@ Tinct follows a plugin-based architecture with the following components:
 ### High-Level Flow
 
 ```
-Source Plugins (optional) -> Input (Image/Colors) -> Color Extraction -> Palette Generation -> Output Plugins -> Hooks
+Source Plugins (optional) -> Input (Image/Colours) -> Colour Extraction -> Palette Generation -> Output Plugins -> Hooks
       |                                                    |
   (AI Gen, Fetch)                                   Configuration
 ```
@@ -249,14 +249,14 @@ Source Plugins (optional) -> Input (Image/Colors) -> Color Extraction -> Palette
 1. **Direct Image Input**: `Image -> Extract -> Generate -> Output Plugins`
 2. **AI Wallpaper Generation**: `AI Source Plugin -> Generate Image -> Extract -> Generate -> Output Plugins`
 3. **Wallpaper Fetching**: `Fetch Source Plugin -> Download -> Extract -> Generate -> Output Plugins`
-4. **Color Codes**: `Color Codes -> Generate -> Output Plugins`
+4. **Colour Codes**: `Colour Codes -> Generate -> Output Plugins`
 
 ### Key Architectural Goals
 
 - **Extensibility**: Easy to add new colour extraction algorithms and output plugins
 - **Composability**: Plugins work independently but can be chained
 - **Testability**: Each component is independently testable
-- **Performance**: Efficient color processing, concurrent plugin execution where safe
+- **Performance**: Efficient colour processing, concurrent plugin execution where safe
 - **User Experience**: Clear CLI interface, helpful error messages, sensible defaults
 
 ## SOLID Principles in Go
@@ -299,7 +299,7 @@ Design for extension without modification. Use interfaces extensively.
 ```go
 // Open for extension via interface implementation
 type ColorExtractor interface {
-    Extract(ctx context.Context, input io.Reader) ([]color.Color, error)
+    Extract(ctx context.Context, input io.Reader) ([]colour.Colour, error)
 }
 
 type KMeansExtractor struct{}
@@ -420,7 +420,7 @@ func NewExecutor(plugins []Plugin) *Executor { // interface parameter
 
 #### Use Context for Cancellation and Timeouts
 ```go
-func (e *Extractor) Extract(ctx context.Context, img image.Image) ([]color.Color, error) {
+func (e *Extractor) Extract(ctx context.Context, img image.Image) ([]colour.Colour, error) {
     select {
     case <-ctx.Done():
         return nil, ctx.Err()
@@ -435,7 +435,7 @@ func (e *Extractor) Extract(ctx context.Context, img image.Image) ([]color.Color
 ```go
 // Wrap errors with context
 if err != nil {
-    return fmt.Errorf("failed to extract colors: %w", err)
+    return fmt.Errorf("failed to extract colours: %w", err)
 }
 
 // Use errors.Is and errors.As for checking
@@ -469,8 +469,8 @@ func TestColorExtraction(t *testing.T) {
         want    int
         wantErr bool
     }{
-        {"8 colors", testImage1, 8, false},
-        {"16 colors", testImage2, 16, false},
+        {"8 colours", testImage1, 8, false},
+        {"16 colours", testImage2, 16, false},
         {"invalid", nil, 0, true},
     }
     
@@ -539,9 +539,9 @@ func (r *Registry[T]) Get(name string) (T, bool) {
 import "slices"
 
 // Use slices package for common operations
-colors = slices.Clone(originalColors)
-slices.Sort(colors)
-unique := slices.Compact(slices.Clone(colors))
+colours = slices.Clone(originalColors)
+slices.Sort(colours)
+unique := slices.Compact(slices.Clone(colours))
 
 if slices.Contains(supportedFormats, format) {
     // ...
@@ -558,7 +558,7 @@ tinct/
  internal/
     app/
        app.go              # Application orchestration
-    color/
+    colour/
        extractor.go        # Colour extraction interfaces
        kmeans.go           # K-means implementation
        mediancut.go        # Median cut implementation
@@ -630,14 +630,14 @@ func init() {
     
     // Global flags
     rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
-    rootCmd.PersistentFlags().IntP("colors", "c", 16, "number of colors to extract")
+    rootCmd.PersistentFlags().IntP("colours", "c", 16, "number of colours to extract")
     
     // Command flags
     generateCmd.Flags().StringP("algorithm", "a", "kmeans", "extraction algorithm")
     generateCmd.Flags().StringSliceP("plugins", "p", []string{}, "plugins to execute")
     
     // Bind flags to viper
-    viper.BindPFlag("colors", rootCmd.PersistentFlags().Lookup("colors"))
+    viper.BindPFlag("colours", rootCmd.PersistentFlags().Lookup("colours"))
     viper.BindPFlag("algorithm", generateCmd.Flags().Lookup("algorithm"))
     
     rootCmd.AddCommand(generateCmd)
@@ -1241,7 +1241,7 @@ type OutputPlugin interface {
     Name() string
     
     // Execute generates output based on the palette
-    Execute(ctx context.Context, palette *color.Palette) error
+    Execute(ctx context.Context, palette *colour.Palette) error
 }
 
 // Validator is an optional interface for plugins that need validation
@@ -1325,8 +1325,8 @@ func (p *AlacrittyPlugin) Name() string {
     return "alacritty"
 }
 
-func (p *AlacrittyPlugin) Execute(ctx context.Context, palette *color.Palette) error {
-    // Generate alacritty.yml color configuration
+func (p *AlacrittyPlugin) Execute(ctx context.Context, palette *colour.Palette) error {
+    // Generate alacritty.yml colour configuration
     // ...
     return nil
 }
@@ -1334,13 +1334,13 @@ func (p *AlacrittyPlugin) Execute(ctx context.Context, palette *color.Palette) e
 func (p *AlacrittyPlugin) Metadata() plugin.Metadata {
     return plugin.Metadata{
         Name:        "alacritty",
-        Description: "Generate Alacritty terminal color scheme",
+        Description: "Generate Alacritty terminal colour scheme",
         Version:     "1.0.0",
     }
 }
 
 func init() {
-    plugin.RegisterOutput("alacritty", NewAlacrittyPlugin("~/.config/alacritty/colors.yml"))
+    plugin.RegisterOutput("alacritty", NewAlacrittyPlugin("~/.config/alacritty/colours.yml"))
 }
 ```
 
@@ -1659,7 +1659,7 @@ type Hook interface {
 
 // State provides context to hooks
 type State struct {
-    Palette     *color.Palette
+    Palette     *colour.Palette
     PluginNames []string
     Errors      []error
 }
@@ -1719,12 +1719,12 @@ import "errors"
 var (
     // Domain errors
     ErrInvalidImage       = errors.New("invalid image format")
-    ErrInvalidColorCount  = errors.New("invalid color count")
+    ErrInvalidColorCount  = errors.New("invalid colour count")
     ErrPluginNotFound     = errors.New("plugin not found")
     ErrHookFailed         = errors.New("hook execution failed")
     
     // Sentinel errors for specific cases
-    ErrNoColorsExtracted  = errors.New("no colors extracted")
+    ErrNoColorsExtracted  = errors.New("no colours extracted")
     ErrConfigNotFound     = errors.New("configuration not found")
 )
 
@@ -1757,12 +1757,12 @@ func (e *PluginError) Unwrap() error {
 ### Test Organization
 
 ```go
-// color/extractor_test.go
+// colour/extractor_test.go
 package color_test // Use _test package for black-box testing
 
 import (
     "testing"
-    "tinct/internal/color"
+    "tinct/internal/colour"
 )
 
 func TestExtractor(t *testing.T) {
@@ -1770,8 +1770,8 @@ func TestExtractor(t *testing.T) {
 }
 
 // For testing internals, use same package
-// color/palette_internal_test.go
-package color
+// colour/palette_internal_test.go
+package colour
 
 import "testing"
 
@@ -1787,7 +1787,7 @@ func TestInternalFunction(t *testing.T) {
 func TestPaletteGeneration(t *testing.T) {
     tests := []struct {
         name       string
-        colors     []color.Color
+        colours     []colour.Colour
         count      int
         wantColors int
         wantErr    bool
@@ -1797,13 +1797,13 @@ func TestPaletteGeneration(t *testing.T) {
     
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            got, err := GeneratePalette(tt.colors, tt.count)
+            got, err := GeneratePalette(tt.colours, tt.count)
             if (err != nil) != tt.wantErr {
                 t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
                 return
             }
-            if len(got.Colors) != tt.wantColors {
-                t.Errorf("got %d colors, want %d", len(got.Colors), tt.wantColors)
+            if len(got.Colours) != tt.wantColors {
+                t.Errorf("got %d colours, want %d", len(got.Colours), tt.wantColors)
             }
         })
     }
@@ -1868,7 +1868,7 @@ func BenchmarkColorExtraction(b *testing.B) {
 //
 // Example usage:
 //
-//     p := palette.New(colors)
+//     p := palette.New(colours)
 //     optimized := p.Optimize()
 //     hex := optimized.ToHex()
 //
@@ -1878,8 +1878,8 @@ package palette
 ### Function Documentation
 
 ```go
-// Extract analyzes the image and extracts the specified number of dominant colors.
-// It uses the configured algorithm (K-means, median cut, etc.) to identify colors
+// Extract analyzes the image and extracts the specified number of dominant colours.
+// It uses the configured algorithm (K-means, median cut, etc.) to identify colours
 // that best represent the image.
 //
 // The context can be used to cancel long-running extractions. If the image is nil
@@ -1887,12 +1887,12 @@ package palette
 //
 // Example:
 //
-//     colors, err := extractor.Extract(ctx, img)
+//     colours, err := extractor.Extract(ctx, img)
 //     if err != nil {
 //         return fmt.Errorf("extraction failed: %w", err)
 //     }
 //
-func (e *Extractor) Extract(ctx context.Context, img image.Image) ([]color.Color, error) {
+func (e *Extractor) Extract(ctx context.Context, img image.Image) ([]colour.Colour, error) {
     // implementation
 }
 ```

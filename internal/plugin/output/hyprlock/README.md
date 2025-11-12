@@ -1,18 +1,18 @@
 # Hyprlock Output Plugin
 
-Generate color themes for [Hyprlock](https://github.com/hyprwm/hyprlock), the GPU-accelerated screen lock for Hyprland.
+Generate colour themes for [Hyprlock](https://github.com/hyprwm/hyprlock), the GPU-accelerated screen lock for Hyprland.
 
 ## Overview
 
-The Hyprlock plugin generates a color configuration file (`tinct-hyprlock.conf`) with Hyprland-style color variables that can be sourced in your hyprlock configuration.
+The Hyprlock plugin generates a colour configuration file (`tinct-hyprlock.conf`) with Hyprland-style colour variables that can be sourced in your hyprlock configuration.
 
 ## Features
 
 - Single configuration file generation
 - Hyprland variable syntax (`$variable`)
-- Both RGB and RGBA color formats
-- Semantic color mapping
-- Pre-defined color variables for quick theming
+- Both RGB and RGBA colour formats
+- Semantic colour mapping
+- Pre-defined colour variables for quick theming
 - Wallpaper path variable (when using image input plugin)
 - Usage examples in comments
 
@@ -38,7 +38,7 @@ source = ~/.config/hypr/tinct-hyprlock.conf
 
 background {
     path = $tinct_wallpaper
-    color = $tinct_background
+    colour = $tinct_background
     blur_passes = 3
 }
 ```
@@ -47,7 +47,7 @@ background {
 
 ## Generated Files
 
-- `tinct-hyprlock.conf` - Complete color variable definitions
+- `tinct-hyprlock.conf` - Complete colour variable definitions
 
 ## Default Output Location
 
@@ -91,13 +91,13 @@ tinct generate --output hyprlock
 Edit `~/.config/hypr/hyprlock.conf`:
 
 ```conf
-# Source tinct colors
+# Source tinct colours
 source = ~/.config/hypr/tinct-hyprlock.conf
 
-# Use the color variables
+# Use the colour variables
 background {
     monitor =
-    color = $tinct_background
+    colour = $tinct_background
     blur_passes = 3
 }
 
@@ -123,7 +123,7 @@ label {
     monitor =
     text = $TIME
     font_size = 90
-    color = $tinct_foreground
+    colour = $tinct_foreground
     
     position = -30, 0
     halign = right
@@ -133,13 +133,13 @@ label {
 
 ### Method 2: Copy Variables
 
-Alternatively, copy the generated color variables directly into your `hyprlock.conf`.
+Alternatively, copy the generated colour variables directly into your `hyprlock.conf`.
 
-## Color Variables
+## Colour Variables
 
-The plugin generates two sets of color variables:
+The plugin generates two sets of colour variables:
 
-### RGB Variables (for solid colors)
+### RGB Variables (for solid colours)
 
 ```conf
 $tinct_background
@@ -173,7 +173,7 @@ $tinct_success_rgba          # 100% opacity
 $tinct_info_rgba             # 100% opacity
 ```
 
-## Color Format
+## Colour Format
 
 ### RGB Format
 
@@ -193,7 +193,7 @@ Hyprland uses `rgba(R, G, B, A)` where:
 $tinct_background_rgba = rgba(26, 27, 38, 0.93)
 ```
 
-## Color Mapping
+## Colour Mapping
 
 | Variable | Tinct Role | Common Usage |
 |----------|------------|--------------|
@@ -209,10 +209,10 @@ $tinct_background_rgba = rgba(26, 27, 38, 0.93)
 
 ## Example Configuration
 
-Complete example using Tinct colors:
+Complete example using Tinct colours:
 
 ```conf
-# Source tinct colors
+# Source tinct colours
 source = ~/.config/hypr/tinct-hyprlock.conf
 
 general {
@@ -222,7 +222,7 @@ general {
 background {
     monitor =
     path = screenshot
-    color = $tinct_background
+    colour = $tinct_background
     blur_passes = 3
 }
 
@@ -259,7 +259,7 @@ label {
     monitor =
     text = $TIME
     font_size = 90
-    color = $tinct_foreground
+    colour = $tinct_foreground
     
     position = -30, 0
     halign = right
@@ -271,7 +271,7 @@ label {
     monitor =
     text = cmd[update:60000] date +"%A, %d %B %Y"
     font_size = 25
-    color = $tinct_foreground_muted
+    colour = $tinct_foreground_muted
     
     position = -30, -150
     halign = right
@@ -283,7 +283,7 @@ label {
     monitor =
     text = Hi, $USER
     font_size = 20
-    color = $tinct_accent2
+    colour = $tinct_accent2
     
     position = 0, 80
     halign = center
@@ -325,7 +325,7 @@ Available in the template:
 
 ### Helper Methods
 
-Convert colors to different formats:
+Convert colours to different formats:
 
 ```go
 // RGB format (RRGGBB without #)
@@ -362,7 +362,7 @@ If `hyprlock` is not found, the plugin will be skipped with a message.
 
 ## Troubleshooting
 
-### Colors Not Applied
+### Colours Not Applied
 
 Ensure the source path is correct:
 
@@ -406,19 +406,19 @@ source = tinct-hyprlock.conf
 source = ./tinct-hyprlock.conf
 ```
 
-### RGBA Colors Look Wrong
+### RGBA Colours Look Wrong
 
 Hyprland's RGBA format uses:
 - RGB values in decimal (0-255)
 - Alpha as float (0.0-1.0)
 
-If colors look incorrect, check that you're using the RGBA variables (ending in `_rgba`), not the RGB ones.
+If colours look incorrect, check that you're using the RGBA variables (ending in `_rgba`), not the RGB ones.
 
 ## Advanced Usage
 
 ### Gradients
 
-Hyprlock supports color gradients:
+Hyprlock supports colour gradients:
 
 ```conf
 input-field {
@@ -431,13 +431,13 @@ input-field {
 
 ### Dynamic Backgrounds
 
-Use screenshot with color overlay:
+Use screenshot with colour overlay:
 
 ```conf
 background {
     monitor =
     path = screenshot
-    color = $tinct_background_rgba  # Transparent overlay
+    colour = $tinct_background_rgba  # Transparent overlay
     blur_passes = 3
 }
 ```
@@ -451,7 +451,7 @@ Create themed status displays:
 label {
     monitor =
     text = cmd[update:5000] uname -r
-    color = $tinct_info
+    colour = $tinct_info
     font_size = 14
     position = 10, 10
     halign = left
@@ -462,7 +462,7 @@ label {
 label {
     monitor =
     text = cmd[update:600000] ~/.config/hypr/scripts/weather.sh
-    color = $tinct_accent3
+    colour = $tinct_accent3
     font_size = 16
     position = -10, 10
     halign = right
@@ -477,7 +477,7 @@ label {
 # Detected theme: dark
 
 # ============================================================================
-# Tinct Color Variables
+# Tinct Colour Variables
 # ============================================================================
 
 $tinct_background = rgb(1a1b26)
@@ -519,7 +519,7 @@ $tinct_info_rgba = rgba(122, 162, 247, 1.00)
 
 - [Hyprlock Documentation](https://wiki.hyprland.org/Hypr-Ecosystem/hyprlock/)
 - [Hyprlock GitHub](https://github.com/hyprwm/hyprlock)
-- [Hyprland Colors Documentation](https://wiki.hyprland.org/Configuring/Variables/#colors)
+- [Hyprland Colours Documentation](https://wiki.hyprland.org/Configuring/Variables/#colours)
 - [Example Configurations](https://github.com/hyprwm/hyprlock/blob/main/assets/example.conf)
 
 ## See Also

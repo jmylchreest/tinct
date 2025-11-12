@@ -1,16 +1,16 @@
 # Tinct Template Guide
 
-Complete guide to using templates in tinct output plugins, including all available functions, color access patterns, and iteration methods.
+Complete guide to using templates in tinct output plugins, including all available functions, colour access patterns, and iteration methods.
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
 - [Template Functions](#template-functions)
-- [Color Access](#color-access)
+- [Colour Access](#colour-access)
 - [Format Conversion](#format-conversion)
 - [Alpha Channel Support](#alpha-channel-support)
 - [Iteration and Loops](#iteration-and-loops)
-- [Complete Color Role List](#complete-color-role-list)
+- [Complete Colour Role List](#complete-colour-role-list)
 - [External Plugin Integration](#external-plugin-integration)
 - [Examples](#examples)
 
@@ -28,7 +28,7 @@ Complete guide to using templates in tinct output plugins, including all availab
 background {{ get . "background" | hex }}
 foreground {{ get . "foreground" | hex }}
 
-# Accent colors
+# Accent colours
 accent1 {{ get . "accent1" | hex }}
 accent2 {{ get . "accent2" | hex }}
 
@@ -44,15 +44,15 @@ All templates receive a `*colour.ThemeData` struct that embeds `*colour.PaletteH
 
 ```go
 type ThemeData struct {
-    *PaletteHelper    // Embedded - provides all color access methods
+    *PaletteHelper    // Embedded - provides all colour access methods
     WallpaperPath string  // Path to wallpaper (if using image input)
     ThemeName     string  // Optional theme name (used by some plugins)
 }
 ```
 
-#### Basic Color Access
+#### Basic Colour Access
 
-Since `ThemeData` embeds `PaletteHelper`, access colors directly:
+Since `ThemeData` embeds `PaletteHelper`, access colours directly:
 
 ```go
 {{ get . "background" | hex }}
@@ -80,10 +80,10 @@ theme {{ .ThemeName }}
 
 ## Template Functions
 
-### Color Access Functions
+### Colour Access Functions
 
 #### `get <palette> <role>`
-Get a color by role name. **Panics if role doesn't exist** - use `has` to check first.
+Get a colour by role name. **Panics if role doesn't exist** - use `has` to check first.
 
 ```go
 {{ get . "background" }}          // Returns ColorValue
@@ -91,14 +91,14 @@ Get a color by role name. **Panics if role doesn't exist** - use `has` to check 
 ```
 
 #### `getSafe <palette> <role>`
-Safely get a color by role. Returns error if role doesn't exist.
+Safely get a colour by role. Returns error if role doesn't exist.
 
 ```go
-{{ $color, $err := getSafe . "customRole" }}
+{{ $colour, $err := getSafe . "customRole" }}
 {{ if $err }}
     # Role not found
 {{ else }}
-    color {{ $color | hex }}
+    colour {{ $colour | hex }}
 {{ end }}
 ```
 
@@ -114,52 +114,52 @@ border {{ get . "outline" | hex }}
 ```
 
 #### `getByIndex <palette> <index>`
-Get color by index in the `AllColors` array (sorted by luminance).
+Get colour by index in the `AllColors` array (sorted by luminance).
 
 ```go
-{{ $color, $err := getByIndex . 0 }}
-color0 {{ $color | hex }}
+{{ $colour, $err := getByIndex . 0 }}
+color0 {{ $colour | hex }}
 ```
 
 #### `ansi <palette> <colorName>`
-Find the closest color to a standard ANSI terminal color name. **Panics if color name is invalid** - use `ansiSafe` to check first.
+Find the closest colour to a standard ANSI terminal colour name. **Panics if colour name is invalid** - use `ansiSafe` to check first.
 
-Supported color names:
+Supported colour names:
 - **Standard**: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`
 - **Bright**: `brightblack`, `brightred`, `brightgreen`, `brightyellow`, `brightblue`, `brightmagenta`, `brightcyan`, `brightwhite`
 - **Aliases**: `color0`-`color15`, `gray`, `grey`, `purple`, `darkgray`, `darkgrey`, etc.
 - **Extended**: `orange`, `pink`, `brown`, `lime`, `navy`, `teal`, `maroon`, `olive`, `violet`, `indigo`
 
 ```go
-# Map ANSI terminal colors to palette
+# Map ANSI terminal colours to palette
 color0 {{ ansi . "black" | hex }}         # Closest to black
 color1 {{ ansi . "red" | hex }}           # Closest to red
 color2 {{ ansi . "green" | hex }}         # Closest to green
 color4 {{ ansi . "blue" | hex }}          # Closest to blue
 ```
 
-**How it works**: Finds the color in your palette that is perceptually closest to the requested ANSI color using color distance calculation (weighted Euclidean distance in RGB space).
+**How it works**: Finds the colour in your palette that is perceptually closest to the requested ANSI colour using colour distance calculation (weighted Euclidean distance in RGB space).
 
 ```go
-# Example: Terminal color scheme
+# Example: Terminal colour scheme
 {{ range $i, $name := list "black" "red" "green" "yellow" "blue" "magenta" "cyan" "white" }}
-color{{ $i }} {{ ansi $ $name | hex }}
+colour{{ $i }} {{ ansi $ $name | hex }}
 {{ end }}
 
 {{ range $i, $name := list "brightblack" "brightred" "brightgreen" "brightyellow" "brightblue" "brightmagenta" "brightcyan" "brightwhite" }}
-color{{ add $i 8 }} {{ ansi $ $name | hex }}
+colour{{ add $i 8 }} {{ ansi $ $name | hex }}
 {{ end }}
 ```
 
 #### `ansiSafe <palette> <colorName>`
-Safely find the closest ANSI color. Returns error if color name is not recognized.
+Safely find the closest ANSI colour. Returns error if colour name is not recognized.
 
 ```go
-{{ $color, $err := ansiSafe . "customColorName" }}
+{{ $colour, $err := ansiSafe . "customColorName" }}
 {{ if $err }}
-    # Color name not recognized
+    # Colour name not recognized
 {{ else }}
-    color {{ $color | hex }}
+    colour {{ $colour | hex }}
 {{ end }}
 ```
 
@@ -167,7 +167,7 @@ Safely find the closest ANSI color. Returns error if color name is not recognize
 
 All format functions take a `ColorValue` and return a formatted string.
 
-#### `hex <color>`
+#### `hex <colour>`
 Returns `#RRGGBB` format (no alpha).
 
 ```go
@@ -175,7 +175,7 @@ Returns `#RRGGBB` format (no alpha).
 # Output: #1e1e2e
 ```
 
-#### `hexAlpha <color>`
+#### `hexAlpha <colour>`
 Returns `#RRGGBBAA` format (with alpha).
 
 ```go
@@ -183,7 +183,7 @@ Returns `#RRGGBBAA` format (with alpha).
 # Output: #00000052
 ```
 
-#### `hexNoHash <color>`
+#### `hexNoHash <colour>`
 Returns `RRGGBB` format (no # prefix, no alpha).
 
 ```go
@@ -191,7 +191,7 @@ Returns `RRGGBB` format (no # prefix, no alpha).
 # Output: 89b4fa
 ```
 
-#### `rgb <color>`
+#### `rgb <colour>`
 Returns CSS `rgb(r,g,b)` format (no alpha).
 
 ```go
@@ -199,7 +199,7 @@ Returns CSS `rgb(r,g,b)` format (no alpha).
 # Output: rgb(30, 30, 46)
 ```
 
-#### `rgba <color>`
+#### `rgba <colour>`
 Returns CSS `rgba(r,g,b,a)` format (with alpha).
 
 ```go
@@ -207,7 +207,7 @@ Returns CSS `rgba(r,g,b,a)` format (with alpha).
 # Output: rgba(0, 0, 0, 0.32)
 ```
 
-#### `rgbDecimal <color>`
+#### `rgbDecimal <colour>`
 Returns `r,g,b` decimal format (for Hyprland, no alpha).
 
 ```go
@@ -215,7 +215,7 @@ Returns `r,g,b` decimal format (for Hyprland, no alpha).
 # Output: 137,180,250
 ```
 
-#### `rgbaDecimal <color>`
+#### `rgbaDecimal <colour>`
 Returns `r,g,b,a` decimal format with alpha channel (for Hyprlock and other tools that need decimal RGBA).
 
 ```go
@@ -226,7 +226,7 @@ Returns `r,g,b,a` decimal format with alpha channel (for Hyprlock and other tool
 # Output: 137,180,250,1.0
 ```
 
-#### `rgbSpaces <color>`
+#### `rgbSpaces <colour>`
 Returns `r g b` space-separated format (for Zellij KDL format).
 
 ```go
@@ -236,7 +236,7 @@ Returns `r g b` space-separated format (for Zellij KDL format).
 
 ### Alpha Manipulation
 
-#### `withAlpha <color> <alpha>`
+#### `withAlpha <colour> <alpha>`
 Returns a new ColorValue with specified alpha (0.0-1.0).
 
 ```go
@@ -249,21 +249,21 @@ Returns a new ColorValue with specified alpha (0.0-1.0).
 
 ### Metadata Functions
 
-#### `role <color>`
-Get the role name of a color.
+#### `role <colour>`
+Get the role name of a colour.
 
 ```go
-{{ $color := get . "background" }}
-{{ role $color }}
+{{ $colour := get . "background" }}
+{{ role $colour }}
 # Output: background
 ```
 
-#### `index <color>`
-Get the index of a color in AllColors array.
+#### `index <colour>`
+Get the index of a colour in AllColors array.
 
 ```go
-{{ $color := get . "accent1" }}
-{{ index $color }}
+{{ $colour := get . "accent1" }}
+{{ index $colour }}
 # Output: 4
 ```
 
@@ -276,7 +276,7 @@ Get theme type string ("dark" or "light").
 ```
 
 #### `count <palette>`
-Get total number of colors in palette.
+Get total number of colours in palette.
 
 ```go
 {{ count . }}
@@ -285,12 +285,12 @@ Get total number of colors in palette.
 
 ---
 
-## Color Access
+## Colour Access
 
 ### By Role Name
 
 ```go
-# Core colors
+# Core colours
 {{ get . "background" | hex }}
 {{ get . "foreground" | hex }}
 
@@ -310,10 +310,10 @@ Get total number of colors in palette.
 ### By Index
 
 ```go
-# ANSI color palette (indexed by luminance)
+# ANSI colour palette (indexed by luminance)
 {{- range $i := 0 }}{{ if lt $i 16 }}
-{{- $color, _ := getByIndex . $i }}
-color{{ $i }} {{ $color | hex }}
+{{- $colour, _ := getByIndex . $i }}
+colour{{ $i }} {{ $colour | hex }}
 {{- end }}{{ end }}
 ```
 
@@ -332,7 +332,7 @@ border {{ get . "outline" | hex }}
 
 ## Format Conversion
 
-### Multiple Formats from Same Color
+### Multiple Formats from Same Colour
 
 ```go
 {{- $bg := get . "background" }}
@@ -361,7 +361,7 @@ $background = rgb({{ get . "background" | rgbDecimal }})
 $backgroundAlpha = rgba({{ get . "background" | withAlpha 0.93 | rgbaDecimal }})
 
 # CSS (rgba)
-background-color: {{ get . "background" | rgba }};
+background-colour: {{ get . "background" | rgba }};
 
 # Dunst (hex with alpha)
 background = "{{ get . "background" | withAlpha 0.9 | hexAlpha }}"
@@ -371,9 +371,9 @@ background = "{{ get . "background" | withAlpha 0.9 | hexAlpha }}"
 
 ## Alpha Channel Support
 
-### Colors with Default Alpha
+### Colours with Default Alpha
 
-Most colors have alpha = 255 (fully opaque) by default. Two exceptions:
+Most colours have alpha = 255 (fully opaque) by default. Two exceptions:
 
 - **scrim**: alpha = 82 (~32% opacity) - for modal overlays
 - **shadow**: alpha = 38 (~15% opacity) - for elevation shadows
@@ -425,11 +425,11 @@ Output:
 ...
 ```
 
-### All Colors by Index
+### All Colours by Index
 
 ```go
-{{ range $i, $color := allColors . }}
-color{{ $i }} {{ $color | hex }}  # {{ role $color }}
+{{ range $i, $colour := allColors . }}
+colour{{ $i }} {{ $colour | hex }}  # {{ role $colour }}
 {{ end }}
 ```
 
@@ -444,7 +444,7 @@ color2 #89b4fa  # accent1
 ### Filtered Iteration
 
 ```go
-# Only accent colors
+# Only accent colours
 {{ range allRoles . }}
 {{- if hasPrefix . "accent" }}
 {{ . }}: {{ get $ . | hex }}
@@ -452,34 +452,34 @@ color2 #89b4fa  # accent1
 {{ end }}
 ```
 
-### ANSI Color Palette
+### ANSI Colour Palette
 
 ```go
-# Standard 16-color ANSI palette
-{{ $colors := list 
+# Standard 16-colour ANSI palette
+{{ $colours := list 
     "background" "foreground" "backgroundMuted" "foregroundMuted"
     "accent1" "accent1Muted" "accent2" "accent2Muted"
     "accent3" "accent3Muted" "accent4" "accent4Muted"
     "danger" "warning" "success" "info" }}
 
-{{ range $i, $role := $colors }}
-color{{ $i }} {{ get $ $role | hex }}
+{{ range $i, $role := $colours }}
+colour{{ $i }} {{ get $ $role | hex }}
 {{ end }}
 ```
 
 ---
 
-## Complete Color Role List
+## Complete Colour Role List
 
-### Core Colors (4)
+### Core Colours (4)
 ```
-background          # Base background color
+background          # Base background colour
 backgroundMuted     # Muted/inactive background
-foreground          # Primary text color  
+foreground          # Primary text colour  
 foregroundMuted     # Secondary/dimmed text
 ```
 
-### Accent Colors (8)
+### Accent Colours (8)
 ```
 accent1             # Primary accent
 accent1Muted        # Muted variant
@@ -491,7 +491,7 @@ accent4             # Quaternary accent
 accent4Muted        # Muted variant
 ```
 
-### Semantic Colors (5)
+### Semantic Colours (5)
 ```
 danger              # Error/destructive actions (red)
 warning             # Warnings/caution (orange)
@@ -500,7 +500,7 @@ info                # Information (blue)
 notification        # Notifications (purple)
 ```
 
-### Surface Colors - Priority 1 (4)
+### Surface Colours - Priority 1 (4)
 ```
 surface             # Card/sheet backgrounds
 onSurface           # Text on surface
@@ -516,7 +516,7 @@ borderMuted         # Inactive borders
 outlineVariant      # Secondary outlines
 ```
 
-### On-Colors for Accents - Priority 2 (4)
+### On-Colours for Accents - Priority 2 (4)
 ```
 onAccent1           # Text on accent1 background
 onAccent2           # Text on accent2 background
@@ -524,7 +524,7 @@ onAccent3           # Text on accent3 background
 onAccent4           # Text on accent4 background
 ```
 
-### On-Colors for Semantics - Priority 2 (4)
+### On-Colours for Semantics - Priority 2 (4)
 ```
 onDanger            # Text on danger background
 onWarning           # Text on warning background
@@ -532,14 +532,14 @@ onSuccess           # Text on success background
 onInfo              # Text on info background
 ```
 
-### Inverse Colors - Priority 3 (3)
+### Inverse Colours - Priority 3 (3)
 ```
 inverseSurface      # Tooltip/inverse surface
 inverseOnSurface    # Text on inverse surface
-inversePrimary      # Inverse accent color
+inversePrimary      # Inverse accent colour
 ```
 
-### Overlay Colors - Priority 3 (2)
+### Overlay Colours - Priority 3 (2)
 ```
 scrim               # Modal backdrop (alpha=0.32)
 shadow              # Elevation shadow (alpha=0.15)
@@ -554,7 +554,7 @@ surfaceContainerHigh     # Elevation level 3
 surfaceContainerHighest  # Elevation level 4
 ```
 
-### Positional Colors (30+)
+### Positional Colours (30+)
 
 Used for ambient lighting effects:
 
@@ -570,7 +570,7 @@ positionBottomLeftInner, positionBottomCenter, positionBottomRightInner
 # ... and more based on --image.regions setting
 ```
 
-**Total**: 49 semantic roles + 30+ positional roles = **79+ colors**
+**Total**: 49 semantic roles + 30+ positional roles = **79+ colours**
 
 ---
 
@@ -622,7 +622,7 @@ External plugins receive a JSON palette with this structure:
 
 ### Key Fields
 
-- **`colours`**: Map of role name to color object
+- **`colours`**: Map of role name to colour object
 - **`rgba`**: **NEW** - Always includes alpha channel (0-255)
 - **`rgb`**: Legacy field (backwards compatible, no alpha)
 - **`hex`**: Always `#RRGGBB` format (no alpha)
@@ -698,8 +698,8 @@ def load_palette(json_path):
         data = json.load(f)
     
     palette = {}
-    for role, color in data['colours'].items():
-        rgba = color['rgba']
+    for role, colour in data['colours'].items():
+        rgba = colour['rgba']
         palette[role] = RGBA(rgba['r'], rgba['g'], rgba['b'], rgba['a'])
     
     return palette, data['theme_type']
@@ -718,7 +718,7 @@ print(palette['scrim'].css_rgba())        # rgba(0, 0, 0, 0.32)
 # Parse JSON with jq
 PALETTE_JSON="$1"
 
-# Get color with alpha
+# Get colour with alpha
 get_color() {
     local role="$1"
     local format="${2:-hex}"  # hex, rgba, hex_alpha
@@ -760,7 +760,7 @@ echo "scrim: $SCRIM"
 # Kitty theme generated by Tinct
 # Theme: {{ themeType . }}
 
-# Basic colors
+# Basic colours
 foreground {{ get . "foreground" | hex }}
 background {{ get . "background" | hex }}
 
@@ -779,20 +779,20 @@ active_border_color {{ get . "border" | hex }}
 active_border_color {{ get . "outline" | hex }}
 {{- end }}
 
-# ANSI colors
+# ANSI colours
 {{- $roles := list "background" "foreground" "backgroundMuted" "foregroundMuted" 
     "accent1" "accent1Muted" "accent2" "accent2Muted"
     "accent3" "accent3Muted" "accent4" "accent4Muted"
     "danger" "warning" "success" "info" }}
 {{- range $i, $role := $roles }}
-color{{ $i }} {{ get $ $role | hex }}
+colour{{ $i }} {{ get $ $role | hex }}
 {{- end }}
 ```
 
 ### Hyprland Theme
 
 ```go
-# Hyprland colors - Tinct generated
+# Hyprland colours - Tinct generated
 # Theme: {{ themeType . }}
 
 {{- $bg := get . "background" }}
@@ -814,26 +814,26 @@ $overlay = rgba({{ get . "scrim" | rgbaDecimal }})
 /* Tinct theme - {{ themeType . }} */
 
 :root {
-  /* Core colors */
-  --color-background: {{ get . "background" | hex }};
-  --color-foreground: {{ get . "foreground" | hex }};
+  /* Core colours */
+  --colour-background: {{ get . "background" | hex }};
+  --colour-foreground: {{ get . "foreground" | hex }};
   
   /* Surfaces */
-  --color-surface: {{ get . "surface" | hex }};
-  --color-on-surface: {{ get . "onSurface" | hex }};
+  --colour-surface: {{ get . "surface" | hex }};
+  --colour-on-surface: {{ get . "onSurface" | hex }};
   
   /* Accents */
-  --color-accent1: {{ get . "accent1" | hex }};
-  --color-accent2: {{ get . "accent2" | hex }};
+  --colour-accent1: {{ get . "accent1" | hex }};
+  --colour-accent2: {{ get . "accent2" | hex }};
   
   /* Semantic */
-  --color-danger: {{ get . "danger" | hex }};
-  --color-success: {{ get . "success" | hex }};
+  --colour-danger: {{ get . "danger" | hex }};
+  --colour-success: {{ get . "success" | hex }};
   
   /* With alpha */
-  --color-overlay: {{ get . "scrim" | rgba }};
-  --color-shadow: {{ get . "shadow" | rgba }};
-  --color-surface-hover: {{ get . "surface" | withAlpha 0.8 | rgba }};
+  --colour-overlay: {{ get . "scrim" | rgba }};
+  --colour-shadow: {{ get . "shadow" | rgba }};
+  --colour-surface-hover: {{ get . "surface" | withAlpha 0.8 | rgba }};
 }
 ```
 
@@ -841,7 +841,7 @@ $overlay = rgba({{ get . "scrim" | rgbaDecimal }})
 
 ## Tips and Best Practices
 
-### 1. Always Check for Optional Colors
+### 1. Always Check for Optional Colours
 
 ```go
 # Good
@@ -855,7 +855,7 @@ border {{ get . "outline" | hex }}
 border {{ get . "border" | hex }}
 ```
 
-### 2. Use Variables for Repeated Colors
+### 2. Use Variables for Repeated Colours
 
 ```go
 # Good
@@ -882,7 +882,7 @@ background {{ get . "background" | hex }}
 $background = rgb({{ get . "background" | rgbDecimal }})
 
 # CSS: rgba
-background-color: {{ get . "background" | rgba }};
+background-colour: {{ get . "background" | rgba }};
 
 # Dunst: hex with alpha
 background = "{{ get . "background" | withAlpha 0.9 | hexAlpha }}"
@@ -891,7 +891,7 @@ background = "{{ get . "background" | withAlpha 0.9 | hexAlpha }}"
 ### 4. Leverage AllRoles for Complete Coverage
 
 ```go
-# Generate all colors
+# Generate all colours
 {{ range allRoles . }}
 {{ . }} = {{ get $ . | hex }}
 {{ end }}
@@ -940,6 +940,6 @@ tmpl, err := template.New("theme").Funcs(common.TemplateFuncs()).Parse(content)
 ## See Also
 
 - [Plugin Development Guide](../contrib/README.md)
-- [Color Role Reference](./COLOR_ROLES.md)
+- [Colour Role Reference](./COLOR_ROLES.md)
 - [External Plugin Integration](./EXTERNAL_PLUGINS.md)
 - [Implementation Summary](../IMPLEMENTATION_SUMMARY.md)

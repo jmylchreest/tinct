@@ -36,7 +36,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Load palette from file or build from colour specifications"
+	return "Load palette from file or colour overrides"
 }
 
 // Version returns the plugin version.

@@ -40,7 +40,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Fetch colour palette from remote CSS source (extracts CSS variables and color values)"
+	return "Fetch colours from remote CSS variables"
 }
 
 // Version returns the plugin version.

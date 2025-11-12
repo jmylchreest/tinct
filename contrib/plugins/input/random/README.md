@@ -1,10 +1,10 @@
-# Random Color Palette Generator
+# Random Colour Palette Generator
 
-A Tinct input plugin that generates random color palettes with configurable seed and color count.
+A Tinct input plugin that generates random colour palettes with configurable seed and colour count.
 
 ## Features
 
-- Generate random color palettes with configurable color counts
+- Generate random colour palettes with configurable colour counts
 - Deterministic generation with seed support for reproducibility
 - Uses go-plugin RPC protocol for better performance and process isolation
 - Process reuse across multiple invocations
@@ -42,15 +42,15 @@ tinct plugins add ./random --type input
 
 ### Basic Usage
 
-Generate a palette with 32 random colors (default):
+Generate a palette with 32 random colours (default):
 
 ```bash
 tinct generate -i random -o tailwind
 ```
 
-### Custom Color Count
+### Custom Colour Count
 
-Generate a palette with a specific number of colors:
+Generate a palette with a specific number of colours:
 
 ```bash
 tinct generate -i random -o tailwind --plugin-arg count=16
@@ -58,13 +58,13 @@ tinct generate -i random -o tailwind --plugin-arg count=16
 
 ### Reproducible Generation
 
-Use a seed for deterministic color generation:
+Use a seed for deterministic colour generation:
 
 ```bash
 # Generate with specific seed
 tinct generate -i random -o tailwind --plugin-arg seed=12345
 
-# Running again with the same seed produces identical colors
+# Running again with the same seed produces identical colours
 tinct generate -i random -o tailwind --plugin-arg seed=12345
 ```
 
@@ -80,7 +80,7 @@ tinct generate -i random -o tailwind \
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `count` | integer | 32 | Number of colors to generate |
+| `count` | integer | 32 | Number of colours to generate |
 | `seed` | integer | random | Random seed for reproducible generation. If not provided, a cryptographically random seed is used |
 
 ## Configuration Example
@@ -107,7 +107,7 @@ tinct generate -i random -o tailwind --dry-run --verbose
 
 Output:
 ```
-DRY-RUN MODE: Would generate 32 random colors
+DRY-RUN MODE: Would generate 32 random colours
 Random seed: 1234567890
 ```
 

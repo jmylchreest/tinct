@@ -55,7 +55,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Hyprland colour theme configuration"
+	return "Hyprland compositor theme"
 }
 
 // Version returns the plugin version.

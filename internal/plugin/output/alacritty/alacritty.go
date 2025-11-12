@@ -50,7 +50,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Alacritty terminal colour theme configuration"
+	return "Alacritty terminal colour theme"
 }
 
 // Version returns the plugin version.

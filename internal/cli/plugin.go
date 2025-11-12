@@ -2,17 +2,9 @@
 package cli
 
 import (
-	"archive/tar"
-	"archive/zip"
-	"bytes"
-	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -21,18 +13,11 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
-	"github.com/jmylchreest/tinct/internal/security"
 )
 
 const (
 	// PluginLockFile is the name of the plugin lock file.
 	PluginLockFile = ".tinct-plugins.json"
-
-	// Plugin source types.
-	sourceTypeRepository = "repository"
-	sourceTypeHTTP       = "http"
-	sourceTypeLocal      = "local"
-	sourceTypeGit        = "git"
 )
 
 // PluginLock represents the plugin lock file structure.
@@ -177,11 +162,27 @@ The plugin will be copied to the plugin directory and registered
 in the plugin lock file. The plugin name is automatically detected from
 the plugin's --plugin-info output.
 
+WARNING: Only install plugins from trusted sources. Plugins execute with your
+user permissions and can access your system. Review plugin source code before
+installation to ensure it is safe.
+
+The command will:
+  1. Verify source and destination are not the same file
+  2. Query plugin metadata (name, version, type, protocol)
+  3. Check protocol compatibility
+  4. Check for version conflicts (upgrades proceed automatically)
+  5. Copy plugin to ~/.local/share/tinct/plugins/
+  6. Register plugin in lock file
+
+Plugin upgrades (newer versions) proceed automatically.
+Use --force to downgrade, reinstall same version, or overwrite.
+
 Examples:
   tinct plugins add ./contrib/notify-send.py
   tinct plugins add https://example.com/plugins/theme.sh
   tinct plugins add https://github.com/user/plugin.git
-  tinct plugins add https://github.com/user/plugin.git:path/to/plugin.sh`,
+  tinct plugins add https://github.com/user/plugin.git:path/to/plugin.sh
+  tinct plugins add ./my-plugin.sh --force  # Force overwrite`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPluginAdd,
 }
@@ -270,219 +271,7 @@ func runPluginList(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// runPluginEnable enables a plugin.
-func runPluginEnable(cmd *cobra.Command, args []string) error {
-	pluginName := args[0]
-	verbose, err := cmd.Flags().GetBool("verbose")
-	if err != nil {
-		return fmt.Errorf("failed to get verbose flag: %w", err)
-	}
-
-	// Load or create plugin lock.
-	lock, lockPath := loadOrCreatePluginLock()
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
-	}
-
-	// Handle "all" pseudo-plugin.
-	if pluginName == pluginTypeAll {
-		if pluginClear {
-			// Just remove "all" from disabled list.
-			lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all", "all")
-		} else {
-			// Clear disabled list.
-			lock.DisabledPlugins = []string{}
-			// Add "all" to enabled list.
-			lock.EnabledPlugins = []string{"all"}
-		}
-
-		if err := savePluginLock(lockPath, lock); err != nil {
-			return fmt.Errorf("failed to save plugin lock: %w", err)
-		}
-
-		if pluginClear {
-			fmt.Println("Cleared 'all' from disabled list")
-		} else {
-			fmt.Println("All plugins enabled")
-		}
-		return nil
-	}
-
-	// Parse plugin name.
-	parsedType, parsedName := parsePluginName(pluginName)
-	if pluginType != "" {
-		parsedType = pluginType
-	}
-
-	// Format full plugin name.
-	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
-
-	if pluginClear {
-		// Just remove from disabled list.
-		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
-	} else {
-		// Remove from disabled list.
-		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
-
-		// Add to enabled list if not already there.
-		if !containsPlugin(lock.EnabledPlugins, parsedName, fullName) {
-			lock.EnabledPlugins = append(lock.EnabledPlugins, fullName)
-		}
-	}
-
-	// Save lock file.
-	if err := savePluginLock(lockPath, lock); err != nil {
-		return fmt.Errorf("failed to save plugin lock: %w", err)
-	}
-
-	if pluginClear {
-		fmt.Printf("Cleared '%s' from disabled list\n", fullName)
-	} else {
-		fmt.Printf("Plugin '%s' enabled\n", fullName)
-	}
-	return nil
-}
-
-// runPluginDisable disables a plugin.
-func runPluginDisable(cmd *cobra.Command, args []string) error {
-	pluginName := args[0]
-	verbose, err := cmd.Flags().GetBool("verbose")
-	if err != nil {
-		return fmt.Errorf("failed to get verbose flag: %w", err)
-	}
-
-	// Load or create plugin lock.
-	lock, lockPath := loadOrCreatePluginLock()
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
-	}
-
-	// Handle "all" pseudo-plugin.
-	if pluginName == "all" {
-		if pluginClear {
-			// Just remove "all" from enabled list.
-			lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all", "all")
-		} else {
-			// Clear enabled list.
-			lock.EnabledPlugins = []string{}
-			// Add "all" to disabled list.
-			lock.DisabledPlugins = []string{"all"}
-		}
-
-		if err := savePluginLock(lockPath, lock); err != nil {
-			return fmt.Errorf("failed to save plugin lock: %w", err)
-		}
-
-		if pluginClear {
-			fmt.Println("Cleared 'all' from enabled list")
-		} else {
-			fmt.Println("All plugins disabled")
-		}
-		return nil
-	}
-
-	// Parse plugin name.
-	parsedType, parsedName := parsePluginName(pluginName)
-	if pluginType != "" {
-		parsedType = pluginType
-	}
-
-	// Format full plugin name.
-	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
-
-	if pluginClear {
-		// Just remove from enabled list.
-		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
-	} else {
-		// Remove from enabled list.
-		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
-
-		// Add to disabled list if not already there.
-		if !containsPlugin(lock.DisabledPlugins, parsedName, fullName) {
-			lock.DisabledPlugins = append(lock.DisabledPlugins, fullName)
-		}
-	}
-
-	// Save lock file.
-	if err := savePluginLock(lockPath, lock); err != nil {
-		return fmt.Errorf("failed to save plugin lock: %w", err)
-	}
-
-	if pluginClear {
-		fmt.Printf("Cleared '%s' from enabled list\n", fullName)
-	} else {
-		fmt.Printf("Plugin '%s' disabled\n", fullName)
-	}
-	return nil
-}
-
-// runPluginClear clears plugin configuration.
-func runPluginClear(cmd *cobra.Command, args []string) error {
-	verbose, err := cmd.Flags().GetBool("verbose")
-	if err != nil {
-		return fmt.Errorf("failed to get verbose flag: %w", err)
-	}
-
-	// Load or create plugin lock.
-	lock, lockPath := loadOrCreatePluginLock()
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
-	}
-
-	// If no plugin name provided, clear all.
-	if len(args) == 0 {
-		lock.EnabledPlugins = []string{}
-		lock.DisabledPlugins = []string{}
-
-		if err := savePluginLock(lockPath, lock); err != nil {
-			return fmt.Errorf("failed to save plugin lock: %w", err)
-		}
-
-		fmt.Println("Cleared all plugin configuration")
-		return nil
-	}
-
-	pluginName := args[0]
-
-	// Handle "all" pseudo-plugin.
-	if pluginName == "all" {
-		lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, "all", "all")
-		lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, "all", "all")
-
-		if err := savePluginLock(lockPath, lock); err != nil {
-			return fmt.Errorf("failed to save plugin lock: %w", err)
-		}
-
-		fmt.Println("Cleared 'all' configuration")
-		return nil
-	}
-
-	// Parse plugin name.
-	parsedType, parsedName := parsePluginName(pluginName)
-	if pluginType != "" {
-		parsedType = pluginType
-	}
-
-	// Format full plugin name.
-	fullName := fmt.Sprintf("%s:%s", parsedType, parsedName)
-
-	// Remove from both lists.
-	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
-	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
-
-	// Save lock file.
-	if err := savePluginLock(lockPath, lock); err != nil {
-		return fmt.Errorf("failed to save plugin lock: %w", err)
-	}
-
-	fmt.Printf("Cleared configuration for '%s'\n", fullName)
-	return nil
-}
-
-// runPluginAdd adds an external plugin.
+// runPluginAdd adds an external plugin with comprehensive safety checks.
 func runPluginAdd(cmd *cobra.Command, args []string) error {
 	source := args[0]
 	verbose, err := cmd.Flags().GetBool("verbose")
@@ -517,50 +306,66 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
-	// Determine plugin path based on source type.
-	pluginPath, err := installPluginFromSource(source, "", pluginDir, verbose)
+	// Stage 1: Resolve source path and check if it's already in the plugin directory
+	sourcePath, isAlreadyInstalled, err := resolvePluginSource(source, pluginDir, verbose)
 	if err != nil {
 		return err
 	}
 
-	// Query plugin for its actual name and metadata.
-	pluginName, pluginDescription, pluginType, version := queryPluginMetadata(pluginPath)
-	if pluginName == "" {
-		return fmt.Errorf("failed to query plugin name from --plugin-info")
-	}
-	if pluginType == "" {
-		pluginType = "output" // default to output if not specified
+	if isAlreadyInstalled {
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Note: Plugin source is already in plugin directory\n")
+		}
 	}
 
-	// Check if plugin already exists.
-	if _, exists := lock.ExternalPlugins[pluginName]; exists && !pluginForce {
-		return fmt.Errorf("plugin '%s' already exists (use --force to overwrite)", pluginName)
+	// Stage 2: Query plugin metadata (before copying to avoid executing untrusted code from final location)
+	pluginInfo, err := queryFullPluginMetadata(sourcePath)
+	if err != nil {
+		return fmt.Errorf("failed to query plugin metadata: %w", err)
 	}
 
-	// Add to lock file.
-	lock.ExternalPlugins[pluginName] = &ExternalPluginMeta{
-		Name:         pluginName,
-		Path:         pluginPath,
-		Type:         pluginType,
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Plugin name: %s\n", pluginInfo.Name)
+		fmt.Fprintf(os.Stderr, "Plugin type: %s\n", pluginInfo.Type)
+		fmt.Fprintf(os.Stderr, "Plugin version: %s\n", pluginInfo.Version)
+		fmt.Fprintf(os.Stderr, "Protocol version: %s\n", pluginInfo.ProtocolVersion)
+	}
+
+	// Stage 3: Check protocol compatibility
+	if err := checkProtocolCompatibility(pluginInfo.ProtocolVersion, verbose); err != nil {
+		return err
+	}
+
+	// Stage 4: Check for conflicts and version comparisons
+	action, existingMeta, err := determinePluginAction(lock, pluginInfo, pluginForce)
+	if err != nil {
+		return err
+	}
+
+	// Stage 5: Install plugin to final location (if not already there)
+	finalPath := filepath.Join(pluginDir, filepath.Base(sourcePath))
+	if !isAlreadyInstalled {
+		if err := installPlugin(sourcePath, finalPath, verbose); err != nil {
+			return fmt.Errorf("failed to install plugin: %w", err)
+		}
+	}
+
+	// Stage 6: Update lock file
+	lock.ExternalPlugins[pluginInfo.Name] = &ExternalPluginMeta{
+		Name:         pluginInfo.Name,
+		Path:         finalPath,
+		Type:         pluginInfo.Type,
 		SourceLegacy: source,
-		Version:      version,
-		Description:  pluginDescription,
+		Version:      pluginInfo.Version,
+		Description:  pluginInfo.Description,
 	}
 
-	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
 
-	fmt.Printf("Plugin '%s' added successfully\n", pluginName)
-	if pluginDescription != "" {
-		fmt.Printf("Description: %s\n", pluginDescription)
-	}
-	fmt.Printf("Type: %s\n", pluginType)
-	if version != "" {
-		fmt.Printf("Version: %s\n", version)
-	}
-	fmt.Printf("Path: %s\n", pluginPath)
+	// Stage 7: Display success message
+	printPluginAddSuccess(pluginInfo, action, existingMeta, finalPath)
 	return nil
 }
 
@@ -570,6 +375,12 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
+
+	// Parse plugin name to support both "name" and "type:name" formats
+	_, parsedName := parsePluginName(pluginName)
+	if parsedName == "" {
+		parsedName = pluginName
 	}
 
 	// Load plugin lock.
@@ -582,15 +393,15 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no external plugins found")
 	}
 
-	// Check if plugin exists.
-	meta, exists := lock.ExternalPlugins[pluginName]
+	// Check if plugin exists (using parsed name)
+	meta, exists := lock.ExternalPlugins[parsedName]
 	if !exists {
-		return fmt.Errorf("plugin '%s' not found", pluginName)
+		return fmt.Errorf("plugin '%s' not found", parsedName)
 	}
 
 	// Confirm deletion if not forced.
 	if !pluginForce {
-		fmt.Printf("Are you sure you want to delete plugin '%s'? (y/N): ", pluginName)
+		fmt.Printf("Are you sure you want to delete plugin '%s'? (y/N): ", parsedName)
 		var response string
 		if _, err := fmt.Scanln(&response); err != nil {
 			return fmt.Errorf("failed to read user input: %w", err)
@@ -611,19 +422,19 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 	}
 
 	// Remove from lock file.
-	delete(lock.ExternalPlugins, pluginName)
+	delete(lock.ExternalPlugins, parsedName)
 
 	// Remove from enabled/disabled lists.
-	fullName := fmt.Sprintf("%s:%s", meta.Type, pluginName)
-	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, pluginName, fullName)
-	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, pluginName, fullName)
+	fullName := fmt.Sprintf("%s:%s", meta.Type, parsedName)
+	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, parsedName, fullName)
+	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, parsedName, fullName)
 
 	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
 
-	fmt.Printf("Plugin '%s' deleted successfully\n", pluginName)
+	fmt.Printf("Plugin '%s' deleted successfully\n", parsedName)
 	return nil
 }
 
@@ -933,527 +744,4 @@ func configureExternalPlugin(pluginName, pluginType string, dryRun bool, pluginA
 			}
 		}
 	}
-}
-
-// queryPluginMetadata queries a plugin for its name, description, type, and version.
-func queryPluginMetadata(pluginPath string) (name, description, pluginType, version string) {
-	cmd := exec.Command(pluginPath, "--plugin-info")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", "", "", ""
-	}
-
-	var info struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Type        string `json:"type"`
-		Version     string `json:"version"`
-	}
-
-	if err := json.Unmarshal(output, &info); err != nil {
-		return "", "", "", ""
-	}
-
-	return info.Name, info.Description, info.Type, info.Version
-}
-
-// parsePluginName parses a plugin name into type and name.
-func parsePluginName(name string) (pluginType, pluginName string) {
-	parts := strings.Split(name, ":")
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	return "", name
-}
-
-// containsPlugin checks if a plugin is in a list.
-func containsPlugin(list []string, name, fullName string) bool {
-	for _, item := range list {
-		if item == name || item == fullName {
-			return true
-		}
-	}
-	return false
-}
-
-// removeFromList removes a plugin from a list.
-func removeFromList(list []string, name, fullName string) []string {
-	result := make([]string, 0, len(list))
-	for _, item := range list {
-		if item != name && item != fullName {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
-// getPluginDir returns the plugin directory path.
-func getPluginDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".local", "share", "tinct", "plugins"), nil
-}
-
-// formatPluginSourceString converts a PluginSource struct to a display string.
-func formatPluginSourceString(source *repository.PluginSource) string {
-	if source == nil {
-		return ""
-	}
-	switch source.Type {
-	case sourceTypeRepository:
-		return fmt.Sprintf("repo:%s/%s@%s", source.Repository, source.Plugin, source.Version)
-	case sourceTypeHTTP:
-		return source.URL
-	case sourceTypeLocal:
-		return source.OriginalPath
-	default:
-		return source.Type
-	}
-}
-
-// installPluginFromSource installs a plugin from various source types.
-func installPluginFromSource(source, pluginName, pluginDir string, verbose bool) (string, error) {
-	// Parse source to determine type.
-	sourceType, sourceInfo := parsePluginSource(source)
-
-	switch sourceType {
-	case sourceTypeLocal:
-		return installFromLocal(sourceInfo, pluginDir, verbose)
-	case sourceTypeHTTP:
-		return installFromHTTP(sourceInfo, pluginName, pluginDir, verbose)
-	case sourceTypeGit:
-		return installFromGit(sourceInfo, pluginName, pluginDir, verbose)
-	default:
-		return "", fmt.Errorf("unsupported source type: %s", source)
-	}
-}
-
-// PluginSourceType represents the type of plugin source.
-type PluginSourceInfo struct {
-	URL      string
-	FilePath string // For git repos, path to file within repo
-	Ref      string // For git repos, branch/tag/commit
-}
-
-// parsePluginSource determines the source type and extracts relevant info.
-func parsePluginSource(source string) (string, PluginSourceInfo) {
-	info := PluginSourceInfo{}
-
-	// Git repository (https://github.com/user/repo.git or git@github.com:user/repo.git).
-	isGit := strings.HasSuffix(source, ".git") ||
-		strings.Contains(source, "github.com") ||
-		strings.Contains(source, "gitlab.com") ||
-		strings.Contains(source, "bitbucket.org")
-
-	if isGit {
-		// Check for file path specification: repo.git:path/to/file.sh.
-		idx := strings.LastIndex(source, ":")
-		if idx <= 0 || strings.HasPrefix(source, "git@") {
-			info.URL = source
-			return sourceTypeGit, info
-		}
-
-		// Make sure it's not the : in git@github.com.
-		if idx > 6 && source[idx-1] != 'm' { // Not ending in ".com:"
-			info.URL = source[:idx]
-			info.FilePath = source[idx+1:]
-		} else {
-			info.URL = source
-		}
-		return sourceTypeGit, info
-	}
-
-	// HTTP/HTTPS URL.
-	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
-		// Check for file path specification: url.tar.gz:path/to/plugin.
-		idx := strings.LastIndex(source, ":")
-		if idx <= 0 {
-			info.URL = source
-			return sourceTypeHTTP, info
-		}
-
-		// Check if it's part of the protocol (http:// or https://).
-		if idx > 7 && source[idx-2:idx] != "tp" && source[idx-3:idx] != "tps" {
-			info.URL = source[:idx]
-			info.FilePath = source[idx+1:]
-		} else {
-			info.URL = source
-		}
-		return sourceTypeHTTP, info
-	}
-
-	// Local file.
-	info.FilePath = source
-	return sourceTypeLocal, info
-}
-
-// installFromLocal installs a plugin from a local file.
-func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (string, error) {
-	absSource, err := filepath.Abs(info.FilePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve plugin path: %w", err)
-	}
-
-	// Verify plugin exists.
-	if _, err := os.Stat(absSource); err != nil {
-		return "", fmt.Errorf("plugin file not found: %w", err)
-	}
-
-	// Copy plugin to plugin directory.
-	destPath := filepath.Join(pluginDir, filepath.Base(absSource))
-	if err := copyFile(absSource, destPath); err != nil {
-		return "", fmt.Errorf("failed to copy plugin: %w", err)
-	}
-
-	// Make it executable.
-	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-		return "", fmt.Errorf("failed to make plugin executable: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Copied plugin to: %s\n", destPath)
-	}
-
-	return destPath, nil
-}
-
-// installFromHTTP downloads a plugin from an HTTP/HTTPS URL.
-func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) {
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Downloading from %s...\n", info.URL)
-	}
-
-	// Download the file.
-	resp, err := http.Get(info.URL)
-	if err != nil {
-		return "", fmt.Errorf("failed to download plugin: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to download plugin: HTTP %d", resp.StatusCode)
-	}
-
-	// Read the entire response into memory for archive detection.
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read download: %w", err)
-	}
-
-	// Determine filename from URL.
-	filename := filepath.Base(info.URL)
-	if filename == "" || filename == "." {
-		filename = pluginName
-	}
-
-	// Check if it's an archive.
-	if strings.HasSuffix(info.URL, ".tar.gz") || strings.HasSuffix(info.URL, ".tgz") {
-		// Extract from tar.gz archive.
-		return extractFromTarGz(data, info.FilePath, pluginDir, verbose)
-	} else if strings.HasSuffix(info.URL, ".zip") {
-		// Extract from zip archive.
-		return extractFromZip(data, info.FilePath, pluginDir, verbose)
-	}
-
-	// Not an archive - treat as direct plugin file.
-	destPath := filepath.Join(pluginDir, filename)
-
-	// Write file.
-	// #nosec G306 -- Plugin executable needs exec permissions.
-	if err := os.WriteFile(destPath, data, 0o755); err != nil {
-		return "", fmt.Errorf("failed to write plugin file: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Downloaded plugin to: %s\n", destPath)
-	}
-
-	return destPath, nil
-}
-
-// extractFromTarGz extracts a plugin from a tar.gz archive.
-func extractFromTarGz(data []byte, targetFile, pluginDir string, verbose bool) (string, error) {
-	// Create gzip reader.
-	gzr, err := gzip.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return "", fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzr.Close()
-
-	// Create tar reader.
-	tr := tar.NewReader(gzr)
-
-	// If no specific file requested, find the first executable or use first file.
-	var targetPath string
-	foundFiles := []string{}
-
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", fmt.Errorf("failed to read tar archive: %w", err)
-		}
-
-		// Skip directories.
-		if header.Typeflag == tar.TypeDir {
-			continue
-		}
-
-		foundFiles = append(foundFiles, header.Name)
-
-		// Check if this is the file we want.
-		if targetFile != "" {
-			if header.Name == targetFile || strings.HasSuffix(header.Name, "/"+targetFile) {
-				targetPath = header.Name
-				break
-			}
-		} else {
-			// Auto-detect: prefer executable files.
-			if header.FileInfo().Mode()&0o111 != 0 {
-				targetPath = header.Name
-				break
-			}
-		}
-	}
-
-	// If we didn't find the target, reset and look for any match.
-	if targetPath == "" && targetFile != "" {
-		return "", fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
-	}
-
-	// If still no target and we have files, use the first one.
-	if targetPath == "" && len(foundFiles) > 0 {
-		targetPath = foundFiles[0]
-	}
-
-	if targetPath == "" {
-		return "", fmt.Errorf("no files found in archive")
-	}
-
-	// Reset readers to extract the target file.
-	gzr, err = gzip.NewReader(bytes.NewReader(data))
-	if err != nil {
-		return "", fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzr.Close()
-
-	tr = tar.NewReader(gzr)
-
-	for {
-		header, err := tr.Next()
-		if errors.Is(err, io.EOF) {
-			return "", fmt.Errorf("file not found in archive")
-		}
-		if err != nil {
-			return "", fmt.Errorf("failed to read tar archive: %w", err)
-		}
-
-		if header.Name != targetPath {
-			continue
-		}
-
-		// Extract the file.
-		destPath := filepath.Join(pluginDir, filepath.Base(targetPath))
-
-		out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
-		if err != nil {
-			return "", fmt.Errorf("failed to create plugin file: %w", err)
-		}
-
-		// Limit decompression size to prevent zip bombs (100MB limit for plugins).
-		limitedReader := security.NewLimitedReader(tr, 100*1024*1024)
-		_, copyErr := io.Copy(out, limitedReader)
-		closeErr := out.Close() // Close immediately instead of defer
-
-		if copyErr != nil {
-			return "", fmt.Errorf("failed to extract plugin: %w", copyErr)
-		}
-		if closeErr != nil {
-			return "", fmt.Errorf("failed to close plugin file: %w", closeErr)
-		}
-
-		// Make executable.
-		if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-			return "", fmt.Errorf("failed to make plugin executable: %w", err)
-		}
-
-		if verbose {
-			fmt.Fprintf(os.Stderr, "Extracted plugin to: %s\n", destPath)
-		}
-
-		return destPath, nil
-	}
-}
-
-// extractFromZip extracts a plugin from a zip archive.
-func extractFromZip(data []byte, targetFile, pluginDir string, verbose bool) (string, error) {
-	// Create zip reader.
-	reader := bytes.NewReader(data)
-	zr, err := zip.NewReader(reader, int64(len(data)))
-	if err != nil {
-		return "", fmt.Errorf("failed to create zip reader: %w", err)
-	}
-
-	// If no specific file requested, find the first executable or use first file.
-	var targetZipFile *zip.File
-	foundFiles := []string{}
-
-	for _, f := range zr.File {
-		// Skip directories.
-		if f.FileInfo().IsDir() {
-			continue
-		}
-
-		foundFiles = append(foundFiles, f.Name)
-
-		// Check if this is the file we want.
-		if targetFile != "" {
-			if f.Name == targetFile || strings.HasSuffix(f.Name, "/"+targetFile) {
-				targetZipFile = f
-				break
-			}
-		} else {
-			// Auto-detect: prefer executable files.
-			if f.FileInfo().Mode()&0o111 != 0 {
-				targetZipFile = f
-				break
-			}
-		}
-	}
-
-	// If we didn't find the target, check if any file matches.
-	if targetZipFile == nil && targetFile != "" {
-		return "", fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
-	}
-
-	// If still no target and we have files, use the first one.
-	if targetZipFile == nil && len(foundFiles) > 0 {
-		targetZipFile = zr.File[0]
-	}
-
-	if targetZipFile == nil {
-		return "", fmt.Errorf("no files found in archive")
-	}
-
-	// Extract the file.
-	destPath := filepath.Join(pluginDir, filepath.Base(targetZipFile.Name))
-
-	rc, err := targetZipFile.Open()
-	if err != nil {
-		return "", fmt.Errorf("failed to open file in archive: %w", err)
-	}
-	defer rc.Close()
-
-	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
-	if err != nil {
-		return "", fmt.Errorf("failed to create plugin file: %w", err)
-	}
-	defer out.Close()
-
-	// Limit decompression size to prevent zip bombs (100MB limit for plugins).
-	limitedReader := security.NewLimitedReader(rc, 100*1024*1024)
-	if _, err := io.Copy(out, limitedReader); err != nil {
-		return "", fmt.Errorf("failed to extract plugin: %w", err)
-	}
-
-	// Make executable.
-	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-		return "", fmt.Errorf("failed to make plugin executable: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Extracted plugin to: %s\n", destPath)
-	}
-
-	return destPath, nil
-}
-
-// installFromGit clones a git repository and extracts the plugin.
-func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) {
-	// Check if git is available.
-	if _, err := exec.LookPath("git"); err != nil {
-		return "", fmt.Errorf("git is not installed or not in PATH")
-	}
-
-	// Validate the git URL for security.
-	if err := security.ValidateGitURL(info.URL); err != nil {
-		return "", fmt.Errorf("invalid git URL: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Cloning from %s...\n", info.URL)
-	}
-
-	// Create temporary directory for cloning.
-	tmpDir, err := os.MkdirTemp("", "tinct-plugin-*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Clone the repository using -- to separate options from arguments (prevents command injection).
-	// #nosec G204 -- URL is validated via security.ValidateGitURL above.
-	cloneCmd := exec.Command("git", "clone", "--depth", "1", "--", info.URL, tmpDir)
-	if output, err := cloneCmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("failed to clone repository: %w\nOutput: %s", err, string(output))
-	}
-
-	// Determine which file to copy.
-	var sourceFile string
-	if info.FilePath != "" {
-		// Specific file path provided.
-		sourceFile = filepath.Join(tmpDir, info.FilePath)
-		if _, err := os.Stat(sourceFile); err != nil {
-			return "", fmt.Errorf("plugin file not found in repository: %s", info.FilePath)
-		}
-	} else {
-		// Try to find a plugin file automatically.
-		// Look for common patterns: plugin.sh, *.py, *.sh in root or bin/.
-		candidates := []string{
-			filepath.Join(tmpDir, pluginName),
-			filepath.Join(tmpDir, pluginName+".sh"),
-			filepath.Join(tmpDir, pluginName+".py"),
-			filepath.Join(tmpDir, "plugin.sh"),
-			filepath.Join(tmpDir, "plugin.py"),
-			filepath.Join(tmpDir, "bin", pluginName),
-			filepath.Join(tmpDir, "bin", pluginName+".sh"),
-			filepath.Join(tmpDir, "bin", pluginName+".py"),
-		}
-
-		for _, candidate := range candidates {
-			if _, err := os.Stat(candidate); err == nil {
-				sourceFile = candidate
-				break
-			}
-		}
-
-		if sourceFile == "" {
-			return "", fmt.Errorf("could not find plugin file in repository, please specify path: repo.git:path/to/plugin.sh")
-		}
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Found plugin file: %s\n", filepath.Base(sourceFile))
-	}
-
-	// Copy plugin to plugin directory.
-	destPath := filepath.Join(pluginDir, filepath.Base(sourceFile))
-	if err := copyFile(sourceFile, destPath); err != nil {
-		return "", fmt.Errorf("failed to copy plugin: %w", err)
-	}
-
-	// Make it executable.
-	if err := os.Chmod(destPath, 0o755); err != nil { // #nosec G302 - Plugin executable needs execute permission
-		return "", fmt.Errorf("failed to make plugin executable: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Installed plugin to: %s\n", destPath)
-	}
-
-	return destPath, nil
 }

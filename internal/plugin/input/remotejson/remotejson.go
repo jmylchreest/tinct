@@ -40,7 +40,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Fetch colour palette from remote JSON source with optional JSONPath queries"
+	return "Fetch colours from remote JSON with JSONPath queries"
 }
 
 // Version returns the plugin version.

@@ -4,16 +4,16 @@
 **Built-in:** Yes  
 **Language:** Go
 
-Extract color palettes from remote CSS files by parsing CSS variables and hex color codes.
+Extract colour palettes from remote CSS files by parsing CSS variables and hex colour codes.
 
 ## Overview
 
-The `remotecss` plugin fetches CSS files from HTTP(S) URLs and extracts colors from CSS custom properties (variables) and inline hex codes. It's useful for importing color schemes from CSS frameworks, design systems, or theme files.
+The `remotecss` plugin fetches CSS files from HTTP(S) URLs and extracts colours from CSS custom properties (variables) and inline hex codes. It's useful for importing colour schemes from CSS frameworks, design systems, or theme files.
 
 ## Features
 
 - ✅ Fetch from any HTTP(S) CSS endpoint
-- ✅ Parse CSS custom properties (`--color-name: #hex`)
+- ✅ Parse CSS custom properties (`--colour-name: #hex`)
 - ✅ Extract inline hex codes
 - ✅ Parse rgb() and hsl() functions
 - ✅ Role mapping (map CSS variable names to Tinct roles)
@@ -48,7 +48,7 @@ tinct generate -i remote-css \
 
 ## Supported CSS Formats
 
-The plugin extracts colors from:
+The plugin extracts colours from:
 
 ### CSS Custom Properties
 ```css
@@ -63,19 +63,19 @@ The plugin extracts colors from:
 ```css
 .theme-dark {
   background: #1e1e2e;
-  color: #cdd6f4;
+  colour: #cdd6f4;
 }
 ```
 
 ### RGB/HSL Functions
 ```css
 :root {
-  --color-bg: rgb(30, 30, 46);
-  --color-fg: hsl(227, 64%, 88%);
+  --colour-bg: rgb(30, 30, 46);
+  --colour-fg: hsl(227, 64%, 88%);
 }
 ```
 
-## Color Format Support
+## Colour Format Support
 
 - **Hex:** `#RRGGBB`, `#RGB`
 - **RGB:** `rgb(R, G, B)`, `rgba(R, G, B, A)`
@@ -96,7 +96,7 @@ tinct generate -i remote-css \
 ```bash
 tinct generate -i remote-css \
   --remote-css.url "https://mysite.com/design-system.css" \
-  --remote-css.map "color-primary=background,color-text=foreground,color-accent=accent1" \
+  --remote-css.map "colour-primary=background,colour-text=foreground,colour-accent=accent1" \
   -o hyprland,kitty
 ```
 
@@ -112,9 +112,9 @@ tinct generate -i remote-css \
 
 1. **Fetch CSS** - Download CSS file from URL
 2. **Parse Variables** - Extract CSS custom properties
-3. **Extract Colors** - Find hex codes, rgb(), hsl() values
+3. **Extract Colours** - Find hex codes, rgb(), hsl() values
 4. **Map Roles** - Apply user-specified role mappings
-5. **Return Palette** - Raw colors (categorization happens separately)
+5. **Return Palette** - Raw colours (categorisation happens separately)
 
 ## Role Mapping
 
@@ -124,7 +124,7 @@ Map CSS variable names to Tinct semantic roles:
 --remote-css.map "bg-primary=background,text-primary=foreground,blue-500=accent1"
 ```
 
-Without mapping, colors are extracted but not assigned to specific roles (auto-categorization will assign them).
+Without mapping, colours are extracted but not assigned to specific roles (auto-categorisation will assign them).
 
 ## Troubleshooting
 
@@ -144,11 +144,11 @@ tinct generate -i remote-css --remote-css.url "https://example.com/theme.css" -o
 - Check internet connection
 - Increase timeout: `--remote-css.timeout 30s`
 
-### "No colors found"
+### "No colours found"
 
-**Problem:** CSS file doesn't contain recognizable color formats.
+**Problem:** CSS file doesn't contain recognizable colour formats.
 
-**Solution:** Check that CSS file contains hex codes or CSS variables with colors.
+**Solution:** Check that CSS file contains hex codes or CSS variables with colours.
 
 ## Related
 
@@ -164,7 +164,7 @@ tinct generate -i remote-css \
   --remote-css.url "https://example.com/theme.css" \
   --dry-run --verbose
 
-# Preview extracted colors
+# Preview extracted colours
 tinct extract -i remote-css \
   --remote-css.url "https://example.com/theme.css" \
   --preview

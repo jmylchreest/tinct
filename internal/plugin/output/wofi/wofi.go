@@ -49,7 +49,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Wofi application launcher colour theme configuration"
+	return "Wofi application launcher theme"
 }
 
 // Version returns the plugin version.

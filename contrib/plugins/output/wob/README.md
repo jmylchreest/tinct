@@ -4,7 +4,7 @@ A dual-mode tool that integrates [wob](https://github.com/francma/wob) (Wayland 
 
 ## Features
 
-- **Tinct Plugin Mode**: Automatically generates wob themes from Tinct color palettes
+- **Tinct Plugin Mode**: Automatically generates wob themes from Tinct colour palettes
 - **Wrapper Mode**: Manages wob instances (start, stop, send values)
 - **Self-Installing**: Plugin mode installs the wrapper script automatically
 - **Single Binary**: No dependencies, pure Go implementation
@@ -177,7 +177,7 @@ margin = 20
 # Timeout (milliseconds)
 timeout = 2000
 
-# Colors will be overridden by theme
+# Colours will be overridden by theme
 background_color = FF000000
 border_color = FFFFFFFF
 bar_color = FFFFFFFF
@@ -187,10 +187,10 @@ bar_color = FFFFFFFF
 
 Tinct generates `~/.config/wob/themes/tinct.ini` with:
 
-- **default** section: Base colors from your palette
-- **normal** section: Success/positive color (green)
-- **critical** section: Danger/error color (red)
-- **warning** section: Warning/caution color (yellow/orange)
+- **default** section: Base colours from your palette
+- **normal** section: Success/positive colour (green)
+- **critical** section: Danger/error colour (red)
+- **warning** section: Warning/caution colour (yellow/orange)
 
 Example generated theme:
 
@@ -439,7 +439,7 @@ tinct-plugin-wob binary
 ## See Also
 
 - [wob](https://github.com/francma/wob) - Wayland Overlay Bar
-- [Tinct](https://github.com/jmylchreest/tinct) - Color palette generator
+- [Tinct](https://github.com/jmylchreest/tinct) - Colour palette generator
 - [Hyprland](https://hyprland.org/) - Dynamic tiling Wayland compositor
 
 ## License

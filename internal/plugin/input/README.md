@@ -1,16 +1,16 @@
 # Input Plugins
 
-This directory contains **built-in input plugins** that extract or generate color palettes from various sources. Input plugins are the first step in Tinct's pipeline - they produce raw color palettes that are then categorized into semantic roles (background, foreground, accent1, etc.).
+This directory contains **built-in input plugins** that extract or generate colour palettes from various sources. Input plugins are the first step in Tinct's pipeline - they produce raw colour palettes that are then categorized into semantic roles (background, foreground, accent1, etc.).
 
 ## Overview
 
-Input plugins extract colors from sources like:
+Input plugins extract colours from sources like:
 - **Images** - Wallpapers, photos, artwork
 - **Remote APIs** - JSON theme APIs, CSS variable files
 - **Files** - Saved palette files
 - **Generators** - Algorithmic palette generation
 
-The extracted colors are passed to the categorizer which assigns semantic roles based on luminance, contrast, and color theory.
+The extracted colours are passed to the categorizer which assigns semantic roles based on luminance, contrast, and colour theory.
 
 ## Built-in Input Plugins
 
@@ -40,7 +40,7 @@ internal/plugin/input/
 └── shared/                # Shared utilities
     └── regions/           # Ambient region extraction
         ├── README.md      # Region extraction docs
-        └── regions.go     # Edge/corner color extraction
+        └── regions.go     # Edge/corner colour extraction
 ```
 
 ## Plugin Interface
@@ -60,8 +60,8 @@ type Plugin interface {
     // Version returns plugin version (e.g., "1.0.0")
     Version() string
 
-    // Generate extracts colors from the source
-    // Returns raw color palette (categorization happens separately)
+    // Generate extracts colours from the source
+    // Returns raw colour palette (categorisation happens separately)
     Generate(ctx context.Context, opts GenerateOptions) (*colour.Palette, error)
 
     // RegisterFlags registers CLI flags (e.g., --image.path)
@@ -108,12 +108,12 @@ type ThemeHinter interface {
 
 ### image Plugin
 
-Extracts colors from images using k-means clustering.
+Extracts colours from images using k-means clustering.
 
 **Features:**
 - K-means clustering with configurable seed modes
 - Supports local files and HTTP(S) URLs
-- Optional ambient region extraction (edge/corner colors)
+- Optional ambient region extraction (edge/corner colours)
 - Theme detection based on dominant luminance
 - Wallpaper provider for output plugins
 
@@ -127,7 +127,7 @@ Extracts colors from images using k-means clustering.
 ```bash
 --image.path, -p          # Image path or URL (required)
 --image.algorithm         # Extraction algorithm (default: kmeans)
---image.colours           # Number of colors to extract (default: 16)
+--image.colours           # Number of colours to extract (default: 16)
 --image.extractAmbience   # Extract edge/corner regions
 --image.regions           # Number of regions (4, 8, 12, 16)
 --image.seed-mode         # Seed mode: content, filepath, manual, random
@@ -143,7 +143,7 @@ tinct generate -i image -p wallpaper.jpg -o hyprland,kitty
 
 ### file Plugin
 
-Loads color palettes from saved files (JSON, YAML).
+Loads colour palettes from saved files (JSON, YAML).
 
 **Features:**
 - Load from JSON or YAML palette files
@@ -175,19 +175,19 @@ tinct generate -i file -p saved-palette.json -o kitty
 
 ### remotejson Plugin
 
-Fetches color palettes from remote JSON APIs.
+Fetches colour palettes from remote JSON APIs.
 
 **Features:**
 - HTTP(S) URL support
 - JSONPath queries for complex JSON structures
-- Color format auto-detection (hex, rgb, hsl)
+- Colour format auto-detection (hex, rgb, hsl)
 - Useful for theme repositories (Catppuccin, Dracula, etc.)
 
 **CLI Flags:**
 ```bash
 --remote-json.url         # JSON URL (required)
 --remote-json.path        # JSONPath query (optional)
---remote-json.format      # Color format hint: hex, rgb, hsl (optional)
+--remote-json.format      # Colour format hint: hex, rgb, hsl (optional)
 ```
 
 **Example:**
@@ -199,11 +199,11 @@ tinct generate -i remote-json \
 
 ### remotecss Plugin
 
-Extracts colors from remote CSS files.
+Extracts colours from remote CSS files.
 
 **Features:**
 - Parse CSS custom properties (variables)
-- Extract hex color codes
+- Extract hex colour codes
 - Useful for loading CSS frameworks or theme files
 
 **CLI Flags:**
@@ -235,7 +235,7 @@ tinct generate -i remote-css \
    import (
        "context"
        "fmt"
-       "image/color"
+       "image/colour"
        
        "github.com/jmylchreest/tinct/internal/colour"
        "github.com/jmylchreest/tinct/internal/plugin/input"
@@ -256,7 +256,7 @@ tinct generate -i remote-css \
    }
 
    func (p *Plugin) Description() string {
-       return "Extract colors from my source"
+       return "Extract colours from my source"
    }
 
    func (p *Plugin) Version() string {
@@ -278,17 +278,17 @@ tinct generate -i remote-css \
        p.verbose = opts.Verbose
 
        if opts.Verbose {
-           fmt.Println("Extracting colors from:", p.sourcePath)
+           fmt.Println("Extracting colours from:", p.sourcePath)
        }
 
-       // Extract colors from your source
-       colors := []color.Color{
-           color.RGBA{R: 30, G: 30, B: 46, A: 255},   // Example colors
-           color.RGBA{R: 205, G: 214, B: 244, A: 255},
+       // Extract colours from your source
+       colours := []colour.Colour{
+           colour.RGBA{R: 30, G: 30, B: 46, A: 255},   // Example colours
+           colour.RGBA{R: 205, G: 214, B: 244, A: 255},
        }
 
        return &colour.Palette{
-           Colors: colors,
+           Colours: colours,
        }, nil
    }
    ```
@@ -332,8 +332,8 @@ tinct generate -i remote-css \
            t.Fatalf("Generate failed: %v", err)
        }
 
-       if len(palette.Colors) == 0 {
-           t.Error("Expected colors, got empty palette")
+       if len(palette.Colours) == 0 {
+           t.Error("Expected colours, got empty palette")
        }
    }
    ```
@@ -372,7 +372,7 @@ type GenerateOptions struct {
     // DryRun indicates generation without side effects
     DryRun bool
 
-    // ColourOverrides are manual color specifications (role=hex)
+    // ColourOverrides are manual colour specifications (role=hex)
     // Example: ["background=#1e1e2e", "accent1=#f38ba8"]
     ColourOverrides []string
 
@@ -387,24 +387,24 @@ type GenerateOptions struct {
 - Handle `ColourOverrides` if appropriate (usually done by categorizer)
 - Parse `PluginArgs` for plugin-specific configuration
 
-## Color Extraction Best Practices
+## Colour Extraction Best Practices
 
-### Number of Colors
+### Number of Colours
 
-- **Too few** (< 8): May not capture color variety
+- **Too few** (< 8): May not capture colour variety
 - **Optimal** (12-24): Good balance for most use cases
-- **Too many** (> 32): Diminishing returns, slower categorization
+- **Too many** (> 32): Diminishing returns, slower categorisation
 
-### Color Quality
+### Colour Quality
 
-1. **Remove duplicates** - Colors too similar muddy the palette
-2. **Check viability** - Very dark/light colors may not categorize well
+1. **Remove duplicates** - Colours too similar muddy the palette
+2. **Check viability** - Very dark/light colours may not categorize well
 3. **Preserve variety** - Include range of hues, saturations, luminances
 
 ### Theme Detection
 
 If implementing `ThemeHinter`:
-- Calculate average luminance of extracted colors
+- Calculate average luminance of extracted colours
 - If avg luminance < 0.5 → probably dark theme
 - If avg luminance > 0.5 → probably light theme
 - Return "auto" if unsure (let categorizer decide)
@@ -446,7 +446,7 @@ go test -cover ./internal/plugin/input/myplugin/...
 
 ### Ambient Region Extraction
 
-The `shared/regions` package provides edge/corner color extraction for ambient lighting:
+The `shared/regions` package provides edge/corner colour extraction for ambient lighting:
 
 ```go
 import "github.com/jmylchreest/tinct/internal/plugin/input/shared/regions"

@@ -9,7 +9,7 @@ This document defines the standard rules and conventions that all output plugins
 3. [Interface Requirements](#interface-requirements)
 4. [Template Requirements](#template-requirements)
 5. [Testing Requirements](#testing-requirements)
-6. [Color Variable Naming](#color-variable-naming)
+6. [Colour Variable Naming](#colour-variable-naming)
 7. [Documentation Requirements](#documentation-requirements)
 8. [Examples](#examples)
 
@@ -22,18 +22,18 @@ All output plugins **MUST** follow this naming standard for generated files:
 ### Two-File Pattern (Preferred)
 
 **Use when the application supports:
-- Color variables/constants (CSS variables, shell variables, etc.)
+- Colour variables/constants (CSS variables, shell variables, etc.)
 - Include/source/import directives
 
 **Files generated:
-1. `tinct-colours.{ext}` - Color variable definitions only
-2. `tinct.{ext}` - Example configuration that uses the color variables
+1. `tinct-colours.{ext}` - Colour variable definitions only
+2. `tinct.{ext}` - Example configuration that uses the colour variables
 
 **Benefits:
-- Users can modify example config without touching color definitions
-- Color file can be imported into multiple configuration files
+- Users can modify example config without touching colour definitions
+- Colour file can be imported into multiple configuration files
 - Clear separation of concerns
-- Easy to update colors without breaking configuration
+- Easy to update colours without breaking configuration
 
 ### Single-File Pattern
 
@@ -42,7 +42,7 @@ All output plugins **MUST** follow this naming standard for generated files:
 - Does NOT support includes/imports
 
 **File generated:
-- `tinct.{ext}` - Complete configuration with colors embedded directly
+- `tinct.{ext}` - Complete configuration with colours embedded directly
 
 ### Naming Examples
 
@@ -70,7 +70,7 @@ internal/plugin/output/
  pluginname/
      pluginname.go              # Plugin implementation (REQUIRED)
      pluginname_test.go         # Unit tests (REQUIRED)
-     tinct-colours.ext.tmpl     # Color definitions template (if two-file)
+     tinct-colours.ext.tmpl     # Colour definitions template (if two-file)
      tinct.ext.tmpl             # Config/example template (REQUIRED)
 ```
 
@@ -122,7 +122,7 @@ type Plugin interface {
 
 - **MUST** be a short, descriptive sentence
 - **SHOULD** start with "Generate" or "Create"
-- Example: `"Generate Waybar status bar color theme"`
+- Example: `"Generate Waybar status bar colour theme"`
 
 #### `DefaultOutputDir() string`
 
@@ -222,13 +222,13 @@ tmplContent, fromCustom, err := loader.Load("tinct-colours.ext.tmpl")
 
 ### Template Structure
 
-#### Color Definitions Template (`tinct-colours.{ext}.tmpl`)
+#### Colour Definitions Template (`tinct-colours.{ext}.tmpl`)
 
 **MUST** include:
 1. Header comment explaining the file purpose
 2. Import/source instructions
 3. Detected theme type: `{{ .SourceTheme }}`
-4. Color definitions using semantic names
+4. Colour definitions using semantic names
 5. Usage documentation in comments
 
 **Example structure:
@@ -238,8 +238,8 @@ tmplContent, fromCustom, err := loader.Load("tinct-colours.ext.tmpl")
 # Import instructions
 # Detected theme: {{ .SourceTheme }}
 
-# Color definitions
-{{- range .Colors }}
+# Colour definitions
+{{- range .Colours }}
 variable_name = "{{ .Hex }}"
 {{- end }}
 
@@ -250,8 +250,8 @@ variable_name = "{{ .Hex }}"
 
 **MUST** include:
 1. Header comment explaining the file purpose
-2. Import/source statement for color definitions file (if two-file pattern)
-3. Example configuration showing color usage
+2. Import/source statement for colour definitions file (if two-file pattern)
+3. Example configuration showing colour usage
 4. Comments explaining available variables
 5. Examples for common use cases
 
@@ -262,16 +262,16 @@ Plugins **MUST** define clear data structures for templates:
 ```go
 type ColorsData struct {
     SourceTheme string            // "dark" or "light"
-    Colors      []ColorDefinition // Semantic colors
+    Colours      []ColorDefinition // Semantic colours
 }
 
 type ColorDefinition struct {
     Name string // Semantic name (e.g., "background")
-    Hex  string // Hex color (e.g., "#1a1b26")
+    Hex  string // Hex colour (e.g., "#1a1b26")
 }
 ```
 
-### Color Mapping
+### Colour Mapping
 
 Plugins **MUST** map semantic roles consistently:
 
@@ -329,11 +329,11 @@ All plugins **MUST** have comprehensive tests:
 
 ---
 
-## Color Variable Naming
+## Colour Variable Naming
 
 ### Standard Semantic Names
 
-All plugins **MUST** use these semantic color names:
+All plugins **MUST** use these semantic colour names:
 
 | Category | Variable Names |
 |----------|----------------|
@@ -347,7 +347,7 @@ All plugins **MUST** use these semantic color names:
 
 - **MUST** use lowercase with hyphens (kebab-case)
 - **MUST NOT** use underscores or camelCase
-- **MUST** use semantic names, not color names (e.g., `danger` not `red`)
+- **MUST** use semantic names, not colour names (e.g., `danger` not `red`)
 - **MUST** use consistent naming across all plugins
 
 ### Application-Specific Syntax
@@ -376,7 +376,7 @@ Plugin files **MUST** include:
 **Example:
 
 ```go
-// Package waybar provides an output plugin for Waybar status bar color themes.
+// Package waybar provides an output plugin for Waybar status bar colour themes.
 package waybar
 
 // Plugin implements the output.Plugin interface for Waybar.
@@ -425,7 +425,7 @@ See `internal/plugin/output/waybar/` for a complete reference implementation:
 
 - `waybar.go` - Full plugin implementation
 - `waybar_test.go` - Comprehensive tests
-- `tinct-colours.css.tmpl` - Color definitions
+- `tinct-colours.css.tmpl` - Colour definitions
 - `tinct.css.tmpl` - Example configuration
 
 ### Complete Single-File Plugin Example
@@ -450,7 +450,7 @@ Use this checklist when creating a new plugin:
 - [ ] Used template loader for user customization support
 - [ ] Created test file: `{pluginname}_test.go`
 - [ ] All required tests passing
-- [ ] Semantic color names follow standard
+- [ ] Semantic colour names follow standard
 - [ ] File naming follows convention (two-file or single-file)
 - [ ] Added plugin documentation comments
 - [ ] Added template documentation comments

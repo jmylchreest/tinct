@@ -22,7 +22,7 @@ Pre-built commands for applying popular colour themes to your desktop using Tinc
 ```bash
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "$.mocha.colors" \
+  --remote-json.query "$.mocha.colours" \
   --remote-json.map "base=background,text=foreground,red=danger,green=success,yellow=warning,blue=info,pink=accent1,mauve=accent2,teal=accent3" \
   -o hyprland,kitty,waybar,dunst
 ```
@@ -32,7 +32,7 @@ tinct generate -i remote-json \
 ```bash
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "$.latte.colors" \
+  --remote-json.query "$.latte.colours" \
   --remote-json.map "base=background,text=foreground,red=danger,green=success,yellow=warning,blue=info,pink=accent1,mauve=accent2,teal=accent3" \
   -o hyprland,kitty,waybar,dunst
 ```
@@ -42,7 +42,7 @@ tinct generate -i remote-json \
 ```bash
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "$.frappe.colors" \
+  --remote-json.query "$.frappe.colours" \
   --remote-json.map "base=background,text=foreground,red=danger,green=success,yellow=warning,blue=info,pink=accent1,mauve=accent2,teal=accent3" \
   -o hyprland,kitty,waybar,dunst
 ```
@@ -52,7 +52,7 @@ tinct generate -i remote-json \
 ```bash
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "$.macchiato.colors" \
+  --remote-json.query "$.macchiato.colours" \
   --remote-json.map "base=background,text=foreground,red=danger,green=success,yellow=warning,blue=info,pink=accent1,mauve=accent2,teal=accent3" \
   -o hyprland,kitty,waybar,dunst
 ```
@@ -128,7 +128,7 @@ tinct generate -i remote-json \
   -o hyprland,kitty,waybar,dunst,neovim
 ```
 
-**Colour Reference** (from [official JSON](https://github.com/tokyo-night/tokyo-night-vscode-theme/blob/master/themes/tokyo-night-color-theme.json)):
+**Colour Reference** (from [official JSON](https://github.com/tokyo-night/tokyo-night-vscode-theme/blob/master/themes/tokyo-night-colour-theme.json)):
 - Keywords: `#bb9af7` (purple), Strings: `#9ece6a` (green), Numbers: `#ff9e64` (orange)
 - Functions: `#7aa2f7` (blue), Variables: `#c0caf5` (light blue), Comments: `#565f89` (muted)
 
@@ -154,7 +154,7 @@ tinct generate -i remote-css \
 
 [Gruvbox](https://github.com/morhetz/gruvbox) is a retro groove colour scheme with high-contrast pastel colours designed for eye comfort.
 
-**Note**: Gruvbox's canonical colour definitions are in the Vim colour scheme file. These colours are extracted from the [official repository](https://github.com/morhetz/gruvbox/blob/master/colors/gruvbox.vim).
+**Note**: Gruvbox's canonical colour definitions are in the Vim colour scheme file. These colours are extracted from the [official repository](https://github.com/morhetz/gruvbox/blob/master/colours/gruvbox.vim).
 
 ### Gruvbox Dark
 
@@ -297,7 +297,7 @@ tinct generate -i remote-json \
 
 [One Dark](https://github.com/atom/one-dark-syntax) is Atom's iconic dark theme, included by default with the Atom editor.
 
-**Note**: Colours extracted from the [official Atom syntax theme](https://github.com/atom/one-dark-syntax/blob/master/styles/colors.less). The theme uses HSL values internally which have been converted to hex.
+**Note**: Colours extracted from the [official Atom syntax theme](https://github.com/atom/one-dark-syntax/blob/master/styles/colours.less). The theme uses HSL values internally which have been converted to hex.
 
 ```bash
 # Create palette from official One Dark colours
@@ -322,7 +322,7 @@ tinct generate -i remote-json \
   -o hyprland,kitty,waybar,dunst,neovim
 ```
 
-**Colour Reference** (from [official source](https://github.com/atom/one-dark-syntax/blob/master/styles/colors.less)):
+**Colour Reference** (from [official source](https://github.com/atom/one-dark-syntax/blob/master/styles/colours.less)):
 - `mono-1` (#abb2bf): Default text colour
 - `hue-1` (#56b6c2): Cyan accent
 - `hue-2` (#61afef): Blue accent  
@@ -411,7 +411,7 @@ tinct generate -i file --file.path /tmp/my-palette.txt \
   -o hyprland,kitty,waybar,dunst
 ```
 
-Higher weights influence accent priority and selection during categorization.
+Higher weights influence accent priority and selection during categorisation.
 
 #### Complex Manual Palette (Roles + Weights + Positions)
 
@@ -456,7 +456,7 @@ tinct generate -i file --file.path /tmp/advanced-palette.txt \
 ```
 
 This approach is perfect when you:
-- Need precise control over colour categorization
+- Need precise control over colour categorisation
 - Want to specify positional colours for LED strips
 - Are migrating from another theme system
 - Have specific accent priorities in mind

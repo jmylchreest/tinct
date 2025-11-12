@@ -52,7 +52,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Zellij terminal multiplexer colour theme (KDL format)"
+	return "Zellij terminal multiplexer theme (KDL)"
 }
 
 // Version returns the plugin version.

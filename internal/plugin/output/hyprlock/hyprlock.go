@@ -49,7 +49,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Hyprlock screen lock colour theme configuration"
+	return "Hyprlock screen locker theme"
 }
 
 // Version returns the plugin version.

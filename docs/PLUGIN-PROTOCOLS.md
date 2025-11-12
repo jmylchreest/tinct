@@ -12,9 +12,9 @@ graph TD
     C --> E[Go Plugins<br/>Advanced Features]
     D --> F[Any Language<br/>Shell, Python, etc.]
     
-    style A fill:#4a90e2,color:#fff
-    style C fill:#7cb342,color:#fff
-    style D fill:#ff9800,color:#fff
+    style A fill:#4a90e2,colour:#fff
+    style C fill:#7cb342,colour:#fff
+    style D fill:#ff9800,colour:#fff
 ```
 
 ## Protocol Comparison
@@ -90,7 +90,7 @@ fi
 # Read palette from stdin
 palette=$(cat)
 
-# Extract colors
+# Extract colours
 bg=$(echo "$palette" | jq -r '.colours.background.hex')
 fg=$(echo "$palette" | jq -r '.colours.foreground.hex')
 
@@ -192,7 +192,7 @@ func (p *MyPlugin) Generate(ctx context.Context, palette protocol.PaletteData) (
     content := fmt.Sprintf("Background: %s\nForeground: %s\n", bg, fg)
     
     return map[string][]byte{
-        "colors.txt": []byte(content),
+        "colours.txt": []byte(content),
     }, nil
 }
 
@@ -376,7 +376,7 @@ You can't force it - the plugin declares its protocol via `--plugin-info`. This 
 
 ## Wallpaper Support for Input Plugins
 
-Input plugins can optionally provide wallpaper images to output plugins. This allows output plugins to set desktop wallpapers alongside theme colors.
+Input plugins can optionally provide wallpaper images to output plugins. This allows output plugins to set desktop wallpapers alongside theme colours.
 
 ### Go-Plugin RPC Protocol
 
@@ -397,17 +397,17 @@ type ImagePlugin struct {
     lastImagePath string
 }
 
-func (p *ImagePlugin) Generate(ctx context.Context, opts protocol.InputOptions) ([]color.Color, error) {
+func (p *ImagePlugin) Generate(ctx context.Context, opts protocol.InputOptions) ([]colour.Colour, error) {
     // Generate or load image
     imagePath := "/path/to/generated/image.png"
     
     // Store the path for WallpaperPath()
     p.lastImagePath = imagePath
     
-    // Extract colors from image
-    colors := extractColorsFromImage(imagePath)
+    // Extract colours from image
+    colours := extractColorsFromImage(imagePath)
     
-    return colors, nil
+    return colours, nil
 }
 
 func (p *ImagePlugin) WallpaperPath() string {
@@ -430,7 +430,7 @@ For JSON-stdio plugins, return a response object with a `wallpaper_path` field:
 **New format (with wallpaper):**
 ```json
 {
-  "colors": [
+  "colours": [
     {"r": 255, "g": 100, "b": 50},
     {"r": 50, "g": 100, "b": 255}
   ],
@@ -455,13 +455,13 @@ For JSON-stdio plugins, return a response object with a `wallpaper_path` field:
 image_path="/tmp/wallpaper-$$.png"
 generate_image "$image_path"
 
-# Extract colors
-colors=$(extract_colors "$image_path")
+# Extract colours
+colours=$(extract_colors "$image_path")
 
 # Return new format with wallpaper path
 cat <<EOF
 {
-  "colors": $colors,
+  "colours": $colours,
   "wallpaper_path": "$image_path"
 }
 EOF

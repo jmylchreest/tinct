@@ -5,7 +5,7 @@ This directory contains the **built-in plugin system** for Tinct. Built-in plugi
 ## Overview
 
 The plugin system allows Tinct to be extended with:
-- **Input plugins** - Extract or generate color palettes from various sources
+- **Input plugins** - Extract or generate colour palettes from various sources
 - **Output plugins** - Apply palettes to applications, generate configs, or control devices
 
 ### Built-in vs External Plugins
@@ -57,14 +57,14 @@ internal/plugin/
 
 ### Input Plugin Interface
 
-Input plugins extract or generate color palettes.
+Input plugins extract or generate colour palettes.
 
 **Required Methods:**
 ```go
 type Plugin interface {
     Name() string                              // Plugin identifier
     Description() string                       // Human-readable description
-    Generate(ctx, opts) (*colour.Palette, error)  // Extract/generate colors
+    Generate(ctx, opts) (*colour.Palette, error)  // Extract/generate colours
     RegisterFlags(cmd *cobra.Command)          // Register CLI flags
     Validate() error                           // Validate configuration
 }
@@ -262,7 +262,7 @@ Defines interfaces and data structures for plugin communication.
 
 **Key Types:**
 - `PluginInfo` - Plugin metadata
-- `PaletteData` - Color palette with metadata
+- `PaletteData` - Colour palette with metadata
 - `InputOptions` - Input plugin options
 - `ExecutionContext` - Execution environment
 
@@ -271,13 +271,13 @@ Defines interfaces and data structures for plugin communication.
 Built-in output plugins use Go's `text/template` engine with custom functions.
 
 **Available in templates:**
-- `get . "role"` - Get color by role
+- `get . "role"` - Get colour by role
 - `has . "role"` - Check if role exists
 - `hex` - Format as #RRGGBB
 - `rgb` - Format as R, G, B
 - `rgba` - Format as R, G, B, A
 - `hsl` - Format as H, S%, L%
-- `withAlpha color alpha` - Set alpha channel
+- `withAlpha colour alpha` - Set alpha channel
 - `themeType .` - Get theme type (dark/light)
 - `.WallpaperPath` - Wallpaper path (if available)
 

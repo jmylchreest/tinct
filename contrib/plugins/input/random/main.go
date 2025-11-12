@@ -1,10 +1,10 @@
-// random - Random Color Palette Generator (Tinct Input Plugin)
+// random - Random Colour Palette Generator (Tinct Input Plugin)
 //
-// Generates random color palettes with configurable seed and color count.
+// Generates random colour palettes with configurable seed and colour count.
 // Uses the go-plugin RPC protocol for better performance and process isolation.
 //
 // Features:
-// - Generate 32 random colors by default (configurable via plugin args)
+// - Generate 32 random colours by default (configurable via plugin args)
 // - Deterministic generation with seed support for reproducibility
 // - Process reuse across multiple invocations
 // - Dry-run mode support
@@ -19,7 +19,7 @@
 //   tinct generate -i random -o tailwind
 //
 // Plugin Args:
-//   count: Number of colors to generate (default: 32)
+//   count: Number of colours to generate (default: 32)
 //   seed: Random seed for reproducible generation
 //
 // Author: Tinct Contributors
@@ -74,15 +74,15 @@ func (p *RandomPlugin) Generate(ctx context.Context, opts tinctplugin.InputOptio
 	// Handle dry-run mode
 	if opts.DryRun {
 		if opts.Verbose {
-			fmt.Fprintf(os.Stderr, "DRY-RUN MODE: Would generate %d random colors\n", colorCount)
+			fmt.Fprintf(os.Stderr, "DRY-RUN MODE: Would generate %d random colours\n", colorCount)
 			fmt.Fprintf(os.Stderr, "Random seed: %d\n", seed)
 		}
 		return []color.Color{}, nil
 	}
 
-	// Generate random colors
+	// Generate random colours
 	if opts.Verbose {
-		fmt.Fprintf(os.Stderr, "Generating %d random colors (seed: %d)\n", colorCount, seed)
+		fmt.Fprintf(os.Stderr, "Generating %d random colours (seed: %d)\n", colorCount, seed)
 	}
 
 	return generateRandomColors(colorCount, rng), nil
@@ -95,7 +95,7 @@ func (p *RandomPlugin) GetMetadata() tinctplugin.PluginInfo {
 		Type:            "input",
 		Version:         "0.0.1",
 		ProtocolVersion: tinctplugin.ProtocolVersion,
-		Description:     "Generate random color palettes with configurable seed and color count",
+		Description:     "Generate random colour palettes with configurable seed and colour count",
 		PluginProtocol:  "go-plugin",
 	}
 }
@@ -114,7 +114,7 @@ func (p *RandomPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
 			Name:        "count",
 			Type:        "int",
 			Default:     "32",
-			Description: "Number of colors to generate",
+			Description: "Number of colours to generate",
 			Required:    false,
 		},
 		{
@@ -127,7 +127,7 @@ func (p *RandomPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
 	}
 }
 
-// generateRandomColors creates n random colors.
+// generateRandomColors creates n random colours.
 func generateRandomColors(n int, rng *mathrand.Rand) []color.Color {
 	colors := make([]color.Color, n)
 

@@ -35,7 +35,7 @@ When using the `image` input plugin, hyprpaper automatically:
 3. Preserves your existing monitor assignments
 
 ```bash
-# Extract colors and set wallpaper
+# Extract colours and set wallpaper
 tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprpaper,hyprlock,hyprland
 
 # hyprpaper plugin will:
@@ -260,7 +260,7 @@ source = ~/.config/hypr/tinct-hyprlock.conf
 
 background {
     path = $tinct_wallpaper  # From tinct-hyprlock.conf
-    color = $tinct_background
+    colour = $tinct_background
     blur_passes = 3
 }
 ```
@@ -281,7 +281,7 @@ tinct generate -i image -p "$WALLPAPER" \
 
 # hyprpaper automatically applies the wallpaper
 # hyprlock gets the wallpaper path in its variables
-# Other plugins get matching color themes
+# Other plugins get matching colour themes
 ```
 
 ### Multiple Wallpapers Per Monitor
@@ -337,5 +337,5 @@ hyprctl hyprpaper wallpaper "DP-1,~/Pictures/new-wallpaper.jpg"
 ## See Also
 
 - [Hyprlock Plugin](../hyprlock/README.md) - Screen lock theming with wallpaper support
-- [Hyprland Plugin](../hyprland/README.md) - Window manager color theming
-- [Image Input Plugin](../../input/image/README.md) - Extract colors from images
+- [Hyprland Plugin](../hyprland/README.md) - Window manager colour theming
+- [Image Input Plugin](../../input/image/README.md) - Extract colours from images

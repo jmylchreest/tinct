@@ -53,7 +53,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate Waybar status bar color theme"
+	return "Waybar status bar theme"
 }
 
 // Version returns the plugin version.

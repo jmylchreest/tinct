@@ -47,10 +47,10 @@ Or create a minimal one:
 
 ```yaml
 templates:
-  - name: "my-app-colors"
-    description: "My app color configuration"
+  - name: "my-app-colours"
+    description: "My app colour configuration"
     template_path: "~/.config/tinct/templates/myapp.tmpl"
-    output_path: "~/.config/myapp/colors.conf"
+    output_path: "~/.config/myapp/colours.conf"
     enabled: true
 
 settings:
@@ -79,7 +79,7 @@ Add to config:
 templates:
   - name: "css-vars"
     template_path: "~/.config/tinct/templates/css-vars.tmpl"
-    output_path: "~/myproject/colors.css"
+    output_path: "~/myproject/colours.css"
     enabled: true
 ```
 
@@ -134,29 +134,29 @@ tinct generate --input image -p wallpaper.jpg --outputs templater --dry-run
 
 ### Available Functions
 
-- `get` - Get color: `{{ (get . "background").Hex }}`
+- `get` - Get colour: `{{ (get . "background").Hex }}`
 - `has` - Check if exists: `{{ if has . "accent4" }}...{{ end }}`
 - `themeType` - Get theme type: `{{ themeType . }}` (returns "dark" or "light")
 - `seq` - Generate sequence: `{{ range seq 1 4 }}{{ . }}{{ end }}`
-- `ansi` - Get ANSI color: `{{ (ansi . 0).Hex }}` (for terminal themes)
+- `ansi` - Get ANSI colour: `{{ (ansi . 0).Hex }}` (for terminal themes)
 
-### Color Methods
+### Colour Methods
 
 ```
-{{ $color := get . "accent1" }}
-{{ $color.Hex }}        → #89b4fa
-{{ $color.HexNoHash }}  → 89b4fa
-{{ $color.RGB }}        → rgb(137,180,250)
-{{ $color.RGBA }}       → rgba(137,180,250,1)
-{{ $color.R }}          → 137
-{{ $color.G }}          → 180
-{{ $color.B }}          → 250
-{{ $color.RGBDecimal }} → 137,180,250
+{{ $colour := get . "accent1" }}
+{{ $colour.Hex }}        → #89b4fa
+{{ $colour.HexNoHash }}  → 89b4fa
+{{ $colour.RGB }}        → rgb(137,180,250)
+{{ $colour.RGBA }}       → rgba(137,180,250,1)
+{{ $colour.R }}          → 137
+{{ $colour.G }}          → 180
+{{ $colour.B }}          → 250
+{{ $colour.RGBDecimal }} → 137,180,250
 ```
 
-### Available Color Roles
+### Available Colour Roles
 
-Core colors:
+Core colours:
 - `background`, `backgroundMuted`
 - `foreground`, `foregroundMuted`
 
@@ -175,7 +175,7 @@ And many more! Use `has` to check availability.
 
 ## Common Patterns
 
-### Conditional Colors
+### Conditional Colours
 
 ```css
 /* Only include accent4 if it exists */
@@ -198,7 +198,7 @@ And many more! Use `has` to check availability.
 ### RGB Components
 
 ```css
---color-rgb: {{ (get . "accent1").R }}, {{ (get . "accent1").G }}, {{ (get . "accent1").B }};
+--colour-rgb: {{ (get . "accent1").R }}, {{ (get . "accent1").G }}, {{ (get . "accent1").B }};
 ```
 
 ### Theme-Specific Values
@@ -241,15 +241,15 @@ Enable verbose mode to see detailed error messages:
 tinct generate ... --plugin-args 'templater={"verbose":true}'
 ```
 
-### Color Role Not Found
+### Colour Role Not Found
 
-Always use `has` before `get` for optional colors:
+Always use `has` before `get` for optional colours:
 
 ```
 {{- if has . "accent4" }}
 {{ (get . "accent4").Hex }}
 {{- else }}
-#default-color
+#default-colour
 {{- end }}
 ```
 

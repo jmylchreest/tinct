@@ -45,11 +45,11 @@ graph TB
     Comm -->|JSON-stdio| PyC[Python Plugin C<br/>JSON I/O]
     Comm -->|JSON-stdio| ShD[Bash Plugin D<br/>JSON I/O]
     
-    style Host fill:#4a90e2,color:#fff
-    style GoA fill:#7cb342,color:#fff
-    style GoB fill:#7cb342,color:#fff
-    style PyC fill:#ff9800,color:#fff
-    style ShD fill:#ff9800,color:#fff
+    style Host fill:#4a90e2,colour:#fff
+    style GoA fill:#7cb342,colour:#fff
+    style GoB fill:#7cb342,colour:#fff
+    style PyC fill:#ff9800,colour:#fff
+    style ShD fill:#ff9800,colour:#fff
 ```
 
 ### Plugin Protocol
@@ -102,7 +102,7 @@ type OutputPlugin interface {
 **Examples**:
 - `tinct-output-hyprland` - Hyprland compositor
 - `tinct-output-waybar` - Waybar status bar
-- `tinct-output-neovim` - Neovim color scheme
+- `tinct-output-neovim` - Neovim colour scheme
 
 ## Quick Start
 
@@ -317,7 +317,7 @@ type HyprlandPlugin struct {
 func NewHyprlandPlugin() *HyprlandPlugin {
     home, _ := os.UserHomeDir()
     return &HyprlandPlugin{
-        configPath: filepath.Join(home, ".config", "hypr", "colors.conf"),
+        configPath: filepath.Join(home, ".config", "hypr", "colours.conf"),
     }
 }
 
@@ -326,13 +326,13 @@ func (p *HyprlandPlugin) Name() string {
 }
 
 func (p *HyprlandPlugin) Execute(ctx context.Context, palette *plugin.Palette) error {
-    tmpl := `# Tinct generated colors for Hyprland
+    tmpl := `# Tinct generated colours for Hyprland
 $background = rgb({{.Background}})
 $foreground = rgb({{.Foreground}})
 $cursor = rgb({{.Cursor}})
 
-{{range $i, $color := .Colors}}
-$color{{$i}} = rgb({{$color}})
+{{range $i, $colour := .Colours}}
+$colour{{$i}} = rgb({{$colour}})
 {{end}}
 
 # Apply to Hyprland
@@ -361,14 +361,14 @@ decoration {
         "Background": palette.Background.Hex(),
         "Foreground": palette.Foreground.Hex(),
         "Cursor":     palette.Cursor.Hex(),
-        "Colors":     palette.Colors,
+        "Colours":     palette.Colours,
     })
 }
 
 func (p *HyprlandPlugin) Metadata() plugin.Metadata {
     return plugin.Metadata{
         Name:        "hyprland",
-        Description: "Generate Hyprland color configuration",
+        Description: "Generate Hyprland colour configuration",
         Version:     "1.0.0",
     }
 }
@@ -472,7 +472,7 @@ chmod +x tinct-source-reddit
 **`tinct-output-neovim`**:
 ```python
 #!/usr/bin/env python3
-"""Tinct output plugin for Neovim color scheme"""
+"""Tinct output plugin for Neovim colour scheme"""
 
 import os
 from pathlib import Path
@@ -480,19 +480,19 @@ from tinct_plugin import OutputPlugin, serve_plugin
 
 class NeovimPlugin(OutputPlugin):
     def __init__(self):
-        self.colors_dir = Path.home() / '.config' / 'nvim' / 'colors'
+        self.colors_dir = Path.home() / '.config' / 'nvim' / 'colours'
         self.colors_dir.mkdir(parents=True, exist_ok=True)
     
     def name(self):
         return "neovim"
     
     def execute(self, palette):
-        """Generate Neovim color scheme"""
+        """Generate Neovim colour scheme"""
         scheme_name = 'tinct'
         output_file = self.colors_dir / f'{scheme_name}.vim'
         
         with open(output_file, 'w') as f:
-            f.write(f'''\" Tinct generated color scheme
+            f.write(f'''\" Tinct generated colour scheme
 \" Name: {scheme_name}
 
 set background=dark
@@ -502,32 +502,32 @@ if exists("syntax_on")
 endif
 let g:colors_name = "{scheme_name}"
 
-\" UI Colors
+\" UI Colours
 hi Normal guifg={palette['foreground']} guibg={palette['background']}
 hi Cursor guifg={palette['background']} guibg={palette['cursor']}
-hi Visual guibg={palette['colors'][1]}
-hi CursorLine guibg={palette['colors'][0]}
-hi StatusLine guifg={palette['foreground']} guibg={palette['colors'][8]}
-hi StatusLineNC guifg={palette['colors'][7]} guibg={palette['colors'][0]}
+hi Visual guibg={palette['colours'][1]}
+hi CursorLine guibg={palette['colours'][0]}
+hi StatusLine guifg={palette['foreground']} guibg={palette['colours'][8]}
+hi StatusLineNC guifg={palette['colours'][7]} guibg={palette['colours'][0]}
 
-\" Syntax Colors
-hi Comment guifg={palette['colors'][8]}
-hi Constant guifg={palette['colors'][1]}
-hi String guifg={palette['colors'][2]}
-hi Identifier guifg={palette['colors'][4]}
-hi Function guifg={palette['colors'][4]}
-hi Statement guifg={palette['colors'][5]}
-hi Keyword guifg={palette['colors'][5]}
-hi Type guifg={palette['colors'][3]}
-hi Special guifg={palette['colors'][6]}
+\" Syntax Colours
+hi Comment guifg={palette['colours'][8]}
+hi Constant guifg={palette['colours'][1]}
+hi String guifg={palette['colours'][2]}
+hi Identifier guifg={palette['colours'][4]}
+hi Function guifg={palette['colours'][4]}
+hi Statement guifg={palette['colours'][5]}
+hi Keyword guifg={palette['colours'][5]}
+hi Type guifg={palette['colours'][3]}
+hi Special guifg={palette['colours'][6]}
 ''')
         
-        print(f"Generated Neovim color scheme: {output_file}")
+        print(f"Generated Neovim colour scheme: {output_file}")
     
     def metadata(self):
         return {
             'name': 'neovim',
-            'description': 'Generate Neovim color scheme',
+            'description': 'Generate Neovim colour scheme',
             'version': '1.0.0'
         }
 
@@ -586,18 +586,18 @@ set -e
 # Read palette from stdin
 palette=$(cat)
 
-# Extract colors
+# Extract colours
 bg=$(echo "$palette" | jq -r '.background')
 fg=$(echo "$palette" | jq -r '.foreground')
-c0=$(echo "$palette" | jq -r '.colors[0]')
-c1=$(echo "$palette" | jq -r '.colors[1]')
-c2=$(echo "$palette" | jq -r '.colors[2]')
-c4=$(echo "$palette" | jq -r '.colors[4]')
+c0=$(echo "$palette" | jq -r '.colours[0]')
+c1=$(echo "$palette" | jq -r '.colours[1]')
+c2=$(echo "$palette" | jq -r '.colours[2]')
+c4=$(echo "$palette" | jq -r '.colours[4]')
 
 # Generate i3 config
-config_file="$HOME/.config/i3/colors"
+config_file="$HOME/.config/i3/colours"
 cat > "$config_file" <<EOF
-# Tinct generated colors for i3
+# Tinct generated colours for i3
 set \$bg     $bg
 set \$fg     $fg
 set \$c0     $c0
@@ -605,16 +605,16 @@ set \$c1     $c1
 set \$c2     $c2
 set \$c4     $c4
 
-# Window colors
+# Window colours
 #                       border  background text    indicator
 client.focused          \$c4    \$c4       \$bg    \$c2
 client.unfocused        \$c0    \$c0       \$fg    \$c0
 client.focused_inactive \$c0    \$c0       \$fg    \$c0
 client.urgent           \$c1    \$c1       \$bg    \$c1
 
-# Bar colors
+# Bar colours
 bar {
-    colors {
+    colours {
         background \$bg
         statusline \$fg
         separator  \$c0
@@ -628,7 +628,7 @@ bar {
 }
 EOF
 
-echo "Generated i3 colors: $config_file"
+echo "Generated i3 colours: $config_file"
 
 # Reload i3
 i3-msg reload >/dev/null 2>&1 || true
@@ -659,9 +659,9 @@ tinct plugins list
 #   bing         Bing daily wallpaper
 #
 # Output Plugins:
-#   hyprland     Generate Hyprland color configuration
-#   neovim       Generate Neovim color scheme
-#   waybar       Generate Waybar colors
+#   hyprland     Generate Hyprland colour configuration
+#   neovim       Generate Neovim colour scheme
+#   waybar       Generate Waybar colours
 ```
 
 ### Plugin Info
@@ -714,7 +714,7 @@ plugins:
     default_subreddit: wallpapers
     
   hyprland:
-    config_path: ~/.config/hypr/colors.conf
+    config_path: ~/.config/hypr/colours.conf
     reload_command: hyprctl reload
 ```
 

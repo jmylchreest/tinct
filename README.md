@@ -2,7 +2,7 @@
 
 > An extensible colour palette generator and theme manager for unified theming across your entire environment
 
-Generate colour palettes from multiple sources (images, remote JSON/CSS themes, manual lists) with intelligent categorization, role hints, weighting, and positional extraction. Apply them consistently to terminals, window managers, text editors, notification daemons, and even external LED lighting. Built with Go and designed for extensibility.
+Generate colour palettes from multiple sources (images, remote JSON/CSS themes, manual lists) with intelligent categorisation, role hints, weighting, and positional extraction. Apply them consistently to terminals, window managers, text editors, notification daemons, and even external LED lighting. Built with Go and designed for extensibility.
 
 [![Go Version](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -10,9 +10,9 @@ Generate colour palettes from multiple sources (images, remote JSON/CSS themes, 
 ## Features
 
 - **Multiple Input Sources**: Extract from images, fetch from remote JSON/CSS, or provide manual colour lists
-- **Role Hints & Weighting**: Override auto-categorization with explicit role assignments and colour importance weights
+- **Role Hints & Weighting**: Override auto-categorisation with explicit role assignments and colour importance weights
 - **Positional Extraction**: Extract edge/corner colours from images for ambient lighting and LED synchronization
-- **Smart Categorization**: Auto-assigns background, foreground, accent, and semantic colours with WCAG contrast checking
+- **Smart Categorisation**: Auto-assigns background, foreground, accent, and semantic colours with WCAG contrast checking
 - **Theme-Aware**: Detects or forces dark/light themes with accessibility compliance
 - **Highly Extensible**: Plugin system for inputs (image, remote JSON/CSS, file) and outputs (applications, LED devices)
 - **External Device Support**: Send colours to LED strips, smart lights, and other RGB peripherals
@@ -35,10 +35,10 @@ cd tinct && go build -o tinct ./cmd/tinct
 ### Basic Usage
 
 ```bash
-# Extract and preview colors from image
+# Extract and preview colours from image
 tinct extract --preview wallpaper.jpg
 
-# Generate themes from wallpaper (colors + wallpaper auto-applied)
+# Generate themes from wallpaper (colours + wallpaper auto-applied)
 tinct generate -i image -p wallpaper.jpg -o hyprland,hyprpaper,hyprlock,kitty,waybar
 
 # Use a remote theme (Catppuccin Mocha)
@@ -61,16 +61,16 @@ tinct extract --categorise --preview wallpaper.jpg
 ### Output Plugins
 
 **Applications:**
-- **hyprland**: Hyprland window manager (color themes)
+- **hyprland**: Hyprland window manager (colour themes)
 - **hyprpaper**: Hyprpaper wallpaper manager (wallpaper config and auto-apply)
-- **hyprlock**: Hyprlock screen locker (colors and wallpaper)
+- **hyprlock**: Hyprlock screen locker (colours and wallpaper)
 - **kitty**: Kitty terminal emulator
 - **waybar**: Waybar status bar
 - **dunst**: Dunst notification daemon
 - **fuzzel**: Fuzzel application launcher
 - **swayosd**: SwayOSD on-screen display
 - **wofi**: Wofi application launcher
-- **neovim**: Neovim text editor (Lua colorschemes)
+- **neovim**: Neovim text editor (Lua colour schemes)
 - **zellij**: Zellij terminal multiplexer
 
 **External Devices:**
@@ -84,19 +84,19 @@ See [Plugin Wishlist](docs/PLUGINS-WISHLIST.md) for planned plugins and [Externa
 
 ## Template Functions Reference
 
-Tinct uses Go templates for generating configuration files. Templates have access to the color palette and various helper functions.
+Tinct uses Go templates for generating configuration files. Templates have access to the colour palette and various helper functions.
 
 ### Common Template Functions
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `get . "role"` | Get color by role name | `{{ get . "background" \| hex }}` → `#1e1e2e` |
+| `get . "role"` | Get colour by role name | `{{ get . "background" \| hex }}` → `#1e1e2e` |
 | `has . "role"` | Check if role exists | `{{ if has . "border" }}...{{ end }}` |
-| `ansi . "color"` | Get closest ANSI color | `{{ ansi . "red" \| hex }}` |
+| `ansi . "colour"` | Get closest ANSI colour | `{{ ansi . "red" \| hex }}` |
 | `themeType .` | Get theme type | `{{ themeType . }}` → `dark` |
 | `.WallpaperPath` | Wallpaper path (if available) | `{{ .WallpaperPath }}` → `/path/to/wallpaper.jpg` |
 
-### Color Format Functions
+### Colour Format Functions
 
 | Function | Output Format | Example |
 |----------|---------------|---------|
@@ -111,13 +111,13 @@ Tinct uses Go templates for generating configuration files. Templates have acces
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `withAlpha color alpha` | Set alpha channel (0.0-1.0) | `{{ withAlpha (get . "background") 0.9 \| rgba }}` |
+| `withAlpha colour alpha` | Set alpha channel (0.0-1.0) | `{{ withAlpha (get . "background") 0.9 \| rgba }}` |
 
 ### Iteration
 
 ```go
 {{- range .AllColours }}
-color{{ .Index }} = {{ .Colour | hex }}
+colour{{ .Index }} = {{ .Colour | hex }}
 {{- end }}
 ```
 
@@ -129,13 +129,13 @@ See [Template Guide](docs/TEMPLATE_GUIDE.md) for complete documentation.
 
 ### Input Plugin Interface
 
-Input plugins extract colors from various sources and return a palette.
+Input plugins extract colours from various sources and return a palette.
 
 | Method | Required | Description |
 |--------|----------|-------------|
 | `Name()` | ✓ | Plugin identifier (e.g., "image", "remote-json") |
 | `Description()` | ✓ | Human-readable description |
-| `Generate(ctx, opts)` | ✓ | Extract colors, return `*colour.Palette` |
+| `Generate(ctx, opts)` | ✓ | Extract colours, return `*colour.Palette` |
 | `RegisterFlags(cmd)` | ✓ | Register CLI flags (e.g., `--image.path`) |
 | `Validate()` | ✓ | Check required inputs are provided |
 | `WallpaperPath()` | Optional | Return wallpaper file path (image plugin only) |
@@ -145,7 +145,7 @@ Input plugins extract colors from various sources and return a palette.
 
 ```go
 type Palette struct {
-    Colors []colour.Color  // Extracted colors
+    Colours []colour.Colour  // Extracted colours
 }
 ```
 
@@ -158,7 +158,7 @@ type Palette struct {
 
 ### Output Plugin Interface
 
-Output plugins generate configuration files from categorized colors.
+Output plugins generate configuration files from categorized colours.
 
 | Method | Required | Description |
 |--------|----------|-------------|
@@ -179,7 +179,7 @@ Output plugins generate configuration files from categorized colors.
 ```go
 map[string][]byte{
     "tinct.conf":         []byte("..."),  // Config file content
-    "tinct-colours.conf": []byte("..."),  // Color definitions (optional)
+    "tinct-colours.conf": []byte("..."),  // Colour definitions (optional)
 }
 ```
 
@@ -213,8 +213,8 @@ type Plugin struct {
 }
 
 func (p *Plugin) Generate(ctx, opts) (*colour.Palette, error) {
-    // Extract colors from image
-    return &colour.Palette{Colors: extractedColors}, nil
+    // Extract colours from image
+    return &colour.Palette{Colours: extractedColors}, nil
 }
 
 func (p *Plugin) WallpaperPath() string {
@@ -352,10 +352,10 @@ The `image` input plugin supports deterministic k-means clustering via seed conf
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
-| `content` | Hash of image pixel data (default) | Same image → same colors (content-based) |
-| `filepath` | Hash of absolute file path | Same location → same colors (path-based) |
+| `content` | Hash of image pixel data (default) | Same image → same colours (content-based) |
+| `filepath` | Hash of absolute file path | Same location → same colours (path-based) |
 | `manual` | User-provided seed value | Reproducible results with custom seed |
-| `random` | Non-deterministic random seed | Different colors each run |
+| `random` | Non-deterministic random seed | Different colours each run |
 
 **Example: Manual Seed Configuration**
 
@@ -416,7 +416,7 @@ export TINCT_DISABLED_PLUGINS="output:waybar,output:dunst"
 
 ### Generate themes from wallpaper
 ```bash
-# Extract colors and apply wallpaper
+# Extract colours and apply wallpaper
 tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland,hyprpaper,hyprlock,kitty,waybar
 
 # hyprpaper plugin automatically:
@@ -425,9 +425,9 @@ tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland,hyprpaper,hyprlo
 # - Updates all monitors or preserves existing assignments
 ```
 
-### Use custom colors (no wallpaper)
+### Use custom colours (no wallpaper)
 ```bash
-# Generate from color specification
+# Generate from colour specification
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
   -o hyprland,hyprlock,kitty,waybar
@@ -477,7 +477,7 @@ tinct generate -i image -p wallpaper.jpg -o kitty --kitty.reload
 tinct/
 ├── cmd/tinct/              # CLI entry point
 ├── internal/
-│   ├── colour/             # Colour extraction & categorization
+│   ├── colour/             # Colour extraction & categorisation
 │   ├── plugin/             # Plugin system
 │   │   ├── input/          # Input plugins
 │   │   ├── output/         # Output plugins
@@ -493,7 +493,7 @@ tinct/
 Tinct uses a flexible plugin architecture that makes it easy to:
 - Add new input sources (image formats, remote APIs, databases)
 - Add new output targets (applications, devices, services)
-- Customize colour extraction and categorization logic
+- Customise colour extraction and categorisation logic
 - Integrate with external tools and workflows
 
 Plugins can be written in any language using the external plugin interface (stdin/stdout JSON protocol) or as native Go plugins for maximum performance.

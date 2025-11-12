@@ -119,7 +119,7 @@ func (p *Plugin) Name() string {
 
 // Description returns a human-readable description.
 func (p *Plugin) Description() string {
-	return "Generate images using Google Imagen models and extract color palettes"
+	return "Generate images with Google Imagen and extract colours"
 }
 
 // Version returns the plugin version.

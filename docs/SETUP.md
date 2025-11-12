@@ -17,7 +17,7 @@ tinct/
 │   └── tinct/                   # Main application entry point
 ├── internal/                    # Private application code
 │   ├── app/                     # Application orchestration
-│   ├── color/                   # Colour extraction & palette generation
+│   ├── colour/                   # Colour extraction & palette generation
 │   ├── config/                  # Configuration management
 │   ├── plugin/                  # Plugin system (Source & Output)
 │   ├── hook/                    # Lifecycle hooks
@@ -207,7 +207,7 @@ Generate application config files:
 
 **Plugin Flow**:
 ```
-Source Plugin → Image → Color Extraction → Palette → Output Plugins
+Source Plugin → Image → Colour Extraction → Palette → Output Plugins
      ↓                                                      ↓
   (Optional)                                    (Configuration Files)
 ```
@@ -244,7 +244,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for implementation details.
 Tinct leverages modern Go capabilities:
 
 1. **Generics**: Type-safe plugin registry
-2. **Range Over Functions**: Custom iterators for palette colors
+2. **Range Over Functions**: Custom iterators for palette colours
 3. **Structured Logging (log/slog)**: JSON/text logging with levels
 4. **Enhanced Errors**: `errors.Join()` for multiple errors
 5. **Slices Package**: `slices.Clone()`, `slices.Sort()`, etc.

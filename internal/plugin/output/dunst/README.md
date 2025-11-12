@@ -1,16 +1,16 @@
 # Dunst Output Plugin
 
-Generate color themes for [Dunst](https://dunst-project.org/), a lightweight and customizable notification daemon for Linux.
+Generate colour themes for [Dunst](https://dunst-project.org/), a lightweight and customizable notification daemon for Linux.
 
 ## Overview
 
-The Dunst plugin generates a color configuration file (`tinct.dunstrc`) with urgency-based color schemes that can be included in your main Dunst configuration.
+The Dunst plugin generates a colour configuration file (`tinct.dunstrc`) with urgency-based colour schemes that can be included in your main Dunst configuration.
 
 ## Features
 
 - Single configuration file generation
 - Three urgency levels (low, normal, critical)
-- Semantic color mapping per urgency
+- Semantic colour mapping per urgency
 - Alpha channel support for transparency
 - Configurable timeouts per urgency
 - Include-based configuration support
@@ -18,7 +18,7 @@ The Dunst plugin generates a color configuration file (`tinct.dunstrc`) with urg
 
 ## Generated Files
 
-- `tinct.dunstrc` - Complete urgency-based color configuration
+- `tinct.dunstrc` - Complete urgency-based colour configuration
 
 ## Default Output Location
 
@@ -62,7 +62,7 @@ tinct generate --output dunst
 Edit `~/.config/dunst/dunstrc`:
 
 ```ini
-# Include tinct colors
+# Include tinct colours
 .include ~/.config/dunst/tinct.dunstrc
 
 # Your other dunst settings
@@ -90,11 +90,11 @@ Dunst uses three urgency levels for notifications:
 
 Used for informational notifications that are not time-sensitive.
 
-**Color Mapping:**
+**Colour Mapping:**
 - Background: Standard background
 - Foreground: Muted foreground (subtle)
-- Frame: Info color (semi-transparent)
-- Highlight: Info color
+- Frame: Info colour (semi-transparent)
+- Highlight: Info colour
 - Timeout: 10 seconds
 
 **Example notifications:**
@@ -106,11 +106,11 @@ Used for informational notifications that are not time-sensitive.
 
 Used for standard notifications that require attention.
 
-**Color Mapping:**
+**Colour Mapping:**
 - Background: Standard background
 - Foreground: Standard foreground
-- Frame: Accent1 color
-- Highlight: Accent1 color
+- Frame: Accent1 colour
+- Highlight: Accent1 colour
 - Timeout: 10 seconds
 
 **Example notifications:**
@@ -122,11 +122,11 @@ Used for standard notifications that require attention.
 
 Used for important notifications that require immediate attention.
 
-**Color Mapping:**
-- Background: Danger color (semi-transparent)
-- Foreground: Background color (inverted for contrast)
-- Frame: Danger color
-- Highlight: Warning color
+**Colour Mapping:**
+- Background: Danger colour (semi-transparent)
+- Foreground: Background colour (inverted for contrast)
+- Frame: Danger colour
+- Highlight: Warning colour
 - Timeout: 0 (never timeout)
 
 **Example notifications:**
@@ -134,24 +134,24 @@ Used for important notifications that require immediate attention.
 - System errors
 - Security alerts
 
-## Color Properties
+## Colour Properties
 
-Each urgency section supports these color properties:
+Each urgency section supports these colour properties:
 
 | Property | Description |
 |----------|-------------|
-| `background` | Background color of the notification |
-| `foreground` | Text color |
-| `frame_color` | Border/frame color |
-| `highlight` | Progress bar and highlight color |
+| `background` | Background colour of the notification |
+| `foreground` | Text colour |
+| `frame_color` | Border/frame colour |
+| `highlight` | Progress bar and highlight colour |
 | `timeout` | Display timeout in seconds (0 = never) |
 
-## Color Format
+## Colour Format
 
-Dunst uses hex colors in the format `#RRGGBB` or `#RRGGBBAA` (with alpha):
+Dunst uses hex colours in the format `#RRGGBB` or `#RRGGBBAA` (with alpha):
 
 ```ini
-background = "#1a1b26"      # Solid color
+background = "#1a1b26"      # Solid colour
 frame_color = "#7aa2f7cc"   # Semi-transparent (80% opacity)
 ```
 
@@ -225,7 +225,7 @@ Available in the template:
 
 ### Helper Methods
 
-Add alpha channel to colors:
+Add alpha channel to colours:
 
 ```go
 {{ .BackgroundWithAlpha "ee" }}    // Background with 93% opacity
@@ -287,7 +287,7 @@ Dunst supports various matching criteria:
     # Match by category
     category = "email"
     
-    # Then apply custom colors
+    # Then apply custom colours
     background = "#1a1b26"
     foreground = "#7aa2f7"
 ```
@@ -296,7 +296,7 @@ Dunst supports various matching criteria:
 
 ### Restart Dunst
 
-After generating new colors:
+After generating new colours:
 
 ```bash
 # Restart dunst to apply changes
@@ -357,7 +357,7 @@ If `dunst` is not found, the plugin will be skipped with a message.
 
 ## Troubleshooting
 
-### Colors Not Applied
+### Colours Not Applied
 
 Ensure the include path is correct:
 
@@ -396,12 +396,12 @@ Dunst's `.include` directive requires a path:
 source = tinct.dunstrc
 ```
 
-### Colors Look Wrong
+### Colours Look Wrong
 
 Ensure you're using the correct format:
 
 ```ini
-# Correct - quoted hex colors
+# Correct - quoted hex colours
 background = "#1a1b26"
 frame_color = "#7aa2f7cc"
 

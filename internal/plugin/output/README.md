@@ -11,14 +11,14 @@ This standard document defines:
 -  Required interface implementations
 -  Template structure and requirements
 -  Testing requirements (>80% coverage)
--  Semantic color naming standards
+-  Semantic colour naming standards
 -  Documentation requirements
 -  Complete checklist for new plugins
 
 **Quick Reference:
 - Use `tinct-colours.{ext}` + `tinct.{ext}` for apps supporting variables/imports
 - Use `tinct.{ext}` only for apps without variable support
-- Follow semantic color names: `background`, `foreground`, `accent1`, `danger`, etc.
+- Follow semantic colour names: `background`, `foreground`, `accent1`, `danger`, etc.
 - Embed templates with `go:embed *.tmpl`
 - Implement all required interface methods
 - Write comprehensive tests
@@ -33,49 +33,49 @@ All output plugins follow a consistent naming standard for generated files:
 
 ### Standard Pattern
 
-**For applications that support color variables/includes:
-- `tinct-colours.conf` (or `.css`, `.toml`, etc.) - Color variable definitions
-- `tinct.conf` - Example configuration that sources/includes the color variables
+**For applications that support colour variables/includes:
+- `tinct-colours.conf` (or `.css`, `.toml`, etc.) - Colour variable definitions
+- `tinct.conf` - Example configuration that sources/includes the colour variables
 
 **For applications that don't support variables:
-- `tinct.conf` - Complete configuration with colors embedded directly
+- `tinct.conf` - Complete configuration with colours embedded directly
 
 ### Examples
 
 **Hyprland** (supports variables):
 ```
-~/.config/hypr/tinct-colours.conf  # Color variables: $background = rgb(...)
+~/.config/hypr/tinct-colours.conf  # Colour variables: $background = rgb(...)
 ~/.config/hypr/tinct.conf          # Example config using: $background
 ```
 
 **Waybar** (supports CSS variables):
 ```
-~/.config/waybar/tinct-colours.css  # @define-color background #1a1b26;
+~/.config/waybar/tinct-colours.css  # @define-colour background #1a1b26;
 ~/.config/waybar/tinct.css          # Uses: @background
 ```
 
 **Kitty** (no variable support):
 ```
-~/.config/kitty/tinct.conf  # Complete config with colors embedded
+~/.config/kitty/tinct.conf  # Complete config with colours embedded
 ```
 
 ### Implementation Checklist
 
 When creating a new plugin, determine:
-1. Does the application support color variables/constants?
-   - Check documentation for variable syntax (CSS `@define-color`, shell variables, etc.)
+1. Does the application support colour variables/constants?
+   - Check documentation for variable syntax (CSS `@define-colour`, shell variables, etc.)
    - Test if variables can be defined in one file and used in another
 2. Does the application support include/source directives?
    - Most do: `include`, `source`, `@import`, etc.
 
 **If YES to both:
 - Generate two files: `tinct-colours.{ext}` and `tinct.{ext}`
-- Put color definitions in `tinct-colours.{ext}`
+- Put colour definitions in `tinct-colours.{ext}`
 - Put example usage in `tinct.{ext}`
 
 **If NO (no variables or includes):
 - Generate single file: `tinct.{ext}`
-- Embed all colors directly in the configuration
+- Embed all colours directly in the configuration
 
 ### Benefits
 
@@ -259,7 +259,7 @@ func prepareData(palette *colour.CategorisedPalette) TemplateData {
 package myplugin
 
 import (
-    "image/color"
+    "image/colour"
     "strings"
     "testing"
 
@@ -267,13 +267,13 @@ import (
 )
 
 func TestPlugin_Generate(t *testing.T) {
-    colors := []color.Color{
-        color.RGBA{R: 20, G: 20, B: 30, A: 255},
-        color.RGBA{R: 230, G: 230, B: 240, A: 255},
-        color.RGBA{R: 229, G: 76, B: 76, A: 255},
+    colours := []colour.Colour{
+        colour.RGBA{R: 20, G: 20, B: 30, A: 255},
+        colour.RGBA{R: 230, G: 230, B: 240, A: 255},
+        colour.RGBA{R: 229, G: 76, B: 76, A: 255},
     }
 
-    palette := &colour.Palette{Colors: colors}
+    palette := &colour.Palette{Colours: colours}
     config := colour.DefaultCategorisationConfig()
     categorised := colour.Categorise(palette, config)
 
@@ -338,7 +338,7 @@ func templateFuncs() template.FuncMap {
 tmpl, err := template.New("config").Funcs(templateFuncs()).Parse(tmplContent)
 ```
 
-### Available Color Data
+### Available Colour Data
 
 In templates, you have access to `CategorisedColour` struct:
 
@@ -368,7 +368,7 @@ accent = "{{ .Primary.Hex }}"
 
 ```json
 {
-  "colors": {
+  "colours": {
     "background": "{{ .Background.Hex }}",
     "foreground": "{{ .Foreground.Hex }}",
 {{- if .Danger }}
@@ -389,17 +389,17 @@ accent = "{{ .Primary.Hex }}"
 ### TOML Config
 
 ```toml
-[colors]
+[colours]
 background = "{{ .Background.Hex }}"
 foreground = "{{ .Foreground.Hex }}"
 
-[colors.semantic]
+[colours.semantic]
 danger = "{{ .Danger.Hex }}"
 warning = "{{ .Warning.Hex }}"
 success = "{{ .Success.Hex }}"
 info = "{{ .Info.Hex }}"
 
-[colors.accents]
+[colours.accents]
 {{- range $i, $accent := .Accents }}
 accent{{ add $i 1 }} = "{{ $accent.Hex }}"
 {{- end }}
@@ -409,9 +409,9 @@ accent{{ add $i 1 }} = "{{ $accent.Hex }}"
 
 ```css
 :root {
-  --color-background: {{ .Background.RGB.R }}, {{ .Background.RGB.G }}, {{ .Background.RGB.B }};
-  --color-foreground: {{ .Foreground.RGB.R }}, {{ .Foreground.RGB.G }}, {{ .Foreground.RGB.B }};
-  --color-danger: {{ .Danger.RGB.R }}, {{ .Danger.RGB.G }}, {{ .Danger.RGB.B }};
+  --colour-background: {{ .Background.RGB.R }}, {{ .Background.RGB.G }}, {{ .Background.RGB.B }};
+  --colour-foreground: {{ .Foreground.RGB.R }}, {{ .Foreground.RGB.G }}, {{ .Foreground.RGB.B }};
+  --colour-danger: {{ .Danger.RGB.R }}, {{ .Danger.RGB.G }}, {{ .Danger.RGB.B }};
 }
 ```
 
@@ -430,7 +430,7 @@ export COLOR_SUCCESS="{{ .Success.Hex }}"
 
 ## Best Practices
 
-### 1. Handle Missing Colors Gracefully
+### 1. Handle Missing Colours Gracefully
 
 ```go
 {{- if .Danger }}
@@ -440,9 +440,9 @@ danger = "#ff0000"  # fallback
 {{- end }}
 ```
 
-### 2. Use Semantic Color Roles
+### 2. Use Semantic Colour Roles
 
-Prefer semantic roles over generic colors:
+Prefer semantic roles over generic colours:
 -  `{{ .Danger.Hex }}` - Clear purpose
 -  `{{ .Red.Hex }}` - Ambiguous
 
@@ -524,7 +524,7 @@ func init() {
 ## Examples
 
 See existing plugins for reference:
-- `waybar/` - Two-file pattern with GTK @define-color format
+- `waybar/` - Two-file pattern with GTK @define-colour format
 - `hyprland/` - Two-file pattern with Hyprland variables
 - `kitty/` - Single-file pattern (no variable support)
 - More coming soon!

@@ -228,7 +228,7 @@ fi
 
 All Go-based plugins in this directory use the go-plugin protocol:
 
-- **`input/random/`** - Random color palette generator
+- **`input/random/`** - Random colour palette generator
   - RPC-based palette generation
   - Reproducible via seed
   - Process reuse for performance

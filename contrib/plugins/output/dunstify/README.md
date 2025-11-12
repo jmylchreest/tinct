@@ -181,7 +181,7 @@ func (p *DunstifyPlugin) PostExecute(ctx context.Context, writtenFiles []string)
 
 ## Customization
 
-To customize the notification, edit `main.go`:
+To customise the notification, edit `main.go`:
 
 ### Change Urgency
 ```go
@@ -317,7 +317,7 @@ To improve this plugin:
 4. Submit a pull request
 
 Ideas for improvements:
-- [ ] Show palette colors in notification
+- [ ] Show palette colours in notification
 - [ ] Add notification action buttons (view files, revert, etc.)
 - [ ] Support custom notification templates
 - [ ] Add notification history/log

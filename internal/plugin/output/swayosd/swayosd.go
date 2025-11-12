@@ -49,7 +49,7 @@ func (p *Plugin) Name() string {
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string {
-	return "Generate SwayOSD on-screen display colour theme configuration"
+	return "SwayOSD on-screen display theme"
 }
 
 // Version returns the plugin version.

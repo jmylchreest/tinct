@@ -8,16 +8,16 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 
 #### WezTerm
 - **Format**: TOML
-- **Config Location**: `~/.config/wezterm/wezterm.lua` or `~/.config/wezterm/colors/`
+- **Config Location**: `~/.config/wezterm/wezterm.lua` or `~/.config/wezterm/colours/`
 - **Popularity**: High - modern GPU-accelerated terminal
-- **Complexity**: Low - simple TOML color mapping
-- **Reference**: https://wezfurlong.org/wezterm/config/appearance.html#defining-your-own-colors
+- **Complexity**: Low - simple TOML colour mapping
+- **Reference**: https://wezfurlong.org/wezterm/config/appearance.html#defining-your-own-colours
 
 #### Alacritty
 - **Format**: TOML (modern) or YAML (legacy)
 - **Config Location**: `~/.config/alacritty/alacritty.toml`
 - **Popularity**: Very High - most popular GPU-accelerated terminal
-- **Complexity**: Low - straightforward color scheme format
+- **Complexity**: Low - straightforward colour scheme format
 - **Reference**: https://alacritty.org/config-alacritty.html
 
 #### Foot
@@ -52,10 +52,10 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 
 #### Vim
 - **Format**: VimScript
-- **Config Location**: `~/.vim/colors/` or `~/.config/vim/colors/`
+- **Config Location**: `~/.vim/colours/` or `~/.config/vim/colours/`
 - **Popularity**: Very High - ubiquitous editor
 - **Complexity**: Medium - requires syntax group definitions
-- **Reference**: https://vimhelp.org/syntax.txt.html#:colorscheme
+- **Reference**: https://vimhelp.org/syntax.txt.html#:colour scheme
 
 #### Helix
 - **Format**: TOML
@@ -70,7 +70,7 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 - **Format**: sway config
 - **Config Location**: `~/.config/sway/config`
 - **Popularity**: High - i3-compatible Wayland compositor
-- **Complexity**: Low - border/bar colors
+- **Complexity**: Low - border/bar colours
 - **Reference**: https://github.com/swaywm/sway
 - **Note**: Already have Hyprland, but Sway is more minimal
 
@@ -99,7 +99,7 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 - **Config Location**: `~/.vscode/extensions/` or workspace
 - **Popularity**: Very High - most popular editor
 - **Complexity**: Medium - comprehensive token scope mapping
-- **Reference**: https://code.visualstudio.com/api/extension-guides/color-theme
+- **Reference**: https://code.visualstudio.com/api/extension-guides/colour-theme
 
 #### Zed
 - **Format**: JSON
@@ -114,7 +114,7 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 - **Format**: INI-style config
 - **Config Location**: `~/.config/mako/config`
 - **Popularity**: High - popular Wayland notification daemon
-- **Complexity**: Low - simple color settings
+- **Complexity**: Low - simple colour settings
 - **Reference**: https://github.com/emersion/mako
 - **Note**: Already have Dunst, but Mako is Wayland-native
 
@@ -174,7 +174,7 @@ When implementing new plugins, consider:
 2. **Complexity**: How difficult is the theme format to generate?
 3. **Maintenance**: How often does the theme format change?
 4. **Wayland Support**: Does it work on modern Wayland compositors?
-5. **Semantic Mapping**: Can we meaningfully map our 49 color roles to the application's theme elements?
+5. **Semantic Mapping**: Can we meaningfully map our 49 colour roles to the application's theme elements?
 
 ## Contributing
 

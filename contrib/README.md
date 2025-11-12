@@ -8,7 +8,7 @@ This directory contains **community contributions, examples, and external resour
 External plugins that extend Tinct's functionality. These plugins run as separate processes and can be written in any language.
 
 **Types:**
-- **Input plugins** (`plugins/input/`): Generate or extract color palettes from various sources
+- **Input plugins** (`plugins/input/`): Generate or extract colour palettes from various sources
 - **Output plugins** (`plugins/output/`): Apply palettes to applications, generate configs, or control external devices
 
 **Distribution:**
@@ -19,7 +19,7 @@ External plugins that extend Tinct's functionality. These plugins run as separat
 See [plugins/README.md](plugins/README.md) for the complete external plugin development guide.
 
 ### 🎨 [`palettes/`](palettes/)
-Example color palette definitions in various formats that can be used with Tinct's input plugins.
+Example colour palette definitions in various formats that can be used with Tinct's input plugins.
 
 **Use with:**
 ```bash

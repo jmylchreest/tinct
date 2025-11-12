@@ -7,10 +7,10 @@ Internal plugin for generating images using Google's Imagen models via the offic
 - Direct integration with `google.golang.org/genai` SDK
 - Support for Imagen 3, Imagen 4, Imagen 4 Ultra, and Imagen 4 Fast
 - Automatic image caching
-- Region/border color sampling for ambient lighting
+- Region/border colour sampling for ambient lighting
 - Wallpaper passthrough support
 - Multiple aspect ratios
-- Deterministic color extraction with content-based seeding
+- Deterministic colour extraction with content-based seeding
 
 ## Prerequisites
 
@@ -68,8 +68,8 @@ googlegenai.ListModels()
 | `--aspect-ratio` | string | `16:9` | Image aspect ratio (1:1, 3:4, 4:3, 9:16, 16:9, 21:9) |
 | `--negative-prompt` | string | - | Description of what to discourage |
 | `--genai-backend` | string | `gemini-api` | Backend (gemini-api or vertex-ai) |
-| `--count` | int | `32` | Number of colors to extract |
-| `--extract-ambience` | bool | `false` | Extract edge/corner colors |
+| `--count` | int | `32` | Number of colours to extract |
+| `--extract-ambience` | bool | `false` | Extract edge/corner colours |
 | `--regions` | int | `8` | Number of edge regions (4, 8, 12, 16) |
 | `--sample-percent` | int | `10` | Percentage of edge to sample (1-50) |
 | `--sample-method` | string | `average` | Sampling method (average or dominant) |
@@ -100,7 +100,7 @@ googlegenai.ListModels()
 
 - `google.golang.org/genai` v1.34.0+ - Official Google Gen AI Go SDK
 - Uses tinct's internal utilities:
-  - `internal/colour` - K-means color extraction
+  - `internal/colour` - K-means colour extraction
   - `internal/image` - Smart image loading
   - `internal/plugin/input/shared/regions` - Region sampling
 
@@ -110,8 +110,8 @@ googlegenai.ListModels()
    - Validates configuration
    - Determines cache path
    - Generates image via Google Gen AI SDK
-   - Extracts colors using k-means
-   - Optionally extracts region colors for ambient lighting
+   - Extracts colours using k-means
+   - Optionally extracts region colours for ambient lighting
 
 2. **Image Generation** - Calls `GenerateImages` API
    - Enhances prompt for wallpaper suitability
@@ -119,9 +119,9 @@ googlegenai.ListModels()
    - Handles safety filtering
    - Writes image bytes to cache
 
-3. **Color Extraction** - Uses tinct's k-means extractor
+3. **Colour Extraction** - Uses tinct's k-means extractor
    - Supports content-based seeding for deterministic results
-   - Combines main palette with region colors (if enabled)
+   - Combines main palette with region colours (if enabled)
    - Applies proper weights (90% main, 10% regions)
 
 ## Advantages Over External Plugin
@@ -129,7 +129,7 @@ googlegenai.ListModels()
 The internal implementation provides several benefits over the external go-plugin version:
 
 1. **No RPC Overhead** - Direct function calls instead of go-plugin RPC
-2. **Shared Utilities** - Reuses tinct's internal color extraction and image loading
+2. **Shared Utilities** - Reuses tinct's internal colour extraction and image loading
 3. **Type Safety** - Compile-time checks instead of runtime protocol marshaling
 4. **Simpler Code** - ~500 lines vs ~600+ lines with plugin boilerplate
 5. **Better Integration** - Native cobra flag registration
