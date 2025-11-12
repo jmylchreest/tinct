@@ -26,7 +26,7 @@ func LoadManifest(path string) (*ManifestManager, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Create new manifest with placeholder metadata
-			return &ManifestManager{
+			mgr := &ManifestManager{
 				manifest: &repository.Manifest{
 					Version:     "1.0",
 					Name:        "New Plugin Repository",
@@ -36,8 +36,13 @@ func LoadManifest(path string) (*ManifestManager, error) {
 					LastUpdated: time.Now(),
 				},
 				path:  path,
-				dirty: true, // Mark dirty so it will be saved with metadata
-			}, nil
+				dirty: true,
+			}
+			// Save the new manifest immediately
+			if err := mgr.Save(); err != nil {
+				return nil, fmt.Errorf("failed to save new manifest: %w", err)
+			}
+			return mgr, nil
 		}
 		return nil, fmt.Errorf("failed to read manifest: %w", err)
 	}

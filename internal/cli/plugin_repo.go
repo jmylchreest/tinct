@@ -53,14 +53,14 @@ var pluginRepoListCmd = &cobra.Command{
 	RunE:  runPluginRepoList,
 }
 
-// pluginRepoRemoveCmd removes a repository.
-var pluginRepoRemoveCmd = &cobra.Command{
-	Use:     "remove <name>",
-	Aliases: []string{"rm", "delete"},
-	Short:   "Remove a plugin repository",
-	Long:    `Remove a configured plugin repository by name.`,
+// pluginRepoDeleteCmd deletes a repository.
+var pluginRepoDeleteCmd = &cobra.Command{
+	Use:     "delete <name>",
+	Aliases: []string{"rm", "remove"},
+	Short:   "Delete a plugin repository",
+	Long:    `Delete a configured plugin repository by name.`,
 	Args:    cobra.ExactArgs(1),
-	RunE:    runPluginRepoRemove,
+	RunE:    runPluginRepoDelete,
 }
 
 // pluginRepoUpdateCmd updates repository manifests.
@@ -68,6 +68,9 @@ var pluginRepoUpdateCmd = &cobra.Command{
 	Use:   "update [name]",
 	Short: "Update repository manifests",
 	Long: `Refresh plugin repository manifests from their source URLs.
+
+Repository manifests are cached for 1 hour by default. Use this command to force
+a refresh when you need the latest plugin information before the cache expires.
 
 If no repository name is provided, all enabled repositories will be updated.`,
 	Args: cobra.MaximumNArgs(1),
@@ -87,7 +90,7 @@ func init() {
 	// Add repo subcommands.
 	pluginRepoCmd.AddCommand(pluginRepoAddCmd)
 	pluginRepoCmd.AddCommand(pluginRepoListCmd)
-	pluginRepoCmd.AddCommand(pluginRepoRemoveCmd)
+	pluginRepoCmd.AddCommand(pluginRepoDeleteCmd)
 	pluginRepoCmd.AddCommand(pluginRepoUpdateCmd)
 	pluginRepoCmd.AddCommand(pluginRepoInfoCmd)
 
@@ -190,7 +193,7 @@ func runPluginRepoList(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func runPluginRepoRemove(_ *cobra.Command, args []string) error {
+func runPluginRepoDelete(_ *cobra.Command, args []string) error {
 	name := args[0]
 
 	mgr, err := getRepoManager()
@@ -199,10 +202,10 @@ func runPluginRepoRemove(_ *cobra.Command, args []string) error {
 	}
 
 	if err := mgr.RemoveRepository(name); err != nil {
-		return fmt.Errorf("failed to remove repository: %w", err)
+		return fmt.Errorf("failed to delete repository: %w", err)
 	}
 
-	fmt.Printf(" Repository %q removed successfully\n", name)
+	fmt.Printf(" Repository %q deleted successfully\n", name)
 	return nil
 }
 
