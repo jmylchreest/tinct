@@ -1,0 +1,17 @@
+# Tinct Repository Sync Configuration
+# This file defines all sources to sync into the repository manifest.
+# Format: One JSON object per line (JSONL)
+# Lines starting with # are ignored as comments.
+#
+# Protocol filtering is done via command flag: --min-protocol-version 0.0.1
+# Use: tinct-repo-manager sync --config sync-config.jsonl --min-protocol-version 0.0.1
+
+# Sync all tinct-plugin-* releases from GitHub
+{"type": "github", "repo": "jmylchreest/tinct", "version": "all", "filter": ["tinct-plugin-*"], "exclude": ["tinct_*"]}
+
+# Script-based plugins from this repository (using raw GitHub URLs)
+# All scripts use version auto-detection ("-")
+{"type": "url", "url": "https://raw.githubusercontent.com/jmylchreest/tinct/main/contrib/plugins/output/tinct-plugin-notify-send.py", "plugin": "notify-send", "plugin_type": "output", "version": "-", "platform": "any", "runtime": "python3"}
+{"type": "url", "url": "https://raw.githubusercontent.com/jmylchreest/tinct/main/contrib/plugins/output/tinct-plugin-openrgb-peripheral.sh", "plugin": "openrgb-peripheral", "plugin_type": "output", "version": "-", "platform": "any", "runtime": "bash"}
+{"type": "url", "url": "https://raw.githubusercontent.com/jmylchreest/tinct/main/contrib/plugins/output/tinct-plugin-wled-ambient.sh", "plugin": "wled-ambient", "plugin_type": "output", "version": "-", "platform": "any", "runtime": "bash"}
+{"type": "url", "url": "https://raw.githubusercontent.com/jmylchreest/tinct/main/contrib/plugins/output/tinct-plugin-example-minimal.sh", "plugin": "example-minimal", "plugin_type": "output", "version": "-", "platform": "any", "runtime": "bash"}
