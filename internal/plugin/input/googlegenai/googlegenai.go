@@ -124,7 +124,7 @@ func (p *Plugin) Description() string {
 
 // Version returns the plugin version.
 func (p *Plugin) Version() string {
-	return "0.1.0"
+	return "0.0.1"
 }
 
 // RegisterFlags registers plugin-specific flags.
