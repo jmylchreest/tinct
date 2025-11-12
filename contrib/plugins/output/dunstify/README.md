@@ -59,7 +59,7 @@ sudo dnf install libnotify
 
 ```bash
 cd contrib/plugins/output/dunstify
-go build -o dunstify main.go
+go build -o tinct-plugin-dunstify main.go
 ```
 
 Or use GoReleaser (builds for multiple platforms):
@@ -81,7 +81,7 @@ tinct plugins add https://github.com/jmylchreest/tinct/releases/download/v1.0.0/
 ```bash
 # Build the plugin
 cd contrib/plugins/output/dunstify
-go build -o dunstify main.go
+go build -o tinct-plugin-dunstify main.go
 
 # Add to Tinct
 tinct plugins add ./dunstify

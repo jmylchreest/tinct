@@ -1,4 +1,4 @@
-# wob-tinct - Wob Theme Generator and Wrapper
+# tinct-plugin-wob - Wob Theme Generator and Wrapper
 
 A dual-mode tool that integrates [wob](https://github.com/francma/wob) (Wayland Overlay Bar) with Tinct, providing both automatic theme generation and a convenient wrapper for managing wob instances.
 
@@ -17,7 +17,7 @@ A dual-mode tool that integrates [wob](https://github.com/francma/wob) (Wayland 
 
 ```bash
 cd contrib/plugins/output/wob
-go build -o wob-tinct
+go build -o tinct-plugin-wob
 ```
 
 ### As Tinct Plugin
@@ -26,7 +26,7 @@ go build -o wob-tinct
 
 ```bash
 mkdir -p ~/.config/tinct/plugins
-cp wob-tinct ~/.config/tinct/plugins/
+cp tinct-plugin-wob ~/.config/tinct/plugins/
 ```
 
 2. The plugin will be automatically discovered when you use:
@@ -42,7 +42,7 @@ tinct generate -i image -p wallpaper.jpg -o wob
 When Tinct generates themes with `-o wob`, the plugin:
 
 1. **Generates theme file**: `~/.config/wob/themes/tinct.ini`
-2. **Installs wrapper**: `~/.config/wob/scripts/wob-tinct` (copy of itself)
+2. **Installs wrapper**: `~/.config/wob/scripts/tinct-plugin-wob` (copy of itself)
 3. **Provides instructions**: Shows Hyprland integration examples
 
 **Example:**
@@ -53,10 +53,10 @@ tinct generate -i image -p ~/wallpaper.jpg -o wob
 
 # Output:
 # Generated wob theme: ~/.config/wob/themes/tinct.ini
-# Installed wrapper: ~/.config/wob/scripts/wob-tinct
+# Installed wrapper: ~/.config/wob/scripts/tinct-plugin-wob
 #
 # To use with Hyprland, add to your hyprland.conf:
-#   exec-once = ~/.config/wob/scripts/wob-tinct start ...
+#   exec-once = ~/.config/wob/scripts/tinct-plugin-wob start ...
 ```
 
 ### Wrapper Mode (Direct Usage)
@@ -65,14 +65,14 @@ tinct generate -i image -p ~/wallpaper.jpg -o wob
 
 ```bash
 # Start with base config only
-wob-tinct start --base-config ~/.config/wob/base.ini
+tinct-plugin-wob start --base-config ~/.config/wob/base.ini
 
 # Start with base + theme overlay
-wob-tinct start --base-config ~/.config/wob/base.ini \
+tinct-plugin-wob start --base-config ~/.config/wob/base.ini \
                 --append-config ~/.config/wob/themes/tinct.ini
 
 # Start with multiple theme layers
-wob-tinct start --base-config ~/.config/wob/base.ini \
+tinct-plugin-wob start --base-config ~/.config/wob/base.ini \
                 --append-config ~/.config/wob/themes/tinct.ini \
                 --append-config ~/.config/wob/custom-overrides.ini
 ```
@@ -81,28 +81,28 @@ wob-tinct start --base-config ~/.config/wob/base.ini \
 
 ```bash
 # Send a percentage value (0-100)
-wob-tinct send 45
+tinct-plugin-wob send 45
 
 # Send current/max (automatically calculates percentage)
-wob-tinct send 4234 9600  # Sends: 44%
+tinct-plugin-wob send 4234 9600  # Sends: 44%
 
 # Send with style override
-wob-tinct send 95 --style critical
-wob-tinct send 50 --style warning
-wob-tinct send 30 --style normal
+tinct-plugin-wob send 95 --style critical
+tinct-plugin-wob send 50 --style warning
+tinct-plugin-wob send 30 --style normal
 ```
 
 #### Manage wob
 
 ```bash
 # Check if wob is running
-wob-tinct status
+tinct-plugin-wob status
 
 # Stop wob
-wob-tinct stop
+tinct-plugin-wob stop
 
 # Show version
-wob-tinct version
+tinct-plugin-wob version
 ```
 
 ## Hyprland Integration
@@ -113,7 +113,7 @@ Add to your `~/.config/hypr/hyprland.conf`:
 
 ```conf
 # Start wob with Tinct theme on login
-exec-once = ~/.config/wob/scripts/wob-tinct start \
+exec-once = ~/.config/wob/scripts/tinct-plugin-wob start \
     --base-config ~/.config/wob/base.ini \
     --append-config ~/.config/wob/themes/tinct.ini
 ```
@@ -123,15 +123,15 @@ exec-once = ~/.config/wob/scripts/wob-tinct start \
 ```conf
 # Volume up
 bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%+ && \
-    ~/.config/wob/scripts/wob-tinct send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print int($2 * 100)}')
+    ~/.config/wob/scripts/tinct-plugin-wob send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print int($2 * 100)}')
 
 # Volume down
 bind = , XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%- && \
-    ~/.config/wob/scripts/wob-tinct send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print int($2 * 100)}')
+    ~/.config/wob/scripts/tinct-plugin-wob send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print int($2 * 100)}')
 
 # Mute toggle (sends 0)
 bind = , XF86AudioMute, exec, wpctl set-mute @DEFAULT_SINK@ toggle && \
-    ~/.config/wob/scripts/wob-tinct send 0
+    ~/.config/wob/scripts/tinct-plugin-wob send 0
 ```
 
 ### Brightness Controls
@@ -139,11 +139,11 @@ bind = , XF86AudioMute, exec, wpctl set-mute @DEFAULT_SINK@ toggle && \
 ```conf
 # Brightness up
 bind = , XF86MonBrightnessUp, exec, brightnessctl set 5%+ && \
-    ~/.config/wob/scripts/wob-tinct send $(brightnessctl get) $(brightnessctl max)
+    ~/.config/wob/scripts/tinct-plugin-wob send $(brightnessctl get) $(brightnessctl max)
 
 # Brightness down
 bind = , XF86MonBrightnessDown, exec, brightnessctl set 5%- && \
-    ~/.config/wob/scripts/wob-tinct send $(brightnessctl get) $(brightnessctl max)
+    ~/.config/wob/scripts/tinct-plugin-wob send $(brightnessctl get) $(brightnessctl max)
 ```
 
 ### With Style-Based Thresholds
@@ -154,7 +154,7 @@ bind = , XF86AudioRaiseVolume, exec, \
     wpctl set-volume @DEFAULT_SINK@ 5%+ && \
     vol=$(wpctl get-volume @DEFAULT_SINK@ | awk '{print int($2 * 100)}') && \
     [[ $vol -gt 80 ]] && style="critical" || style="normal" && \
-    ~/.config/wob/scripts/wob-tinct send $vol --style $style
+    ~/.config/wob/scripts/tinct-plugin-wob send $vol --style $style
 ```
 
 ## Configuration
@@ -236,7 +236,7 @@ margin = 30
 Then load with multiple `--append-config` flags (last config wins):
 
 ```bash
-wob-tinct start --base-config base.ini \
+tinct-plugin-wob start --base-config base.ini \
                 --append-config themes/tinct.ini \
                 --append-config custom.ini
 ```
@@ -264,7 +264,7 @@ $XDG_RUNTIME_DIR/wob/  (or /tmp/$USER-wob-runtime/)
 When you send a value but wob isn't running:
 
 ```bash
-wob-tinct send 50  # Automatically starts wob with default config
+tinct-plugin-wob send 50  # Automatically starts wob with default config
 ```
 
 To start with your theme automatically, ensure wob is started via `exec-once` in your Hyprland config.
@@ -281,7 +281,7 @@ Example:
 ```bash
 export WOB_BIN=/usr/local/bin/wob
 export WOB_RUNTIME_DIR=/run/user/$UID/my-wob
-wob-tinct start --base-config base.ini
+tinct-plugin-wob start --base-config base.ini
 ```
 
 ## Troubleshooting
@@ -306,8 +306,8 @@ ls -la $XDG_RUNTIME_DIR/wob/
 If missing or incorrect, stop and restart wob:
 
 ```bash
-wob-tinct stop
-wob-tinct start --base-config ~/.config/wob/base.ini
+tinct-plugin-wob stop
+tinct-plugin-wob start --base-config ~/.config/wob/base.ini
 ```
 
 ### Values not displaying
@@ -315,13 +315,13 @@ wob-tinct start --base-config ~/.config/wob/base.ini
 1. Check if wob is running:
 
 ```bash
-wob-tinct status
+tinct-plugin-wob status
 ```
 
 2. Test with a direct value:
 
 ```bash
-wob-tinct send 50
+tinct-plugin-wob send 50
 ```
 
 3. Check wob process:
@@ -336,7 +336,7 @@ cat $XDG_RUNTIME_DIR/wob/wob.pid
 Ensure config merge order is correct (last wins):
 
 ```bash
-wob-tinct start --base-config base.ini \
+tinct-plugin-wob start --base-config base.ini \
                 --append-config themes/tinct.ini  # This overrides base.ini
 ```
 
@@ -348,35 +348,35 @@ wob-tinct start --base-config base.ini \
 
 ```conf
 # Start wob with Tinct theme
-exec-once = ~/.config/wob/scripts/wob-tinct start \
+exec-once = ~/.config/wob/scripts/tinct-plugin-wob start \
     --base-config ~/.config/wob/base.ini \
     --append-config ~/.config/wob/themes/tinct.ini
 
 # Volume controls
 bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%+ && \
     vol=$(wpctl get-volume @DEFAULT_SINK@ | awk '{print int($2 * 100)}') && \
-    ~/.config/wob/scripts/wob-tinct send $vol
+    ~/.config/wob/scripts/tinct-plugin-wob send $vol
 
 bind = , XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%- && \
     vol=$(wpctl get-volume @DEFAULT_SINK@ | awk '{print int($2 * 100)}') && \
-    ~/.config/wob/scripts/wob-tinct send $vol
+    ~/.config/wob/scripts/tinct-plugin-wob send $vol
 
 bind = , XF86AudioMute, exec, wpctl set-mute @DEFAULT_SINK@ toggle && \
-    ~/.config/wob/scripts/wob-tinct send 0
+    ~/.config/wob/scripts/tinct-plugin-wob send 0
 
 # Brightness controls
 bind = , XF86MonBrightnessUp, exec, brightnessctl set 5%+ && \
-    ~/.config/wob/scripts/wob-tinct send $(brightnessctl get) $(brightnessctl max)
+    ~/.config/wob/scripts/tinct-plugin-wob send $(brightnessctl get) $(brightnessctl max)
 
 bind = , XF86MonBrightnessDown, exec, brightnessctl set 5%- && \
-    ~/.config/wob/scripts/wob-tinct send $(brightnessctl get) $(brightnessctl max)
+    ~/.config/wob/scripts/tinct-plugin-wob send $(brightnessctl get) $(brightnessctl max)
 
 # Reload theme after generating new palette
 bind = $mainMod SHIFT, R, exec, \
     tinct generate -i image -p ~/wallpaper.jpg -o wob,hyprland && \
-    ~/.config/wob/scripts/wob-tinct stop && \
+    ~/.config/wob/scripts/tinct-plugin-wob stop && \
     sleep 0.1 && \
-    ~/.config/wob/scripts/wob-tinct start \
+    ~/.config/wob/scripts/tinct-plugin-wob start \
         --base-config ~/.config/wob/base.ini \
         --append-config ~/.config/wob/themes/tinct.ini
 ```
@@ -399,7 +399,7 @@ else
     style="normal"
 fi
 
-~/.config/wob/scripts/wob-tinct send $vol --style $style
+~/.config/wob/scripts/tinct-plugin-wob send $vol --style $style
 ```
 
 Then use in Hyprland:
@@ -414,11 +414,11 @@ bind = , XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%- && wob-
 ### Dual-Mode Design
 
 ```
-wob-tinct binary
+tinct-plugin-wob binary
 ├── Plugin Mode (invoked by Tinct)
 │   ├── Read palette JSON from stdin
 │   ├── Generate ~/.config/wob/themes/tinct.ini
-│   ├── Install self to ~/.config/wob/scripts/wob-tinct
+│   ├── Install self to ~/.config/wob/scripts/tinct-plugin-wob
 │   └── Print Hyprland integration instructions
 │
 └── Wrapper Mode (invoked by user/scripts)

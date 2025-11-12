@@ -6,7 +6,7 @@
 
 ```bash
 cd contrib/plugins/output/templater
-go build -o ~/.local/share/tinct/plugins/templater
+go build -o /.local/share/tinct/plugins/tinct-plugin-templater
 ```
 
 ### 2. Register with Tinct

@@ -11,7 +11,7 @@
 // - Uses go-plugin RPC protocol for performance
 //
 // Build:
-//   go build -o dunstify main.go
+//   go build -o tinct-plugin-dunstify main.go
 //
 // Usage:
 //   tinct plugins add ./dunstify --type output

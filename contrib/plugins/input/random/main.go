@@ -11,7 +11,7 @@
 // - Verbose output option
 //
 // Build:
-//   go build -o random
+//   go build -o tinct-plugin-random
 //
 // Usage:
 //   tinct plugins add ./random --type input

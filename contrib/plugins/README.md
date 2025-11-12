@@ -128,7 +128,9 @@ func main() {
 }
 ```
 
-Build: `go build -o my-plugin`
+Build: `go build -o tinct-plugin-myplugin`
+
+**Note**: All Tinct plugins should follow the naming convention `tinct-plugin-{name}` to avoid conflicts with system binaries.
 
 ## Plugin Info (Required)
 

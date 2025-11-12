@@ -26,7 +26,7 @@ A flexible Tinct output plugin that can generate arbitrary files from custom tem
 
 ```bash
 cd contrib/plugins/output/templater
-go build -o ~/.local/share/tinct/plugins/templater
+go build -o /.local/share/tinct/plugins/tinct-plugin-templater
 ```
 
 ### Add to Tinct Plugin Config
@@ -350,7 +350,7 @@ templater/
 cd contrib/plugins/output/templater
 go mod init github.com/jmylchreest/tinct/contrib/plugins/output/templater
 go mod tidy
-go build -o templater
+go build -o tinct-plugin-templater
 ```
 
 ### Testing

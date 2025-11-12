@@ -2,24 +2,32 @@
 package cli
 
 import (
+	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 // Table represents a simple table formatter with dynamic column widths.
 type Table struct {
-	headers   []string
-	rows      [][]string
-	padding   int
-	maxWidths map[int]int // Maximum width per column index (0 = no limit)
+	headers               []string
+	rows                  [][]string
+	padding               int
+	maxWidths             map[int]int // Maximum width per column index (0 = no limit)
+	terminalAwareCol      int         // Column index to size based on terminal width (-1 = none)
+	terminalAwareMinW     int         // Minimum width for terminal-aware column
+	terminalWidthOverride int         // Override terminal width for testing
 }
 
 // NewTable creates a new table with the given headers.
 func NewTable(headers []string) *Table {
 	return &Table{
-		headers:   headers,
-		rows:      make([][]string, 0),
-		padding:   2, // 2 spaces between columns
-		maxWidths: make(map[int]int),
+		headers:           headers,
+		rows:              make([][]string, 0),
+		padding:           2, // 2 spaces between columns
+		maxWidths:         make(map[int]int),
+		terminalAwareCol:  -1, // Disabled by default
+		terminalAwareMinW: 0,
 	}
 }
 
@@ -27,6 +35,14 @@ func NewTable(headers []string) *Table {
 // Text longer than this will be wrapped to multiple lines.
 func (t *Table) SetColumnMaxWidth(colIndex, maxWidth int) {
 	t.maxWidths[colIndex] = maxWidth
+}
+
+// EnableTerminalAwareWidth enables terminal-aware width calculation for a column.
+// The specified column will size to fit available terminal width (after other columns).
+// minWidth specifies the minimum width for the column.
+func (t *Table) EnableTerminalAwareWidth(colIndex, minWidth int) {
+	t.terminalAwareCol = colIndex
+	t.terminalAwareMinW = minWidth
 }
 
 // AddRow adds a row to the table.
@@ -50,11 +66,16 @@ func (t *Table) Render() string {
 		return ""
 	}
 
-	// Wrap cells that exceed max width
+	// First pass: wrap cells with existing constraints
 	wrappedRows := t.wrapAllCells()
 
-	// Calculate column widths based on content and constraints
+	// Calculate column widths (includes terminal-aware adjustments)
 	colWidths := t.calculateColumnWidths(wrappedRows)
+
+	// Second pass: re-wrap cells if terminal-aware width changed things
+	if t.terminalAwareCol >= 0 {
+		wrappedRows = t.wrapAllCells()
+	}
 
 	// Build the table string
 	return t.buildTableString(wrappedRows, colWidths)
@@ -84,6 +105,12 @@ func (t *Table) wrapCell(cell string, colIdx int) []string {
 func (t *Table) calculateColumnWidths(wrappedRows [][][]string) []int {
 	colWidths := t.getHeaderWidths()
 	t.updateWidthsFromContent(colWidths, wrappedRows)
+
+	// Apply terminal-aware width if configured
+	if t.terminalAwareCol >= 0 && t.terminalAwareCol < len(colWidths) {
+		t.applyTerminalAwareWidth(colWidths)
+	}
+
 	return colWidths
 }
 
@@ -263,4 +290,54 @@ func wrapText(text string, width int) []string {
 	}
 
 	return lines
+}
+
+// getTerminalWidth returns the width of the terminal in characters.
+// Returns 0 if unable to determine (e.g., not a TTY).
+func (t *Table) getTerminalWidth() int {
+	if t.terminalWidthOverride > 0 {
+		return t.terminalWidthOverride
+	}
+
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 0
+	}
+	return width
+}
+
+// applyTerminalAwareWidth adjusts the terminal-aware column to fit available space.
+func (t *Table) applyTerminalAwareWidth(colWidths []int) {
+	termWidth := t.getTerminalWidth()
+	if termWidth <= 0 {
+		// Can't determine terminal width, use minimum or existing width
+		if colWidths[t.terminalAwareCol] < t.terminalAwareMinW {
+			t.maxWidths[t.terminalAwareCol] = t.terminalAwareMinW
+			colWidths[t.terminalAwareCol] = t.terminalAwareMinW
+		}
+		return
+	}
+
+	// Calculate space used by other columns
+	usedWidth := 0
+	for i, width := range colWidths {
+		if i != t.terminalAwareCol {
+			usedWidth += width
+		}
+	}
+
+	// Add padding between columns (n-1 gaps)
+	usedWidth += (len(colWidths) - 1) * t.padding
+
+	// Calculate available width for terminal-aware column
+	availableWidth := termWidth - usedWidth
+
+	// Ensure we don't go below minimum width
+	if availableWidth < t.terminalAwareMinW {
+		availableWidth = t.terminalAwareMinW
+	}
+
+	// Set the max width for wrapping and update column width
+	t.maxWidths[t.terminalAwareCol] = availableWidth
+	colWidths[t.terminalAwareCol] = availableWidth
 }

@@ -1,6 +1,6 @@
 .PHONY: build install clean test help
 
-BINARY_NAME=wob-tinct
+BINARY_NAME=tinct-plugin-wob
 BUILD_DIR=.
 INSTALL_DIR=$(HOME)/.config/tinct/plugins
 
@@ -34,15 +34,15 @@ test:
 	@./$(BINARY_NAME) status || true
 
 help:
-	@echo "wob-tinct Makefile"
+	@echo "tinct-plugin-wob Makefile"
 	@echo ""
 	@echo "Targets:"
-	@echo "  build    - Build the wob-tinct binary"
+	@echo "  build    - Build the tinct-plugin-wob binary"
 	@echo "  install  - Build and install to ~/.config/tinct/plugins/"
 	@echo "  clean    - Remove built binary"
 	@echo "  test     - Test plugin and wrapper modes"
 	@echo "  help     - Show this help"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make build && ./wob-tinct help"
+	@echo "  make build && ./tinct-plugin-wob help"
 	@echo "  make install"

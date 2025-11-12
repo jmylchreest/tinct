@@ -215,8 +215,9 @@ func collectAllPlugins(mgr *manager.Manager, lock *PluginLock) []pluginInfo {
 func displayPluginTable(plugins []pluginInfo) {
 	tbl := NewTable([]string{"", "PLUGIN", "STATUS", "VERSION", "DESCRIPTION"})
 
-	// Set max width of 80 characters for the description column (index 4).
-	tbl.SetColumnMaxWidth(4, 80)
+	// Enable terminal-aware column sizing
+	// Description column (index 4) will automatically size to fit terminal width
+	tbl.EnableTerminalAwareWidth(4, 40) // Min width of 40 chars for description
 
 	for _, p := range plugins {
 		addPluginToTable(tbl, p)

@@ -34,7 +34,7 @@ Replace `VERSION` with the actual version number.
 
 ```bash
 cd contrib/plugins/input/random
-go build -o random
+go build -o tinct-plugin-random
 tinct plugins add ./random --type input
 ```
 
@@ -126,7 +126,7 @@ Requirements:
 
 Build command:
 ```bash
-go build -o random
+go build -o tinct-plugin-random
 ```
 
 ## License

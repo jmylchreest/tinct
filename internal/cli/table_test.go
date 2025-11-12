@@ -246,3 +246,135 @@ func TestTableConsistentSpacing(t *testing.T) {
 		t.Errorf("Expected at least 4 non-empty lines (header, separator, 2 data rows), got %d", nonEmptyLines)
 	}
 }
+
+func TestTableTerminalAwareWidth(t *testing.T) {
+	table := NewTable([]string{"Name", "Status", "Description"})
+
+	// Set terminal width override for testing
+	table.terminalWidthOverride = 80
+
+	// Enable terminal-aware width on description column (index 2)
+	table.EnableTerminalAwareWidth(2, 20)
+
+	table.AddRow([]string{"plugin1", "enabled", "This is a very long description that should wrap to fit the available terminal width"})
+	table.AddRow([]string{"plugin2", "disabled", "Short desc"})
+
+	output := table.Render()
+
+	// Verify output contains expected content
+	if !strings.Contains(output, "plugin1") {
+		t.Error("Output should contain 'plugin1'")
+	}
+	if !strings.Contains(output, "This is a very long description") {
+		t.Error("Output should contain description text")
+	}
+
+	// Verify lines don't exceed terminal width
+	lines := strings.Split(output, "\n")
+	for i, line := range lines {
+		if len(line) > 80 {
+			t.Errorf("Line %d exceeds terminal width: length=%d, line=%q", i, len(line), line)
+		}
+	}
+}
+
+func TestTableTerminalAwareWidthMinimum(t *testing.T) {
+	table := NewTable([]string{"A", "B", "C"})
+
+	// Set a very small terminal width
+	table.terminalWidthOverride = 20
+
+	// Enable terminal-aware width with minimum of 30 (larger than terminal)
+	table.EnableTerminalAwareWidth(2, 30)
+
+	table.AddRow([]string{"x", "y", "This should respect minimum width"})
+
+	output := table.Render()
+
+	// Should still contain the data (possibly wrapped across multiple lines)
+	if !strings.Contains(output, "This should respect") {
+		t.Error("Output should contain wrapped description text")
+	}
+	if !strings.Contains(output, "minimum") && !strings.Contains(output, "width") {
+		t.Error("Output should contain all words from description text")
+	}
+}
+
+func TestTableColumnMaxWidth(t *testing.T) {
+	table := NewTable([]string{"Name", "Description"})
+
+	// Set max width on description column
+	table.SetColumnMaxWidth(1, 20)
+
+	table.AddRow([]string{"test", "This is a very long description that should be wrapped at 20 characters"})
+
+	output := table.Render()
+	lines := strings.Split(output, "\n")
+
+	// Should have multiple lines due to wrapping
+	if len(lines) < 5 { // header, separator, at least 3 wrapped lines
+		t.Errorf("Expected at least 5 lines due to wrapping, got %d", len(lines))
+	}
+
+	// Verify content is present
+	if !strings.Contains(output, "This is a very long") {
+		t.Error("Output should contain wrapped description text")
+	}
+}
+
+func TestWrapText(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		width    int
+		expected int // expected number of lines
+	}{
+		{
+			name:     "Short text",
+			text:     "Hello",
+			width:    10,
+			expected: 1,
+		},
+		{
+			name:     "Text at width boundary",
+			text:     "Hello World",
+			width:    11,
+			expected: 1,
+		},
+		{
+			name:     "Text needs wrapping",
+			text:     "Hello World Test",
+			width:    10,
+			expected: 2,
+		},
+		{
+			name:     "Very long word",
+			text:     "Supercalifragilisticexpialidocious",
+			width:    10,
+			expected: 4, // Word split across lines
+		},
+		{
+			name:     "Multiple sentences",
+			text:     "This is a test. It has multiple sentences. They should wrap nicely.",
+			width:    20,
+			expected: 4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := wrapText(tt.text, tt.width)
+			if len(result) != tt.expected {
+				t.Errorf("wrapText(%q, %d) returned %d lines, expected %d\nLines: %v",
+					tt.text, tt.width, len(result), tt.expected, result)
+			}
+
+			// Verify no line exceeds width
+			for i, line := range result {
+				if len(line) > tt.width {
+					t.Errorf("Line %d exceeds width %d: %q (length=%d)", i, tt.width, line, len(line))
+				}
+			}
+		})
+	}
+}
