@@ -254,28 +254,21 @@ issues:
 
 # Output configuration
 output:
+  # Output format
+  # Options: colored-line-number, line-number, json, tab, checkstyle, code-climate, html, junit-xml, github-actions
   formats:
-    colored-line-number:
+    - format: colored-line-number
       path: stdout
 
-  # Print linter name in the end of issue text
-  print-linter-name: true
+  # Show statistics per linter
+  show-stats: true
 
-  # Print lines of code with issue
-  print-issued-lines: true
-
-  # Enable sorting of results
+  # Sort results
   sort-results: true
-
-  # Sort order for results
-  # Possible values: file, linter, severity
   sort-order:
     - linter
     - severity
     - file
-
-  # Show statistics per linter
-  show-stats: true
 
 # Options for analysis running
 run:
