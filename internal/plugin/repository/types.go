@@ -4,7 +4,7 @@ package repository
 import "time"
 
 // OfficialRepoURL is the URL for the official Tinct plugin repository.
-const OfficialRepoURL = "https://raw.githubusercontent.com/jmylchreest/tinct/refs/heads/main/contrib/repository/repository.json"
+const OfficialRepoURL = "https://raw.githubusercontent.com/jmylchreest/tinct-plugins/refs/heads/main/repository/repository.json"
 
 // Manifest represents a plugin repository manifest.
 type Manifest struct {

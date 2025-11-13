@@ -2,7 +2,7 @@
   "version": "1.0",
   "name": "Tinct Official Plugin Repository",
   "description": "Official repository for Tinct plugins",
-  "url": "https://raw.githubusercontent.com/jmylchreest/tinct/refs/heads/main/contrib/repository/repository.json",
+  "url": "https://raw.githubusercontent.com/jmylchreest/tinct-plugins/refs/heads/main/repository/repository.json",
   "last_updated": "2025-11-12T22:25:50.858825466Z",
   "last_pruned": "2025-11-12T22:25:50.858825296Z",
   "plugins": {

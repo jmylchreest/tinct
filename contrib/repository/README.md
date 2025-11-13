@@ -8,7 +8,7 @@ Official plugin repository for Tinct - discover and install plugins for system-w
 
 ```bash
 tinct plugins repo add official \
-  https://raw.githubusercontent.com/jmylchreest/tinct/main/contrib/repository/repository.json
+  https://raw.githubusercontent.com/jmylchreest/tinct-plugins/main/repository/repository.json
 ```
 
 ### Search and Install Plugins
