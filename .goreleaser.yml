@@ -269,7 +269,7 @@ archives:
       - README.md
       - LICENSE
       - docs/**/*
-      - completions/**/*
+      - completions/*
 
   # Repository manager tool archive
   - id: tinct-repo-manager-archive

@@ -2,7 +2,7 @@ module github.com/jmylchreest/tinct/contrib/plugins/output/wob
 
 go 1.25.1
 
-require github.com/jmylchreest/tinct v0.0.0
+require github.com/jmylchreest/tinct v0.0.7
 
 require (
 	github.com/fatih/color v1.18.0 // indirect
