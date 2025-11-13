@@ -269,6 +269,7 @@ archives:
       - README.md
       - LICENSE
       - docs/**/*
+      - completions/**/*
 
   # Repository manager tool archive
   - id: tinct-repo-manager-archive
@@ -458,9 +459,12 @@ aurs:
       install -Dm644 "./completions/tinct.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/tinct.fish"
 
       # sbom
-      if [ -f "*.sbom.json" ]; then
-        install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct/sbom.json"
-      fi
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct/sbom.json"
+          break
+        fi
+      done
 
   # Plugin: random
   - name: tinct-plugin-random-bin
@@ -484,9 +488,12 @@ aurs:
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-random/LICENSE"
 
       # sbom
-      if [ -f *.sbom.json ]; then
-        install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-random/sbom.json"
-      fi
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-random/sbom.json"
+          break
+        fi
+      done
     install: .goreleaser/aur-install-scripts/plugin-random.install
 
   # Plugin: templater
@@ -511,9 +518,12 @@ aurs:
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-templater/LICENSE"
 
       # sbom
-      if [ -f *.sbom.json ]; then
-        install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-templater/sbom.json"
-      fi
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-templater/sbom.json"
+          break
+        fi
+      done
     install: .goreleaser/aur-install-scripts/plugin-templater.install
 
   # Plugin: wob
@@ -538,9 +548,12 @@ aurs:
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-wob/LICENSE"
 
       # sbom
-      if [ -f *.sbom.json ]; then
-        install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-wob/sbom.json"
-      fi
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-wob/sbom.json"
+          break
+        fi
+      done
     install: .goreleaser/aur-install-scripts/plugin-wob.install
 
   # Plugin: dunstify
@@ -565,9 +578,12 @@ aurs:
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-dunstify/LICENSE"
 
       # sbom
-      if [ -f *.sbom.json ]; then
-        install -Dm644 *.sbom.json "${pkgdir}/usr/share/doc/tinct-plugin-dunstify/sbom.json"
-      fi
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-dunstify/sbom.json"
+          break
+        fi
+      done
     install: .goreleaser/aur-install-scripts/plugin-dunstify.install
 # ============================================================================
 # GITHUB RELEASE
