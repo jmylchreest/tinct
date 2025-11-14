@@ -478,7 +478,7 @@ aurs:
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-random-bin.git"
     depends:
-      - tinct-bin
+      - tinct
     url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     package: |-
       # bin
@@ -508,7 +508,7 @@ aurs:
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-templater-bin.git"
     depends:
-      - tinct-bin
+      - tinct
     url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     package: |-
       # bin
@@ -538,7 +538,7 @@ aurs:
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-wob-bin.git"
     depends:
-      - tinct-bin
+      - tinct
     url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     package: |-
       # bin
@@ -568,7 +568,7 @@ aurs:
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-dunstify-bin.git"
     depends:
-      - tinct-bin
+      - tinct
     url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     package: |-
       # bin
