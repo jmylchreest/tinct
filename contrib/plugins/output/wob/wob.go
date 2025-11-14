@@ -1,11 +1,11 @@
 package main
 
+// This file contains the gRPC plugin interface implementation.
+// The wob plugin uses json-stdio protocol (in main.go) for wrapper functionality.
+// This gRPC code is not used and exists only for protocol compatibility.
+
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 )
@@ -15,76 +15,19 @@ type WobPlugin struct{}
 
 // Generate creates wob theme files
 func (p *WobPlugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
-	// Generate theme content
-	themeContent, err := generateWobTheme(palette)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate theme: %w", err)
-	}
-
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	// Return file map for Tinct to write
-	files := make(map[string][]byte)
-
-	themePath := filepath.Join(homeDir, ".config", "wob", "themes", "tinct.ini")
-	files[themePath] = []byte(themeContent)
-
-	return files, nil
+	// Not used - json-stdio protocol is used instead (see main.go)
+	return nil, nil
 }
 
 // PreExecute checks if wob binary exists
 func (p *WobPlugin) PreExecute(ctx context.Context) (bool, string, error) {
-	// Check if wob binary exists on PATH
-	if _, err := lookupWobBinary(); err != nil {
-		return true, "wob binary not found on $PATH", nil
-	}
-
-	// Check if config directory exists (create if it doesn't)
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return false, "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "wob")
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0755); err != nil { // #nosec G301
-			return false, "", fmt.Errorf("failed to create wob config directory: %w", err)
-		}
-	}
-
+	// Not used - json-stdio protocol is used instead (see main.go)
 	return false, "", nil
 }
 
-// PostExecute stops running wob instance and installs wrapper
+// PostExecute reports what was done and installs wrapper
 func (p *WobPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
-	// Install wrapper (copy self)
-	if err := p.installWrapper(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to install wrapper: %v\n", err)
-		// Don't fail - wrapper is optional
-	}
-
-	// Check if wob is running
-	running, err := isWobRunning()
-	if err != nil {
-		return nil
-	}
-
-	if !running {
-		fmt.Fprintf(os.Stderr, "wob is not running, theme will be used on next start\n")
-		return nil
-	}
-
-	// Stop the running instance
-	if err := runStop(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to stop wob: %v\n", err)
-		fmt.Fprintf(os.Stderr, "You may need to manually restart wob to use the new theme\n")
-		return nil
-	}
-
-	fmt.Fprintf(os.Stderr, "Stopped wob - theme will be applied on next use\n")
+	// Not used - json-stdio protocol is used instead (see main.go)
 	return nil
 }
 
@@ -104,87 +47,4 @@ func (p *WobPlugin) GetMetadata() tinctplugin.PluginInfo {
 func (p *WobPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
 	// Wob plugin doesn't accept any command-line flags
 	return []tinctplugin.FlagHelp{}
-}
-
-// installWrapper copies self to scripts directory
-func (p *WobPlugin) installWrapper() error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-
-	scriptsDir := filepath.Join(homeDir, ".config", "wob", "scripts")
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil { // #nosec G301
-		return err
-	}
-
-	wrapperPath := filepath.Join(scriptsDir, "wob-tinct")
-	selfPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	if err := copyFile(selfPath, wrapperPath); err != nil {
-		return err
-	}
-
-	if err := os.Chmod(wrapperPath, 0755); err != nil { // #nosec G302
-		return err
-	}
-
-	// Output usage instructions
-	fmt.Fprintf(os.Stderr, "\nInstalled wrapper: %s\n\n", wrapperPath)
-	fmt.Fprintf(os.Stderr, "To use with Hyprland, add to your hyprland.conf:\n\n")
-	fmt.Fprintf(os.Stderr, "  exec-once = %s start --base-config ~/.config/wob/base.ini \\\n", wrapperPath)
-	fmt.Fprintf(os.Stderr, "                       --append-config ~/.config/wob/themes/tinct.ini\n\n")
-	fmt.Fprintf(os.Stderr, "Then bind keys to send values:\n\n")
-	fmt.Fprintf(os.Stderr, "  bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%%+ && \\\n")
-	fmt.Fprintf(os.Stderr, "         %s send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print $2 * 100}')\n\n", wrapperPath)
-
-	return nil
-}
-
-// generateWobTheme creates wob INI content from palette
-func generateWobTheme(palette tinctplugin.PaletteData) (string, error) {
-	// Helper to get hex color
-	getColor := func(key string) string {
-		if color, ok := palette.Colours[key]; ok {
-			return strings.TrimPrefix(color.Hex, "#")
-		}
-		return "000000"
-	}
-
-	bg := getColor("background")
-	border := getColor("border")
-	accent1 := getColor("accent1")
-	success := getColor("success")
-	warning := getColor("warning")
-	danger := getColor("danger")
-
-	theme := fmt.Sprintf(`# Wob theme generated by Tinct
-# https://github.com/jmylchreest/tinct
-
-[default]
-# Bar dimensions
-height = 50
-border_offset = 4
-border_size = 2
-bar_padding = 3
-
-# Colors (ARGB format)
-background_color = FF%s
-border_color = FF%s
-bar_color = FF%s
-
-[normal]
-bar_color = FF%s
-
-[critical]
-bar_color = FF%s
-
-[warning]
-bar_color = FF%s
-`, bg, border, accent1, success, danger, warning)
-
-	return theme, nil
 }

@@ -10,12 +10,10 @@
 /output/
 
 # Contrib plugin binaries
-/contrib/random
-/contrib/plugins/input/random/random
-/contrib/plugins/output/wob/wob-tinct
-/contrib/plugins/output/wob/wob
-/contrib/plugins/output/templater/templater
-/contrib/plugins/output/dunstify/dunstify
+/contrib/plugins/input/random/tinct-plugin-random
+/contrib/plugins/output/wob/tinct-plugin-wob
+/contrib/plugins/output/templater/tinct-plugin-templater
+/contrib/plugins/output/dunstify/tinct-plugin-dunstify
 
 # Test binary, built with `go test -c`
 *.test

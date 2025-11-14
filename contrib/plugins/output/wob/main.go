@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,8 +13,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"text/template"
 	"time"
 )
+
+//go:embed templates/*.tmpl
+var templatesFS embed.FS
 
 // isValidPath checks if a path is safe to use in commands.
 func isValidPath(path string) bool {
@@ -63,16 +69,17 @@ const (
 
 // RuntimePaths holds all runtime file paths
 type RuntimePaths struct {
-	Dir    string
-	Pipe   string
-	Config string
-	PID    string
+	Dir        string
+	Pipe       string
+	Config     string
+	PID        string
+	ConfigInfo string
 }
 
-// WobConfig represents wob configuration
-type WobConfig struct {
-	BaseConfig   string
-	AppendConfig []string
+// ConfigInfo tracks config sources for reload detection
+type ConfigInfo struct {
+	BaseConfig    string   `json:"base_config"`
+	AppendConfigs []string `json:"append_configs"`
 }
 
 func main() {
@@ -210,7 +217,7 @@ EXAMPLES:
   wob-tinct start --base-config ~/.config/wob/base.ini \
                   --append-config ~/.config/wob/themes/tinct.ini
 
-  # Send volume level
+  # Send volume level (auto-reloads if theme changed)
   wob-tinct send 45
 
   # Send brightness (current/max)
@@ -225,6 +232,9 @@ HYPRLAND INTEGRATION:
 
   bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%%+ && \
          wob-tinct send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print $2 * 100}')
+
+NOTE:
+  Config changes are automatically detected on send - wob will restart if needed.
 `)
 }
 
@@ -266,10 +276,11 @@ func getRuntimePaths() (*RuntimePaths, error) {
 	}
 
 	return &RuntimePaths{
-		Dir:    baseDir,
-		Pipe:   filepath.Join(baseDir, os.Getenv("WOB_PIPE")),
-		Config: filepath.Join(baseDir, os.Getenv("WOB_MERGED_CONFIG")),
-		PID:    filepath.Join(baseDir, defaultPIDFile),
+		Dir:        baseDir,
+		Pipe:       filepath.Join(baseDir, os.Getenv("WOB_PIPE")),
+		Config:     filepath.Join(baseDir, os.Getenv("WOB_MERGED_CONFIG")),
+		PID:        filepath.Join(baseDir, defaultPIDFile),
+		ConfigInfo: filepath.Join(baseDir, "config.json"),
 	}, nil
 }
 
@@ -344,7 +355,58 @@ func writePIDFile(paths *RuntimePaths, pid int) error {
 	return os.WriteFile(paths.PID, []byte(fmt.Sprintf("%d\n", pid)), 0600)
 }
 
-// runStart starts wob with optional config
+// saveConfigInfo saves config info to JSON file
+func saveConfigInfo(paths *RuntimePaths, info *ConfigInfo) error {
+	data, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(paths.ConfigInfo, data, 0600)
+}
+
+// loadConfigInfo loads config info from JSON file
+func loadConfigInfo(paths *RuntimePaths) (*ConfigInfo, error) {
+	data, err := os.ReadFile(paths.ConfigInfo)
+	if err != nil {
+		return nil, err
+	}
+	var info ConfigInfo
+	if err := json.Unmarshal(data, &info); err != nil {
+		return nil, err
+	}
+	return &info, nil
+}
+
+// needsConfigReload checks if any source configs are newer than merged config
+func needsConfigReload(paths *RuntimePaths, configInfo *ConfigInfo) (bool, error) {
+	// Check if merged config exists
+	mergedInfo, err := os.Stat(paths.Config)
+	if err != nil {
+		// Merged config doesn't exist - reload needed
+		return true, nil
+	}
+	mergedTime := mergedInfo.ModTime()
+
+	// Check base config mtime
+	if configInfo.BaseConfig != "" {
+		baseInfo, err := os.Stat(configInfo.BaseConfig)
+		if err == nil && baseInfo.ModTime().After(mergedTime) {
+			return true, nil
+		}
+	}
+
+	// Check append configs mtime
+	for _, appendPath := range configInfo.AppendConfigs {
+		appendInfo, err := os.Stat(appendPath)
+		if err == nil && appendInfo.ModTime().After(mergedTime) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// runStart starts wob with optional config (runs in background, does not block)
 func runStart(args []string) error {
 	var baseConfig string
 	var appendConfigs []string
@@ -369,6 +431,11 @@ func runStart(args []string) error {
 		}
 	}
 
+	paths, err := getRuntimePaths()
+	if err != nil {
+		return err
+	}
+
 	// Check if wob is already running
 	running, err := isWobRunning()
 	if err != nil {
@@ -377,11 +444,6 @@ func runStart(args []string) error {
 	if running {
 		fmt.Println("wob is already running")
 		return nil
-	}
-
-	paths, err := getRuntimePaths()
-	if err != nil {
-		return err
 	}
 
 	// Ensure FIFO exists
@@ -411,6 +473,7 @@ func runStart(args []string) error {
 		if !isValidPath(mergedPath) {
 			return fmt.Errorf("invalid merged config path: contains suspicious characters")
 		}
+
 		// #nosec G204 -- wobBin and mergedPath are validated
 		wobCmd = exec.Command(wobBin, "-c", mergedPath)
 	} else {
@@ -448,15 +511,19 @@ func runStart(args []string) error {
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 
+	// Save config info for reload detection (only if config was provided)
+	if baseConfig != "" {
+		configInfo := &ConfigInfo{
+			BaseConfig:    baseConfig,
+			AppendConfigs: appendConfigs,
+		}
+		if err := saveConfigInfo(paths, configInfo); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to save config info: %v\n", err)
+			// Not fatal, continue
+		}
+	}
+
 	fmt.Fprintf(os.Stderr, "Started wob (PID: %d)\n", wobCmd.Process.Pid)
-
-	// Wait for wob to exit
-	_ = wobCmd.Wait()          // Wait for process to finish, ignore exit status
-	_ = tailCmd.Process.Kill() // Best effort cleanup
-
-	// Cleanup
-	_ = os.Remove(paths.Pipe) // Ignore cleanup errors
-	_ = os.Remove(paths.PID)  // Ignore cleanup errors
 
 	return nil
 }
@@ -510,7 +577,7 @@ func mergeConfigs(paths *RuntimePaths, baseConfig string, appendConfigs []string
 	return finalPath, nil
 }
 
-// runSend sends a value to wob
+// runSend sends a value to wob, restarting it if config changed
 func runSend(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("send requires at least one argument")
@@ -540,22 +607,52 @@ func runSend(args []string) error {
 		return fmt.Errorf("no numeric values provided")
 	}
 
-	// Check if wob is running, start if not
+	paths, err := getRuntimePaths()
+	if err != nil {
+		return err
+	}
+
+	// Check if wob is running
 	running, err := isWobRunning()
 	if err != nil {
 		return err
 	}
+
 	if !running {
-		// Start wob in background with default config
-		go func() {
-			_ = runStart([]string{}) // Run in background, errors are logged by runStart
-		}()
-		time.Sleep(100 * time.Millisecond)
+		return fmt.Errorf("wob is not running - start it first with: wob-tinct start")
 	}
 
-	paths, err := getRuntimePaths()
-	if err != nil {
-		return err
+	// Try to load saved config info and check if reload needed
+	configInfo, err := loadConfigInfo(paths)
+	if err == nil {
+		needsReload, err := needsConfigReload(paths, configInfo)
+		if err == nil && needsReload {
+			fmt.Fprintf(os.Stderr, "Detected config change, reloading wob\n")
+
+			// Stop current wob
+			if err := runStop(); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to stop wob: %v\n", err)
+			} else {
+				// Wait for cleanup
+				time.Sleep(200 * time.Millisecond)
+
+				// Restart with saved config
+				startArgs := []string{}
+				if configInfo.BaseConfig != "" {
+					startArgs = append(startArgs, "--base-config", configInfo.BaseConfig)
+				}
+				for _, appendPath := range configInfo.AppendConfigs {
+					startArgs = append(startArgs, "--append-config", appendPath)
+				}
+
+				if err := runStart(startArgs); err != nil {
+					return fmt.Errorf("failed to restart wob: %w", err)
+				}
+
+				// Wait for wob to be ready
+				time.Sleep(300 * time.Millisecond)
+			}
+		}
 	}
 
 	// Ensure FIFO exists
@@ -645,7 +742,8 @@ func runStop() error {
 	}
 
 	// Cleanup
-	_ = os.Remove(paths.PID) // Ignore cleanup errors
+	_ = os.Remove(paths.PID)
+	_ = os.Remove(paths.ConfigInfo)
 
 	fmt.Println("Stopped wob")
 	return nil
@@ -719,6 +817,12 @@ func runPlugin() error {
 
 // generateWobThemeFromMap creates wob INI content from palette map (JSON-stdio mode)
 func generateWobThemeFromMap(palette map[string]interface{}) (string, error) {
+	// Load template from embedded filesystem
+	tmplContent, err := templatesFS.ReadFile("templates/tinct.ini.tmpl")
+	if err != nil {
+		return "", fmt.Errorf("failed to read template: %w", err)
+	}
+
 	// Helper to get hex color from nested palette structure
 	getColor := func(key string) string {
 		// Access palette.colours[key].hex
@@ -732,39 +836,35 @@ func generateWobThemeFromMap(palette map[string]interface{}) (string, error) {
 		return "000000"
 	}
 
-	bg := getColor("background")
-	border := getColor("border")
-	accent1 := getColor("accent1")
-	success := getColor("success")
-	warning := getColor("warning")
-	danger := getColor("danger")
+	// Create a simple color map for the template
+	colorMap := map[string]string{
+		"background": getColor("background"),
+		"foreground": getColor("foreground"),
+		"accent1":    getColor("accent1"),
+		"success":    getColor("success"),
+		"warning":    getColor("warning"),
+		"danger":     getColor("danger"),
+	}
 
-	theme := fmt.Sprintf(`# Wob theme generated by Tinct
-# https://github.com/jmylchreest/tinct
+	// Parse and execute template
+	tmpl, err := template.New("wob").Funcs(template.FuncMap{
+		"get": func(m map[string]string, key string) string {
+			if color, ok := m[key]; ok {
+				return color
+			}
+			return "000000"
+		},
+	}).Parse(string(tmplContent))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse template: %w", err)
+	}
 
-[default]
-# Bar dimensions
-height = 50
-border_offset = 4
-border_size = 2
-bar_padding = 3
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, colorMap); err != nil {
+		return "", fmt.Errorf("failed to execute template: %w", err)
+	}
 
-# Colors (ARGB format)
-background_color = FF%s
-border_color = FF%s
-bar_color = FF%s
-
-[normal]
-bar_color = FF%s
-
-[critical]
-bar_color = FF%s
-
-[warning]
-bar_color = FF%s
-`, bg, border, accent1, success, danger, warning)
-
-	return theme, nil
+	return buf.String(), nil
 }
 
 // copyFile copies a file from src to dst
