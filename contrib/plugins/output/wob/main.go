@@ -128,7 +128,7 @@ func main() {
 		printUsage()
 
 	case "version", "-v", "--version":
-		fmt.Printf("wob-tinct %s\n", Version)
+		fmt.Printf("tinct-plugin-wob %s\n", Version)
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
@@ -138,46 +138,46 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Printf(`wob-tinct - Wob theme generator and wrapper
+	fmt.Printf(`tinct-plugin-wob - Wob theme generator and wrapper
 
 PLUGIN MODE (used by Tinct):
-  wob-tinct plugin              Run as Tinct external plugin
+  tinct-plugin-wob plugin              Run as Tinct external plugin
 
 WRAPPER MODE (direct usage):
-  wob-tinct start [OPTIONS]     Start wob with theme
+  tinct-plugin-wob start [OPTIONS]     Start wob with theme
     --base-config FILE          Base wob.ini
     --append-config FILE        Additional config (repeatable)
 
-  wob-tinct send VALUE [OPTIONS]     Send value to wob (0-100)
+  tinct-plugin-wob send VALUE [OPTIONS]     Send value to wob (0-100)
     --style STYLE               Style name (normal, critical, etc.)
 
-  wob-tinct send CURRENT MAX    Send current/max as percentage
+  tinct-plugin-wob send CURRENT MAX    Send current/max as percentage
 
-  wob-tinct stop                Stop running wob instance
-  wob-tinct status              Check if wob is running
-  wob-tinct help                Show this help
-  wob-tinct version             Show version
+  tinct-plugin-wob stop                Stop running wob instance
+  tinct-plugin-wob status              Check if wob is running
+  tinct-plugin-wob help                Show this help
+  tinct-plugin-wob version             Show version
 
 EXAMPLES:
   # Start wob with tinct theme
-  wob-tinct start --base-config ~/.config/wob/base.ini \
+  tinct-plugin-wob start --base-config ~/.config/wob/base.ini \
                   --append-config ~/.config/wob/themes/tinct.ini
 
   # Send volume level (auto-reloads if theme changed)
-  wob-tinct send 45
+  tinct-plugin-wob send 45
 
   # Send brightness (current/max)
-  wob-tinct send 4234 9600
+  tinct-plugin-wob send 4234 9600
 
   # Send with style
-  wob-tinct send 95 --style critical
+  tinct-plugin-wob send 95 --style critical
 
 HYPRLAND INTEGRATION:
-  exec-once = wob-tinct start --base-config ~/.config/wob/base.ini \
+  exec-once = tinct-plugin-wob start --base-config ~/.config/wob/base.ini \
                                --append-config ~/.config/wob/themes/tinct.ini
 
   bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%%+ && \
-         wob-tinct send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print $2 * 100}')
+         tinct-plugin-wob send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print $2 * 100}')
 
 NOTE:
   Config changes are automatically detected on send - wob will restart if needed.

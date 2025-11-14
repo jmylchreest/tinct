@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,36 +46,13 @@ func runPlugin() error {
 		return fmt.Errorf("failed to write theme file: %w", err)
 	}
 
-	// Install wrapper (copy self)
-	scriptsDir := filepath.Join(homeDir, ".config", "wob", "scripts")
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil { // #nosec G301 - Scripts directory needs standard permissions
-		return fmt.Errorf("failed to create scripts directory: %w", err)
-	}
-
-	wrapperPath := filepath.Join(scriptsDir, "wob-tinct")
-	selfPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	// Copy self to wrapper location
-	if err := copyFile(selfPath, wrapperPath); err != nil {
-		return fmt.Errorf("failed to install wrapper: %w", err)
-	}
-
-	if err := os.Chmod(wrapperPath, 0755); err != nil { // #nosec G302 - Wrapper executable needs execute permission
-		return fmt.Errorf("failed to chmod wrapper: %w", err)
-	}
-
-	// Output success message with instructions
-	fmt.Fprintf(os.Stderr, "\nGenerated wob theme: %s\n", themeFile)
-	fmt.Fprintf(os.Stderr, "Installed wrapper: %s\n\n", wrapperPath)
-	fmt.Fprintf(os.Stderr, "To use with Hyprland, add to your hyprland.conf:\n\n")
-	fmt.Fprintf(os.Stderr, "  exec-once = %s start --base-config ~/.config/wob/base.ini \\\n", wrapperPath)
+	// Output success message
+	fmt.Fprintf(os.Stderr, "\nGenerated wob theme: %s\n\n", themeFile)
+	fmt.Fprintf(os.Stderr, "To use the wrapper, ensure tinct-plugin-wob is in your PATH, then add to hyprland.conf:\n\n")
+	fmt.Fprintf(os.Stderr, "  exec-once = tinct-plugin-wob start --base-config ~/.config/wob/base.ini \\\n")
 	fmt.Fprintf(os.Stderr, "                       --append-config ~/.config/wob/themes/tinct.ini\n\n")
-	fmt.Fprintf(os.Stderr, "Then bind keys to send values:\n\n")
 	fmt.Fprintf(os.Stderr, "  bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%%+ && \\\n")
-	fmt.Fprintf(os.Stderr, "         %s send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print $2 * 100}')\n\n", wrapperPath)
+	fmt.Fprintf(os.Stderr, "         tinct-plugin-wob send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print $2 * 100}')\n\n")
 
 	return nil
 }
@@ -131,22 +107,4 @@ func generateWobThemeFromMap(palette map[string]interface{}) (string, error) {
 	}
 
 	return buf.String(), nil
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	source, err := os.Open(src) // #nosec G304 - User-specified source file, intended to be read
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	destination, err := os.Create(dst) // #nosec G304 - User-specified destination file
-	if err != nil {
-		return err
-	}
-	defer destination.Close()
-
-	_, err = io.Copy(destination, source)
-	return err
 }

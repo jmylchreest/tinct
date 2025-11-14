@@ -213,7 +213,7 @@ func runSend(args []string) error {
 	}
 
 	if !running {
-		return fmt.Errorf("wob is not running - start it first with: wob-tinct start")
+		return fmt.Errorf("wob is not running - start it first with: tinct-plugin-wob start")
 	}
 
 	// Try to load saved config info and check if reload needed
