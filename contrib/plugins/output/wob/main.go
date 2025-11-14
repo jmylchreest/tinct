@@ -627,15 +627,10 @@ func runSend(args []string) error {
 	if err == nil {
 		needsReload, err := needsConfigReload(paths, configInfo)
 		if err == nil && needsReload {
-			fmt.Fprintf(os.Stderr, "Detected config change, reloading wob\n")
-
 			// Stop current wob
 			if err := runStop(); err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to stop wob: %v\n", err)
 			} else {
-				// Wait for cleanup
-				time.Sleep(200 * time.Millisecond)
-
 				// Restart with saved config
 				startArgs := []string{}
 				if configInfo.BaseConfig != "" {
@@ -648,9 +643,6 @@ func runSend(args []string) error {
 				if err := runStart(startArgs); err != nil {
 					return fmt.Errorf("failed to restart wob: %w", err)
 				}
-
-				// Wait for wob to be ready
-				time.Sleep(300 * time.Millisecond)
 			}
 		}
 	}
@@ -729,19 +721,12 @@ func runStop() error {
 		return err
 	}
 
+	// Send SIGTERM for graceful shutdown
 	if err := process.Signal(syscall.SIGTERM); err != nil {
 		return fmt.Errorf("failed to terminate wob: %w", err)
 	}
 
-	// Wait a bit for graceful shutdown
-	time.Sleep(100 * time.Millisecond)
-
-	// Force kill if still running
-	if err := process.Signal(syscall.Signal(0)); err == nil {
-		_ = process.Kill() // Best effort force kill
-	}
-
-	// Cleanup
+	// Cleanup PID files immediately - process will die on its own
 	_ = os.Remove(paths.PID)
 	_ = os.Remove(paths.ConfigInfo)
 
