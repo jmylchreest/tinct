@@ -56,9 +56,20 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 
 	// Load template.
 	loader := tincttemplate.New("zed", templatesFS)
-	tmplContent, _, err := loader.Load("templates/theme.json.tmpl")
+	if palette.Verbose {
+		loader.WithVerbose(true, &stdLogger{})
+	}
+	tmplContent, fromCustom, err := loader.Load("templates/theme.json.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load template: %w", err)
+	}
+
+	if palette.Verbose {
+		if fromCustom {
+			fmt.Fprintf(os.Stderr, "   Template source: custom (%s)\n", loader.CustomPath("templates/theme.json.tmpl"))
+		} else {
+			fmt.Fprintf(os.Stderr, "   Template source: embedded\n")
+		}
 	}
 
 	// Parse template with helper functions.
@@ -135,6 +146,13 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 // by disabling backups in the file write logic.
 func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
 	return nil
+}
+
+// stdLogger implements the Logger interface for template loading.
+type stdLogger struct{}
+
+func (l *stdLogger) Printf(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // GetMetadata returns plugin metadata.

@@ -693,7 +693,7 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 	palette := themeData.Palette()
 
 	// Convert to protocol format.
-	paletteData := convertCategorisedPaletteToProtocol(palette, p.args, p.dryRun)
+	paletteData := convertCategorisedPaletteToProtocol(palette, p.args, p.dryRun, p.verbose)
 
 	// Execute output plugin.
 	files, err := exec.ExecuteOutput(context.Background(), paletteData)
@@ -774,7 +774,7 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 }
 
 // convertCategorisedPaletteToProtocol converts a CategorisedPalette to plugin.PaletteData.
-func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool) plugin.PaletteData {
+func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool, verbose bool) plugin.PaletteData {
 	colours := make(map[string]plugin.CategorisedColour)
 	for role, colour := range palette.Colours {
 		colours[string(role)] = plugin.CategorisedColour{
@@ -822,5 +822,6 @@ func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, plu
 		ThemeType:  themeType,
 		PluginArgs: pluginArgs,
 		DryRun:     dryRun,
+		Verbose:    verbose,
 	}
 }

@@ -618,7 +618,7 @@ func TestConvertCategorisedPaletteToProtocol(t *testing.T) {
 	}
 
 	args := map[string]any{"test": "value"}
-	result := convertCategorisedPaletteToProtocol(palette, args, true)
+	result := convertCategorisedPaletteToProtocol(palette, args, true, false)
 
 	if result.ThemeType != "dark" {
 		t.Errorf("Expected theme type 'dark', got '%s'", result.ThemeType)

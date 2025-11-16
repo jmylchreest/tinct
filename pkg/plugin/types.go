@@ -16,6 +16,7 @@ type PaletteData struct {
 	ThemeType  string                       `json:"theme_type"`
 	PluginArgs map[string]any               `json:"plugin_args,omitempty"`
 	DryRun     bool                         `json:"dry_run"`
+	Verbose    bool                         `json:"verbose"`
 }
 
 // CategorisedColour represents a color with metadata for RPC transfer.
