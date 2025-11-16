@@ -290,3 +290,19 @@ jobs:
           subject-path: |
             dist/**/*.tar.gz
             dist/**/*.zip
+
+      - name: Trigger plugin repository update
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.PLUGIN_REPO_PAT }}
+        run: |
+          if [ -n "$GH_TOKEN" ]; then
+            echo "Triggering plugin repository update workflow..."
+            gh workflow run update-plugins.yml \
+              --repo jmylchreest/tinct-plugins \
+              --ref main \
+              -f tinct_version=${{ github.ref_name }} \
+              -f triggered_by="tinct release ${{ github.ref_name }}"
+          else
+            echo "PLUGIN_REPO_PAT not configured, skipping plugin repository trigger"
+          fi
