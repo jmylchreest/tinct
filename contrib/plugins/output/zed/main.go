@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -24,6 +25,18 @@ var (
 )
 
 func main() {
+	// Handle --plugin-info flag for metadata extraction
+	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
+		printPluginInfo()
+		return
+	}
+
+	// Handle --version flag
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		printVersion()
+		return
+	}
+
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:      hclog.Error,
 		Output:     os.Stderr,
@@ -50,6 +63,27 @@ func main() {
 		Plugins:         pluginMap,
 		Logger:          logger,
 	})
+}
+
+// printPluginInfo prints plugin metadata as JSON and exits.
+func printPluginInfo() {
+	outputPlugin := &Plugin{
+		version: Version,
+		commit:  Commit,
+		date:    Date,
+	}
+
+	metadata := outputPlugin.GetMetadata()
+
+	// Marshal to JSON
+	data, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error marshaling plugin info: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(string(data))
+	os.Exit(0)
 }
 
 // printVersion prints version information and exits.
