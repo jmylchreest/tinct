@@ -115,6 +115,7 @@ tinct extract --categorise --preview wallpaper.jpg
 | Plugin | Application |
 |--------|-------------|
 | **neovim** | Neovim text editor (Lua colour schemes) |
+| **zed** | Zed code editor (JSON themes) |
 | **zellij** | Zellij terminal multiplexer (KDL) |
 
 **External Devices & Custom:**

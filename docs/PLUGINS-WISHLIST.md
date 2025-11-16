@@ -30,6 +30,7 @@ The following plugins from this wishlist have been implemented and are available
 
 **Text Editors:**
 - ✅ **Neovim** - Built-in plugin (`internal/plugin/output/neovim`)
+- ✅ **Zed** - External plugin (`contrib/plugins/output/zed`)
 
 **Terminal Multiplexers:**
 - ✅ **Zellij** - Built-in plugin (`internal/plugin/output/zellij`)
@@ -129,11 +130,12 @@ The following plugins from this wishlist have been implemented and are available
 - **Complexity**: Medium - comprehensive token scope mapping
 - **Reference**: https://code.visualstudio.com/api/extension-guides/colour-theme
 
-#### Zed
+#### ✅ Zed (Implemented)
 - **Format**: JSON
 - **Config Location**: `~/.config/zed/themes/`
 - **Popularity**: Growing - new Rust-based editor
 - **Complexity**: Low - simple JSON theme format
+- **Status**: ✅ **Completed** - External plugin available (`contrib/plugins/output/zed`)
 - **Reference**: https://zed.dev/docs/themes
 
 ### Window Decorations

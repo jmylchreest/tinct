@@ -63,6 +63,67 @@ The plugin generates a single file:
 ~/.config/zed/themes/tinct.json
 ```
 
+## Applying the Theme to Zed
+
+After generating the theme, you need to activate it in Zed:
+
+### Method 1: Command Palette (Recommended)
+
+1. Open Zed
+2. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Linux/Windows) to open the command palette
+3. Type "theme" and select **"theme selector: toggle"**
+4. Search for "Tinct" in the theme list
+5. Select the theme to apply it
+
+### Method 2: Settings File
+
+Add the theme to your Zed settings file:
+
+```bash
+# Open Zed settings
+zed ~/.config/zed/settings.json
+```
+
+Add or update the `theme` setting:
+
+```json
+{
+  "theme": "Tinct"
+}
+```
+
+### Method 3: Settings UI
+
+1. Open Zed
+2. Go to **Settings** (Cmd+, on macOS, Ctrl+, on Linux)
+3. Search for "theme"
+4. Select "Tinct" from the theme dropdown
+
+### Automatic Theme Reload
+
+Zed automatically watches the themes directory for changes. When you regenerate the theme with tinct, Zed will reload it automatically if it's already selected.
+
+```bash
+# Generate new theme from a different wallpaper
+tinct generate -i file --path ~/new-wallpaper.png -o zed
+
+# Zed will automatically reload the theme if "Tinct" is selected
+```
+
+### Verifying Theme Installation
+
+Check that Zed recognizes your theme:
+
+```bash
+# List all available Zed themes (including custom ones)
+ls -la ~/.config/zed/themes/
+
+# View the generated theme
+cat ~/.config/zed/themes/tinct.json | jq '.name'
+```
+
+The output should show `"Tinct"`.
+
 ## Theme Structure
 
 The generated theme includes:
