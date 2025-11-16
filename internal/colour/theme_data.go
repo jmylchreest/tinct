@@ -1,17 +1,14 @@
 package colour
 
+import (
+	pkgcolour "github.com/jmylchreest/tinct/pkg/colour"
+	"maps"
+)
+
 // ThemeData is the standard data structure passed to all plugin templates.
-// It embeds PaletteHelper to provide all color access methods and includes.
-// additional optional fields that plugins can populate.
+// It embeds the public ThemeData and adds internal-specific fields.
 type ThemeData struct {
-	*PaletteHelper
-
-	// WallpaperPath is the path to the wallpaper file, populated by plugins.
-	// that implement the WallpaperContextProvider interface
-	WallpaperPath string
-
-	// ThemeName is an optional theme name that can be set by plugins.
-	ThemeName string
+	*pkgcolour.ThemeData
 
 	// OutputDir is the directory where output files will be written.
 	// This allows templates to reference other generated files with correct paths.
@@ -20,14 +17,36 @@ type ThemeData struct {
 	// ColorFileName is the name of the primary color palette file being generated.
 	// This allows stub/config templates to reference the correct color file.
 	ColorFileName string
+
+	// internalPalette stores the original internal palette for backward compatibility.
+	internalPalette *CategorisedPalette
+}
+
+// Palette returns the internal CategorisedPalette for backward compatibility.
+func (td *ThemeData) Palette() *CategorisedPalette {
+	return td.internalPalette
 }
 
 // NewThemeData creates a new ThemeData instance with the given palette.
 // Optional wallpaperPath and themeName can be provided (pass empty strings if not needed).
+// This is the internal factory that works with internal CategorisedPalette.
 func NewThemeData(palette *CategorisedPalette, wallpaperPath, themeName string) *ThemeData {
+	// Convert internal CategorisedPalette to pkg version.
+	pkgPalette := &pkgcolour.CategorisedPalette{
+		Colours:    make(map[pkgcolour.Role]pkgcolour.CategorisedColour),
+		ThemeType:  palette.ThemeType,
+		AllColours: make([]pkgcolour.CategorisedColour, len(palette.AllColours)),
+		ANSI:       palette.ANSI,
+	}
+
+	// Copy colours map.
+	maps.Copy(pkgPalette.Colours, palette.Colours)
+
+	// Copy AllColours slice.
+	copy(pkgPalette.AllColours, palette.AllColours)
+
 	return &ThemeData{
-		PaletteHelper: NewPaletteHelper(palette),
-		WallpaperPath: wallpaperPath,
-		ThemeName:     themeName,
+		ThemeData:       pkgcolour.NewThemeData(pkgPalette, wallpaperPath, themeName),
+		internalPalette: palette,
 	}
 }

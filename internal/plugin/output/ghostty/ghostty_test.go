@@ -51,7 +51,7 @@ func TestGhosttyPlugin_ContentValidation(t *testing.T) {
 	}
 
 	// Check for all 16 palette entries (0-15).
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		paletteEntry := "palette = " + string(rune('0'+i))
 		if i >= 10 {
 			paletteEntry = "palette = 1" + string(rune('0'+(i-10)))
@@ -202,8 +202,8 @@ func TestGhosttyPlugin_HexColors(t *testing.T) {
 	themeFile := string(files["tinct.conf"])
 
 	// Check that colors are in hex format (#RRGGBB or #RRGGBBAA).
-	lines := strings.Split(themeFile, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(themeFile, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		// Skip comments and empty lines.
 		if line == "" || strings.HasPrefix(line, "#") {

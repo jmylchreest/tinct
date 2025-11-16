@@ -4,156 +4,106 @@ package colour
 import (
 	"encoding/json"
 	"fmt"
-	"image/color"
 	"strings"
+
+	pkgcolour "github.com/jmylchreest/tinct/pkg/colour"
 )
 
-// Role represents the semantic role of a colour in a theme.
-type Role string
+// Re-export public types from pkg/colour for backward compatibility.
+type (
+	Role              = pkgcolour.Role
+	ThemeType         = pkgcolour.ThemeType
+	RGB               = pkgcolour.RGB
+	RGBA              = pkgcolour.RGBA
+	CategorisedColour = pkgcolour.CategorisedColour
+	ANSIColors        = pkgcolour.ANSIColors
+)
 
+// Re-export Role constants from pkg/colour.
 const (
-	// Core roles.
-	RoleBackground      Role = "background"
-	RoleBackgroundMuted Role = "backgroundMuted"
-	RoleForeground      Role = "foreground"
-	RoleForegroundMuted Role = "foregroundMuted"
-
-	// Accent roles.
-	RoleAccent1      Role = "accent1"
-	RoleAccent1Muted Role = "accent1Muted"
-	RoleAccent2      Role = "accent2"
-	RoleAccent2Muted Role = "accent2Muted"
-	RoleAccent3      Role = "accent3"
-	RoleAccent3Muted Role = "accent3Muted"
-	RoleAccent4      Role = "accent4"
-	RoleAccent4Muted Role = "accent4Muted"
-
-	// Semantic roles.
-	RoleDanger       Role = "danger"
-	RoleWarning      Role = "warning"
-	RoleSuccess      Role = "success"
-	RoleInfo         Role = "info"
-	RoleNotification Role = "notification"
-
-	// Surface and container roles (Priority 1 - Material Design 3).
-	RoleSurface   Role = "surface"   // Base surface for cards, sheets, dialogs
-	RoleOnSurface Role = "onSurface" // Text/icons on surface
-	RoleOutline   Role = "outline"   // Borders, dividers, outlines
-	RoleBorder    Role = "border"    // Primary border color
-
-	// Surface and border variants (Priority 2).
-	RoleSurfaceVariant   Role = "surfaceVariant"   // Alternate surface color
-	RoleOnSurfaceVariant Role = "onSurfaceVariant" // Text on surface variant
-	RoleBorderMuted      Role = "borderMuted"      // Inactive/muted borders
-	RoleOutlineVariant   Role = "outlineVariant"   // Secondary outline
-
-	// On-colors for accents (Priority 2).
-	RoleOnAccent1 Role = "onAccent1" // Text on accent1 background
-	RoleOnAccent2 Role = "onAccent2" // Text on accent2 background
-	RoleOnAccent3 Role = "onAccent3" // Text on accent3 background
-	RoleOnAccent4 Role = "onAccent4" // Text on accent4 background
-
-	// On-colors for semantic roles (Priority 2).
-	RoleOnDanger  Role = "onDanger"  // Text on danger background
-	RoleOnWarning Role = "onWarning" // Text on warning background
-	RoleOnSuccess Role = "onSuccess" // Text on success background
-	RoleOnInfo    Role = "onInfo"    // Text on info background
-
-	// Inverse colors for overlays (Priority 3).
-	RoleInverseSurface   Role = "inverseSurface"   // Inverse surface (tooltip backgrounds)
-	RoleInverseOnSurface Role = "inverseOnSurface" // Text on inverse surface
-	RoleInversePrimary   Role = "inversePrimary"   // Inverse accent color
-
-	// Scrim and shadow with alpha (Priority 3).
-	RoleScrim  Role = "scrim"  // Modal backdrop overlay (with alpha)
-	RoleShadow Role = "shadow" // Elevation shadows (with alpha)
-
-	// Surface container elevation variants (Priority 3 - Material Design 3).
-	RoleSurfaceContainerLowest  Role = "surfaceContainerLowest"  // Lowest elevation
-	RoleSurfaceContainerLow     Role = "surfaceContainerLow"     // Low elevation
-	RoleSurfaceContainer        Role = "surfaceContainer"        // Default container
-	RoleSurfaceContainerHigh    Role = "surfaceContainerHigh"    // High elevation
-	RoleSurfaceContainerHighest Role = "surfaceContainerHighest" // Highest elevation
-
-	// Positional roles for ambient lighting.
-	// Core 8 positions (corners + mid-edges).
-	RolePositionTopLeft     Role = "positionTopLeft"
-	RolePositionTop         Role = "positionTop"
-	RolePositionTopRight    Role = "positionTopRight"
-	RolePositionRight       Role = "positionRight"
-	RolePositionBottomRight Role = "positionBottomRight"
-	RolePositionBottom      Role = "positionBottom"
-	RolePositionBottomLeft  Role = "positionBottomLeft"
-	RolePositionLeft        Role = "positionLeft"
-
-	// Extended positions for 12+ region configurations.
-	RolePositionTopLeftInner     Role = "positionTopLeftInner"
-	RolePositionTopCenter        Role = "positionTopCenter"
-	RolePositionTopRightInner    Role = "positionTopRightInner"
-	RolePositionRightTop         Role = "positionRightTop"
-	RolePositionRightBottom      Role = "positionRightBottom"
-	RolePositionBottomRightInner Role = "positionBottomRightInner"
-	RolePositionBottomCenter     Role = "positionBottomCenter"
-	RolePositionBottomLeftInner  Role = "positionBottomLeftInner"
-	RolePositionLeftBottom       Role = "positionLeftBottom"
-	RolePositionLeftTop          Role = "positionLeftTop"
-
-	// Ultra-extended positions for 16+ region configurations.
-	RolePositionTopLeftOuter      Role = "positionTopLeftOuter"
-	RolePositionTopLeftCenter     Role = "positionTopLeftCenter"
-	RolePositionTopRightCenter    Role = "positionTopRightCenter"
-	RolePositionTopRightOuter     Role = "positionTopRightOuter"
-	RolePositionRightTopOuter     Role = "positionRightTopOuter"
-	RolePositionRightBottomOuter  Role = "positionRightBottomOuter"
-	RolePositionBottomRightOuter  Role = "positionBottomRightOuter"
-	RolePositionBottomRightCenter Role = "positionBottomRightCenter"
-	RolePositionBottomLeftCenter  Role = "positionBottomLeftCenter"
-	RolePositionBottomLeftOuter   Role = "positionBottomLeftOuter"
-	RolePositionLeftBottomOuter   Role = "positionLeftBottomOuter"
-	RolePositionLeftTopOuter      Role = "positionLeftTopOuter"
+	RoleBackground                = pkgcolour.RoleBackground
+	RoleBackgroundMuted           = pkgcolour.RoleBackgroundMuted
+	RoleForeground                = pkgcolour.RoleForeground
+	RoleForegroundMuted           = pkgcolour.RoleForegroundMuted
+	RoleAccent1                   = pkgcolour.RoleAccent1
+	RoleAccent1Muted              = pkgcolour.RoleAccent1Muted
+	RoleAccent2                   = pkgcolour.RoleAccent2
+	RoleAccent2Muted              = pkgcolour.RoleAccent2Muted
+	RoleAccent3                   = pkgcolour.RoleAccent3
+	RoleAccent3Muted              = pkgcolour.RoleAccent3Muted
+	RoleAccent4                   = pkgcolour.RoleAccent4
+	RoleAccent4Muted              = pkgcolour.RoleAccent4Muted
+	RoleDanger                    = pkgcolour.RoleDanger
+	RoleWarning                   = pkgcolour.RoleWarning
+	RoleSuccess                   = pkgcolour.RoleSuccess
+	RoleInfo                      = pkgcolour.RoleInfo
+	RoleNotification              = pkgcolour.RoleNotification
+	RoleSurface                   = pkgcolour.RoleSurface
+	RoleOnSurface                 = pkgcolour.RoleOnSurface
+	RoleOutline                   = pkgcolour.RoleOutline
+	RoleBorder                    = pkgcolour.RoleBorder
+	RoleSurfaceVariant            = pkgcolour.RoleSurfaceVariant
+	RoleOnSurfaceVariant          = pkgcolour.RoleOnSurfaceVariant
+	RoleBorderMuted               = pkgcolour.RoleBorderMuted
+	RoleOutlineVariant            = pkgcolour.RoleOutlineVariant
+	RoleOnAccent1                 = pkgcolour.RoleOnAccent1
+	RoleOnAccent2                 = pkgcolour.RoleOnAccent2
+	RoleOnAccent3                 = pkgcolour.RoleOnAccent3
+	RoleOnAccent4                 = pkgcolour.RoleOnAccent4
+	RoleOnDanger                  = pkgcolour.RoleOnDanger
+	RoleOnWarning                 = pkgcolour.RoleOnWarning
+	RoleOnSuccess                 = pkgcolour.RoleOnSuccess
+	RoleOnInfo                    = pkgcolour.RoleOnInfo
+	RoleInverseSurface            = pkgcolour.RoleInverseSurface
+	RoleInverseOnSurface          = pkgcolour.RoleInverseOnSurface
+	RoleInversePrimary            = pkgcolour.RoleInversePrimary
+	RoleScrim                     = pkgcolour.RoleScrim
+	RoleShadow                    = pkgcolour.RoleShadow
+	RoleSurfaceContainerLowest    = pkgcolour.RoleSurfaceContainerLowest
+	RoleSurfaceContainerLow       = pkgcolour.RoleSurfaceContainerLow
+	RoleSurfaceContainer          = pkgcolour.RoleSurfaceContainer
+	RoleSurfaceContainerHigh      = pkgcolour.RoleSurfaceContainerHigh
+	RoleSurfaceContainerHighest   = pkgcolour.RoleSurfaceContainerHighest
+	RolePositionTopLeft           = pkgcolour.RolePositionTopLeft
+	RolePositionTop               = pkgcolour.RolePositionTop
+	RolePositionTopRight          = pkgcolour.RolePositionTopRight
+	RolePositionRight             = pkgcolour.RolePositionRight
+	RolePositionBottomRight       = pkgcolour.RolePositionBottomRight
+	RolePositionBottom            = pkgcolour.RolePositionBottom
+	RolePositionBottomLeft        = pkgcolour.RolePositionBottomLeft
+	RolePositionLeft              = pkgcolour.RolePositionLeft
+	RolePositionTopLeftInner      = pkgcolour.RolePositionTopLeftInner
+	RolePositionTopCenter         = pkgcolour.RolePositionTopCenter
+	RolePositionTopRightInner     = pkgcolour.RolePositionTopRightInner
+	RolePositionRightTop          = pkgcolour.RolePositionRightTop
+	RolePositionRightBottom       = pkgcolour.RolePositionRightBottom
+	RolePositionBottomRightInner  = pkgcolour.RolePositionBottomRightInner
+	RolePositionBottomCenter      = pkgcolour.RolePositionBottomCenter
+	RolePositionBottomLeftInner   = pkgcolour.RolePositionBottomLeftInner
+	RolePositionLeftBottom        = pkgcolour.RolePositionLeftBottom
+	RolePositionLeftTop           = pkgcolour.RolePositionLeftTop
+	RolePositionTopLeftOuter      = pkgcolour.RolePositionTopLeftOuter
+	RolePositionTopLeftCenter     = pkgcolour.RolePositionTopLeftCenter
+	RolePositionTopRightCenter    = pkgcolour.RolePositionTopRightCenter
+	RolePositionTopRightOuter     = pkgcolour.RolePositionTopRightOuter
+	RolePositionRightTopOuter     = pkgcolour.RolePositionRightTopOuter
+	RolePositionRightBottomOuter  = pkgcolour.RolePositionRightBottomOuter
+	RolePositionBottomRightOuter  = pkgcolour.RolePositionBottomRightOuter
+	RolePositionBottomRightCenter = pkgcolour.RolePositionBottomRightCenter
+	RolePositionBottomLeftCenter  = pkgcolour.RolePositionBottomLeftCenter
+	RolePositionBottomLeftOuter   = pkgcolour.RolePositionBottomLeftOuter
+	RolePositionLeftBottomOuter   = pkgcolour.RolePositionLeftBottomOuter
+	RolePositionLeftTopOuter      = pkgcolour.RolePositionLeftTopOuter
 )
 
-// CategorisedColour represents a colour with its assigned role and metadata.
-type CategorisedColour struct {
-	Colour      color.Color `json:"-"`
-	Role        Role        `json:"role"`
-	Hex         string      `json:"hex"`  // #RRGGBB format (backwards compatible)
-	RGB         RGB         `json:"rgb"`  // RGB without alpha (backwards compatible)
-	RGBA        RGBA        `json:"rgba"` // RGBA with alpha channel (defaults to 255/opaque)
-	Luminance   float64     `json:"luminance"`
-	IsLight     bool        `json:"is_light"`
-	Hue         float64     `json:"hue,omitempty"`          // HSL hue (0-360)
-	Saturation  float64     `json:"saturation,omitempty"`   // HSL saturation (0-1)
-	Index       int         `json:"index,omitempty"`        // Index in AllColours array (sorted by luminance)
-	IsGenerated bool        `json:"is_generated,omitempty"` // True if colour was generated/enhanced, not extracted
-	Weight      float64     `json:"weight,omitempty"`       // Original weight from palette (0.0-1.0, 0 if generated)
-}
-
-// ThemeType represents whether a theme is light-on-dark or dark-on-light.
-type ThemeType int
-
+// Re-export ThemeType constants from pkg/colour.
 const (
-	// ThemeAuto automatically detects the best theme type based on dominant color luminance.
-	ThemeAuto ThemeType = iota
-	// ThemeDark is a dark theme (light text on dark background).
-	ThemeDark
-	// ThemeLight is a light theme (dark text on light background).
-	ThemeLight
+	ThemeDark  = pkgcolour.ThemeDark
+	ThemeLight = pkgcolour.ThemeLight
 )
 
-// String returns the string representation of a ThemeType.
-func (t ThemeType) String() string {
-	switch t {
-	case ThemeDark:
-		return "dark"
-	case ThemeLight:
-		return "light"
-	case ThemeAuto:
-		return "auto"
-	default:
-		return "unknown"
-	}
-}
+// ThemeAuto is internal-only for automatic theme detection.
+const ThemeAuto ThemeType = 0
 
 // CategorisationConfig holds configuration for colour categorisation.
 type CategorisationConfig struct {
@@ -182,6 +132,7 @@ type CategorisedPalette struct {
 	Colours    map[Role]CategorisedColour `json:"colours"`
 	ThemeType  ThemeType                  `json:"theme_type"`
 	AllColours []CategorisedColour        `json:"all_colours,omitempty"`
+	ANSI       *ANSIColors                `json:"ansi,omitempty"` // ANSI terminal colors
 }
 
 // NewCategorisedPalette creates a new categorised palette.
