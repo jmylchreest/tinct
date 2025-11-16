@@ -14,6 +14,7 @@
 /contrib/plugins/output/wob/tinct-plugin-wob
 /contrib/plugins/output/templater/tinct-plugin-templater
 /contrib/plugins/output/dunstify/tinct-plugin-dunstify
+/contrib/plugins/output/zed/tinct-plugin-zed
 
 # Test binary, built with `go test -c`
 *.test
