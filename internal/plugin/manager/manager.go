@@ -26,6 +26,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/alacritty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
 	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
+	"github.com/jmylchreest/tinct/internal/plugin/output/ghostty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprpaper"
@@ -152,6 +153,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(alacritty.New())
 	m.outputRegistry.Register(dunst.New())
 	m.outputRegistry.Register(fuzzel.New())
+	m.outputRegistry.Register(ghostty.New())
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(hyprlock.New())
 	m.outputRegistry.Register(hyprpaper.New())

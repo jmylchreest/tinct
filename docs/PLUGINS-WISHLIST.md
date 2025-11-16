@@ -8,6 +8,7 @@ The following plugins from this wishlist have been implemented and are available
 
 **Terminal Emulators:**
 - ✅ **Alacritty** - Built-in plugin (`internal/plugin/output/alacritty`)
+- ✅ **Ghostty** - Built-in plugin (`internal/plugin/output/ghostty`)
 - ✅ **Kitty** - Built-in plugin (`internal/plugin/output/kitty`)
 
 **Window Managers & Compositors:**

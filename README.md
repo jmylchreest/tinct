@@ -87,6 +87,7 @@ tinct extract --categorise --preview wallpaper.jpg
 | Plugin | Application |
 |--------|-------------|
 | **alacritty** | Alacritty terminal emulator |
+| **ghostty** | Ghostty terminal emulator |
 | **kitty** | Kitty terminal emulator |
 
 **Window Managers & Compositors:**
