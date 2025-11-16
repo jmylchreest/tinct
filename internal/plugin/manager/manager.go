@@ -32,6 +32,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
+	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
@@ -157,6 +158,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(kitty.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(swayosd.New())
+	m.outputRegistry.Register(walker.New())
 	m.outputRegistry.Register(waybar.New())
 	m.outputRegistry.Register(wofi.New())
 	m.outputRegistry.Register(zellij.New())

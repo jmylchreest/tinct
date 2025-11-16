@@ -2,6 +2,39 @@
 
 This document tracks requested and recommended output plugins for Tinct. Plugins are categorized by priority and implementation complexity.
 
+## ✅ Completed Plugins
+
+The following plugins from this wishlist have been implemented and are available in Tinct:
+
+**Terminal Emulators:**
+- ✅ **Alacritty** - Built-in plugin (`internal/plugin/output/alacritty`)
+- ✅ **Kitty** - Built-in plugin (`internal/plugin/output/kitty`)
+
+**Window Managers & Compositors:**
+- ✅ **Hyprland** - Built-in plugin (`internal/plugin/output/hyprland`)
+- ✅ **Hyprpaper** - Built-in plugin (`internal/plugin/output/hyprpaper`)
+- ✅ **Hyprlock** - Built-in plugin (`internal/plugin/output/hyprlock`)
+
+**Application Launchers:**
+- ✅ **Fuzzel** - Built-in plugin (`internal/plugin/output/fuzzel`)
+- ✅ **Walker** - Built-in plugin (`internal/plugin/output/walker`)
+- ✅ **Wofi** - Built-in plugin (`internal/plugin/output/wofi`)
+
+**Notification Daemons:**
+- ✅ **Dunst** - Built-in plugin (`internal/plugin/output/dunst`)
+- ✅ **SwayOSD** - Built-in plugin (`internal/plugin/output/swayosd`)
+
+**Status Bars:**
+- ✅ **Waybar** - Built-in plugin (`internal/plugin/output/waybar`)
+
+**Text Editors:**
+- ✅ **Neovim** - Built-in plugin (`internal/plugin/output/neovim`)
+
+**Terminal Multiplexers:**
+- ✅ **Zellij** - Built-in plugin (`internal/plugin/output/zellij`)
+
+---
+
 ## High Priority
 
 ### Terminal Emulators
@@ -13,11 +46,12 @@ This document tracks requested and recommended output plugins for Tinct. Plugins
 - **Complexity**: Low - simple TOML colour mapping
 - **Reference**: https://wezfurlong.org/wezterm/config/appearance.html#defining-your-own-colours
 
-#### Alacritty
+#### ✅ Alacritty (Implemented)
 - **Format**: TOML (modern) or YAML (legacy)
 - **Config Location**: `~/.config/alacritty/alacritty.toml`
 - **Popularity**: Very High - most popular GPU-accelerated terminal
 - **Complexity**: Low - straightforward colour scheme format
+- **Status**: ✅ **Completed** - Built-in plugin available
 - **Reference**: https://alacritty.org/config-alacritty.html
 
 #### Foot

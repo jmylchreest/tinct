@@ -22,11 +22,21 @@ Generate colour palettes from multiple sources (images, remote JSON/CSS themes, 
 
 ### Installation
 
+**Arch Linux (AUR):**
+```bash
+# Using yay
+yay -S tinct-bin
+
+# Using paru
+paru -S tinct-bin
+```
+
+**From Go:**
 ```bash
 go install github.com/jmylchreest/tinct/cmd/tinct@latest
 ```
 
-Or build from source:
+**From source:**
 ```bash
 git clone https://github.com/jmylchreest/tinct.git
 cd tinct && go build -o tinct ./cmd/tinct
@@ -35,16 +45,26 @@ cd tinct && go build -o tinct ./cmd/tinct
 ### Basic Usage
 
 ```bash
+# Add official plugin repository (for external plugins)
+tinct plugins repo add official https://github.com/jmylchreest/tinct-plugins
+
 # Extract and preview colours from image
 tinct extract --preview wallpaper.jpg
 
-# Generate themes from wallpaper (colours + wallpaper auto-applied)
-tinct generate -i image -p wallpaper.jpg -o hyprland,hyprpaper,hyprlock,kitty,waybar
+# Generate themes from local wallpaper
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o all
 
-# Use a remote theme (Catppuccin Mocha)
+# Use Catppuccin Mocha theme from remote JSON
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  -o hyprland,kitty,waybar
+  --remote-json.query "colors.mocha" \
+  -o all
+
+# Generate image with Google Gemini and apply theme (requires API key)
+export GOOGLE_API_KEY="AIzaSyC7xM4deUpK3Y.eX4MPleHiJkL"
+tinct generate -i google-genai \
+  --prompt "beautiful sunset over the rolling mountains and vineyards of tuscany" \
+  -o all
 
 # Preview categorized palette with role assignments
 tinct extract --categorise --preview wallpaper.jpg
@@ -53,32 +73,55 @@ tinct extract --categorise --preview wallpaper.jpg
 ## Available Plugins
 
 ### Input Plugins
-- **image**: Extract from images (JPEG, PNG, GIF, WebP) with optional ambient edge/corner extraction
-- **remote-json**: Fetch from JSON URLs with JSONPath queries
-- **remote-css**: Extract from CSS files (variables, hex codes)
-- **file**: Load from saved palettes
+| Plugin | Description |
+|--------|-------------|
+| **image** | Extract from images (JPEG, PNG, GIF, WebP) with optional ambient edge/corner extraction |
+| **google-genai** | Generate images with Google Gemini Imagen and extract colours |
+| **remote-json** | Fetch from JSON URLs with JSONPath queries |
+| **remote-css** | Extract from CSS files (variables, hex codes) |
+| **file** | Load from saved palettes or manual colour specifications |
 
 ### Output Plugins
 
-**Applications:**
-- **hyprland**: Hyprland window manager (colour themes)
-- **hyprpaper**: Hyprpaper wallpaper manager (wallpaper config and auto-apply)
-- **hyprlock**: Hyprlock screen locker (colours and wallpaper)
-- **kitty**: Kitty terminal emulator
-- **waybar**: Waybar status bar
-- **dunst**: Dunst notification daemon
-- **fuzzel**: Fuzzel application launcher
-- **swayosd**: SwayOSD on-screen display
-- **wofi**: Wofi application launcher
-- **neovim**: Neovim text editor (Lua colour schemes)
-- **zellij**: Zellij terminal multiplexer
+**Terminals:**
+| Plugin | Application |
+|--------|-------------|
+| **alacritty** | Alacritty terminal emulator |
+| **kitty** | Kitty terminal emulator |
 
-**External Devices:**
+**Window Managers & Compositors:**
+| Plugin | Application |
+|--------|-------------|
+| **hyprland** | Hyprland compositor (colour themes) |
+| **hyprpaper** | Hyprpaper wallpaper manager (wallpaper config and auto-apply) |
+| **hyprlock** | Hyprlock screen locker (colours and wallpaper) |
+
+**Bars & Notifications:**
+| Plugin | Application |
+|--------|-------------|
+| **waybar** | Waybar status bar |
+| **dunst** | Dunst notification daemon |
+| **swayosd** | SwayOSD on-screen display |
+
+**Launchers:**
+| Plugin | Application |
+|--------|-------------|
+| **fuzzel** | Fuzzel application launcher |
+| **walker** | Walker application launcher |
+| **wofi** | Wofi application launcher |
+
+**Editors & Multiplexers:**
+| Plugin | Application |
+|--------|-------------|
+| **neovim** | Neovim text editor (Lua colour schemes) |
+| **zellij** | Zellij terminal multiplexer (KDL) |
+
+**External Devices & Custom:**
 - Write custom output plugins to control LED strips (e.g., WLED, Philips Hue, Govee)
 - Use ambient edge/corner extraction to sync bias lighting with your wallpaper
 - Support for any device with a JSON/HTTP API or command-line interface
 
-See [Plugin Wishlist](docs/PLUGINS-WISHLIST.md) for planned plugins and [External Plugins Guide](docs/external-plugins.md) for creating device controllers.
+See [Plugin Wishlist](docs/PLUGINS-WISHLIST.md) for planned plugins and [External Plugins Guide](contrib/plugins/README.md) for creating device controllers.
 
 **Note on Plugin Templates:** The current application plugin templates are based on online examples and personal configurations. They may benefit from refactoring for broader adoption. Contributions are significantly welcome, especially for plugins that make sense to be shipped and managed as part of Tinct. If you have expertise with any of these applications or want to add support for new ones, please see [Contributing](docs/DEVELOPMENT.md).
 
@@ -125,121 +168,16 @@ colour{{ .Index }} = {{ .Colour | hex }}
 
 See [Template Guide](docs/TEMPLATE_GUIDE.md) for complete documentation.
 
-## Plugin Interface Reference
+## Plugin Development
 
-### Input Plugin Interface
+Tinct supports two types of plugins:
 
-Input plugins extract colours from various sources and return a palette.
+- **Built-in plugins** (Go): Compiled into the main binary for maximum performance
+- **External plugins** (Any language): Standalone executables using JSON-stdio or gRPC protocols
 
-| Method | Required | Description |
-|--------|----------|-------------|
-| `Name()` | ✓ | Plugin identifier (e.g., "image", "remote-json") |
-| `Description()` | ✓ | Human-readable description |
-| `Generate(ctx, opts)` | ✓ | Extract colours, return `*colour.Palette` |
-| `RegisterFlags(cmd)` | ✓ | Register CLI flags (e.g., `--image.path`) |
-| `Validate()` | ✓ | Check required inputs are provided |
-| `WallpaperPath()` | Optional | Return wallpaper file path (image plugin only) |
-| `ThemeHint()` | Optional | Suggest "dark" or "light" theme type |
-
-**Generate Method Returns:**
-
-```go
-type Palette struct {
-    Colours []colour.Colour  // Extracted colours
-}
-```
-
-**Optional Interfaces:**
-
-| Interface | Method | Purpose |
-|-----------|--------|---------|
-| `WallpaperProvider` | `WallpaperPath() string` | Provide wallpaper path to output plugins |
-| `ThemeHinter` | `ThemeHint() string` | Suggest theme type ("dark", "light", "auto") |
-
-### Output Plugin Interface
-
-Output plugins generate configuration files from categorized colours.
-
-| Method | Required | Description |
-|--------|----------|-------------|
-| `Name()` | ✓ | Plugin identifier (e.g., "kitty", "hyprland") |
-| `Description()` | ✓ | Human-readable description |
-| `Generate(palette)` | ✓ | Generate config files, return `map[string][]byte` |
-| `RegisterFlags(cmd)` | ✓ | Register CLI flags (e.g., `--kitty.output-dir`) |
-| `Validate()` | ✓ | Check plugin configuration is valid |
-| `DefaultOutputDir()` | ✓ | Return default config directory path |
-| `SetVerbose(bool)` | Optional | Receive verbose flag setting |
-| `PreExecute(ctx)` | Optional | Run checks before generation |
-| `PostExecute(ctx, execCtx, files)` | Optional | Run actions after file write |
-| `SetWallpaperContext(path)` | Optional | Receive wallpaper path before generation |
-| `GetEmbeddedFS()` | Optional | Expose embedded templates for management |
-
-**Generate Method Returns:**
-
-```go
-map[string][]byte{
-    "tinct.conf":         []byte("..."),  // Config file content
-    "tinct-colours.conf": []byte("..."),  // Colour definitions (optional)
-}
-```
-
-**Optional Interfaces:**
-
-| Interface | Method | Purpose | Example Usage |
-|-----------|--------|---------|---------------|
-| `VerbosePlugin` | `SetVerbose(bool)` | Receive verbose flag | Control output verbosity |
-| `PreExecuteHook` | `PreExecute(ctx) (skip, reason, err)` | Pre-generation checks | Verify app is installed |
-| `PostExecuteHook` | `PostExecute(ctx, execCtx, files) error` | Post-generation actions | Reload config, set wallpaper |
-| `WallpaperContextProvider` | `SetWallpaperContext(string)` | Receive wallpaper path | Include in templates |
-| `TemplateProvider` | `GetEmbeddedFS() interface{}` | Expose templates | Template management |
-
-**PostExecute ExecutionContext:**
-
-```go
-type ExecutionContext struct {
-    DryRun        bool   // Is this a dry-run?
-    Verbose       bool   // Verbose mode enabled?
-    OutputDir     string // Output directory path
-    WallpaperPath string // Wallpaper path (if available)
-}
-```
-
-### Plugin Implementation Patterns
-
-**Input Plugin Example:**
-```go
-type Plugin struct {
-    path string  // From --image.path flag
-}
-
-func (p *Plugin) Generate(ctx, opts) (*colour.Palette, error) {
-    // Extract colours from image
-    return &colour.Palette{Colours: extractedColors}, nil
-}
-
-func (p *Plugin) WallpaperPath() string {
-    return p.path  // Optional interface
-}
-```
-
-**Output Plugin Example:**
-```go
-type Plugin struct {
-    outputDir     string
-    verbose       bool
-    wallpaperPath string  // Optional, from SetWallpaperContext
-}
-
-func (p *Plugin) Generate(palette) (map[string][]byte, error) {
-    // Generate config using templates
-    return map[string][]byte{"tinct.conf": content}, nil
-}
-
-func (p *Plugin) PostExecute(ctx, execCtx, files) error {
-    // Reload app config, set wallpaper, etc.
-    return nil
-}
-```
+For detailed plugin development guides:
+- **[Built-in Plugin Development](docs/DEVELOPMENT.md)** - Creating Go plugins
+- **[External Plugin Development](contrib/plugins/README.md)** - Creating plugins in any language (Bash, Python, etc.)
 
 ## Plugin Management
 
@@ -416,8 +354,8 @@ export TINCT_DISABLED_PLUGINS="waybar,dunst"
 
 ### Generate themes from wallpaper
 ```bash
-# Extract colours and apply wallpaper
-tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland,hyprpaper,hyprlock,kitty,waybar
+# Extract colours and apply to all configured applications
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o all
 
 # hyprpaper plugin automatically:
 # - Generates wallpaper config with preload/wallpaper directives
@@ -425,16 +363,36 @@ tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland,hyprpaper,hyprlo
 # - Updates all monitors or preserves existing assignments
 ```
 
-### Use custom colours (no wallpaper)
+### Use Catppuccin Mocha theme
 ```bash
-# Generate from colour specification
+# Fetch Catppuccin Mocha from remote JSON and apply to all apps
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  -o hyprland,hyprlock,kitty,waybar
+  --remote-json.query "colors.mocha" \
+  -o all
 
-# hyprpaper/hyprlock still work without wallpaper source
-# - Config files generated with helpful placeholders
-# - Wallpaper application skipped gracefully
+# Apply to specific applications only
+tinct generate -i remote-json \
+  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
+  --remote-json.query "colors.mocha" \
+  -o hyprland,kitty,waybar,walker
+```
+
+### Generate with AI (Google Gemini)
+```bash
+# Set up your Google API key (get one from https://aistudio.google.com/apikey)
+export GOOGLE_API_KEY="AIzaSyC7x8K9mN3pQ2rT5vW8yZ1aBcDeFgHiJkL"
+
+# Generate image with Gemini Imagen and extract colours
+tinct generate -i google-genai \
+  --prompt "beautiful sunset over the rolling mountains and vineyards of tuscany" \
+  -o all
+
+# The google-genai plugin:
+# - Generates an image using Google's Imagen model
+# - Saves the image to your pictures directory
+# - Automatically extracts colours from the generated image
+# - Provides the image path to wallpaper plugins (hyprpaper, hyprlock)
 ```
 
 ### Ambient LED Lighting / External Devices
