@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
+	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 )
 
@@ -126,21 +128,200 @@ func extractWallpaperPath(inputPlugin input.Plugin) string {
 	return ""
 }
 
-// categorizePalette categorizes a raw palette based on theme settings.
-func categorizePalette(rawPalette *colour.Palette, inputPlugin input.Plugin) *colour.CategorisedPalette {
+// categorizePalette categorizes a raw palette for both primary and alternate themes.
+// Always returns both primary and alternate palettes to support dual-theme plugins.
+func categorizePalette(rawPalette *colour.Palette, inputPlugin input.Plugin, desaturate bool) (*colour.CategorisedPalette, *colour.CategorisedPalette) {
 	themeType := determineThemeType(inputPlugin)
 
-	config := colour.DefaultCategorisationConfig()
-	config.ThemeType = themeType
-	palette := colour.Categorise(rawPalette, config)
+	// Determine primary theme
+	primaryTheme := themeType
+	if themeType == colour.ThemeAuto {
+		config := colour.DefaultCategorisationConfig()
+		config.ThemeType = colour.ThemeAuto
+		tempPalette := colour.Categorise(rawPalette, config)
+		primaryTheme = tempPalette.ThemeType
+	}
+
+	// Categorize for primary theme
+	primaryConfig := colour.DefaultCategorisationConfig()
+	primaryConfig.ThemeType = primaryTheme
+	primaryPalette := colour.Categorise(rawPalette, primaryConfig)
+
+	// Determine alternate theme (opposite of primary)
+	var alternateTheme colour.ThemeType
+	if primaryTheme == colour.ThemeDark {
+		alternateTheme = colour.ThemeLight
+	} else {
+		alternateTheme = colour.ThemeDark
+	}
+
+	// For alternate theme, optionally desaturate the palette
+	// to avoid highly saturated backgrounds in light themes
+	alternatePaletteRaw := rawPalette
+	if desaturate {
+		alternatePaletteRaw = desaturatePalette(rawPalette, alternateTheme)
+	}
+
+	// Categorize for alternate theme
+	alternateConfig := colour.DefaultCategorisationConfig()
+	alternateConfig.ThemeType = alternateTheme
+	alternatePalette := colour.Categorise(alternatePaletteRaw, alternateConfig)
 
 	if generateVerbose {
 		fmt.Fprintf(os.Stderr, "   Categorized palette (%d colours, %s theme)\n",
-			len(palette.AllColours), palette.ThemeType.String())
+			len(primaryPalette.AllColours), primaryPalette.ThemeType.String())
+		if desaturate {
+			fmt.Fprintf(os.Stderr, "   Categorized alternate palette (%d colours, %s theme, desaturated)\n",
+				len(alternatePalette.AllColours), alternatePalette.ThemeType.String())
+		} else {
+			fmt.Fprintf(os.Stderr, "   Categorized alternate palette (%d colours, %s theme)\n",
+				len(alternatePalette.AllColours), alternatePalette.ThemeType.String())
+		}
 		fmt.Fprintf(os.Stderr, "   Plugin execution complete.\n")
 	}
 
-	return palette
+	return primaryPalette, alternatePalette
+}
+
+// desaturatePalette creates a new palette with inverted luminance and conditional desaturation for alternate themes.
+// All colors are inverted. For light themes, very bright colors are desaturated to create neutral backgrounds.
+func desaturatePalette(palette *colour.Palette, themeType colour.ThemeType) *colour.Palette {
+	if palette == nil || len(palette.Colors) == 0 {
+		return palette
+	}
+
+	const brightThreshold = 0.7 // Very bright colors get desaturated (after inversion)
+
+	adjusted := make([]color.Color, len(palette.Colors))
+	for i, c := range palette.Colors {
+		r, g, b, a := c.RGBA()
+		// Convert to 0-255 range
+		r8 := uint8(r >> 8)
+		g8 := uint8(g >> 8)
+		b8 := uint8(b >> 8)
+		a8 := uint8(a >> 8)
+
+		// Convert to HSL
+		h, s, l := rgbToHSL(r8, g8, b8)
+
+		// Always invert luminance for alternate theme
+		l = 1.0 - l
+
+		// For light themes, desaturate very bright colors to avoid garish backgrounds
+		if themeType == colour.ThemeLight && l > brightThreshold {
+			s = s * 0.4
+		}
+
+		// Convert back to RGB
+		rNew, gNew, bNew := hslToRGB(h, s, l)
+		adjusted[i] = color.RGBA{R: rNew, G: gNew, B: bNew, A: a8}
+	}
+
+	return &colour.Palette{
+		Colors:    adjusted,
+		Weights:   palette.Weights,
+		RoleHints: palette.RoleHints,
+	}
+}
+
+// rgbToHSL converts RGB (0-255) to HSL (0-1).
+func rgbToHSL(r, g, b uint8) (h, s, l float64) {
+	rf := float64(r) / 255.0
+	gf := float64(g) / 255.0
+	bf := float64(b) / 255.0
+
+	max := rf
+	if gf > max {
+		max = gf
+	}
+	if bf > max {
+		max = bf
+	}
+
+	min := rf
+	if gf < min {
+		min = gf
+	}
+	if bf < min {
+		min = bf
+	}
+
+	l = (max + min) / 2.0
+
+	if max == min {
+		h = 0
+		s = 0
+	} else {
+		d := max - min
+		if l > 0.5 {
+			s = d / (2.0 - max - min)
+		} else {
+			s = d / (max + min)
+		}
+
+		switch max {
+		case rf:
+			h = (gf - bf) / d
+			if gf < bf {
+				h += 6.0
+			}
+		case gf:
+			h = (bf-rf)/d + 2.0
+		case bf:
+			h = (rf-gf)/d + 4.0
+		}
+		h /= 6.0
+	}
+
+	return h, s, l
+}
+
+// hslToRGB converts HSL (0-1) to RGB (0-255).
+func hslToRGB(h, s, l float64) (r, g, b uint8) {
+	var rf, gf, bf float64
+
+	if s == 0 {
+		rf = l
+		gf = l
+		bf = l
+	} else {
+		var q float64
+		if l < 0.5 {
+			q = l * (1.0 + s)
+		} else {
+			q = l + s - l*s
+		}
+		p := 2.0*l - q
+
+		rf = hueToRGB(p, q, h+1.0/3.0)
+		gf = hueToRGB(p, q, h)
+		bf = hueToRGB(p, q, h-1.0/3.0)
+	}
+
+	r = uint8(rf * 255.0)
+	g = uint8(gf * 255.0)
+	b = uint8(bf * 255.0)
+	return r, g, b
+}
+
+// hueToRGB is a helper for HSL to RGB conversion.
+func hueToRGB(p, q, t float64) float64 {
+	if t < 0 {
+		t += 1.0
+	}
+	if t > 1 {
+		t -= 1.0
+	}
+	if t < 1.0/6.0 {
+		return p + (q-p)*6.0*t
+	}
+	if t < 1.0/2.0 {
+		return q
+	}
+	if t < 2.0/3.0 {
+		return p + (q-p)*(2.0/3.0-t)*6.0
+	}
+	return p
 }
 
 // determineThemeType determines the theme type from global flag and plugin hints.
@@ -307,7 +488,7 @@ func shouldSkipFromPreHook(ctx context.Context, plugin output.Plugin, exec *plug
 }
 
 // generateAndWriteFiles generates files from plugins and writes them to disk.
-func generateAndWriteFiles(executions []pluginExecution, palette *colour.CategorisedPalette, wallpaperPath string) int {
+func generateAndWriteFiles(executions []pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath string) int {
 	successCount := 0
 	firstOutputPlugin := true
 
@@ -322,7 +503,7 @@ func generateAndWriteFiles(executions []pluginExecution, palette *colour.Categor
 			firstOutputPlugin = false
 		}
 
-		if processPluginGeneration(exec, palette, wallpaperPath) {
+		if processPluginGeneration(exec, palette, alternatePalette, wallpaperPath) {
 			successCount++
 		}
 	}
@@ -331,7 +512,7 @@ func generateAndWriteFiles(executions []pluginExecution, palette *colour.Categor
 }
 
 // processPluginGeneration generates and writes files for a single plugin.
-func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedPalette, wallpaperPath string) bool {
+func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath string) bool {
 	plugin := exec.plugin
 
 	if generateVerbose {
@@ -340,7 +521,15 @@ func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedP
 	}
 
 	// Create theme data with wallpaper context.
+	// For external plugins, we'll pass the alternate palette through the manager.
 	themeData := colour.NewThemeData(palette, wallpaperPath, "")
+
+	// If this is an external plugin and we have an alternate palette, set it
+	if alternatePalette != nil {
+		if extPlugin, ok := plugin.(*manager.ExternalOutputPlugin); ok {
+			extPlugin.SetAlternatePalette(alternatePalette)
+		}
+	}
 
 	// Generate files.
 	files, err := plugin.Generate(themeData)

@@ -610,12 +610,13 @@ func (p *ExternalInputPlugin) WallpaperPath() string {
 
 // ExternalOutputPlugin wraps an external executable as an output plugin.
 type ExternalOutputPlugin struct {
-	name        string
-	description string
-	path        string
-	args        map[string]any
-	dryRun      bool
-	verbose     bool
+	name             string
+	description      string
+	path             string
+	args             map[string]any
+	dryRun           bool
+	verbose          bool
+	alternatePalette *colour.CategorisedPalette
 }
 
 // NewExternalOutputPlugin creates a new external output plugin wrapper.
@@ -680,6 +681,11 @@ func (p *ExternalOutputPlugin) GetVerbose() bool {
 	return p.verbose
 }
 
+// SetAlternatePalette sets the alternate palette for dual-theme generation.
+func (p *ExternalOutputPlugin) SetAlternatePalette(palette *colour.CategorisedPalette) {
+	p.alternatePalette = palette
+}
+
 // Generate executes the external plugin and returns its output.
 func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	// Create executor (detects protocol automatically).
@@ -692,8 +698,8 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 	// Extract palette from themeData.
 	palette := themeData.Palette()
 
-	// Convert to protocol format.
-	paletteData := convertCategorisedPaletteToProtocol(palette, p.args, p.dryRun, p.verbose)
+	// Convert to protocol format, including alternate palette if set.
+	paletteData := convertCategorisedPaletteToProtocolWithAlternate(palette, p.alternatePalette, p.args, p.dryRun, p.verbose)
 
 	// Execute output plugin.
 	files, err := exec.ExecuteOutput(context.Background(), paletteData)
@@ -775,6 +781,11 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 
 // convertCategorisedPaletteToProtocol converts a CategorisedPalette to plugin.PaletteData.
 func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool, verbose bool) plugin.PaletteData {
+	return convertCategorisedPaletteToProtocolWithAlternate(palette, nil, pluginArgs, dryRun, verbose)
+}
+
+// convertCategorisedPaletteToProtocolWithAlternate converts a CategorisedPalette to plugin.PaletteData with optional alternate theme.
+func convertCategorisedPaletteToProtocolWithAlternate(palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool, verbose bool) plugin.PaletteData {
 	colours := make(map[string]plugin.CategorisedColour)
 	for role, colour := range palette.Colours {
 		colours[string(role)] = plugin.CategorisedColour{
@@ -816,7 +827,7 @@ func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, plu
 		themeType = "light"
 	}
 
-	return plugin.PaletteData{
+	paletteData := plugin.PaletteData{
 		Colours:    colours,
 		AllColours: allColours,
 		ThemeType:  themeType,
@@ -824,4 +835,56 @@ func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, plu
 		DryRun:     dryRun,
 		Verbose:    verbose,
 	}
+
+	// Convert alternate palette if provided
+	if alternatePalette != nil {
+		alternateColours := make(map[string]plugin.CategorisedColour)
+		for role, colour := range alternatePalette.Colours {
+			alternateColours[string(role)] = plugin.CategorisedColour{
+				RGB: plugin.RGBColour{
+					R: colour.RGB.R,
+					G: colour.RGB.G,
+					B: colour.RGB.B,
+				},
+				Hex:        colour.Hex,
+				Role:       string(colour.Role),
+				Luminance:  colour.Luminance,
+				IsLight:    colour.IsLight,
+				Hue:        colour.Hue,
+				Saturation: colour.Saturation,
+				Index:      colour.Index,
+			}
+		}
+
+		alternateAllColours := make([]plugin.CategorisedColour, len(alternatePalette.AllColours))
+		for i, colour := range alternatePalette.AllColours {
+			alternateAllColours[i] = plugin.CategorisedColour{
+				RGB: plugin.RGBColour{
+					R: colour.RGB.R,
+					G: colour.RGB.G,
+					B: colour.RGB.B,
+				},
+				Hex:        colour.Hex,
+				Role:       string(colour.Role),
+				Luminance:  colour.Luminance,
+				IsLight:    colour.IsLight,
+				Hue:        colour.Hue,
+				Saturation: colour.Saturation,
+				Index:      colour.Index,
+			}
+		}
+
+		alternateThemeType := "dark"
+		if alternatePalette.ThemeType == colour.ThemeLight {
+			alternateThemeType = "light"
+		}
+
+		paletteData.AlternateTheme = &plugin.AlternateThemeData{
+			Colours:    alternateColours,
+			AllColours: alternateAllColours,
+			ThemeType:  alternateThemeType,
+		}
+	}
+
+	return paletteData
 }

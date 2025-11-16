@@ -14,6 +14,9 @@ var (
 	// Global theme flag.
 	globalTheme string
 
+	// Global desaturation flag for alternate themes.
+	globalNoDesaturation bool
+
 	// Shared plugin manager instance used by all commands.
 	sharedPluginManager *manager.Manager
 
@@ -47,6 +50,7 @@ func NewRootCmd() *cobra.Command {
 	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable verbose output")
 	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress non-error output")
 	RootCmd.PersistentFlags().StringVarP(&globalTheme, "theme", "t", "auto", "theme type (auto, dark, light)")
+	RootCmd.PersistentFlags().BoolVar(&globalNoDesaturation, "no-desaturation", false, "disable desaturation when generating alternate themes (keeps original color saturation)")
 
 	// Set version template.
 	RootCmd.SetVersionTemplate(version.String() + "\n")

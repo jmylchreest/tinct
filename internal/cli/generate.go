@@ -99,8 +99,8 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// Phase 4: Categorize the palette.
-	palette := categorizePalette(rawPalette, inputPlugin)
+	// Phase 4: Categorize the palette (primary + alternate for dual-theme support).
+	palette, alternatePalette := categorizePalette(rawPalette, inputPlugin, !globalNoDesaturation)
 
 	// Phase 5: Handle palette output (preview/save).
 	if err := handlePaletteOutput(palette); err != nil {
@@ -124,7 +124,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 	executions := preparePluginExecutions(ctx, outputPlugins)
 
 	// Phase 9: Generate and write files.
-	successCount := generateAndWriteFiles(executions, palette, wallpaperPath)
+	successCount := generateAndWriteFiles(executions, palette, alternatePalette, wallpaperPath)
 
 	// Phase 10: Run post-execute hooks.
 	if !generateDryRun {

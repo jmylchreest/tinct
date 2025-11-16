@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,20 +52,83 @@ func detectZedPaths() ([]string, error) {
 
 // Generate creates a Zed theme JSON file from the palette data.
 func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
-	// Convert PaletteData to ThemeData for template rendering.
-	themeData := convertPaletteDataToThemeData(palette)
+	// Load and parse template once
+	tmpl, err := p.loadTemplate(palette.Verbose)
+	if err != nil {
+		return nil, err
+	}
 
-	// Load template.
+	// Generate theme data for primary palette
+	primaryThemeData := convertPaletteDataToThemeData(palette)
+	primaryThemeObj, err := p.executeTemplate(tmpl, primaryThemeData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate primary theme: %w", err)
+	}
+
+	// Check if we have dual-theme support
+	if palette.AlternateTheme != nil {
+		if palette.Verbose {
+			fmt.Fprintf(os.Stderr, "   Generating dual-theme (light + dark)\n")
+		}
+
+		// Generate theme data for alternate palette
+		alternatePaletteData := tinctplugin.PaletteData{
+			Colours:    palette.AlternateTheme.Colours,
+			AllColours: palette.AlternateTheme.AllColours,
+			ThemeType:  palette.AlternateTheme.ThemeType,
+			Verbose:    palette.Verbose,
+		}
+		alternateThemeData := convertPaletteDataToThemeData(alternatePaletteData)
+		alternateThemeObj, err := p.executeTemplate(tmpl, alternateThemeData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate alternate theme: %w", err)
+		}
+
+		// Combine both themes
+		combined := map[string]interface{}{
+			"$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+			"name":    "Tinct",
+			"author":  "Tinct Color Generator",
+			"themes":  []interface{}{primaryThemeObj, alternateThemeObj},
+		}
+
+		combinedJSON, err := json.MarshalIndent(combined, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal combined theme: %w", err)
+		}
+
+		return p.writeThemeFiles(combinedJSON)
+	}
+
+	// Single theme mode - marshal the full theme file
+	singleTheme := map[string]interface{}{
+		"$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+		"name":    "Tinct",
+		"author":  "Tinct Color Generator",
+		"themes":  []interface{}{primaryThemeObj},
+	}
+
+	singleJSON, err := json.MarshalIndent(singleTheme, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal theme: %w", err)
+	}
+
+	return p.writeThemeFiles(singleJSON)
+}
+
+// loadTemplate loads and parses the Zed theme template.
+func (p *Plugin) loadTemplate(verbose bool) (*template.Template, error) {
 	loader := tincttemplate.New("zed", templatesFS)
-	if palette.Verbose {
+	if verbose {
 		loader.WithVerbose(true, &stdLogger{})
 	}
+
 	tmplContent, fromCustom, err := loader.Load("templates/theme.json.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load template: %w", err)
 	}
 
-	if palette.Verbose {
+	if verbose {
 		if fromCustom {
 			fmt.Fprintf(os.Stderr, "   Template source: custom (%s)\n", loader.CustomPath("templates/theme.json.tmpl"))
 		} else {
@@ -72,7 +136,6 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		}
 	}
 
-	// Parse template with helper functions.
 	tmpl, err := template.New("theme").
 		Funcs(tincttemplate.TemplateFuncs()).
 		Parse(string(tmplContent))
@@ -80,11 +143,38 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Execute template.
+	return tmpl, nil
+}
+
+// executeTemplate executes the template and extracts the theme object.
+func (p *Plugin) executeTemplate(tmpl *template.Template, themeData *colour.ThemeData) (map[string]interface{}, error) {
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
+
+	// Parse the generated JSON
+	var result map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse generated JSON: %w", err)
+	}
+
+	// Extract the theme object from the themes array
+	themes, ok := result["themes"].([]interface{})
+	if !ok || len(themes) == 0 {
+		return nil, fmt.Errorf("invalid theme structure: missing themes array")
+	}
+
+	themeObj, ok := themes[0].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid theme object structure")
+	}
+
+	return themeObj, nil
+}
+
+// writeThemeFiles writes theme content to all appropriate output directories.
+func (p *Plugin) writeThemeFiles(content []byte) (map[string][]byte, error) {
 
 	// Determine output directories.
 	var outputDirs []string
@@ -120,7 +210,7 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 
 		// Add file with full path.
 		fullPath := filepath.Join(outputDir, "tinct.json")
-		files[fullPath] = buf.Bytes()
+		files[fullPath] = content
 	}
 
 	return files, nil

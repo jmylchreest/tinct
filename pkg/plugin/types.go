@@ -17,6 +17,17 @@ type PaletteData struct {
 	PluginArgs map[string]any               `json:"plugin_args,omitempty"`
 	DryRun     bool                         `json:"dry_run"`
 	Verbose    bool                         `json:"verbose"`
+
+	// DualTheme support (optional, for plugins that support both light and dark)
+	// If present, contains the alternate theme variant (light if primary is dark, vice versa)
+	AlternateTheme *AlternateThemeData `json:"alternate_theme,omitempty"`
+}
+
+// AlternateThemeData contains the palette data for the alternate theme variant.
+type AlternateThemeData struct {
+	Colours    map[string]CategorisedColour `json:"colours"`
+	AllColours []CategorisedColour          `json:"all_colours"`
+	ThemeType  string                       `json:"theme_type"`
 }
 
 // CategorisedColour represents a color with metadata for RPC transfer.
