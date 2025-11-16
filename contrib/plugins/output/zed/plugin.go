@@ -61,6 +61,11 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		outputDir = filepath.Join(home, ".config", "zed", "themes")
 	}
 
+	// Create themes directory if it doesn't exist.
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create themes directory: %w", err)
+	}
+
 	// Return generated file with full path.
 	files := make(map[string][]byte)
 	fullPath := filepath.Join(outputDir, "tinct.json")
@@ -69,21 +74,17 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 	return files, nil
 }
 
-// PreExecute checks if the output directory exists and creates it if needed.
+// PreExecute checks if Zed is installed (config directory exists).
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Determine output directory.
-	outputDir := p.outputDir
-	if outputDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return false, "", fmt.Errorf("failed to get home directory: %w", err)
-		}
-		outputDir = filepath.Join(home, ".config", "zed", "themes")
+	// Check if .config/zed exists (indicates Zed is installed)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false, "", fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	// Create directory if it doesn't exist.
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return false, "", fmt.Errorf("failed to create output directory: %w", err)
+	zedConfigDir := filepath.Join(home, ".config", "zed")
+	if _, err := os.Stat(zedConfigDir); os.IsNotExist(err) {
+		return true, "Zed not installed (config directory does not exist)", nil
 	}
 
 	return false, "", nil
