@@ -464,8 +464,17 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, outputPath string,
 		return fmt.Errorf("image generation failed: %w", err)
 	}
 
+	// Check if response is valid
+	if response == nil {
+		return fmt.Errorf("received nil response from API")
+	}
+
 	// Check if we got any parts in the response
-	if len(response.Candidates) == 0 || len(response.Candidates[0].Content.Parts) == 0 {
+	if len(response.Candidates) == 0 {
+		return fmt.Errorf("no candidates in response")
+	}
+
+	if response.Candidates[0].Content == nil || len(response.Candidates[0].Content.Parts) == 0 {
 		return fmt.Errorf("no image data in response")
 	}
 
