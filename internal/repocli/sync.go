@@ -141,7 +141,6 @@ Examples:
 				pruneStats = PruneManifestWithOptions(mgr, &PruneOptions{
 					RemoveAfterDuration: removeAfterDuration,
 					PruneIncompatible:   pruneIncompatible,
-					MinProtocolVersion:  minProtocolVersion,
 					KeepRecent:          keepRecent,
 					DryRun:              dryRun,
 					Verbose:             verbose,
@@ -320,7 +319,6 @@ func syncFromConfig(
 		pruneStats = PruneManifestWithOptions(mgr, &PruneOptions{
 			RemoveAfterDuration: removeAfterDuration,
 			PruneIncompatible:   pruneIncompatible,
-			MinProtocolVersion:  minProtocolVersion,
 			KeepRecent:          keepRecent,
 			DryRun:              dryRun,
 			Verbose:             verbose,

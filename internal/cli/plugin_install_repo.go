@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 )
 
@@ -112,6 +113,19 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 		}
 		return fmt.Errorf("plugin %q version %s for %s is unavailable: %s",
 			pluginName, result.Version.Version, platform, reason)
+	}
+
+	// Check protocol compatibility before downloading.
+	if result.Version.Compatibility != "" {
+		compatible, err := protocol.IsCompatible(result.Version.Compatibility)
+		if err != nil {
+			return fmt.Errorf("failed to check protocol compatibility: %w", err)
+		}
+		if !compatible {
+			return fmt.Errorf("plugin %q version %s requires protocol version %s, but tinct is using %s (min compatible: %s)",
+				pluginName, result.Version.Version, result.Version.Compatibility,
+				protocol.ProtocolVersion, protocol.MinCompatibleVersion)
+		}
 	}
 
 	// Load or create plugin lock.

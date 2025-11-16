@@ -16,79 +16,9 @@ func NewPruneValidator() *PruneValidator {
 }
 
 // IsProtocolCompatible checks if a plugin protocol version is compatible with the current tinct version.
-// It wraps the protocol.IsCompatible function for use in the repomanager package.
-func IsProtocolCompatible(pluginVersion string) (bool, error) {
-	// Strip common comparison operators from version string (e.g., ">=0.0.1" -> "0.0.1")
-	pluginVersion = strings.TrimPrefix(pluginVersion, ">=")
-	pluginVersion = strings.TrimPrefix(pluginVersion, "<=")
-	pluginVersion = strings.TrimPrefix(pluginVersion, ">")
-	pluginVersion = strings.TrimPrefix(pluginVersion, "<")
-	pluginVersion = strings.TrimPrefix(pluginVersion, "=")
-	pluginVersion = strings.TrimSpace(pluginVersion)
-
-	compatible, err := protocol.IsCompatible(pluginVersion)
-	if err != nil {
-		return false, err
-	}
-	return compatible, nil
-}
-
-// IsProtocolCompatibleWithMin checks if a plugin protocol version meets a minimum version requirement.
-// If minVersion is empty, it uses the current protocol version check (same as IsProtocolCompatible).
-// Otherwise, it checks if the plugin version is >= minVersion.
-func IsProtocolCompatibleWithMin(pluginVersion, minVersion string) (bool, error) {
-	if minVersion == "" {
-		return IsProtocolCompatible(pluginVersion)
-	}
-
-	// Strip common comparison operators from version strings (e.g., ">=0.0.1" -> "0.0.1")
-	pluginVersion = strings.TrimPrefix(pluginVersion, ">=")
-	pluginVersion = strings.TrimPrefix(pluginVersion, "<=")
-	pluginVersion = strings.TrimPrefix(pluginVersion, ">")
-	pluginVersion = strings.TrimPrefix(pluginVersion, "<")
-	pluginVersion = strings.TrimPrefix(pluginVersion, "=")
-	pluginVersion = strings.TrimSpace(pluginVersion)
-
-	minVersion = strings.TrimPrefix(minVersion, ">=")
-	minVersion = strings.TrimPrefix(minVersion, "<=")
-	minVersion = strings.TrimPrefix(minVersion, ">")
-	minVersion = strings.TrimPrefix(minVersion, "<")
-	minVersion = strings.TrimPrefix(minVersion, "=")
-	minVersion = strings.TrimSpace(minVersion)
-
-	// Parse both versions
-	pluginVer, err := protocol.Parse(pluginVersion)
-	if err != nil {
-		return false, err
-	}
-
-	minVer, err := protocol.Parse(minVersion)
-	if err != nil {
-		return false, err
-	}
-
-	// Compare versions: plugin must be >= minVersion
-	if pluginVer.Major < minVer.Major {
-		return false, nil
-	}
-	if pluginVer.Major > minVer.Major {
-		return true, nil
-	}
-
-	// Same major version, check minor
-	if pluginVer.Minor < minVer.Minor {
-		return false, nil
-	}
-	if pluginVer.Minor > minVer.Minor {
-		return true, nil
-	}
-
-	// Same major and minor, check patch
-	if pluginVer.Patch < minVer.Patch {
-		return false, nil
-	}
-
-	return true, nil
+// The compatibility field in repository.json now stores the raw protocol version (e.g., "0.0.1").
+func IsProtocolCompatible(pluginProtocolVersion string) (bool, error) {
+	return protocol.IsCompatible(pluginProtocolVersion)
 }
 
 // ShouldKeepDownload checks if a download entry should be kept during pruning.

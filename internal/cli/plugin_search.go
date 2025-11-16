@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 )
 
@@ -83,15 +84,26 @@ func runPluginSearch(_ *cobra.Command, args []string) error {
 	}
 
 	// Display results in table format matching plugins list
-	table := NewTable([]string{"TYPE", "PLUGIN", "VERSION", "REPO", "DESCRIPTION"})
+	table := NewTable([]string{"TYPE", "PLUGIN", "VERSION", "REPO", "COMPAT", "DESCRIPTION"})
 
 	// Enable terminal-aware column sizing for description
-	table.EnableTerminalAwareWidth(4, 40) // Min width of 40 chars for description
+	table.EnableTerminalAwareWidth(5, 40) // Min width of 40 chars for description
 
 	for _, result := range results {
 		version := ""
+		compatStatus := ""
 		if result.Version != nil {
 			version = result.Version.Version
+
+			// Check compatibility
+			if result.Version.Compatibility != "" {
+				compatible, err := protocol.IsCompatible(result.Version.Compatibility)
+				if err != nil || !compatible {
+					compatStatus = "✗"
+				} else {
+					compatStatus = "✓"
+				}
+			}
 		}
 
 		table.AddRow([]string{
@@ -99,6 +111,7 @@ func runPluginSearch(_ *cobra.Command, args []string) error {
 			result.Plugin.Name,
 			version,
 			result.Repository,
+			compatStatus,
 			result.Plugin.Description,
 		})
 	}

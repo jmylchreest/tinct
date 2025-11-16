@@ -163,7 +163,7 @@ Examples:
 
 			// Add compatibility if we have metadata
 			if metadata != nil {
-				version.Compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+				version.Compatibility = metadata.ProtocolVersion
 			}
 
 			// Add to manifest

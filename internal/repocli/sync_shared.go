@@ -67,7 +67,7 @@ func (c *MetadataHydrationCache) SetMetadata(
 
 	// Hydrate all pending plugins with this metadata
 	hydrated := 0
-	compatibility := repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+	compatibility := metadata.ProtocolVersion
 
 	for _, pending := range pendingList {
 		if verbose {
@@ -252,7 +252,7 @@ func ProcessGitHubSourceWithProtocol(
 				if hasCached {
 					// Reuse cached metadata from another architecture
 					metadata = cachedMetadata
-					compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+					compatibility = metadata.ProtocolVersion
 					if verbose {
 						fmt.Printf("      Using cached metadata from another architecture\n")
 						fmt.Printf("      Protocol: %s, Compatibility: %s\n",
@@ -279,10 +279,10 @@ func ProcessGitHubSourceWithProtocol(
 							ChangelogURL:  release.URL,
 						})
 					} else {
-						compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+						compatibility = metadata.ProtocolVersion
 						if verbose {
-							fmt.Printf("      Protocol: %s, Compatibility: %s\n",
-								metadata.ProtocolVersion, compatibility)
+							fmt.Printf("      Protocol: %s\n",
+								metadata.ProtocolVersion)
 						}
 
 						// Store metadata and hydrate any pending plugins
@@ -396,7 +396,7 @@ func ProcessURLSourceWithProtocol(
 		if hasCached {
 			// Reuse cached metadata from another platform
 			metadata = cachedMetadata
-			compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+			compatibility = metadata.ProtocolVersion
 			if verbose {
 				fmt.Printf("  Using cached metadata from another platform\n")
 				fmt.Printf("  Protocol: %s, Compatibility: %s\n",
@@ -436,10 +436,10 @@ func ProcessURLSourceWithProtocol(
 					}
 				}
 
-				compatibility = repomanager.CalculateCompatibility(metadata.ProtocolVersion)
+				compatibility = metadata.ProtocolVersion
 				if verbose {
-					fmt.Printf("  Protocol: %s, Compatibility: %s\n",
-						metadata.ProtocolVersion, compatibility)
+					fmt.Printf("  Protocol: %s\n",
+						metadata.ProtocolVersion)
 				}
 
 				// Store metadata and hydrate any pending plugins

@@ -22,7 +22,6 @@ type PruneStats struct {
 type PruneOptions struct {
 	RemoveAfterDuration time.Duration
 	PruneIncompatible   bool
-	MinProtocolVersion  string
 	KeepRecent          int
 	DryRun              bool
 	Verbose             bool
@@ -69,14 +68,15 @@ func PruneManifestWithOptions(
 
 			// Step 0: Check protocol compatibility if requested
 			if opts.PruneIncompatible && version.Compatibility != "" {
-				compatible, err := repomanager.IsProtocolCompatibleWithMin(version.Compatibility, opts.MinProtocolVersion)
+				compatible, err := repomanager.IsProtocolCompatible(version.Compatibility)
 				if err != nil || !compatible {
 					if opts.Verbose {
 						reason := "incompatible"
 						if err != nil {
 							reason = err.Error()
-						} else if opts.MinProtocolVersion != "" {
-							reason = fmt.Sprintf("version %s < minimum %s", version.Compatibility, opts.MinProtocolVersion)
+						} else {
+							reason = fmt.Sprintf("protocol version %s incompatible with tinct %s",
+								version.Compatibility, "0.0.1")
 						}
 						fmt.Printf("  Removing incompatible version: %s %s - %s\n",
 							pluginName, version.Version, reason)
