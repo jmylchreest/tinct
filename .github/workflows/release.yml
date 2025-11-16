@@ -293,16 +293,21 @@ jobs:
 
       - name: Trigger plugin repository update
         if: success()
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.PLUGIN_REPO_PAT }}
         run: |
           if [ -n "$GH_TOKEN" ]; then
-            echo "Triggering plugin repository update workflow..."
-            gh workflow run update-plugins.yml \
+            echo "Triggering plugin repository sync workflow..."
+            if gh workflow run update-repository.yml \
               --repo jmylchreest/tinct-plugins \
               --ref main \
-              -f tinct_version=${{ github.ref_name }} \
-              -f triggered_by="tinct release ${{ github.ref_name }}"
+              -f prune=true; then
+              echo "✓ Successfully triggered plugin repository sync"
+            else
+              echo "⚠ Failed to trigger plugin repository sync"
+              exit 0
+            fi
           else
             echo "PLUGIN_REPO_PAT not configured, skipping plugin repository trigger"
           fi
