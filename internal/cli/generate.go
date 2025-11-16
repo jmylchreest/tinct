@@ -503,20 +503,15 @@ func writeFile(path string, content []byte, verbose bool) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Check if file exists and create backup.
-	if _, err := os.Stat(path); err == nil {
-		backupPath := path + ".backup"
-		if err := os.Rename(path, backupPath); err != nil {
-			// If backup fails, continue anyway.
-			if verbose {
-				fmt.Fprintf(os.Stderr, "    Could not create backup: %v\n", err)
-			}
-		} else if verbose {
-			fmt.Fprintf(os.Stderr, "   Created backup: %s\n", backupPath)
+	// Backup disabled: backup operation interferes with file watchers (e.g., Zed editor).
+	// Reading the old file before writing the new one causes file watchers to see stale content.
+	if verbose {
+		if _, err := os.Stat(path); err == nil {
+			fmt.Fprintf(os.Stderr, "   Skipping backup (file watcher compatibility)\n")
 		}
 	}
 
-	// Write the file.
+	// Write new content to the original file.
 	if err := os.WriteFile(path, content, 0o600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}

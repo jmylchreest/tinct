@@ -25,6 +25,30 @@ type Plugin struct {
 	outputDir string
 }
 
+// detectZedPaths finds all installed Zed configurations (standard and Flatpak).
+func detectZedPaths() ([]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	var paths []string
+
+	// Check for standard Zed installation.
+	standardPath := filepath.Join(home, ".config", "zed", "themes")
+	if _, err := os.Stat(filepath.Join(home, ".config", "zed")); err == nil {
+		paths = append(paths, standardPath)
+	}
+
+	// Check for Flatpak Zed installation.
+	flatpakPath := filepath.Join(home, ".var", "app", "dev.zed.Zed", "config", "zed", "themes")
+	if _, err := os.Stat(filepath.Join(home, ".var", "app", "dev.zed.Zed", "config", "zed")); err == nil {
+		paths = append(paths, flatpakPath)
+	}
+
+	return paths, nil
+}
+
 // Generate creates a Zed theme JSON file from the palette data.
 func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
 	// Convert PaletteData to ThemeData for template rendering.
@@ -51,46 +75,64 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	// Determine output directory and full path.
-	outputDir := p.outputDir
-	if outputDir == "" {
-		home, err := os.UserHomeDir()
+	// Determine output directories.
+	var outputDirs []string
+	if p.outputDir != "" {
+		// User specified a custom output directory - use only that.
+		outputDirs = []string{p.outputDir}
+	} else {
+		// No custom directory specified - detect Zed installation paths.
+		detectedPaths, err := detectZedPaths()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get home directory: %w", err)
+			return nil, err
 		}
-		outputDir = filepath.Join(home, ".config", "zed", "themes")
+
+		if len(detectedPaths) == 0 {
+			// Fallback to default if no installations detected.
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get home directory: %w", err)
+			}
+			outputDirs = []string{filepath.Join(home, ".config", "zed", "themes")}
+		} else {
+			outputDirs = detectedPaths
+		}
 	}
 
-	// Create themes directory if it doesn't exist.
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create themes directory: %w", err)
-	}
-
-	// Return generated file with full path.
+	// Generate files for all output directories.
 	files := make(map[string][]byte)
-	fullPath := filepath.Join(outputDir, "tinct.json")
-	files[fullPath] = buf.Bytes()
+	for _, outputDir := range outputDirs {
+		// Create themes directory if it doesn't exist.
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create themes directory %q: %w", outputDir, err)
+		}
+
+		// Add file with full path.
+		fullPath := filepath.Join(outputDir, "tinct.json")
+		files[fullPath] = buf.Bytes()
+	}
 
 	return files, nil
 }
 
 // PreExecute checks if Zed is installed (config directory exists).
 func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Check if .config/zed exists (indicates Zed is installed)
-	home, err := os.UserHomeDir()
+	// Detect Zed installations.
+	detectedPaths, err := detectZedPaths()
 	if err != nil {
-		return false, "", fmt.Errorf("failed to get home directory: %w", err)
+		return false, "", err
 	}
 
-	zedConfigDir := filepath.Join(home, ".config", "zed")
-	if _, err := os.Stat(zedConfigDir); os.IsNotExist(err) {
+	// If no installations found, skip this plugin.
+	if len(detectedPaths) == 0 {
 		return true, "Zed not installed (config directory does not exist)", nil
 	}
 
 	return false, "", nil
 }
 
-// PostExecute is a no-op for Zed (themes are loaded automatically).
+// PostExecute is no longer needed - file watcher compatibility is now handled
+// by disabling backups in the file write logic.
 func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
 	return nil
 }
@@ -114,8 +156,8 @@ func (p *Plugin) GetFlagHelp() []tinctplugin.FlagHelp {
 			Name:        "output-dir",
 			Shorthand:   "o",
 			Type:        "string",
-			Default:     "~/.config/zed/themes",
-			Description: "Output directory for Zed theme files",
+			Default:     "auto-detected",
+			Description: "Output directory for Zed theme files (default: auto-detects standard and Flatpak installations)",
 			Required:    false,
 		},
 	}
