@@ -748,7 +748,7 @@ announce:
   skip: "{{gt .Patch 0}}"
 
   discord:
-    enabled: true
+    enabled: false
     message_template: |
       **Tinct {{.Tag}}** has been released!
 

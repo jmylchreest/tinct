@@ -389,7 +389,6 @@ git commit -m "fix(extract): handle edge case in k-means clustering"
 
 - **Issues**: [GitHub Issues](https://github.com/jmylchreest/tinct/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/jmylchreest/tinct/discussions)
-- **Email**: John Mylchreest <jmylchreest@gmail.com>
 
 ## License
 

@@ -462,12 +462,6 @@ Plugins can be written in any language using the external plugin interface (stdi
 
 MIT License - see [LICENSE](LICENSE) file.
 
-## Author
-
-**John Mylchreest**
-- Email: jmylchreest@gmail.com
-- GitHub: [@jmylchreest](https://github.com/jmylchreest)
-
 ## Contributing
 
 Contributions welcome! See [Development Guide](docs/DEVELOPMENT.md) and [Plugin Development Guide](contrib/README.md).

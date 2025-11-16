@@ -3,7 +3,7 @@
   "name": "tinct-official",
   "description": "Official Tinct plugin repository",
   "url": "https://github.com/jmylchreest/tinct-plugins",
-  "maintained_by": "John Mylchreest <jmylchreest@gmail.com>",
+  "maintained_by": "Example Maintainer <maintainer@example.com>",
   "last_updated": "2025-01-10T12:00:00Z",
 
   "plugins": {
