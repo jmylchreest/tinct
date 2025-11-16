@@ -13,10 +13,23 @@ help:
 CURRENT_VERSION := $(shell git tag --sort=-v:refname | head -1)
 
 get-version:
-	@if [ -z "$(CURRENT_VERSION)" ]; then \
-		git describe --always --dirty 2>/dev/null || echo "unknown"; \
+	@CURRENT_COMMIT=$$(git rev-parse HEAD 2>/dev/null); \
+	if [ -z "$(CURRENT_VERSION)" ]; then \
+		SHORT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+		echo "v0.0.1-$$SHORT_COMMIT-SNAPSHOT"; \
 	else \
-		git describe --tags --always --dirty 2>/dev/null || echo $(CURRENT_VERSION); \
+		TAG_COMMIT=$$(git rev-parse $(CURRENT_VERSION)^{commit} 2>/dev/null); \
+		if [ "$$CURRENT_COMMIT" = "$$TAG_COMMIT" ]; then \
+			echo $(CURRENT_VERSION); \
+		else \
+			NEXT_VERSION=$$(echo $(CURRENT_VERSION) | sed 's/^v//' | awk -F. '{print "v"$$1"."$$2"."$$3+1}'); \
+			SHORT_COMMIT=$$(git rev-parse --short HEAD); \
+			if git diff --quiet 2>/dev/null; then \
+				echo "$$NEXT_VERSION-$$SHORT_COMMIT-SNAPSHOT"; \
+			else \
+				echo "$$NEXT_VERSION-$$SHORT_COMMIT-SNAPSHOT-dirty"; \
+			fi; \
+		fi; \
 	fi
 
 get-latest-release:
@@ -30,6 +43,10 @@ get-latest-release:
 bump: bump-patch
 
 bump-patch:
+	@if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then \
+		echo "Error: Working directory is dirty. Commit or stash your changes first."; \
+		exit 1; \
+	fi
 	@if [ -z "$(CURRENT_VERSION)" ]; then \
 		echo "No existing tags found, creating v0.0.1"; \
 		git tag -a v0.0.1 -m "Release v0.0.1"; \
@@ -49,6 +66,10 @@ bump-patch:
 	fi
 
 bump-minor:
+	@if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then \
+		echo "Error: Working directory is dirty. Commit or stash your changes first."; \
+		exit 1; \
+	fi
 	@if [ -z "$(CURRENT_VERSION)" ]; then \
 		echo "No existing tags found, creating v0.1.0"; \
 		git tag -a v0.1.0 -m "Release v0.1.0"; \
@@ -68,6 +89,10 @@ bump-minor:
 	fi
 
 bump-major:
+	@if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then \
+		echo "Error: Working directory is dirty. Commit or stash your changes first."; \
+		exit 1; \
+	fi
 	@if [ -z "$(CURRENT_VERSION)" ]; then \
 		echo "No existing tags found, creating v1.0.0"; \
 		git tag -a v1.0.0 -m "Release v1.0.0"; \
