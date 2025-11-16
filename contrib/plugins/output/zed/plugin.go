@@ -51,9 +51,20 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	// Return generated file.
+	// Determine output directory and full path.
+	outputDir := p.outputDir
+	if outputDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get home directory: %w", err)
+		}
+		outputDir = filepath.Join(home, ".config", "zed", "themes")
+	}
+
+	// Return generated file with full path.
 	files := make(map[string][]byte)
-	files["tinct.json"] = buf.Bytes()
+	fullPath := filepath.Join(outputDir, "tinct.json")
+	files[fullPath] = buf.Bytes()
 
 	return files, nil
 }

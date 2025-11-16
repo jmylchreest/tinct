@@ -205,19 +205,13 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		// Update specific repository.
 		name := args[0]
-		fmt.Printf("Updating repository %q...\n", name)
-
-		if err := mgr.UpdateRepository(name); err != nil {
-			return fmt.Errorf("failed to update repository: %w", err)
+		if err := updateAndPrintRepo(mgr, name); err != nil {
+			return err
 		}
-
-		fmt.Printf(" Repository %q updated successfully\n", name)
 		return nil
 	}
 
 	// Update all repositories.
-	fmt.Println("Updating all repositories...")
-
 	repos := mgr.ListRepositories()
 	if len(repos) == 0 {
 		fmt.Println("No repositories configured.")
@@ -225,15 +219,29 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 	}
 
 	for _, repo := range repos {
-		fmt.Printf("\n%s...\n", repo.Name)
-		if err := mgr.UpdateRepository(repo.Name); err != nil {
-			fmt.Printf("   Failed: %v\n", err)
-		} else {
-			fmt.Printf("   Updated\n")
-		}
+		_ = updateAndPrintRepo(mgr, repo.Name)
 	}
 
-	fmt.Println("\n Repository update complete")
+	return nil
+}
+
+// updateAndPrintRepo updates a repository and prints the result on one line.
+func updateAndPrintRepo(mgr *repository.Manager, name string) error {
+	fmt.Printf("Updating %s... ", name)
+
+	if err := mgr.UpdateRepository(name); err != nil {
+		fmt.Printf("✗ failed: %v\n", err)
+		return fmt.Errorf("failed to update repository: %w", err)
+	}
+
+	// Get updated manifest to show last updated time
+	repo, err := mgr.GetRepository(name)
+	if err == nil && repo.Manifest != nil && !repo.Manifest.LastUpdated.IsZero() {
+		fmt.Printf("✓ (last modified %s)\n", repo.Manifest.LastUpdated.Format("2006-01-02 15:04:05 MST"))
+	} else {
+		fmt.Printf("✓\n")
+	}
+
 	return nil
 }
 

@@ -107,7 +107,47 @@ tinct-plugin-wob version
 
 ## Hyprland Integration
 
-### Basic Setup
+The wob plugin binary (`tinct-plugin-wob`) can be used directly as a wrapper for seamless Hyprland integration with volume, brightness, and other visual feedback.
+
+### Using the Plugin Binary (Recommended)
+
+After running `tinct generate -o wob`, the plugin is installed to `~/.local/share/tinct/plugins/tinct-plugin-wob` and can be used as both a theme generator and a wob wrapper.
+
+#### Autostart Configuration
+
+Add to `~/.config/hypr/exec.conf` or `~/.config/hypr/hyprland.conf`:
+
+```conf
+# Start wob with Tinct theme on login
+exec-once = ~/.local/share/tinct/plugins/tinct-plugin-wob start --base-config ~/.config/wob/base.ini --append-config ~/.config/wob/themes/tinct.ini
+```
+
+#### Keybinds Configuration  
+
+Add to `~/.config/hypr/keybinds.conf` or `~/.config/hypr/hyprland.conf`:
+
+```conf
+# Volume controls with wob feedback
+bindel = ,XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+ && ~/.local/share/tinct/plugins/tinct-plugin-wob send $(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print int($2*100+0.5)}')
+bindel = ,XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ~/.local/share/tinct/plugins/tinct-plugin-wob send $(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print int($2*100+0.5)}')
+bindel = ,XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ~/.local/share/tinct/plugins/tinct-plugin-wob send $(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '/Volume:/ {p=int($2*100+0.5); for(i=3;i<=NF;i++){ if($i=="[MUTED]") p=0 } print p }')
+
+# Microphone mute with wob feedback
+bindel = ,XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle && ~/.local/share/tinct/plugins/tinct-plugin-wob send $(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | awk '/Volume:/ {p=int($2*100+0.5); for(i=3;i<=NF;i++){ if($i=="[MUTED]") p=0 } print p }')
+
+# Brightness controls with wob feedback
+bindel = ,XF86MonBrightnessUp, exec, brightnessctl s 5%+ && ~/.local/share/tinct/plugins/tinct-plugin-wob send $(brightnessctl get) $(brightnessctl m)
+bindel = ,XF86MonBrightnessDown, exec, brightnessctl s 5%- && ~/.local/share/tinct/plugins/tinct-plugin-wob send $(brightnessctl get) $(brightnessctl m)
+```
+
+**Key Features:**
+- **Direct plugin usage**: No separate wrapper script needed
+- **Mute handling**: Automatically shows 0% when muted using AWK pattern
+- **Brightness**: Uses `$(brightnessctl get) $(brightnessctl m)` to calculate percentage
+- **Volume**: Handles both regular volume and muted state correctly
+- **Rounding**: `int($2*100+0.5)` provides proper rounding of percentages
+
+### Alternative: Using a Custom Path
 
 Add to your `~/.config/hypr/hyprland.conf`:
 
