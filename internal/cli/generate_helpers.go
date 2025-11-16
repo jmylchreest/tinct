@@ -209,7 +209,7 @@ func desaturatePalette(palette *colour.Palette, themeType colour.ThemeType) *col
 
 		// For light themes, desaturate very bright colors to avoid garish backgrounds
 		if themeType == colour.ThemeLight && l > brightThreshold {
-			s = s * 0.4
+			s *= 0.4
 		}
 
 		// Convert back to RGB
@@ -230,36 +230,36 @@ func rgbToHSL(r, g, b uint8) (h, s, l float64) {
 	gf := float64(g) / 255.0
 	bf := float64(b) / 255.0
 
-	max := rf
-	if gf > max {
-		max = gf
+	maxVal := rf
+	if gf > maxVal {
+		maxVal = gf
 	}
-	if bf > max {
-		max = bf
-	}
-
-	min := rf
-	if gf < min {
-		min = gf
-	}
-	if bf < min {
-		min = bf
+	if bf > maxVal {
+		maxVal = bf
 	}
 
-	l = (max + min) / 2.0
+	minVal := rf
+	if gf < minVal {
+		minVal = gf
+	}
+	if bf < minVal {
+		minVal = bf
+	}
 
-	if max == min {
+	l = (maxVal + minVal) / 2.0
+
+	if maxVal == minVal {
 		h = 0
 		s = 0
 	} else {
-		d := max - min
+		d := maxVal - minVal
 		if l > 0.5 {
-			s = d / (2.0 - max - min)
+			s = d / (2.0 - maxVal - minVal)
 		} else {
-			s = d / (max + min)
+			s = d / (maxVal + minVal)
 		}
 
-		switch max {
+		switch maxVal {
 		case rf:
 			h = (gf - bf) / d
 			if gf < bf {

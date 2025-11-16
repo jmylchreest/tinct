@@ -205,10 +205,7 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		// Update specific repository.
 		name := args[0]
-		if err := updateAndPrintRepo(mgr, name); err != nil {
-			return err
-		}
-		return nil
+		return updateAndPrintRepo(mgr, name)
 	}
 
 	// Update all repositories.
@@ -219,7 +216,11 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 	}
 
 	for _, repo := range repos {
-		_ = updateAndPrintRepo(mgr, repo.Name)
+		// Intentionally continue on error to update all repos
+		if err := updateAndPrintRepo(mgr, repo.Name); err != nil {
+			// Error already printed by updateAndPrintRepo
+			continue
+		}
 	}
 
 	return nil

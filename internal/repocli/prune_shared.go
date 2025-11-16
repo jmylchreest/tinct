@@ -71,7 +71,7 @@ func PruneManifestWithOptions(
 				compatible, err := repomanager.IsProtocolCompatible(version.Compatibility)
 				if err != nil || !compatible {
 					if opts.Verbose {
-						reason := "incompatible"
+						var reason string
 						if err != nil {
 							reason = err.Error()
 						} else {
