@@ -58,7 +58,7 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		if err != nil {
 			return nil, fmt.Errorf("failed to get home directory: %w", err)
 		}
-		outputDir = filepath.Join(home, ".config", "zed", "themes")
+		outputDir = filepath.Join(home, ".config", "zed", "themes", "tinct")
 	}
 
 	// Create themes directory if it doesn't exist.
@@ -114,7 +114,7 @@ func (p *Plugin) GetFlagHelp() []tinctplugin.FlagHelp {
 			Name:        "output-dir",
 			Shorthand:   "o",
 			Type:        "string",
-			Default:     "~/.config/zed/themes",
+			Default:     "~/.config/zed/themes/tinct",
 			Description: "Output directory for Zed theme files",
 			Required:    false,
 		},

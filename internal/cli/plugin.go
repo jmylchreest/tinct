@@ -601,13 +601,8 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 
 	for _, name := range pluginNames {
 		meta := lock.ExternalPlugins[name]
-		sourceStr := ""
-		if meta.Source != nil {
-			sourceStr = formatPluginSourceString(meta.Source)
-		} else if meta.SourceLegacy != "" {
-			sourceStr = meta.SourceLegacy
-		}
-		fmt.Printf("Updating plugin '%s' from %s...\n", name, sourceStr)
+
+		fmt.Printf("Updating %s... ", name)
 
 		// Handle repository sources specially.
 		var pluginPath string
@@ -628,7 +623,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			} else if meta.SourceLegacy != "" {
 				sourceForInstall = meta.SourceLegacy
 			} else {
-				fmt.Printf("   no source information available (reinstall with 'tinct plugins install %s' to enable updates)\n", name)
+				fmt.Printf("✗ no source information\n")
 				failCount++
 				continue
 			}
@@ -636,13 +631,13 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		}
 
 		if err != nil {
-			fmt.Printf("   %v\n", err)
+			fmt.Printf("✗ failed: %v\n", err)
 			failCount++
 			continue
 		}
 
 		if skipUpdate {
-			fmt.Printf("   already up to date\n")
+			fmt.Printf("✓ (already up to date)\n")
 			continue
 		}
 
@@ -668,7 +663,12 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			Description: pluginDescription,
 		}
 
-		fmt.Printf("   Updated: %s\n", pluginPath)
+		// Show version if available
+		if version != "" {
+			fmt.Printf("✓ (version %s)\n", version)
+		} else {
+			fmt.Printf("✓\n")
+		}
 		successCount++
 	}
 
@@ -678,9 +678,6 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to save plugin lock: %w", err)
 		}
 	}
-
-	// Summary.
-	fmt.Printf("\nUpdate complete: %d succeeded, %d failed\n", successCount, failCount)
 
 	if failCount > 0 {
 		return fmt.Errorf("some plugins failed to update")
