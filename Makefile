@@ -1,137 +1,87 @@
-.PHONY: all build clean install test help plugins main
-
-# Build configuration
-BINARY_NAME=tinct
-OUT_DIR=./out
-PLUGINS_DIR=$(OUT_DIR)/plugins
-INPUT_PLUGINS_DIR=$(PLUGINS_DIR)/input
-OUTPUT_PLUGINS_DIR=$(PLUGINS_DIR)/output
-
-# Installation directories
-INSTALL_BIN_DIR=$(HOME)/.local/bin
-INSTALL_PLUGINS_DIR=$(HOME)/.local/share/tinct/plugins
-
-# Go plugins that need building
-GO_INPUT_PLUGINS=$(wildcard contrib/plugins/input/*)
-GO_OUTPUT_PLUGINS=$(wildcard contrib/plugins/output/*/go.mod)
-
-all: build
-
-build: main plugins
-
-main:
-	@echo "Building $(BINARY_NAME)..."
-	@go build -ldflags="-s -w" -o $(OUT_DIR)/$(BINARY_NAME) ./cmd/tinct
-	@echo "✓ Built: $(OUT_DIR)/$(BINARY_NAME)"
-
-plugins: plugins-input plugins-output plugins-scripts force-install-script
-
-plugins-input:
-	@echo "Building input plugins..."
-	@mkdir -p $(INPUT_PLUGINS_DIR)
-	@for dir in contrib/plugins/input/*/; do \
-		if [ -f "$$dir/go.mod" ]; then \
-			name=$$(basename $$dir); \
-			echo "  Building input plugin: $$name"; \
-			(cd $$dir && go build -ldflags="-s -w" -o $(CURDIR)/$(INPUT_PLUGINS_DIR)/tinct-plugin-$$name .) && \
-				echo "  ✓ tinct-plugin-$$name" || \
-				echo "  ✗ tinct-plugin-$$name (failed)"; \
-		fi \
-	done
-
-plugins-output:
-	@echo "Building output plugins..."
-	@mkdir -p $(OUTPUT_PLUGINS_DIR)
-	@for dir in contrib/plugins/output/*/; do \
-		if [ -f "$$dir/go.mod" ]; then \
-			name=$$(basename $$dir); \
-			echo "  Building output plugin: $$name"; \
-			(cd $$dir && go build -ldflags="-s -w" -o $(CURDIR)/$(OUTPUT_PLUGINS_DIR)/tinct-plugin-$$name .) && \
-				echo "  ✓ tinct-plugin-$$name" || \
-				echo "  ✗ tinct-plugin-$$name (failed)"; \
-		fi \
-	done
-
-plugins-scripts:
-	@echo "Copying script plugins..."
-	@mkdir -p $(OUTPUT_PLUGINS_DIR)
-	@for script in contrib/plugins/output/tinct-plugin-*.sh contrib/plugins/output/tinct-plugin-*.py; do \
-		if [ -f "$$script" ]; then \
-			name=$$(basename $$script); \
-			cp "$$script" $(OUTPUT_PLUGINS_DIR)/$$name; \
-			chmod +x $(OUTPUT_PLUGINS_DIR)/$$name; \
-			echo "  ✓ $$name"; \
-		fi \
-	done
-
-force-install-script:
-	@echo "Generating force-install-plugins.sh..."
-	@echo '#!/bin/bash' > $(OUT_DIR)/force-install-plugins.sh
-	@echo '# Auto-generated script to force-install all built plugins' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo 'set -e' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo '' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo 'cd "$$(dirname "$$0")/.."' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo '' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo 'for plugin in ./out/plugins/input/* ./out/plugins/output/*; do' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo '  if [ -f "$$plugin" ]; then' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo '    echo "Installing $$plugin..."' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo '    go run ./cmd/tinct plugins add "$$plugin" --force || true' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo '  fi' >> $(OUT_DIR)/force-install-plugins.sh
-	@echo 'done' >> $(OUT_DIR)/force-install-plugins.sh
-	@chmod +x $(OUT_DIR)/force-install-plugins.sh
-	@echo "✓ Generated: $(OUT_DIR)/force-install-plugins.sh"
-
-clean:
-	@echo "Cleaning build artifacts..."
-	@rm -rf $(OUT_DIR)
-	@echo "Cleaned: $(OUT_DIR)"
-
-install: build
-	@echo "Installing $(BINARY_NAME) to $(INSTALL_BIN_DIR)..."
-	@mkdir -p $(INSTALL_BIN_DIR)
-	@mkdir -p $(INSTALL_PLUGINS_DIR)
-	@cp $(OUT_DIR)/$(BINARY_NAME) $(INSTALL_BIN_DIR)/
-	@echo "✓ Installed: $(INSTALL_BIN_DIR)/$(BINARY_NAME)"
-	@echo "Installing plugins to $(INSTALL_PLUGINS_DIR)..."
-	@if [ -d $(INPUT_PLUGINS_DIR) ] && [ -n "$$(ls -A $(INPUT_PLUGINS_DIR) 2>/dev/null)" ]; then \
-		cp $(INPUT_PLUGINS_DIR)/* $(INSTALL_PLUGINS_DIR)/; \
-		echo "✓ Installed input plugins"; \
-	fi
-	@if [ -d $(OUTPUT_PLUGINS_DIR) ] && [ -n "$$(ls -A $(OUTPUT_PLUGINS_DIR) 2>/dev/null)" ]; then \
-		cp $(OUTPUT_PLUGINS_DIR)/* $(INSTALL_PLUGINS_DIR)/; \
-		chmod +x $(INSTALL_PLUGINS_DIR)/*; \
-		echo "✓ Installed output plugins"; \
-	fi
-
-test:
-	@echo "Running tests..."
-	@go test ./...
-
-test-race:
-	@echo "Running tests with race detector..."
-	@go test -race ./...
-
-test-cover:
-	@echo "Running tests with coverage..."
-	@go test -cover ./...
+.PHONY: bump-patch bump-minor bump-major bump help get-version get-latest-release
 
 help:
-	@echo "Tinct Makefile"
-	@echo ""
-	@echo "Targets:"
-	@echo "  build        - Build tinct and all plugins (default)"
-	@echo "  main         - Build only tinct binary"
-	@echo "  plugins      - Build all plugins"
-	@echo "  clean        - Remove build artifacts"
-	@echo "  install      - Build and install to ~/.local/bin and ~/.local/share/tinct/plugins"
-	@echo "  test         - Run all tests"
-	@echo "  test-race    - Run tests with race detector"
-	@echo "  test-cover   - Run tests with coverage"
-	@echo "  help         - Show this help"
-	@echo ""
-	@echo "Output structure:"
-	@echo "  $(OUT_DIR)/"
-	@echo "  ├── tinct"
-	@echo "  └── plugins/"
-	@echo "      ├── input/  (tinct-plugin-*)"
-	@echo "      └── output/ (tinct-plugin-*)"
+	@echo "Usage:"
+	@echo "  make bump               - Bump patch version (e.g., 1.0.0 -> 1.0.1)"
+	@echo "  make bump-patch         - Bump patch version (e.g., 1.0.0 -> 1.0.1)"
+	@echo "  make bump-minor         - Bump minor version (e.g., 0.0.22 -> 0.1.0)"
+	@echo "  make bump-major         - Bump major version (e.g., 0.1.0 -> 1.0.0)"
+	@echo "  make get-version        - Get current version (like goreleaser)"
+	@echo "  make get-latest-release - Get latest release tag"
+
+# Get the latest tag
+CURRENT_VERSION := $(shell git tag --sort=-v:refname | head -1)
+
+get-version:
+	@if [ -z "$(CURRENT_VERSION)" ]; then \
+		git describe --always --dirty 2>/dev/null || echo "unknown"; \
+	else \
+		git describe --tags --always --dirty 2>/dev/null || echo $(CURRENT_VERSION); \
+	fi
+
+get-latest-release:
+	@if [ -z "$(CURRENT_VERSION)" ]; then \
+		echo "No release tags found"; \
+	else \
+		echo $(CURRENT_VERSION); \
+	fi
+
+# Default to patch if no target specified
+bump: bump-patch
+
+bump-patch:
+	@if [ -z "$(CURRENT_VERSION)" ]; then \
+		echo "No existing tags found, creating v0.0.1"; \
+		git tag -a v0.0.1 -m "Release v0.0.1"; \
+		echo "Created tag: v0.0.1"; \
+	else \
+		CURRENT_COMMIT=$$(git rev-parse HEAD); \
+		TAG_COMMIT=$$(git rev-parse $(CURRENT_VERSION)^{commit} 2>/dev/null || echo ""); \
+		if [ "$$CURRENT_COMMIT" = "$$TAG_COMMIT" ] && [ "$(FORCE)" != "1" ]; then \
+			echo "Error: Current commit is already tagged as $(CURRENT_VERSION)"; \
+			echo "No changes since last release. Use 'make bump-patch FORCE=1' to force."; \
+			exit 1; \
+		fi; \
+		NEW_VERSION=$$(echo $(CURRENT_VERSION) | sed 's/^v//' | awk -F. '{print "v"$$1"."$$2"."$$3+1}'); \
+		echo "Bumping $(CURRENT_VERSION) -> $$NEW_VERSION"; \
+		git tag -a $$NEW_VERSION -m "Release $$NEW_VERSION"; \
+		echo "Created tag: $$NEW_VERSION"; \
+	fi
+
+bump-minor:
+	@if [ -z "$(CURRENT_VERSION)" ]; then \
+		echo "No existing tags found, creating v0.1.0"; \
+		git tag -a v0.1.0 -m "Release v0.1.0"; \
+		echo "Created tag: v0.1.0"; \
+	else \
+		CURRENT_COMMIT=$$(git rev-parse HEAD); \
+		TAG_COMMIT=$$(git rev-parse $(CURRENT_VERSION)^{commit} 2>/dev/null || echo ""); \
+		if [ "$$CURRENT_COMMIT" = "$$TAG_COMMIT" ] && [ "$(FORCE)" != "1" ]; then \
+			echo "Error: Current commit is already tagged as $(CURRENT_VERSION)"; \
+			echo "No changes since last release. Use 'make bump-minor FORCE=1' to force."; \
+			exit 1; \
+		fi; \
+		NEW_VERSION=$$(echo $(CURRENT_VERSION) | sed 's/^v//' | awk -F. '{print "v"$$1"."$$2+1".0"}'); \
+		echo "Bumping $(CURRENT_VERSION) -> $$NEW_VERSION"; \
+		git tag -a $$NEW_VERSION -m "Release $$NEW_VERSION"; \
+		echo "Created tag: $$NEW_VERSION"; \
+	fi
+
+bump-major:
+	@if [ -z "$(CURRENT_VERSION)" ]; then \
+		echo "No existing tags found, creating v1.0.0"; \
+		git tag -a v1.0.0 -m "Release v1.0.0"; \
+		echo "Created tag: v1.0.0"; \
+	else \
+		CURRENT_COMMIT=$$(git rev-parse HEAD); \
+		TAG_COMMIT=$$(git rev-parse $(CURRENT_VERSION)^{commit} 2>/dev/null || echo ""); \
+		if [ "$$CURRENT_COMMIT" = "$$TAG_COMMIT" ] && [ "$(FORCE)" != "1" ]; then \
+			echo "Error: Current commit is already tagged as $(CURRENT_VERSION)"; \
+			echo "No changes since last release. Use 'make bump-major FORCE=1' to force."; \
+			exit 1; \
+		fi; \
+		NEW_VERSION=$$(echo $(CURRENT_VERSION) | sed 's/^v//' | awk -F. '{print "v"$$1+1".0.0"}'); \
+		echo "Bumping $(CURRENT_VERSION) -> $$NEW_VERSION"; \
+		git tag -a $$NEW_VERSION -m "Release $$NEW_VERSION"; \
+		echo "Created tag: $$NEW_VERSION"; \
+	fi
