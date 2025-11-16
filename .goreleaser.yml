@@ -243,6 +243,38 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: zed (Go)
+  - id: tinct-plugin-zed
+    main: .
+    binary: tinct-plugin-zed
+    dir: ./contrib/plugins/output/zed
+
+    # Build for multiple platforms
+    goos:
+      - linux
+      - darwin
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm64
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 # ============================================================================
 # ARCHIVES
 # ============================================================================
@@ -383,6 +415,31 @@ archives:
     formats: [tar.gz]
 
     files:
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-zed-archive
+    ids:
+      - tinct-plugin-zed
+    name_template: >-
+      tinct-plugin-zed_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    files:
+      - src: contrib/plugins/output/zed/README.md
+        dst: README.md
+      - src: contrib/plugins/output/zed/templates/*.tmpl
+        dst: templates/
       - src: LICENSE
         dst: LICENSE
 
@@ -585,6 +642,36 @@ aurs:
         fi
       done
     install: .goreleaser/aur-install-scripts/plugin-dunstify.install
+
+  # Plugin: zed
+  - name: tinct-plugin-zed-bin
+    ids:
+      - tinct-plugin-zed-archive
+    homepage: "https://github.com/jmylchreest/tinct"
+    description: "Zed editor theme plugin for Tinct"
+    maintainers:
+      - "John Mylchreest <jmylchreest@gmail.com>"
+    license: MIT
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-zed-bin.git"
+    depends:
+      - tinct
+    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    package: |-
+      # bin
+      install -Dm755 "./tinct-plugin-zed" "${pkgdir}/usr/bin/tinct-plugin-zed"
+
+      # license
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-zed/LICENSE"
+
+      # sbom
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-zed/sbom.json"
+          break
+        fi
+      done
+    install: .goreleaser/aur-install-scripts/plugin-zed.install
 # ============================================================================
 # GITHUB RELEASE
 # ============================================================================
@@ -634,6 +721,7 @@ release:
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-wob_{{.Version}}_Linux_x86_64.tar.gz:wob-tinct
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-templater_{{.Version}}_Linux_x86_64.tar.gz:templater
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-dunstify_{{.Version}}_Linux_x86_64.tar.gz:dunstify
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-zed_{{.Version}}_Linux_x86_64.tar.gz:zed
     ```
 
     Or download manually from the assets below and add locally:
@@ -642,6 +730,7 @@ release:
     tinct plugins add ./wob-tinct
     tinct plugins add ./templater
     tinct plugins add ./dunstify
+    tinct plugins add ./zed
     ```
 
     ## What's Next?

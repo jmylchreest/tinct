@@ -1,0 +1,239 @@
+{
+  "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+  "name": "Tinct",
+  "author": "Tinct Color Generator",
+  "themes": [
+    {
+      "name": "Tinct {{ themeType . | toUpper }}",
+      "appearance": "{{ themeType . }}",
+      "style": {
+        "border": "{{ get . "outline" | hex }}",
+        "border.variant": "{{ get . "outlineVariant" | hex }}",
+        "border.focused": "{{ get . "accent1" | hex }}",
+        "border.selected": "{{ get . "accent1" | hex }}",
+        "border.transparent": "{{ withAlpha (get . "outline") 0.0 | hexAlpha }}",
+        "border.disabled": "{{ get . "borderMuted" | hex }}",
+        "elevated_surface.background": "{{ get . "surfaceContainerHigh" | hex }}",
+        "surface.background": "{{ get . "surface" | hex }}",
+        "background": "{{ get . "background" | hex }}",
+        "element.background": "{{ get . "surfaceContainer" | hex }}",
+        "element.hover": "{{ get . "surfaceContainerHigh" | hex }}",
+        "element.active": "{{ get . "accent1" | hex }}",
+        "element.selected": "{{ get . "accent1" | hex }}",
+        "element.disabled": "{{ get . "surfaceVariant" | hex }}",
+        "drop_target.background": "{{ withAlpha (get . "accent1") 0.2 | hexAlpha }}",
+        "ghost_element.background": "{{ withAlpha (get . "surface") 0.0 | hexAlpha }}",
+        "ghost_element.hover": "{{ get . "surfaceContainerLow" | hex }}",
+        "ghost_element.active": "{{ get . "surfaceContainer" | hex }}",
+        "ghost_element.selected": "{{ get . "accent1" | hex }}",
+        "ghost_element.disabled": "{{ get . "surfaceVariant" | hex }}",
+        "text": "{{ get . "foreground" | hex }}",
+        "text.muted": "{{ get . "foregroundMuted" | hex }}",
+        "text.placeholder": "{{ get . "onSurfaceVariant" | hex }}",
+        "text.disabled": "{{ get . "foregroundMuted" | hex }}",
+        "text.accent": "{{ get . "accent1" | hex }}",
+        "icon": "{{ get . "onSurface" | hex }}",
+        "icon.muted": "{{ get . "onSurfaceVariant" | hex }}",
+        "icon.disabled": "{{ get . "foregroundMuted" | hex }}",
+        "icon.placeholder": "{{ get . "onSurfaceVariant" | hex }}",
+        "icon.accent": "{{ get . "accent1" | hex }}",
+        "status_bar.background": "{{ get . "surface" | hex }}",
+        "title_bar.background": "{{ get . "surface" | hex }}",
+        "toolbar.background": "{{ get . "surface" | hex }}",
+        "tab_bar.background": "{{ get . "surface" | hex }}",
+        "tab.inactive_background": "{{ get . "surface" | hex }}",
+        "tab.active_background": "{{ get . "surfaceContainer" | hex }}",
+        "search.match_background": "{{ withAlpha (get . "warning") 0.3 | hexAlpha }}",
+        "panel.background": "{{ get . "surface" | hex }}",
+        "panel.focused_border": "{{ get . "accent1" | hex }}",
+        "pane.focused_border": "{{ get . "accent1" | hex }}",
+        "scrollbar.thumb.background": "{{ withAlpha (get . "onSurface") 0.2 | hexAlpha }}",
+        "scrollbar.thumb.hover_background": "{{ withAlpha (get . "onSurface") 0.3 | hexAlpha }}",
+        "scrollbar.thumb.border": "{{ withAlpha (get . "outline") 0.0 | hexAlpha }}",
+        "scrollbar.track.background": "{{ withAlpha (get . "surface") 0.0 | hexAlpha }}",
+        "scrollbar.track.border": "{{ withAlpha (get . "outline") 0.0 | hexAlpha }}",
+        "editor.foreground": "{{ get . "foreground" | hex }}",
+        "editor.background": "{{ get . "background" | hex }}",
+        "editor.gutter.background": "{{ get . "background" | hex }}",
+        "editor.subheader.background": "{{ get . "surface" | hex }}",
+        "editor.active_line.background": "{{ withAlpha (get . "surfaceContainer") 0.5 | hexAlpha }}",
+        "editor.highlighted_line.background": "{{ get . "surfaceContainer" | hex }}",
+        "editor.line_number": "{{ get . "onSurfaceVariant" | hex }}",
+        "editor.active_line_number": "{{ get . "onSurface" | hex }}",
+        "editor.invisible": "{{ get . "onSurfaceVariant" | hex }}",
+        "editor.wrap_guide": "{{ get . "outline" | hex }}",
+        "editor.active_wrap_guide": "{{ get . "accent1" | hex }}",
+        "editor.document_highlight.read_background": "{{ withAlpha (get . "accent2") 0.2 | hexAlpha }}",
+        "editor.document_highlight.write_background": "{{ withAlpha (get . "accent3") 0.2 | hexAlpha }}",
+        "terminal.background": "{{ get . "background" | hex }}",
+        "terminal.foreground": "{{ get . "foreground" | hex }}",
+        "terminal.ansi.black": "{{ ansi . "black" | hex }}",
+        "terminal.ansi.red": "{{ ansi . "red" | hex }}",
+        "terminal.ansi.green": "{{ ansi . "green" | hex }}",
+        "terminal.ansi.yellow": "{{ ansi . "yellow" | hex }}",
+        "terminal.ansi.blue": "{{ ansi . "blue" | hex }}",
+        "terminal.ansi.magenta": "{{ ansi . "magenta" | hex }}",
+        "terminal.ansi.cyan": "{{ ansi . "cyan" | hex }}",
+        "terminal.ansi.white": "{{ ansi . "white" | hex }}",
+        "terminal.ansi.bright_black": "{{ ansi . "bright-black" | hex }}",
+        "terminal.ansi.bright_red": "{{ ansi . "bright-red" | hex }}",
+        "terminal.ansi.bright_green": "{{ ansi . "bright-green" | hex }}",
+        "terminal.ansi.bright_yellow": "{{ ansi . "bright-yellow" | hex }}",
+        "terminal.ansi.bright_blue": "{{ ansi . "bright-blue" | hex }}",
+        "terminal.ansi.bright_magenta": "{{ ansi . "bright-magenta" | hex }}",
+        "terminal.ansi.bright_cyan": "{{ ansi . "bright-cyan" | hex }}",
+        "terminal.ansi.bright_white": "{{ ansi . "bright-white" | hex }}",
+        "link_text.hover": "{{ get . "accent2" | hex }}",
+        "conflict": "{{ get . "warning" | hex }}",
+        "conflict.background": "{{ withAlpha (get . "warning") 0.2 | hexAlpha }}",
+        "conflict.border": "{{ get . "warning" | hex }}",
+        "created": "{{ get . "success" | hex }}",
+        "created.background": "{{ withAlpha (get . "success") 0.2 | hexAlpha }}",
+        "created.border": "{{ get . "success" | hex }}",
+        "deleted": "{{ get . "danger" | hex }}",
+        "deleted.background": "{{ withAlpha (get . "danger") 0.2 | hexAlpha }}",
+        "deleted.border": "{{ get . "danger" | hex }}",
+        "error": "{{ get . "danger" | hex }}",
+        "error.background": "{{ withAlpha (get . "danger") 0.2 | hexAlpha }}",
+        "error.border": "{{ get . "danger" | hex }}",
+        "hidden": "{{ get . "onSurfaceVariant" | hex }}",
+        "hidden.background": "{{ get . "surfaceVariant" | hex }}",
+        "hidden.border": "{{ get . "outlineVariant" | hex }}",
+        "hint": "{{ get . "info" | hex }}",
+        "hint.background": "{{ withAlpha (get . "info") 0.2 | hexAlpha }}",
+        "hint.border": "{{ get . "info" | hex }}",
+        "ignored": "{{ get . "onSurfaceVariant" | hex }}",
+        "ignored.background": "{{ get . "surfaceVariant" | hex }}",
+        "ignored.border": "{{ get . "outlineVariant" | hex }}",
+        "info": "{{ get . "info" | hex }}",
+        "info.background": "{{ withAlpha (get . "info") 0.2 | hexAlpha }}",
+        "info.border": "{{ get . "info" | hex }}",
+        "modified": "{{ get . "warning" | hex }}",
+        "modified.background": "{{ withAlpha (get . "warning") 0.2 | hexAlpha }}",
+        "modified.border": "{{ get . "warning" | hex }}",
+        "predictive": "{{ get . "accent3" | hex }}",
+        "predictive.background": "{{ withAlpha (get . "accent3") 0.2 | hexAlpha }}",
+        "predictive.border": "{{ get . "accent3" | hex }}",
+        "renamed": "{{ get . "accent2" | hex }}",
+        "renamed.background": "{{ withAlpha (get . "accent2") 0.2 | hexAlpha }}",
+        "renamed.border": "{{ get . "accent2" | hex }}",
+        "success": "{{ get . "success" | hex }}",
+        "success.background": "{{ withAlpha (get . "success") 0.2 | hexAlpha }}",
+        "success.border": "{{ get . "success" | hex }}",
+        "unreachable": "{{ get . "onSurfaceVariant" | hex }}",
+        "unreachable.background": "{{ get . "surfaceVariant" | hex }}",
+        "unreachable.border": "{{ get . "outlineVariant" | hex }}",
+        "warning": "{{ get . "warning" | hex }}",
+        "warning.background": "{{ withAlpha (get . "warning") 0.2 | hexAlpha }}",
+        "warning.border": "{{ get . "warning" | hex }}",
+        "players": [
+          {
+            "cursor": "{{ get . "accent1" | hex }}",
+            "background": "{{ withAlpha (get . "accent1") 0.3 | hexAlpha }}",
+            "selection": "{{ withAlpha (get . "accent1") 0.2 | hexAlpha }}"
+          },
+          {
+            "cursor": "{{ get . "accent2" | hex }}",
+            "background": "{{ withAlpha (get . "accent2") 0.3 | hexAlpha }}",
+            "selection": "{{ withAlpha (get . "accent2") 0.2 | hexAlpha }}"
+          },
+          {
+            "cursor": "{{ get . "accent3" | hex }}",
+            "background": "{{ withAlpha (get . "accent3") 0.3 | hexAlpha }}",
+            "selection": "{{ withAlpha (get . "accent3") 0.2 | hexAlpha }}"
+          },
+          {
+            "cursor": "{{ get . "accent4" | hex }}",
+            "background": "{{ withAlpha (get . "accent4") 0.3 | hexAlpha }}",
+            "selection": "{{ withAlpha (get . "accent4") 0.2 | hexAlpha }}"
+          }
+        ],
+        "syntax": {
+          "attribute": {
+            "color": "{{ get . "accent2" | hex }}"
+          },
+          "boolean": {
+            "color": "{{ get . "accent3" | hex }}"
+          },
+          "comment": {
+            "color": "{{ get . "foregroundMuted" | hex }}",
+            "font_style": "italic"
+          },
+          "comment.doc": {
+            "color": "{{ get . "onSurfaceVariant" | hex }}",
+            "font_style": "italic"
+          },
+          "constant": {
+            "color": "{{ get . "accent3" | hex }}"
+          },
+          "constructor": {
+            "color": "{{ get . "accent2" | hex }}"
+          },
+          "function": {
+            "color": "{{ get . "accent1" | hex }}"
+          },
+          "keyword": {
+            "color": "{{ get . "accent4" | hex }}"
+          },
+          "number": {
+            "color": "{{ get . "accent3" | hex }}"
+          },
+          "operator": {
+            "color": "{{ get . "onSurface" | hex }}"
+          },
+          "property": {
+            "color": "{{ get . "accent2" | hex }}"
+          },
+          "punctuation": {
+            "color": "{{ get . "onSurface" | hex }}"
+          },
+          "punctuation.bracket": {
+            "color": "{{ get . "onSurface" | hex }}"
+          },
+          "punctuation.delimiter": {
+            "color": "{{ get . "onSurface" | hex }}"
+          },
+          "punctuation.list_marker": {
+            "color": "{{ get . "onSurface" | hex }}"
+          },
+          "punctuation.special": {
+            "color": "{{ get . "accent1" | hex }}"
+          },
+          "string": {
+            "color": "{{ get . "success" | hex }}"
+          },
+          "string.escape": {
+            "color": "{{ get . "accent3" | hex }}"
+          },
+          "string.regex": {
+            "color": "{{ get . "accent2" | hex }}"
+          },
+          "string.special": {
+            "color": "{{ get . "accent1" | hex }}"
+          },
+          "string.special.symbol": {
+            "color": "{{ get . "accent3" | hex }}"
+          },
+          "tag": {
+            "color": "{{ get . "accent4" | hex }}"
+          },
+          "text.literal": {
+            "color": "{{ get . "success" | hex }}"
+          },
+          "type": {
+            "color": "{{ get . "accent2" | hex }}"
+          },
+          "variable": {
+            "color": "{{ get . "foreground" | hex }}"
+          },
+          "variable.special": {
+            "color": "{{ get . "accent1" | hex }}"
+          },
+          "variant": {
+            "color": "{{ get . "accent2" | hex }}"
+          }
+        }
+      }
+    }
+  ]
+}
