@@ -24,6 +24,8 @@ func SyncCmd() *cobra.Command {
 		verbose            bool
 		prune              bool
 		pruneRemoveAfter   string
+		pruneIncompatible  bool
+		keepRecent         int
 	)
 
 	cmd := &cobra.Command{
@@ -48,6 +50,8 @@ Protocol filtering:
 Pruning:
   Use --prune to verify and clean up unavailable entries after sync.
   Use --prune-remove-after to remove entries unavailable for a duration (e.g., 720h = 30 days).
+  Use --prune-incompatible to remove plugin versions incompatible with current protocol.
+  Use --keep-recent to keep only the N most recent versions per plugin.
 
 Examples:
   # Sync from config file (recommended)
@@ -69,7 +73,7 @@ Examples:
 
 			// If config is specified, delegate to config-based sync
 			if configPath != "" {
-				return syncFromConfig(configPath, manifestPath, minProtocolVersion, skipQuery, dryRun, verbose, prune, pruneRemoveAfter)
+				return syncFromConfig(configPath, manifestPath, minProtocolVersion, skipQuery, dryRun, verbose, prune, pruneRemoveAfter, pruneIncompatible, keepRecent)
 			}
 
 			// GitHub mode - validate required flags
@@ -134,13 +138,26 @@ Examples:
 					}
 				}
 
-				pruneStats = PruneManifest(mgr, removeAfterDuration, dryRun, verbose)
+				pruneStats = PruneManifestWithOptions(mgr, &PruneOptions{
+					RemoveAfterDuration: removeAfterDuration,
+					PruneIncompatible:   pruneIncompatible,
+					MinProtocolVersion:  minProtocolVersion,
+					KeepRecent:          keepRecent,
+					DryRun:              dryRun,
+					Verbose:             verbose,
+				})
 
 				fmt.Printf("\n=== Prune Summary ===\n")
 				fmt.Printf("Checked: %d\n", pruneStats.Checked)
 				fmt.Printf("Unavailable: %d\n", pruneStats.Unavailable)
 				if pruneStats.FilterFailed > 0 {
 					fmt.Printf("Filter failed: %d\n", pruneStats.FilterFailed)
+				}
+				if pruneStats.Incompatible > 0 {
+					fmt.Printf("Incompatible: %d\n", pruneStats.Incompatible)
+				}
+				if pruneStats.OldVersions > 0 {
+					fmt.Printf("Old versions: %d\n", pruneStats.OldVersions)
 				}
 				if pruneStats.Removed > 0 {
 					fmt.Printf("Removed: %d\n", pruneStats.Removed)
@@ -188,6 +205,8 @@ Examples:
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 	cmd.Flags().BoolVar(&prune, "prune", false, "Verify and prune unavailable entries after sync")
 	cmd.Flags().StringVar(&pruneRemoveAfter, "prune-remove-after", "720h", "Remove entries unavailable for duration (e.g., 720h)")
+	cmd.Flags().BoolVar(&pruneIncompatible, "prune-incompatible", false, "Remove plugin versions incompatible with current protocol")
+	cmd.Flags().IntVar(&keepRecent, "keep-recent", 0, "Keep only the N most recent versions per plugin (0 = keep all)")
 
 	// Make flags mutually exclusive (either --config OR --github)
 	cmd.MarkFlagsMutuallyExclusive("config", "github")
@@ -207,6 +226,8 @@ func syncFromConfig(
 	verbose bool,
 	prune bool,
 	pruneRemoveAfter string,
+	pruneIncompatible bool,
+	keepRecent int,
 ) error {
 	// Load config
 	fmt.Printf("Loading sync configuration from: %s\n", configPath)
@@ -296,13 +317,26 @@ func syncFromConfig(
 			}
 		}
 
-		pruneStats = PruneManifest(mgr, removeAfterDuration, dryRun, verbose)
+		pruneStats = PruneManifestWithOptions(mgr, &PruneOptions{
+			RemoveAfterDuration: removeAfterDuration,
+			PruneIncompatible:   pruneIncompatible,
+			MinProtocolVersion:  minProtocolVersion,
+			KeepRecent:          keepRecent,
+			DryRun:              dryRun,
+			Verbose:             verbose,
+		})
 
 		fmt.Printf("\n=== Prune Summary ===\n")
 		fmt.Printf("Checked: %d\n", pruneStats.Checked)
 		fmt.Printf("Unavailable: %d\n", pruneStats.Unavailable)
 		if pruneStats.FilterFailed > 0 {
 			fmt.Printf("Filter failed: %d\n", pruneStats.FilterFailed)
+		}
+		if pruneStats.Incompatible > 0 {
+			fmt.Printf("Incompatible: %d\n", pruneStats.Incompatible)
+		}
+		if pruneStats.OldVersions > 0 {
+			fmt.Printf("Old versions: %d\n", pruneStats.OldVersions)
 		}
 		if pruneStats.Removed > 0 {
 			fmt.Printf("Removed: %d\n", pruneStats.Removed)

@@ -13,6 +13,18 @@ type PruneStats struct {
 	Unavailable  int
 	Removed      int
 	FilterFailed int
+	Incompatible int
+	OldVersions  int
+}
+
+// PruneOptions contains configuration for pruning operations.
+type PruneOptions struct {
+	RemoveAfterDuration time.Duration
+	PruneIncompatible   bool
+	MinProtocolVersion  string
+	KeepRecent          int
+	DryRun              bool
+	Verbose             bool
 }
 
 // PruneManifest performs comprehensive pruning on a manifest.
@@ -23,6 +35,22 @@ func PruneManifest(
 	dryRun bool,
 	verbose bool,
 ) *PruneStats {
+	return PruneManifestWithOptions(mgr, &PruneOptions{
+		RemoveAfterDuration: removeAfterDuration,
+		PruneIncompatible:   false,
+		KeepRecent:          0,
+		DryRun:              dryRun,
+		Verbose:             verbose,
+	})
+}
+
+// PruneManifestWithOptions performs comprehensive pruning on a manifest with advanced options.
+// It validates downloads against filters, marks unavailable URLs, removes old entries,
+// prunes incompatible plugins, and limits the number of versions kept per plugin.
+func PruneManifestWithOptions(
+	mgr *repomanager.ManifestManager,
+	opts *PruneOptions,
+) *PruneStats {
 
 	manifest := mgr.GetManifest()
 	verifier := repomanager.NewVerifier()
@@ -32,8 +60,32 @@ func PruneManifest(
 
 	// Iterate through all plugins
 	for pluginName, plugin := range manifest.Plugins {
+		// Track versions to remove for this plugin
+		versionsToRemove := []int{}
+
 		for vi := len(plugin.Versions) - 1; vi >= 0; vi-- {
 			version := &plugin.Versions[vi]
+
+			// Step 0: Check protocol compatibility if requested
+			if opts.PruneIncompatible && version.Compatibility != "" {
+				compatible, err := repomanager.IsProtocolCompatibleWithMin(version.Compatibility, opts.MinProtocolVersion)
+				if err != nil || !compatible {
+					if opts.Verbose {
+						reason := "incompatible"
+						if err != nil {
+							reason = err.Error()
+						} else if opts.MinProtocolVersion != "" {
+							reason = fmt.Sprintf("version %s < minimum %s", version.Compatibility, opts.MinProtocolVersion)
+						}
+						fmt.Printf("  Removing incompatible version: %s %s - %s\n",
+							pluginName, version.Version, reason)
+					}
+					versionsToRemove = append(versionsToRemove, vi)
+					stats.Incompatible++
+					stats.Removed++
+					continue
+				}
+			}
 
 			platformsToRemove := []string{}
 
@@ -43,7 +95,7 @@ func PruneManifest(
 				// Step 1: Validate against filter patterns (remove invalid entries immediately)
 				shouldKeep, filterReason := validator.ShouldKeepDownload(download.URL)
 				if !shouldKeep {
-					if verbose {
+					if opts.Verbose {
 						fmt.Printf("  Filter validation failed: %s %s (%s) - %s\n",
 							pluginName, version.Version, platform, filterReason)
 					}
@@ -54,10 +106,10 @@ func PruneManifest(
 				}
 
 				// Step 2: Check if should remove (already unavailable and past threshold)
-				if removeAfterDuration > 0 && download.UnavailableSince != nil {
+				if opts.RemoveAfterDuration > 0 && download.UnavailableSince != nil {
 					unavailableDuration := time.Since(*download.UnavailableSince)
-					if unavailableDuration > removeAfterDuration {
-						if verbose {
+					if unavailableDuration > opts.RemoveAfterDuration {
+						if opts.Verbose {
 							fmt.Printf("  Removing: %s %s (%s) - unavailable for %v\n",
 								pluginName, version.Version, platform, unavailableDuration.Round(time.Hour))
 						}
@@ -72,13 +124,13 @@ func PruneManifest(
 
 				if !available {
 					stats.Unavailable++
-					if verbose {
+					if opts.Verbose {
 						fmt.Printf("  ✗ Unavailable: %s %s (%s) - %s\n",
 							pluginName, version.Version, platform, reason)
 					}
 
 					// Mark as unavailable with timestamp
-					if !dryRun {
+					if !opts.DryRun {
 						// Only mark dirty if availability status changed
 						wasAvailable := download.Available
 						download.Available = false
@@ -95,7 +147,7 @@ func PruneManifest(
 					}
 				} else {
 					// Mark as available and clear unavailable fields
-					if !dryRun {
+					if !opts.DryRun {
 						// Only mark dirty if availability status changed
 						wasUnavailable := !download.Available || download.UnavailableSince != nil
 
@@ -112,7 +164,7 @@ func PruneManifest(
 			}
 
 			// Remove platforms marked for removal
-			if !dryRun && len(platformsToRemove) > 0 {
+			if !opts.DryRun && len(platformsToRemove) > 0 {
 				for _, platform := range platformsToRemove {
 					delete(version.Downloads, platform)
 				}
@@ -120,19 +172,46 @@ func PruneManifest(
 
 				// Clean up versions with no downloads
 				if len(version.Downloads) == 0 {
-					plugin.Versions = append(plugin.Versions[:vi], plugin.Versions[vi+1:]...)
-					if verbose {
+					versionsToRemove = append(versionsToRemove, vi)
+					if opts.Verbose {
 						fmt.Printf("  Removed version %s (no downloads left)\n", version.Version)
 					}
 				}
 			}
 		}
 
+		// Remove versions marked for removal
+		if !opts.DryRun && len(versionsToRemove) > 0 {
+			// Sort indices in descending order to avoid index issues
+			for i := len(versionsToRemove) - 1; i >= 0; i-- {
+				vi := versionsToRemove[i]
+				plugin.Versions = append(plugin.Versions[:vi], plugin.Versions[vi+1:]...)
+			}
+			mgr.MarkDirty()
+		}
+
+		// Step 4: Limit to most recent versions if requested
+		if opts.KeepRecent > 0 && len(plugin.Versions) > opts.KeepRecent {
+			oldVersionCount := len(plugin.Versions) - opts.KeepRecent
+			if opts.Verbose {
+				fmt.Printf("  Keeping only %d most recent versions of %s (removing %d old versions)\n",
+					opts.KeepRecent, pluginName, oldVersionCount)
+			}
+
+			if !opts.DryRun {
+				plugin.Versions = plugin.Versions[:opts.KeepRecent]
+				mgr.MarkDirty()
+			}
+
+			stats.OldVersions += oldVersionCount
+			stats.Removed += oldVersionCount
+		}
+
 		// Clean up plugins with no versions
-		if !dryRun && len(plugin.Versions) == 0 {
+		if !opts.DryRun && len(plugin.Versions) == 0 {
 			delete(manifest.Plugins, pluginName)
 			mgr.MarkDirty()
-			if verbose {
+			if opts.Verbose {
 				fmt.Printf("  Removed plugin %s (no versions left)\n", pluginName)
 			}
 		}

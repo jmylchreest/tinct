@@ -3,6 +3,8 @@ package repomanager
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 )
 
 // PruneValidator checks if downloads should be kept during pruning.
@@ -11,6 +13,59 @@ type PruneValidator struct{}
 // NewPruneValidator creates a new prune validator.
 func NewPruneValidator() *PruneValidator {
 	return &PruneValidator{}
+}
+
+// IsProtocolCompatible checks if a plugin protocol version is compatible with the current tinct version.
+// It wraps the protocol.IsCompatible function for use in the repomanager package.
+func IsProtocolCompatible(pluginVersion string) (bool, error) {
+	compatible, err := protocol.IsCompatible(pluginVersion)
+	if err != nil {
+		return false, err
+	}
+	return compatible, nil
+}
+
+// IsProtocolCompatibleWithMin checks if a plugin protocol version meets a minimum version requirement.
+// If minVersion is empty, it uses the current protocol version check (same as IsProtocolCompatible).
+// Otherwise, it checks if the plugin version is >= minVersion.
+func IsProtocolCompatibleWithMin(pluginVersion, minVersion string) (bool, error) {
+	if minVersion == "" {
+		return IsProtocolCompatible(pluginVersion)
+	}
+
+	// Parse both versions
+	pluginVer, err := protocol.Parse(pluginVersion)
+	if err != nil {
+		return false, err
+	}
+
+	minVer, err := protocol.Parse(minVersion)
+	if err != nil {
+		return false, err
+	}
+
+	// Compare versions: plugin must be >= minVersion
+	if pluginVer.Major < minVer.Major {
+		return false, nil
+	}
+	if pluginVer.Major > minVer.Major {
+		return true, nil
+	}
+
+	// Same major version, check minor
+	if pluginVer.Minor < minVer.Minor {
+		return false, nil
+	}
+	if pluginVer.Minor > minVer.Minor {
+		return true, nil
+	}
+
+	// Same major and minor, check patch
+	if pluginVer.Patch < minVer.Patch {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // ShouldKeepDownload checks if a download entry should be kept during pruning.
