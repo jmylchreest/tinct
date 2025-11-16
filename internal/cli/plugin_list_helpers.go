@@ -299,8 +299,8 @@ func addPluginToTable(tbl *Table, p pluginInfo, showPath bool) {
 		// Plugin query failed or protocol version unavailable
 		compatible = "N"
 	} else {
-		isCompat, _ := protocol.IsCompatible(p.protocolVersion)
-		if !isCompat {
+		isCompat, err := protocol.IsCompatible(p.protocolVersion)
+		if err != nil || !isCompat {
 			compatible = "N"
 		}
 	}
