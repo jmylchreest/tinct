@@ -2,6 +2,7 @@ package repocli
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jmylchreest/tinct/internal/repomanager"
@@ -182,10 +183,14 @@ func PruneManifestWithOptions(
 
 		// Remove versions marked for removal
 		if !opts.DryRun && len(versionsToRemove) > 0 {
-			// Sort indices in descending order to avoid index issues
-			for i := len(versionsToRemove) - 1; i >= 0; i-- {
-				vi := versionsToRemove[i]
-				plugin.Versions = append(plugin.Versions[:vi], plugin.Versions[vi+1:]...)
+			// Sort indices in descending order to avoid index issues when removing
+			// We need to sort because versionsToRemove was built in reverse order
+			sort.Sort(sort.Reverse(sort.IntSlice(versionsToRemove)))
+
+			for _, vi := range versionsToRemove {
+				if vi < len(plugin.Versions) {
+					plugin.Versions = append(plugin.Versions[:vi], plugin.Versions[vi+1:]...)
+				}
 			}
 			mgr.MarkDirty()
 		}

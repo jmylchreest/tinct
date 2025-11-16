@@ -18,6 +18,14 @@ func NewPruneValidator() *PruneValidator {
 // IsProtocolCompatible checks if a plugin protocol version is compatible with the current tinct version.
 // It wraps the protocol.IsCompatible function for use in the repomanager package.
 func IsProtocolCompatible(pluginVersion string) (bool, error) {
+	// Strip common comparison operators from version string (e.g., ">=0.0.1" -> "0.0.1")
+	pluginVersion = strings.TrimPrefix(pluginVersion, ">=")
+	pluginVersion = strings.TrimPrefix(pluginVersion, "<=")
+	pluginVersion = strings.TrimPrefix(pluginVersion, ">")
+	pluginVersion = strings.TrimPrefix(pluginVersion, "<")
+	pluginVersion = strings.TrimPrefix(pluginVersion, "=")
+	pluginVersion = strings.TrimSpace(pluginVersion)
+
 	compatible, err := protocol.IsCompatible(pluginVersion)
 	if err != nil {
 		return false, err
@@ -32,6 +40,21 @@ func IsProtocolCompatibleWithMin(pluginVersion, minVersion string) (bool, error)
 	if minVersion == "" {
 		return IsProtocolCompatible(pluginVersion)
 	}
+
+	// Strip common comparison operators from version strings (e.g., ">=0.0.1" -> "0.0.1")
+	pluginVersion = strings.TrimPrefix(pluginVersion, ">=")
+	pluginVersion = strings.TrimPrefix(pluginVersion, "<=")
+	pluginVersion = strings.TrimPrefix(pluginVersion, ">")
+	pluginVersion = strings.TrimPrefix(pluginVersion, "<")
+	pluginVersion = strings.TrimPrefix(pluginVersion, "=")
+	pluginVersion = strings.TrimSpace(pluginVersion)
+
+	minVersion = strings.TrimPrefix(minVersion, ">=")
+	minVersion = strings.TrimPrefix(minVersion, "<=")
+	minVersion = strings.TrimPrefix(minVersion, ">")
+	minVersion = strings.TrimPrefix(minVersion, "<")
+	minVersion = strings.TrimPrefix(minVersion, "=")
+	minVersion = strings.TrimSpace(minVersion)
 
 	// Parse both versions
 	pluginVer, err := protocol.Parse(pluginVersion)
