@@ -108,19 +108,19 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate tinct-colours.css file.
+	// Generate tinct-colours.css file - goes to themes/tinct-colours.css.
 	colorsContent, err := p.generateColors(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate colors: %w", err)
 	}
 	files["tinct-colours.css"] = colorsContent
 
-	// Generate tinct.css file (which imports tinct-colours.css).
+	// Generate tinct.css file - goes to themes/tinct/style.css.
 	styleContent, err := p.generateStyle(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate style: %w", err)
 	}
-	files["tinct.css"] = styleContent
+	files["tinct/style.css"] = styleContent
 
 	return files, nil
 }
