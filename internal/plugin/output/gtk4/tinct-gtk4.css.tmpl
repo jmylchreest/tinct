@@ -1,0 +1,42 @@
+/* Tinct GTK4 Theme - Generated */
+/* Traditional GTK4 apps (non-libadwaita) */
+/* Theme type: {{ themeType . }} */
+
+:root {
+  /* Background colors */
+  --theme-bg-color: {{ get . "background" | hex }};
+  --theme-fg-color: {{ get . "foreground" | hex }};
+  --theme-base-color: {{ get . "background" | hex }};
+  --theme-text-color: {{ get . "foreground" | hex }};
+
+  /* Muted variants */
+  --theme-bg-muted-color: {{ get . "backgroundMuted" | hex }};
+  --theme-fg-muted-color: {{ get . "foregroundMuted" | hex }};
+
+  /* Accent colors */
+  --theme-selected-bg-color: {{ get . "accent1" | hex }};
+  --theme-selected-fg-color: white;
+  --theme-accent-color: {{ get . "accent1" | hex }};
+
+  /* Border colors */
+  --borders: {{ get . "border" | hex }};
+  --theme-border-color: {{ get . "border" | hex }};
+
+  /* Status colors */
+  --warning-color: {{ get . "warning" | hex }};
+  --error-color: {{ get . "danger" | hex }};
+  --success-color: {{ get . "success" | hex }};
+  --info-color: {{ get . "info" | hex }};
+}
+
+/* Legacy @define-color for older GTK4 apps */
+@define-color theme_bg_color {{ get . "background" | hex }};
+@define-color theme_fg_color {{ get . "foreground" | hex }};
+@define-color theme_base_color {{ get . "background" | hex }};
+@define-color theme_text_color {{ get . "foreground" | hex }};
+@define-color theme_selected_bg_color {{ get . "accent1" | hex }};
+@define-color theme_selected_fg_color white;
+@define-color borders {{ get . "border" | hex }};
+@define-color warning_color {{ get . "warning" | hex }};
+@define-color error_color {{ get . "danger" | hex }};
+@define-color success_color {{ get . "success" | hex }};

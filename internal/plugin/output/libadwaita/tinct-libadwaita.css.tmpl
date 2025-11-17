@@ -1,0 +1,81 @@
+/* Tinct Libadwaita Theme - Generated */
+/* Modern GNOME/libadwaita apps */
+/* Theme type: {{ themeType . }} */
+
+:root {
+  /* Window colors */
+  --window-bg-color: {{ get . "background" | hex }};
+  --window-fg-color: {{ get . "foreground" | hex }};
+
+  /* View colors */
+  --view-bg-color: {{ get . "background" | hex }};
+  --view-fg-color: {{ get . "foreground" | hex }};
+
+  /* Header bar colors */
+  --headerbar-bg-color: {{ get . "surface" | hex }};
+  --headerbar-fg-color: {{ get . "onSurface" | hex }};
+  --headerbar-border-color: {{ get . "border" | hex }};
+  --headerbar-backdrop-color: {{ get . "surface" | hex }};
+  --headerbar-shade-color: rgba(0, 0, 0, 0.12);
+
+  /* Sidebar colors */
+  --sidebar-bg-color: {{ get . "surfaceVariant" | hex }};
+  --sidebar-fg-color: {{ get . "onSurfaceVariant" | hex }};
+  --sidebar-backdrop-color: {{ get . "surfaceVariant" | hex }};
+  --sidebar-border-color: {{ get . "border" | hex }};
+  --sidebar-shade-color: rgba(0, 0, 0, 0.07);
+
+  /* Secondary sidebar (additional variant) */
+  --secondary-sidebar-bg-color: {{ get . "surface" | hex }};
+  --secondary-sidebar-fg-color: {{ get . "onSurface" | hex }};
+  --secondary-sidebar-backdrop-color: {{ get . "surface" | hex }};
+  --secondary-sidebar-border-color: {{ get . "border" | hex }};
+  --secondary-sidebar-shade-color: rgba(0, 0, 0, 0.07);
+
+  /* Card colors */
+  --card-bg-color: {{ get . "background" | hex }};
+  --card-fg-color: {{ get . "foreground" | hex }};
+  --card-shade-color: rgba(0, 0, 0, 0.07);
+
+  /* Dialog colors */
+  --dialog-bg-color: {{ get . "background" | hex }};
+  --dialog-fg-color: {{ get . "foreground" | hex }};
+
+  /* Popover colors */
+  --popover-bg-color: {{ get . "background" | hex }};
+  --popover-fg-color: {{ get . "foreground" | hex }};
+  --popover-shade-color: rgba(0, 0, 0, 0.07);
+
+  /* Thumbnail colors */
+  --thumbnail-bg-color: {{ get . "background" | hex }};
+  --thumbnail-fg-color: {{ get . "foreground" | hex }};
+
+  /* Misc background colors */
+  --shade-color: rgba(0, 0, 0, 0.07);
+  --scrollbar-outline-color: rgba(0, 0, 0, 0.5);
+
+  /* Accent colors (Blue is default, customizable) */
+  --accent-bg-color: {{ get . "accent1" | hex }};
+  --accent-fg-color: {{ get . "onAccent1" | hex }};
+  --accent-color: {{ get . "accent1" | hex }};
+
+  /* Destructive/danger colors */
+  --destructive-bg-color: {{ get . "danger" | hex }};
+  --destructive-fg-color: {{ get . "onDanger" | hex }};
+  --destructive-color: {{ get . "danger" | hex }};
+
+  /* Success colors */
+  --success-bg-color: {{ get . "success" | hex }};
+  --success-fg-color: {{ get . "onSuccess" | hex }};
+  --success-color: {{ get . "success" | hex }};
+
+  /* Warning colors */
+  --warning-bg-color: {{ get . "warning" | hex }};
+  --warning-fg-color: {{ get . "onWarning" | hex }};
+  --warning-color: {{ get . "warning" | hex }};
+
+  /* Error colors */
+  --error-bg-color: {{ get . "danger" | hex }};
+  --error-fg-color: {{ get . "onDanger" | hex }};
+  --error-color: {{ get . "danger" | hex }};
+}

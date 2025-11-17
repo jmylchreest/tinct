@@ -1,0 +1,241 @@
+/* Tinct GNOME Shell Theme - Generated */
+/* Theme type: {{ themeType . }} */
+
+/* Import base GNOME Shell theme (optional - for partial overrides) */
+/* @import url("resource:///org/gnome/shell/theme/gnome-shell.css"); */
+
+/* Stage (root element) */
+stage {
+  color: {{ get . "foreground" | hex }};
+}
+
+/* Panel */
+#panel {
+  background-color: {{ get . "background" | hex }};
+  color: {{ get . "foreground" | hex }};
+  font-weight: bold;
+  height: 2.2em;
+}
+
+.panel-button {
+  color: {{ get . "foreground" | hex }};
+  -natural-hpadding: 12px;
+  -minimum-hpadding: 6px;
+}
+
+.panel-button:hover {
+  background-color: {{ get . "accent1" | hex }};
+  color: {{ get . "onAccent1" | hex }};
+}
+
+.panel-button:active,
+.panel-button:overview,
+.panel-button:focus,
+.panel-button:checked {
+  background-color: {{ get . "accent1" | hex }};
+  color: {{ get . "onAccent1" | hex }};
+}
+
+.panel-status-indicators-box,
+.panel-status-menu-box {
+  spacing: 2px;
+}
+
+/* System status area */
+.system-status-icon {
+  icon-size: 1.09em;
+  padding: 0 5px;
+}
+
+/* Overview */
+#overview {
+  background-color: {{ get . "background" | hex }};
+}
+
+.overview-controls {
+  padding-bottom: 32px;
+}
+
+/* Dash */
+#dash {
+  background-color: {{ get . "surface" | hex }};
+  padding: 4px 0;
+  border: 1px solid {{ get . "border" | hex }};
+  border-radius: 9px;
+}
+
+.dash-background {
+  background-color: {{ get . "surface" | hex }};
+}
+
+.dash-item-container > StWidget {
+  padding: 4px 8px;
+}
+
+.dash-label {
+  background-color: {{ get . "surface" | hex }};
+  color: {{ get . "onSurface" | hex }};
+  border-radius: 7px;
+  padding: 4px 12px;
+}
+
+/* App icons in dash */
+.app-well-app,
+.show-apps,
+.grid-search-result {
+  border-radius: 8px;
+}
+
+.app-well-app:hover,
+.show-apps:hover,
+.grid-search-result:hover {
+  background-color: {{ get . "accent1" | hex }};
+}
+
+/* Search */
+.search-entry {
+  background-color: {{ get . "background" | hex }};
+  color: {{ get . "foreground" | hex }};
+  border-color: {{ get . "accent1" | hex }};
+  border-radius: 18px;
+  padding: 4px 12px;
+}
+
+.search-entry:focus {
+  border-color: {{ get . "accent1" | hex }};
+  box-shadow: inset 0 0 0 2px {{ get . "accent1" | hex }};
+}
+
+/* Workspace switcher */
+.workspace-background {
+  background-color: {{ get . "surface" | hex }};
+  border-radius: 12px;
+}
+
+.workspace-background:hover {
+  background-color: {{ get . "accent1" | hex }};
+}
+
+/* Window picker */
+.window-picker {
+  spacing: 8px;
+}
+
+.window-clone-border {
+  border: 3px solid {{ get . "accent1" | hex }};
+  border-radius: 8px;
+}
+
+/* Notifications */
+.notification-banner {
+  background-color: {{ get . "background" | hex }};
+  color: {{ get . "foreground" | hex }};
+  border: 1px solid {{ get . "accent1" | hex }};
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.notification-banner:hover {
+  background-color: {{ get . "surfaceVariant" | hex }};
+}
+
+/* System menu / Quick settings */
+.popup-menu {
+  background-color: {{ get . "background" | hex }};
+  color: {{ get . "foreground" | hex }};
+  border: 1px solid {{ get . "accent1" | hex }};
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.popup-menu-content {
+  padding: 8px;
+}
+
+.popup-menu-item {
+  spacing: 12px;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.popup-menu-item:hover,
+.popup-menu-item:focus {
+  background-color: {{ get . "accent1" | hex }};
+  color: {{ get . "onAccent1" | hex }};
+}
+
+.popup-menu-item:active {
+  background-color: {{ get . "accent1" | hex }};
+  color: {{ get . "onAccent1" | hex }};
+}
+
+/* Separators */
+.popup-separator-menu-item {
+  height: 1px;
+  margin: 6px 0;
+  background-color: {{ get . "outline" | hex }};
+}
+
+/* Buttons */
+.button {
+  background-color: {{ get . "surface" | hex }};
+  color: {{ get . "onSurface" | hex }};
+  border: 1px solid {{ get . "border" | hex }};
+  border-radius: 6px;
+  padding: 4px 16px;
+}
+
+.button:hover {
+  background-color: {{ get . "accent1" | hex }};
+  color: {{ get . "onAccent1" | hex }};
+  border-color: {{ get . "accent1" | hex }};
+}
+
+.button:active {
+  background-color: {{ get . "accent1" | hex }};
+  color: {{ get . "onAccent1" | hex }};
+}
+
+.button:focus {
+  border-color: {{ get . "accent1" | hex }};
+  box-shadow: 0 0 0 2px {{ get . "accent1" | hex }};
+}
+
+/* Message tray */
+.message-list {
+  background-color: {{ get . "background" | hex }};
+  border: 1px solid {{ get . "accent1" | hex }};
+  border-radius: 12px;
+}
+
+.message {
+  background-color: {{ get . "surface" | hex }};
+  color: {{ get . "onSurface" | hex }};
+  border-radius: 8px;
+}
+
+.message:hover {
+  background-color: {{ get . "accent1" | hex }};
+  color: {{ get . "onAccent1" | hex }};
+}
+
+/* OSD (On-Screen Display) */
+.osd-window {
+  background-color: {{ get . "background" | hex }};
+  color: {{ get . "foreground" | hex }};
+  border: 1px solid {{ get . "accent1" | hex }};
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* Modal dialogs */
+.modal-dialog {
+  background-color: {{ get . "background" | hex }};
+  color: {{ get . "foreground" | hex }};
+  border: 1px solid {{ get . "accent1" | hex }};
+  border-radius: 12px;
+}
+
+.modal-dialog-content-box {
+  padding: 24px;
+}

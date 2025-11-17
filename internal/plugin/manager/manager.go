@@ -27,10 +27,14 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
 	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
 	"github.com/jmylchreest/tinct/internal/plugin/output/ghostty"
+	gnomeshell "github.com/jmylchreest/tinct/internal/plugin/output/gnome-shell"
+	"github.com/jmylchreest/tinct/internal/plugin/output/gtk3"
+	"github.com/jmylchreest/tinct/internal/plugin/output/gtk4"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprpaper"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
+	"github.com/jmylchreest/tinct/internal/plugin/output/libadwaita"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
@@ -154,10 +158,14 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(dunst.New())
 	m.outputRegistry.Register(fuzzel.New())
 	m.outputRegistry.Register(ghostty.New())
+	m.outputRegistry.Register(gnomeshell.New())
+	m.outputRegistry.Register(gtk3.New())
+	m.outputRegistry.Register(gtk4.New())
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(hyprlock.New())
 	m.outputRegistry.Register(hyprpaper.New())
 	m.outputRegistry.Register(kitty.New())
+	m.outputRegistry.Register(libadwaita.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(swayosd.New())
 	m.outputRegistry.Register(walker.New())
