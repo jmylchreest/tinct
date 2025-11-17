@@ -118,6 +118,14 @@ tinct extract --categorise --preview wallpaper.jpg
 | **zed** | Zed code editor (JSON themes) |
 | **zellij** | Zellij terminal multiplexer (KDL) |
 
+**Desktop Environment:**
+| Plugin | Application |
+|--------|-------------|
+| **gnome-shell** | GNOME Shell desktop theme (with automatic gsettings application) |
+| **gtk3** | GTK3 applications (requires adw-gtk-theme) |
+| **gtk4** | GTK4 applications |
+| **libadwaita** | Libadwaita applications (modern GNOME apps) |
+
 **External Devices & Custom:**
 - Write custom output plugins to control LED strips (e.g., WLED, Philips Hue, Govee)
 - Use ambient edge/corner extraction to sync bias lighting with your wallpaper

@@ -35,6 +35,12 @@ The following plugins from this wishlist have been implemented and are available
 **Terminal Multiplexers:**
 - ✅ **Zellij** - Built-in plugin (`internal/plugin/output/zellij`)
 
+**Desktop Environment:**
+- ✅ **GNOME Shell** - Built-in plugin (`internal/plugin/output/gnome-shell`) - Automatically applies theme and wallpaper via gsettings
+- ✅ **GTK3** - Built-in plugin (`internal/plugin/output/gtk3`) - Requires adw-gtk-theme, best-effort support (libhandy apps may have headerbar limitations)
+- ✅ **GTK4** - Built-in plugin (`internal/plugin/output/gtk4`)
+- ✅ **Libadwaita** - Built-in plugin (`internal/plugin/output/libadwaita`) - Works with modern GNOME apps
+
 ---
 
 ## High Priority
@@ -106,13 +112,6 @@ The following plugins from this wishlist have been implemented and are available
 ## Lower Priority
 
 ### Desktop Environments
-
-#### GTK 3/4 Themes
-- **Format**: CSS
-- **Config Location**: `~/.themes/` or `~/.local/share/themes/`
-- **Popularity**: High - used by many applications
-- **Complexity**: High - complex CSS with many selectors
-- **Reference**: https://docs.gtk.org/gtk4/css-overview.html
 
 #### Qt Themes
 - **Format**: Various (qss, conf)
