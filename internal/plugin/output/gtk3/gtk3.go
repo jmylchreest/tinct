@@ -174,11 +174,11 @@ func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext,
 	usesAdwGtk3 := false
 	currentTheme := ""
 	if err == nil {
-		lines := strings.Split(string(settingsContent), "\n")
-		for _, line := range lines {
+		lines := strings.SplitSeq(string(settingsContent), "\n")
+		for line := range lines {
 			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "gtk-theme-name=") {
-				currentTheme = strings.TrimPrefix(line, "gtk-theme-name=")
+			if after, ok := strings.CutPrefix(line, "gtk-theme-name="); ok {
+				currentTheme = after
 				if strings.HasPrefix(currentTheme, "adw-gtk3") {
 					usesAdwGtk3 = true
 				}
