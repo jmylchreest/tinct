@@ -7,7 +7,7 @@ import (
 
 // Minimum contrast requirements for accents.
 const (
-	MinAccentBgContrast     = 3.0  // Minimum contrast between accent and background (WCAG AA for large text)
+	MinAccentBgContrast     = 4.5  // Minimum contrast between accent and background (WCAG AA for normal text)
 	MinAccentAccentContrast = 1.5  // Minimum contrast between consecutive accents for visual distinction
 	MaxAccentSimilarity     = 0.05 // Maximum luminance difference to consider accents "identical" (5%)
 )
@@ -38,6 +38,23 @@ func sortAccentsForTheme(accents []CategorisedColour, bg, fg CategorisedColour, 
 		return
 	}
 
+	// First pass: Filter out accents that don't meet minimum contrast requirement.
+	// This ensures ALL accent colors are usable for text on the background.
+	validAccents := make([]CategorisedColour, 0, len(accents))
+	for _, accent := range accents {
+		contrast := ContrastRatio(accent.Colour, bg.Colour)
+		if contrast >= MinAccentBgContrast {
+			validAccents = append(validAccents, accent)
+		}
+	}
+
+	// If we filtered out too many, keep original list (will trigger synthetic generation later).
+	if len(validAccents) >= 4 {
+		copy(accents[:len(validAccents)], validAccents)
+		// Truncate the slice to only valid accents for scoring.
+		accents = accents[:len(validAccents)]
+	}
+
 	// Calculate a score for each accent based on multiple factors.
 	type accentScore struct {
 		index int
@@ -62,11 +79,12 @@ func sortAccentsForTheme(accents []CategorisedColour, bg, fg CategorisedColour, 
 
 		// Factor 3: Contrast with background (must be readable).
 		bgContrast := ContrastRatio(accent.Colour, bg.Colour)
-		if bgContrast >= 4.5 {
-			score += 2.0 // Good contrast bonus
-		} else if bgContrast >= 3.0 {
-			score += 1.0 // Acceptable contrast
+		if bgContrast >= 7.0 {
+			score += 2.0 // Excellent contrast bonus (WCAG AAA)
+		} else if bgContrast >= 4.5 {
+			score += 1.0 // Good contrast (WCAG AA for normal text)
 		}
+		// Colors below 4.5 don't get a contrast bonus
 
 		// Factor 4: Contrast with foreground (accents should be distinguishable).
 		fgContrast := ContrastRatio(accent.Colour, fg.Colour)
