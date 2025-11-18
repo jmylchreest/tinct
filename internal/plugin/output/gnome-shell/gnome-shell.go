@@ -122,7 +122,10 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	}
 
 	// Check if User Themes extension exists (not necessarily enabled)
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return true, "Could not determine home directory", nil
+	}
 	userThemesPath := filepath.Join(home, ".local", "share", "gnome-shell", "extensions", userThemeExtensionID)
 	systemThemesPath := filepath.Join("/usr/share/gnome-shell/extensions", userThemeExtensionID)
 
@@ -242,16 +245,16 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 
 		// Get current wallpaper (check both light and dark)
 		cmd = exec.CommandContext(ctx, "gsettings", "get", "org.gnome.desktop.background", "picture-uri")
-		currentLight, _ := cmd.Output()
+		currentLight, err := cmd.Output()
 		currentLightURI := ""
-		if len(currentLight) > 0 {
+		if err == nil && len(currentLight) > 0 {
 			currentLightURI = strings.Trim(strings.TrimSpace(string(currentLight)), "'\"")
 		}
 
 		cmd = exec.CommandContext(ctx, "gsettings", "get", "org.gnome.desktop.background", "picture-uri-dark")
-		currentDark, _ := cmd.Output()
+		currentDark, err := cmd.Output()
 		currentDarkURI := ""
-		if len(currentDark) > 0 {
+		if err == nil && len(currentDark) > 0 {
 			currentDarkURI = strings.Trim(strings.TrimSpace(string(currentDark)), "'\"")
 		}
 
@@ -278,7 +281,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 			// Set picture options to zoom
 			cmd = exec.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-options", "zoom")
-			_ = cmd.Run() // Best effort
+			_ = cmd.Run() //nolint:errcheck // Best effort, non-critical setting
 
 			// Always show when we actually change the wallpaper
 			fmt.Fprintf(os.Stderr, "   gsettings: wallpaper set: %s\n", execCtx.WallpaperPath)

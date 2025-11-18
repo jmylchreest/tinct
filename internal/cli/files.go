@@ -236,7 +236,10 @@ func runCacheList() error {
 		}
 
 		// Determine plugin from path.
-		relPath, _ := filepath.Rel(cacheDir, path)
+		relPath, err := filepath.Rel(cacheDir, path)
+		if err != nil {
+			relPath = path // Fallback to full path
+		}
 		parts := strings.SplitN(relPath, string(filepath.Separator), 2)
 		plugin := "unknown"
 		if len(parts) > 0 {
@@ -337,8 +340,7 @@ func runFilesDelete(_ *cobra.Command, args []string) error {
 		}
 		fmt.Print("\nConfirm deletion? [y/N] ")
 		var response string
-		fmt.Scanln(&response)
-		if !strings.EqualFold(response, "y") {
+		if _, err := fmt.Scanln(&response); err != nil || !strings.EqualFold(response, "y") {
 			fmt.Println("Cancelled")
 			return nil
 		}
@@ -455,8 +457,7 @@ func runCacheDelete(args []string) error {
 		}
 		fmt.Print("\nConfirm deletion? [y/N] ")
 		var response string
-		fmt.Scanln(&response)
-		if !strings.EqualFold(response, "y") {
+		if _, err := fmt.Scanln(&response); err != nil || !strings.EqualFold(response, "y") {
 			fmt.Println("Cancelled")
 			return nil
 		}
@@ -700,8 +701,7 @@ func runFilesClean(_ *cobra.Command, _ []string) error {
 		}
 		fmt.Print("\nConfirm deletion? [y/N] ")
 		var response string
-		fmt.Scanln(&response)
-		if !strings.EqualFold(response, "y") {
+		if _, err := fmt.Scanln(&response); err != nil || !strings.EqualFold(response, "y") {
 			fmt.Println("Cancelled")
 			return nil
 		}
@@ -735,7 +735,11 @@ func getAvailablePluginNames() []string {
 	var names []string
 
 	// Load plugin lock to get external plugins.
-	lock, _, _ := loadPluginLock()
+	// Errors are ignored as we fall back to built-in plugins only.
+	lock, _, err := loadPluginLock()
+	if err != nil {
+		lock = nil
+	}
 	mgr := createManagerFromLock(lock)
 
 	// Get input plugins.
