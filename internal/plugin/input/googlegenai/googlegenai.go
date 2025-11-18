@@ -69,8 +69,8 @@ type ImageMetadata struct {
 	ImageSize_ int       `json:"image_bytes"`
 
 	// API response data
-	RAIFilteredReason string                 `json:"rai_filtered_reason,omitempty"`
-	SafetyAttributes  map[string]interface{} `json:"safety_attributes,omitempty"`
+	RAIFilteredReason string         `json:"rai_filtered_reason,omitempty"`
+	SafetyAttributes  map[string]any `json:"safety_attributes,omitempty"`
 }
 
 // Plugin implements the input.Plugin interface for Google Imagen image generation.
@@ -466,7 +466,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, outputPath string,
 
 	// Extract safety attributes if available
 	if generatedImage.SafetyAttributes != nil {
-		metadata.SafetyAttributes = make(map[string]interface{})
+		metadata.SafetyAttributes = make(map[string]any)
 		if len(generatedImage.SafetyAttributes.Categories) > 0 {
 			metadata.SafetyAttributes["categories"] = generatedImage.SafetyAttributes.Categories
 		}
