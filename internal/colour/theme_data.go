@@ -1,8 +1,9 @@
 package colour
 
 import (
-	pkgcolour "github.com/jmylchreest/tinct/pkg/colour"
 	"maps"
+
+	pkgcolour "github.com/jmylchreest/tinct/pkg/colour"
 )
 
 // ThemeData is the standard data structure passed to all plugin templates.
@@ -25,6 +26,13 @@ type ThemeData struct {
 // Palette returns the internal CategorisedPalette for backward compatibility.
 func (td *ThemeData) Palette() *CategorisedPalette {
 	return td.internalPalette
+}
+
+// GetPaletteHelper returns the embedded public PaletteHelper.
+// This method allows internal ThemeData to satisfy the pkg/template.PaletteProvider interface,
+// enabling the internal template functions to delegate to the public ones.
+func (td *ThemeData) GetPaletteHelper() *pkgcolour.PaletteHelper {
+	return td.ThemeData.PaletteHelper
 }
 
 // NewThemeData creates a new ThemeData instance with the given palette.

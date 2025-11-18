@@ -1,0 +1,38 @@
+{{- /* Qt6ct Color Scheme Template for Tinct */ -}}
+{{- /*
+Qt6ct uses 22 color values for each state (active, inactive, disabled).
+Format: #AARRGGBB (Alpha, Red, Green, Blue)
+
+Color order (0-21):
+0:  WindowText          11: Base
+1:  Button              12: AlternateBase
+2:  Light               13: ToolTipBase
+3:  Midlight            14: ToolTipText
+4:  Dark                15: Text
+5:  Mid                 16: Button
+6:  Text                17: ButtonText
+7:  BrightText          18: BrightText
+8:  ButtonText          19: Link
+9:  Base                20: Highlight (translucent)
+10: Window              21: HighlightedText
+*/ -}}
+{{- $bg := get . "background" -}}
+{{- $fg := get . "foreground" -}}
+{{- $accent1 := get . "accent1" -}}
+{{- /* Surface roles - prefer surface over background for UI elements */ -}}
+{{- $surface := $bg -}}
+{{- if has . "surface" }}{{ $surface = get . "surface" }}{{ end -}}
+{{- $surfaceVariant := $surface -}}
+{{- if has . "surfaceVariant" }}{{ $surfaceVariant = get . "surfaceVariant" }}{{ end -}}
+{{- /* Border/outline roles - prefer outline, then border, then muted foreground */ -}}
+{{- $border := $fg -}}
+{{- if has . "outline" }}{{ $border = get . "outline" }}{{ else if has . "border" }}{{ $border = get . "border" }}{{ else if has . "foregroundMuted" }}{{ $border = get . "foregroundMuted" }}{{ end -}}
+{{- /* Semantic colors with sensible ANSI fallbacks */ -}}
+{{- $danger := ansi . "red" -}}
+{{- if has . "danger" }}{{ $danger = get . "danger" }}{{ end -}}
+{{- $warning := ansi . "yellow" -}}
+{{- if has . "warning" }}{{ $warning = get . "warning" }}{{ end -}}
+[ColorScheme]
+active_colors={{ $fg | argb }}, {{ $surface | argb }}, {{ $surfaceVariant | argb }}, {{ $border | argb }}, {{ $bg | argb }}, {{ $bg | argb }}, {{ $fg | argb }}, {{ $fg | argb }}, {{ $fg | argb }}, {{ $bg | argb }}, {{ $surface | argb }}, {{ $border | argb }}, {{ $accent1 | argb }}, {{ $bg | argb }}, {{ $accent1 | argb }}, {{ $fg | argb }}, {{ $surface | argb }}, #ffffffff, {{ $bg | argb }}, {{ $fg | argb }}, {{ withAlpha $accent1 0.5 | argb }}, {{ $accent1 | argb }}
+inactive_colors={{ withAlpha $fg 0.7 | argb }}, {{ $surface | argb }}, {{ $surfaceVariant | argb }}, {{ $border | argb }}, {{ $bg | argb }}, {{ $bg | argb }}, {{ withAlpha $fg 0.7 | argb }}, {{ $fg | argb }}, {{ withAlpha $fg 0.7 | argb }}, {{ $bg | argb }}, {{ $surface | argb }}, {{ $border | argb }}, {{ $accent1 | argb }}, {{ withAlpha $fg 0.7 | argb }}, {{ withAlpha $accent1 0.7 | argb }}, {{ withAlpha $fg 0.7 | argb }}, {{ $surface | argb }}, #ffffffff, {{ $bg | argb }}, {{ $fg | argb }}, {{ withAlpha $accent1 0.3 | argb }}, {{ $accent1 | argb }}
+disabled_colors={{ withAlpha $fg 0.5 | argb }}, {{ $surface | argb }}, {{ $surfaceVariant | argb }}, {{ $border | argb }}, {{ $bg | argb }}, {{ $bg | argb }}, {{ withAlpha $fg 0.5 | argb }}, {{ $fg | argb }}, {{ withAlpha $fg 0.5 | argb }}, {{ $bg | argb }}, {{ $surface | argb }}, {{ $border | argb }}, {{ $surface | argb }}, {{ withAlpha $fg 0.5 | argb }}, {{ withAlpha $accent1 0.5 | argb }}, {{ withAlpha $fg 0.7 | argb }}, {{ $surface | argb }}, #ffffffff, {{ $bg | argb }}, {{ $fg | argb }}, {{ withAlpha $accent1 0.3 | argb }}, {{ $surface | argb }}

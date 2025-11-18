@@ -90,6 +90,27 @@ type TemplateProvider interface {
 	GetEmbeddedFS() any
 }
 
+// DualThemePlugin is an optional interface that plugins can implement to support
+// generating both light and dark theme variants in a single execution.
+//
+// This is useful for desktop environments and applications that automatically
+// switch themes based on system preference (e.g., KDE Plasma, Qt applications).
+//
+// When this interface is implemented:
+//   - GenerateDualTheme() is called instead of Generate()
+//   - The plugin receives both the primary theme and its alternate variant
+//   - The plugin can generate configuration files for both themes at once
+//
+// Example: KDE Plasma generates both TinctDark.colors and TinctLight.colors,
+// allowing seamless switching via system settings.
+type DualThemePlugin interface {
+	// GenerateDualTheme creates output files for both light and dark themes.
+	// primaryTheme is the main theme (based on input source).
+	// alternateTheme is the opposite variant (light if primary is dark, vice versa).
+	// Returns map of filename -> content for all generated files.
+	GenerateDualTheme(primaryTheme, alternateTheme *colour.ThemeData) (map[string][]byte, error)
+}
+
 // ExecutionContext provides context for hook execution.
 type ExecutionContext struct {
 	DryRun        bool   // Whether this is a dry-run

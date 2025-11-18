@@ -520,24 +520,41 @@ func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedP
 		fmt.Fprintf(os.Stderr, "   %s\n", plugin.Description())
 	}
 
-	// Create theme data with wallpaper context.
-	// For external plugins, we'll pass the alternate palette through the manager.
-	themeData := colour.NewThemeData(palette, wallpaperPath, "")
+	var files map[string][]byte
+	var err error
 
-	// If this is an external plugin and we have an alternate palette, set it
-	if alternatePalette != nil {
-		if extPlugin, ok := plugin.(*manager.ExternalOutputPlugin); ok {
-			extPlugin.SetAlternatePalette(alternatePalette)
+	// Check if plugin supports dual-theme generation
+	if dualThemePlugin, ok := plugin.(output.DualThemePlugin); ok && alternatePalette != nil {
+		// Generate both themes
+		primaryThemeData := colour.NewThemeData(palette, wallpaperPath, "")
+		alternateThemeData := colour.NewThemeData(alternatePalette, wallpaperPath, "")
+
+		files, err = dualThemePlugin.GenerateDualTheme(primaryThemeData, alternateThemeData)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " %s failed (dual-theme): %v\n", plugin.Name(), err)
+			exec.skip = true
+			exec.skipReason = fmt.Sprintf("dual-theme generation failed: %v", err)
+			return false
 		}
-	}
+	} else {
+		// Standard single-theme generation
+		themeData := colour.NewThemeData(palette, wallpaperPath, "")
 
-	// Generate files.
-	files, err := plugin.Generate(themeData)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, " %s failed: %v\n", plugin.Name(), err)
-		exec.skip = true
-		exec.skipReason = fmt.Sprintf("generation failed: %v", err)
-		return false
+		// If this is an external plugin and we have an alternate palette, set it
+		if alternatePalette != nil {
+			if extPlugin, ok := plugin.(*manager.ExternalOutputPlugin); ok {
+				extPlugin.SetAlternatePalette(alternatePalette)
+			}
+		}
+
+		// Generate files.
+		files, err = plugin.Generate(themeData)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " %s failed: %v\n", plugin.Name(), err)
+			exec.skip = true
+			exec.skipReason = fmt.Sprintf("generation failed: %v", err)
+			return false
+		}
 	}
 
 	// Write files.

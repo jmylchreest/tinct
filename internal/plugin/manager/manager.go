@@ -33,9 +33,12 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprpaper"
+	kdeplasma "github.com/jmylchreest/tinct/internal/plugin/output/kde-plasma"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/libadwaita"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
+	"github.com/jmylchreest/tinct/internal/plugin/output/qt5"
+	"github.com/jmylchreest/tinct/internal/plugin/output/qt6"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
@@ -164,9 +167,12 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(hyprlock.New())
 	m.outputRegistry.Register(hyprpaper.New())
+	m.outputRegistry.Register(kdeplasma.New())
 	m.outputRegistry.Register(kitty.New())
 	m.outputRegistry.Register(libadwaita.New())
 	m.outputRegistry.Register(neovim.New())
+	m.outputRegistry.Register(qt5.New())
+	m.outputRegistry.Register(qt6.New())
 	m.outputRegistry.Register(swayosd.New())
 	m.outputRegistry.Register(walker.New())
 	m.outputRegistry.Register(waybar.New())

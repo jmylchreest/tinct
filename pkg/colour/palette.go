@@ -58,6 +58,12 @@ type ThemeData struct {
 	ThemeName     string
 }
 
+// GetPaletteHelper returns the embedded PaletteHelper.
+// This method allows ThemeData to satisfy the PaletteProvider interface.
+func (td *ThemeData) GetPaletteHelper() *PaletteHelper {
+	return td.PaletteHelper
+}
+
 // NewThemeData creates a ThemeData wrapper from a CategorisedPalette.
 // This is called by tinct when preparing data for plugins.
 func NewThemeData(palette *CategorisedPalette, wallpaperPath, themeName string) *ThemeData {

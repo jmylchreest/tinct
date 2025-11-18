@@ -28,6 +28,7 @@ func TemplateFuncs() template.FuncMap {
 		"hex":         hexFunc,
 		"hexAlpha":    hexAlphaFunc,
 		"hexNoHash":   hexNoHashFunc,
+		"argb":        argbFunc,
 		"rgb":         rgbFunc,
 		"rgba":        rgbaFunc,
 		"rgbDecimal":  rgbDecimalFunc,
@@ -94,15 +95,24 @@ func getByIndexFunc(data any, index int) (colour.ColorValue, error) {
 	return cv, nil
 }
 
-// extractPaletteHelper extracts PaletteHelper from either *ThemeData or *PaletteHelper.
+// PaletteProvider is an interface for types that can provide a PaletteHelper.
+// Both pkg/colour.ThemeData and internal/colour.ThemeData implement this.
+type PaletteProvider interface {
+	GetPaletteHelper() *colour.PaletteHelper
+}
+
+// extractPaletteHelper extracts PaletteHelper from either *ThemeData, *PaletteHelper,
+// or any type that implements PaletteProvider (like internal/colour.ThemeData).
 func extractPaletteHelper(data any) *colour.PaletteHelper {
 	switch v := data.(type) {
 	case *colour.ThemeData:
 		return v.PaletteHelper
 	case *colour.PaletteHelper:
 		return v
+	case PaletteProvider:
+		return v.GetPaletteHelper()
 	default:
-		panic(fmt.Sprintf("expected *colour.ThemeData or *colour.PaletteHelper, got %T", data))
+		panic(fmt.Sprintf("expected *colour.ThemeData, *colour.PaletteHelper, or PaletteProvider, got %T", data))
 	}
 }
 
@@ -119,6 +129,11 @@ func hexAlphaFunc(cv colour.ColorValue) string {
 // hexNoHashFunc returns color in RRGGBB format (no # prefix).
 func hexNoHashFunc(cv colour.ColorValue) string {
 	return cv.HexNoHash()
+}
+
+// argbFunc returns color in #AARRGGBB format (for Qt5ct/Qt6ct).
+func argbFunc(cv colour.ColorValue) string {
+	return fmt.Sprintf("#%02x%02x%02x%02x", cv.A(), cv.R(), cv.G(), cv.B())
 }
 
 // rgbFunc returns color in CSS rgb(r,g,b) format.

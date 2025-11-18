@@ -191,6 +191,19 @@ Returns `RRGGBB` format (no # prefix, no alpha).
 # Output: 89b4fa
 ```
 
+#### `argb <colour>`
+Returns `#AARRGGBB` format (alpha-first for Qt5ct/Qt6ct).
+
+```go
+{{ get . "background" | argb }}
+# Output: #ff1e1e2e
+
+{{ withAlpha (get . "accent1") 0.8 | argb }}
+# Output: #cc89b4fa
+```
+
+**Note:** Qt uses alpha-first format (#AARRGGBB) unlike standard hex (#RRGGBBAA). This function is specifically for Qt5ct and Qt6ct configuration files.
+
 #### `rgb <colour>`
 Returns CSS `rgb(r,g,b)` format (no alpha).
 

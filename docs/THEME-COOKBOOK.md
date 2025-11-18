@@ -538,6 +538,79 @@ tinct generate -i remote-json \
   --plugin-args 'openrgb-peripheral={"devices":["keyboard","mouse"]}'
 ```
 
+## Desktop Environment Specific Examples
+
+### KDE Plasma
+
+Apply themes to KDE Plasma desktop environment:
+
+```bash
+# Catppuccin Mocha for KDE Plasma
+tinct generate -i remote-json \
+  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
+  --remote-json.query "$.mocha.colours" \
+  --remote-json.map "base=background,text=foreground,red=danger,green=success,yellow=warning,blue=info,pink=accent1,mauve=accent2" \
+  -o kde-plasma,qt5,qt6
+
+# Apply the color scheme
+plasma-apply-colorscheme TinctDark
+```
+
+**Notes:**
+- KDE plugin generates `TinctDark.colors` for dark themes and `TinctLight.colors` for light themes
+- Output location: `~/.local/share/color-schemes/`
+- Apply manually via System Settings > Colors or use `plasma-apply-colorscheme` command
+
+### Qt Applications (without KDE)
+
+For Qt applications running outside KDE Plasma:
+
+```bash
+# Generate Qt5/Qt6 themes
+tinct generate -i image -p wallpaper.jpg -o qt5,qt6
+
+# Set environment variables (add to ~/.bashrc or ~/.zshrc)
+export QT_QPA_PLATFORMTHEME=qt5ct  # For Qt5 apps
+export QT_QPA_PLATFORMTHEME=qt6ct  # For Qt6 apps
+
+# Select theme in qt5ct/qt6ct GUI
+qt5ct
+qt6ct
+```
+
+**Requirements:**
+- Install `qt5ct` for Qt5 applications
+- Install `qt6ct` for Qt6 applications
+- Set `QT_QPA_PLATFORMTHEME` environment variable
+- Configuration directories must exist: `~/.config/qt5ct/` and `~/.config/qt6ct/`
+
+**Applications that benefit:**
+- Zapzap (WhatsApp client)
+- Telegram Desktop
+- VLC Media Player
+- KeePassXC
+- Dolphin file manager (when run outside KDE)
+
+### GNOME Desktop
+
+Apply themes to GNOME Shell and applications:
+
+```bash
+# Tokyo Night for GNOME
+tinct generate -i remote-json \
+  --remote-json.url "https://raw.githubusercontent.com/folke/tokyonight.nvim/main/extras/lua/tokyonight_colors.lua" \
+  --remote-json.query "night" \
+  -o gnome-shell,gtk3,gtk4,libadwaita
+
+# Theme is automatically applied via gsettings
+```
+
+**Notes:**
+- GNOME Shell plugin requires User Themes extension
+- GTK3 requires `adw-gtk3-theme` for proper styling
+- GTK4 and Libadwaita target modern GNOME applications
+- Shell reload happens automatically
+
 ## Contributing
 
 Have a favourite theme that's missing? Please contribute by:
