@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"image/color"
 	_ "image/jpeg" // Required for JPEG image decoding
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/genai"
@@ -49,6 +51,27 @@ const (
 	// defaultBackend is the default backend used when none is specified.
 	defaultBackend = "gemini-api"
 )
+
+// ImageMetadata contains metadata about a generated image.
+type ImageMetadata struct {
+	// Generation parameters
+	Prompt         string `json:"prompt"`
+	EnhancedPrompt string `json:"enhanced_prompt,omitempty"`
+	NegativePrompt string `json:"negative_prompt,omitempty"`
+	Model          string `json:"model"`
+	Backend        string `json:"backend"`
+	AspectRatio    string `json:"aspect_ratio"`
+	ImageSize      string `json:"image_size,omitempty"`
+
+	// Generation details
+	CreatedAt  time.Time `json:"created_at"`
+	ImagePath  string    `json:"image_path"`
+	ImageSize_ int       `json:"image_bytes"`
+
+	// API response data
+	RAIFilteredReason string                 `json:"rai_filtered_reason,omitempty"`
+	SafetyAttributes  map[string]interface{} `json:"safety_attributes,omitempty"`
+}
 
 // Plugin implements the input.Plugin interface for Google Imagen image generation.
 type Plugin struct {
@@ -426,6 +449,36 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, outputPath string,
 		return fmt.Errorf("failed to write image to file: %w", err)
 	}
 
+	// Save metadata alongside the image
+	metadata := &ImageMetadata{
+		Prompt:            p.prompt,
+		EnhancedPrompt:    enhancedPrompt,
+		NegativePrompt:    genConfig.NegativePrompt,
+		Model:             p.model,
+		Backend:           p.backend,
+		AspectRatio:       p.aspectRatio,
+		ImageSize:         p.imageSize,
+		CreatedAt:         time.Now(),
+		ImagePath:         outputPath,
+		ImageSize_:        len(imageBytes),
+		RAIFilteredReason: generatedImage.RAIFilteredReason,
+	}
+
+	// Extract safety attributes if available
+	if generatedImage.SafetyAttributes != nil {
+		metadata.SafetyAttributes = make(map[string]interface{})
+		if len(generatedImage.SafetyAttributes.Categories) > 0 {
+			metadata.SafetyAttributes["categories"] = generatedImage.SafetyAttributes.Categories
+		}
+		if len(generatedImage.SafetyAttributes.Scores) > 0 {
+			metadata.SafetyAttributes["scores"] = generatedImage.SafetyAttributes.Scores
+		}
+	}
+
+	if err := p.saveMetadata(outputPath, metadata); err != nil && verbose {
+		fmt.Fprintf(os.Stderr, "Warning: failed to save metadata: %v\n", err)
+	}
+
 	return nil
 }
 
@@ -498,6 +551,39 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, outputPath string,
 	// Write image to file
 	if err := os.WriteFile(outputPath, imageBytes, 0o600); err != nil {
 		return fmt.Errorf("failed to write image to file: %w", err)
+	}
+
+	// Save metadata alongside the image
+	metadata := &ImageMetadata{
+		Prompt:         p.prompt,
+		EnhancedPrompt: enhancedPrompt,
+		Model:          p.model,
+		Backend:        p.backend,
+		AspectRatio:    p.aspectRatio,
+		CreatedAt:      time.Now(),
+		ImagePath:      outputPath,
+		ImageSize_:     len(imageBytes),
+	}
+
+	if err := p.saveMetadata(outputPath, metadata); err != nil && verbose {
+		fmt.Fprintf(os.Stderr, "Warning: failed to save metadata: %v\n", err)
+	}
+
+	return nil
+}
+
+// saveMetadata saves generation metadata as a JSON file alongside the image.
+func (p *Plugin) saveMetadata(imagePath string, metadata *ImageMetadata) error {
+	// Create metadata file path by replacing extension with .json
+	metadataPath := strings.TrimSuffix(imagePath, filepath.Ext(imagePath)) + ".json"
+
+	data, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	if err := os.WriteFile(metadataPath, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write metadata file: %w", err)
 	}
 
 	return nil
