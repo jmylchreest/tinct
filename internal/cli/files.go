@@ -338,7 +338,7 @@ func runFilesDelete(_ *cobra.Command, args []string) error {
 		fmt.Print("\nConfirm deletion? [y/N] ")
 		var response string
 		fmt.Scanln(&response)
-		if strings.ToLower(response) != "y" {
+		if !strings.EqualFold(response, "y") {
 			fmt.Println("Cancelled")
 			return nil
 		}
@@ -456,7 +456,7 @@ func runCacheDelete(args []string) error {
 		fmt.Print("\nConfirm deletion? [y/N] ")
 		var response string
 		fmt.Scanln(&response)
-		if strings.ToLower(response) != "y" {
+		if !strings.EqualFold(response, "y") {
 			fmt.Println("Cancelled")
 			return nil
 		}
@@ -701,7 +701,7 @@ func runFilesClean(_ *cobra.Command, _ []string) error {
 		fmt.Print("\nConfirm deletion? [y/N] ")
 		var response string
 		fmt.Scanln(&response)
-		if strings.ToLower(response) != "y" {
+		if !strings.EqualFold(response, "y") {
 			fmt.Println("Cancelled")
 			return nil
 		}

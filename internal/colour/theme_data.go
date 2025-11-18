@@ -32,7 +32,7 @@ func (td *ThemeData) Palette() *CategorisedPalette {
 // This method allows internal ThemeData to satisfy the pkg/template.PaletteProvider interface,
 // enabling the internal template functions to delegate to the public ones.
 func (td *ThemeData) GetPaletteHelper() *pkgcolour.PaletteHelper {
-	return td.ThemeData.PaletteHelper
+	return td.PaletteHelper
 }
 
 // NewThemeData creates a new ThemeData instance with the given palette.

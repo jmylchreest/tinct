@@ -274,7 +274,7 @@ func (m *Manager) IsTracked(path string) bool {
 }
 
 // VerifyFile checks if a file's current checksum matches the manifest.
-// Returns: (exists on disk, matches checksum, error)
+// Returns: (exists on disk, matches checksum, error).
 func (m *Manager) VerifyFile(path string) (bool, bool, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

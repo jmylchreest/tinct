@@ -35,6 +35,7 @@ func PruneManifest(
 	dryRun bool,
 	verbose bool,
 ) *PruneStats {
+
 	return PruneManifestWithOptions(mgr, &PruneOptions{
 		RemoveAfterDuration: removeAfterDuration,
 		PruneIncompatible:   false,
