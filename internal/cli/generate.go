@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/manifest"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/version"
@@ -46,6 +47,10 @@ var (
 	generateVerbose     bool
 	generatePluginArgs  map[string]string
 	generateBackend     string
+	generateForce       bool
+
+	// generateManifestManager is the manifest manager for tracking generated files.
+	generateManifestManager *manifest.Manager
 )
 
 // generateCmd represents the generate command.
@@ -73,6 +78,7 @@ func init() {
 	generateCmd.Flags().StringVar(&generateBackend, "backend", "kmeans", "Colour extraction backend (kmeans)")
 	generateCmd.Flags().BoolVarP(&generateVerbose, "verbose", "v", false, "Verbose output")
 	generateCmd.Flags().StringToStringVar(&generatePluginArgs, "plugin-args", nil, "Plugin-specific arguments (key=value format, repeatable for multiple plugins)")
+	generateCmd.Flags().BoolVar(&generateForce, "force", false, "Overwrite untracked files without prompting")
 
 	// Override Help method to generate dynamic help text with filtered flags.
 	generateCmd.SetHelpFunc(customGenerateHelp)
@@ -81,6 +87,16 @@ func init() {
 // runGenerate executes the generate command.
 func runGenerate(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	// Phase 0: Initialize manifest manager for file tracking.
+	var err error
+	generateManifestManager, err = manifest.NewManager("")
+	if err != nil {
+		return fmt.Errorf("failed to initialize manifest: %w", err)
+	}
+	if err := generateManifestManager.Load(); err != nil {
+		return fmt.Errorf("failed to load manifest: %w", err)
+	}
 
 	// Phase 1: Load and configure plugins.
 	if err := loadAndConfigurePlugins(); err != nil {
@@ -135,6 +151,11 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 			if generateVerbose {
 				fmt.Fprintf(os.Stderr, " Global post-hook failed: %v\n", err)
 			}
+		}
+
+		// Save manifest with tracked files.
+		if err := generateManifestManager.Save(); err != nil {
+			fmt.Fprintf(os.Stderr, " Warning: failed to save manifest: %v\n", err)
 		}
 	}
 

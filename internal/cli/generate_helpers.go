@@ -590,6 +590,18 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 		if generateDryRun {
 			fmt.Printf("   Would write: %s (%d bytes)\n", fullPath, len(content))
 		} else {
+			// Check for untracked file protection.
+			if generateManifestManager != nil && !generateForce {
+				// Check if file exists on disk but isn't tracked.
+				if _, err := os.Stat(fullPath); err == nil {
+					if !generateManifestManager.IsTracked(fullPath) {
+						fmt.Fprintf(os.Stderr, "   Skipping %s: file exists but is not tracked by tinct\n", fullPath)
+						fmt.Fprintf(os.Stderr, "   Use --force to overwrite, or 'tinct files scan' to adopt existing files\n")
+						continue
+					}
+				}
+			}
+
 			if err := writeFile(fullPath, content, generateVerbose); err != nil {
 				fmt.Fprintf(os.Stderr, " Failed to write %s: %v\n", fullPath, err)
 				exec.skip = true
@@ -598,6 +610,15 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 			}
 			fmt.Printf("   %s (%d bytes)\n", fullPath, len(content))
 			exec.writtenFiles = append(exec.writtenFiles, fullPath)
+
+			// Record file in manifest for tracking.
+			if generateManifestManager != nil {
+				if err := generateManifestManager.RecordFile(plugin.Name(), fullPath, content); err != nil {
+					if generateVerbose {
+						fmt.Fprintf(os.Stderr, "   Warning: failed to record %s in manifest: %v\n", fullPath, err)
+					}
+				}
+			}
 		}
 	}
 

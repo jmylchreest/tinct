@@ -60,6 +60,7 @@ func NewRootCmd() *cobra.Command {
 	RootCmd.AddCommand(extractCmd)
 	RootCmd.AddCommand(generateCmd)
 	RootCmd.AddCommand(pluginsCmd)
+	RootCmd.AddCommand(filesCmd)
 
 	return RootCmd
 }
