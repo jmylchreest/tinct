@@ -275,6 +275,40 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: keylightd-tray (Go)
+  - id: tinct-plugin-keylightd-tray
+    main: .
+    binary: tinct-plugin-keylightd-tray
+    dir: ./contrib/plugins/output/keylightd-tray
+
+    # Build for Linux only (keylightd-tray is Linux-specific)
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 # ============================================================================
 # ARCHIVES
 # ============================================================================
@@ -440,6 +474,26 @@ archives:
         dst: README.md
       - src: contrib/plugins/output/zed/templates/*.tmpl
         dst: templates/
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-keylightd-tray-archive
+    ids:
+      - tinct-plugin-keylightd-tray
+    name_template: >-
+      tinct-plugin-keylightd-tray_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+
+    files:
+      - src: contrib/plugins/output/keylightd-tray/README.md
+        dst: README.md
       - src: LICENSE
         dst: LICENSE
 
@@ -672,6 +726,36 @@ aurs:
         fi
       done
     install: .goreleaser/aur-install-scripts/plugin-zed.install
+
+  # Plugin: keylightd-tray
+  - name: tinct-plugin-keylightd-tray-bin
+    ids:
+      - tinct-plugin-keylightd-tray-archive
+    homepage: "https://github.com/jmylchreest/tinct"
+    description: "keylightd-tray theme plugin for Tinct"
+    maintainers:
+      - "John Mylchreest <jmylchreest@gmail.com>"
+    license: MIT
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-keylightd-tray-bin.git"
+    depends:
+      - tinct
+    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    package: |-
+      # bin
+      install -Dm755 "./tinct-plugin-keylightd-tray" "${pkgdir}/usr/bin/tinct-plugin-keylightd-tray"
+
+      # license
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-keylightd-tray/LICENSE"
+
+      # sbom
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-keylightd-tray/sbom.json"
+          break
+        fi
+      done
+    install: .goreleaser/aur-install-scripts/plugin-keylightd-tray.install
 # ============================================================================
 # GITHUB RELEASE
 # ============================================================================
@@ -722,6 +806,7 @@ release:
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-templater_{{.Version}}_Linux_x86_64.tar.gz:templater
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-dunstify_{{.Version}}_Linux_x86_64.tar.gz:dunstify
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-zed_{{.Version}}_Linux_x86_64.tar.gz:zed
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-keylightd-tray_{{.Version}}_Linux_x86_64.tar.gz:keylightd-tray
     ```
 
     Or download manually from the assets below and add locally:
@@ -731,6 +816,7 @@ release:
     tinct plugins add ./templater
     tinct plugins add ./dunstify
     tinct plugins add ./zed
+    tinct plugins add ./keylightd-tray
     ```
 
     ## What's Next?

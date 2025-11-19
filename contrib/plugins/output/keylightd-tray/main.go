@@ -1,0 +1,95 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
+	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
+)
+
+var (
+	// Version is the semantic version of the plugin.
+	// Injected at build time via: -ldflags "-X main.Version=x.y.z"
+	Version = "0.1.0"
+
+	// Commit is the git commit hash of the build.
+	// Injected at build time via: -ldflags "-X main.Commit=$(git rev-parse HEAD)"
+	Commit = "unknown"
+
+	// Date is the build date in RFC3339 format.
+	// Injected at build time via: -ldflags "-X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+	Date = "unknown"
+)
+
+func main() {
+	// Handle --plugin-info flag for metadata extraction
+	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
+		printPluginInfo()
+		return
+	}
+
+	// Handle --version flag
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		printVersion()
+		return
+	}
+
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.Error,
+		Output:     os.Stderr,
+		JSONFormat: false,
+	})
+
+	// Create plugin instance.
+	outputPlugin := &Plugin{
+		version: Version,
+		commit:  Commit,
+		date:    Date,
+	}
+
+	// Configure plugin map.
+	pluginMap := map[string]plugin.Plugin{
+		"output": &tinctplugin.OutputPluginRPC{
+			Impl: outputPlugin,
+		},
+	}
+
+	// Serve the plugin.
+	plugin.Serve(&plugin.ServeConfig{
+		HandshakeConfig: tinctplugin.Handshake,
+		Plugins:         pluginMap,
+		Logger:          logger,
+	})
+}
+
+// printPluginInfo prints plugin metadata as JSON and exits.
+func printPluginInfo() {
+	outputPlugin := &Plugin{
+		version: Version,
+		commit:  Commit,
+		date:    Date,
+	}
+
+	metadata := outputPlugin.GetMetadata()
+
+	// Marshal to JSON
+	data, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error marshaling plugin info: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(string(data))
+	os.Exit(0)
+}
+
+// printVersion prints version information and exits.
+func printVersion() {
+	fmt.Printf("tinct-plugin-keylightd-tray %s\n", Version)
+	fmt.Printf("Commit: %s\n", Commit)
+	fmt.Printf("Built:  %s\n", Date)
+	os.Exit(0)
+}
