@@ -134,37 +134,49 @@ func TestPlugin_Generate(t *testing.T) {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	if len(files) != 1 {
-		t.Fatalf("expected 1 file, got %d", len(files))
+	if len(files) != 2 {
+		t.Fatalf("expected 2 files, got %d", len(files))
 	}
 
-	// Check file path
-	expectedPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")
-	content, ok := files[expectedPath]
+	// Check colours file path
+	coloursPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-colours.css")
+	coloursContent, ok := files[coloursPath]
 	if !ok {
-		t.Fatalf("expected file at %q, got files: %v", expectedPath, files)
+		t.Fatalf("expected file at %q, got files: %v", coloursPath, files)
 	}
 
-	// Check CSS content
-	css := string(content)
-
-	// Verify CSS variables are present
-	expectedVars := []string{
-		"--bg-primary: #1e1e2e",
-		"--bg-secondary: #313244",
-		"--text-primary: #cdd6f4",
-		"--text-secondary: #a6adc8",
-		"--accent: #89b4fa",
-		"--success: #a6e3a1",
-		"--warning: #f9e2af",
-		"--error: #f38ba8",
-		"--surface: #313244",
-		"--overlay: #45475a",
+	// Check custom file path
+	customPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")
+	customContent, ok := files[customPath]
+	if !ok {
+		t.Fatalf("expected file at %q, got files: %v", customPath, files)
 	}
 
-	for _, v := range expectedVars {
+	// Check CSS content in colours file
+	css := string(coloursContent)
+
+	// Check custom file imports colours
+	customCSS := string(customContent)
+	if !strings.Contains(customCSS, "@import url(\"tinct-colours.css\")") {
+		t.Error("tinct-custom.css should import tinct-colours.css")
+	}
+
+	// Verify CSS variables are present in colours file (tinct-prefixed)
+	expectedColoursVars := []string{
+		"--tinct-background: #1e1e2e",
+		"--tinct-surface: #313244",
+		"--tinct-foreground: #cdd6f4",
+		"--tinct-subtle: #a6adc8",
+		"--tinct-accent: #89b4fa",
+		"--tinct-green: #a6e3a1",
+		"--tinct-yellow: #f9e2af",
+		"--tinct-red: #f38ba8",
+		"--tinct-overlay: #45475a",
+	}
+
+	for _, v := range expectedColoursVars {
 		if !strings.Contains(css, v) {
-			t.Errorf("CSS missing variable %q", v)
+			t.Errorf("Colours CSS missing variable %q", v)
 		}
 	}
 
@@ -174,8 +186,21 @@ func TestPlugin_Generate(t *testing.T) {
 	}
 
 	// Verify header comment
-	if !strings.Contains(css, "Tinct-generated theme") {
+	if !strings.Contains(css, "Tinct-generated colours") {
 		t.Error("CSS missing header comment")
+	}
+
+	// Verify custom CSS applies the colours
+	expectedCustomVars := []string{
+		"--bg-primary: var(--tinct-background)",
+		"--text-primary: var(--tinct-foreground)",
+		"--accent: var(--tinct-accent)",
+	}
+
+	for _, v := range expectedCustomVars {
+		if !strings.Contains(customCSS, v) {
+			t.Errorf("Custom CSS missing variable %q", v)
+		}
 	}
 }
 
@@ -214,25 +239,25 @@ func TestPlugin_Generate_MinimalPalette(t *testing.T) {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	if len(files) != 1 {
-		t.Fatalf("expected 1 file, got %d", len(files))
+	if len(files) != 2 {
+		t.Fatalf("expected 2 files, got %d", len(files))
 	}
 
-	// Get the content
-	var content []byte
-	for _, c := range files {
-		content = c
-		break
+	// Get the colours content
+	coloursPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-colours.css")
+	content, ok := files[coloursPath]
+	if !ok {
+		t.Fatalf("expected colours file at %q", coloursPath)
 	}
 
 	css := string(content)
 
-	// Should still have background and foreground
-	if !strings.Contains(css, "--bg-primary: #000000") {
-		t.Error("CSS missing --bg-primary")
+	// Should still have background and foreground (tinct-prefixed)
+	if !strings.Contains(css, "--tinct-background: #000000") {
+		t.Error("CSS missing --tinct-background")
 	}
-	if !strings.Contains(css, "--text-primary: #ffffff") {
-		t.Error("CSS missing --text-primary")
+	if !strings.Contains(css, "--tinct-foreground: #ffffff") {
+		t.Error("CSS missing --tinct-foreground")
 	}
 }
 
@@ -284,28 +309,28 @@ func TestPlugin_Generate_FallbackColors(t *testing.T) {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	// Get the content
-	var content []byte
-	for _, c := range files {
-		content = c
-		break
+	// Get the colours content
+	coloursPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-colours.css")
+	content, ok := files[coloursPath]
+	if !ok {
+		t.Fatalf("expected colours file at %q", coloursPath)
 	}
 
 	css := string(content)
 
-	// Should use accent2/3/4 as fallbacks for success/warning/error
-	if !strings.Contains(css, "--success: #a6e3a1") {
-		t.Error("CSS missing --success fallback from accent2")
+	// Should use accent2/3/4 as fallbacks for green/yellow/red (tinct-prefixed)
+	if !strings.Contains(css, "--tinct-green: #a6e3a1") {
+		t.Error("CSS missing --tinct-green fallback from accent2")
 	}
-	if !strings.Contains(css, "--warning: #f9e2af") {
-		t.Error("CSS missing --warning fallback from accent3")
+	if !strings.Contains(css, "--tinct-yellow: #f9e2af") {
+		t.Error("CSS missing --tinct-yellow fallback from accent3")
 	}
-	if !strings.Contains(css, "--error: #f38ba8") {
-		t.Error("CSS missing --error fallback from accent4")
+	if !strings.Contains(css, "--tinct-red: #f38ba8") {
+		t.Error("CSS missing --tinct-red fallback from accent4")
 	}
 }
 
-func TestGenerateCSS(t *testing.T) {
+func TestGenerateColoursCSS(t *testing.T) {
 	p := &Plugin{}
 
 	palette := tinctplugin.PaletteData{
@@ -317,7 +342,7 @@ func TestGenerateCSS(t *testing.T) {
 		ThemeType: "dark",
 	}
 
-	css := p.generateCSS(palette)
+	css := p.generateColoursCSS(palette)
 
 	// Check structure
 	if !strings.HasPrefix(css, "/*") {
@@ -331,16 +356,49 @@ func TestGenerateCSS(t *testing.T) {
 	}
 }
 
-func TestGetTinctCSSPath(t *testing.T) {
+func TestGenerateCustomCSS(t *testing.T) {
+	p := &Plugin{}
+
+	css := p.generateCustomCSS()
+
+	// Check import statement
+	if !strings.Contains(css, "@import url(\"tinct-colours.css\")") {
+		t.Error("Custom CSS should import tinct-colours.css")
+	}
+	// Check for header comment
+	if !strings.Contains(css, "Tinct custom theme") {
+		t.Error("Custom CSS should have header comment")
+	}
+}
+
+func TestGetTinctColoursPath(t *testing.T) {
 	// Test with XDG_CONFIG_HOME set
 	tmpDir := t.TempDir()
 	oldXDG := os.Getenv("XDG_CONFIG_HOME")
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getTinctCSSPath()
+	path, err := getTinctColoursPath()
 	if err != nil {
-		t.Fatalf("getTinctCSSPath failed: %v", err)
+		t.Fatalf("getTinctColoursPath failed: %v", err)
+	}
+
+	expected := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-colours.css")
+	if path != expected {
+		t.Errorf("expected %q, got %q", expected, path)
+	}
+}
+
+func TestGetTinctCustomPath(t *testing.T) {
+	// Test with XDG_CONFIG_HOME set
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
+
+	path, err := getTinctCustomPath()
+	if err != nil {
+		t.Fatalf("getTinctCustomPath failed: %v", err)
 	}
 
 	expected := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")
@@ -349,19 +407,19 @@ func TestGetTinctCSSPath(t *testing.T) {
 	}
 }
 
-func TestGetTinctCSSPath_DefaultHome(t *testing.T) {
+func TestGetTinctColoursPath_DefaultHome(t *testing.T) {
 	// Test with XDG_CONFIG_HOME unset
 	oldXDG := os.Getenv("XDG_CONFIG_HOME")
 	os.Unsetenv("XDG_CONFIG_HOME")
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getTinctCSSPath()
+	path, err := getTinctColoursPath()
 	if err != nil {
-		t.Fatalf("getTinctCSSPath failed: %v", err)
+		t.Fatalf("getTinctColoursPath failed: %v", err)
 	}
 
 	home, _ := os.UserHomeDir()
-	expected := filepath.Join(home, ".config", "keylightd", "keylightd-tray", "tinct-custom.css")
+	expected := filepath.Join(home, ".config", "keylightd", "keylightd-tray", "tinct-colours.css")
 	if path != expected {
 		t.Errorf("expected %q, got %q", expected, path)
 	}
@@ -474,26 +532,48 @@ func TestPlugin_Generate_ComponentColors(t *testing.T) {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	// Get the content
-	var content []byte
-	for _, c := range files {
-		content = c
-		break
+	// Get the colours content - should have tinct-prefixed raw values
+	coloursPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-colours.css")
+	coloursContent, ok := files[coloursPath]
+	if !ok {
+		t.Fatalf("expected colours file at %q", coloursPath)
 	}
 
-	css := string(content)
+	coloursCSS := string(coloursContent)
 
-	// Check component-specific variables
-	expectedVars := []string{
-		"--slider-track: #181825",
-		"--input-bg: #11111b",
-		"--input-border: #45475a",
-		"--list-item-bg: #11111b",
+	// Check that raw tinct-prefixed variables are in colours file
+	expectedColoursVars := []string{
+		"--tinct-surface-container-lowest: #11111b",
+		"--tinct-surface-container-low: #181825",
+		"--tinct-border-muted: #45475a",
 	}
 
-	for _, v := range expectedVars {
-		if !strings.Contains(css, v) {
-			t.Errorf("CSS missing component variable %q", v)
+	for _, v := range expectedColoursVars {
+		if !strings.Contains(coloursCSS, v) {
+			t.Errorf("Colours CSS missing variable %q", v)
+		}
+	}
+
+	// Get the custom content - should have component mappings using var()
+	customPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")
+	customContent, ok := files[customPath]
+	if !ok {
+		t.Fatalf("expected custom file at %q", customPath)
+	}
+
+	customCSS := string(customContent)
+
+	// Check component-specific variables use var() references
+	expectedCustomVars := []string{
+		"--slider-track: var(--tinct-surface-container-low)",
+		"--input-bg: var(--tinct-surface-container-lowest)",
+		"--input-border: var(--tinct-border-muted)",
+		"--list-item-bg: var(--tinct-surface-container-lowest)",
+	}
+
+	for _, v := range expectedCustomVars {
+		if !strings.Contains(customCSS, v) {
+			t.Errorf("Custom CSS missing component variable %q", v)
 		}
 	}
 }
