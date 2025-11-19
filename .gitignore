@@ -15,6 +15,7 @@
 /contrib/plugins/output/templater/tinct-plugin-templater
 /contrib/plugins/output/dunstify/tinct-plugin-dunstify
 /contrib/plugins/output/zed/tinct-plugin-zed
+/contrib/plugins/output/keylightd-tray/tinct-plugin-keylightd-tray
 
 # Test binary, built with `go test -c`
 *.test
