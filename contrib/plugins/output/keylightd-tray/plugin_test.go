@@ -139,7 +139,7 @@ func TestPlugin_Generate(t *testing.T) {
 	}
 
 	// Check file path
-	expectedPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "custom.css")
+	expectedPath := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")
 	content, ok := files[expectedPath]
 	if !ok {
 		t.Fatalf("expected file at %q, got files: %v", expectedPath, files)
@@ -331,16 +331,52 @@ func TestGenerateCSS(t *testing.T) {
 	}
 }
 
-func TestGetConfigPath(t *testing.T) {
+func TestGetTinctCSSPath(t *testing.T) {
 	// Test with XDG_CONFIG_HOME set
 	tmpDir := t.TempDir()
 	oldXDG := os.Getenv("XDG_CONFIG_HOME")
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getConfigPath()
+	path, err := getTinctCSSPath()
 	if err != nil {
-		t.Fatalf("getConfigPath failed: %v", err)
+		t.Fatalf("getTinctCSSPath failed: %v", err)
+	}
+
+	expected := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")
+	if path != expected {
+		t.Errorf("expected %q, got %q", expected, path)
+	}
+}
+
+func TestGetTinctCSSPath_DefaultHome(t *testing.T) {
+	// Test with XDG_CONFIG_HOME unset
+	oldXDG := os.Getenv("XDG_CONFIG_HOME")
+	os.Unsetenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
+
+	path, err := getTinctCSSPath()
+	if err != nil {
+		t.Fatalf("getTinctCSSPath failed: %v", err)
+	}
+
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".config", "keylightd", "keylightd-tray", "tinct-custom.css")
+	if path != expected {
+		t.Errorf("expected %q, got %q", expected, path)
+	}
+}
+
+func TestGetCustomCSSPath(t *testing.T) {
+	// Test with XDG_CONFIG_HOME set
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
+
+	path, err := getCustomCSSPath()
+	if err != nil {
+		t.Fatalf("getCustomCSSPath failed: %v", err)
 	}
 
 	expected := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "custom.css")
@@ -349,20 +385,115 @@ func TestGetConfigPath(t *testing.T) {
 	}
 }
 
-func TestGetConfigPath_DefaultHome(t *testing.T) {
-	// Test with XDG_CONFIG_HOME unset
+func TestPlugin_PostExecute_NoCustomCSS(t *testing.T) {
+	// Test PostExecute when custom.css doesn't exist
+	tmpDir := t.TempDir()
 	oldXDG := os.Getenv("XDG_CONFIG_HOME")
-	os.Unsetenv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getConfigPath()
+	p := &Plugin{}
+	ctx := context.Background()
+
+	err := p.PostExecute(ctx, []string{filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")})
 	if err != nil {
-		t.Fatalf("getConfigPath failed: %v", err)
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestPlugin_PostExecute_WithImport(t *testing.T) {
+	// Test PostExecute when custom.css contains the import
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
+
+	// Create the directory and custom.css with import
+	configDir := filepath.Join(tmpDir, "keylightd", "keylightd-tray")
+	os.MkdirAll(configDir, 0755)
+	customCSS := filepath.Join(configDir, "custom.css")
+	os.WriteFile(customCSS, []byte("@import url(\"tinct-custom.css\");\n"), 0644)
+
+	p := &Plugin{}
+	ctx := context.Background()
+
+	err := p.PostExecute(ctx, []string{filepath.Join(configDir, "tinct-custom.css")})
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestPlugin_Generate_ComponentColors(t *testing.T) {
+	// Test that component-specific colors are generated
+	tmpDir := t.TempDir()
+
+	oldXDG := os.Getenv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
+
+	p := &Plugin{
+		version: "1.0.0",
+		commit:  "test",
+		date:    "2024-01-01",
 	}
 
-	home, _ := os.UserHomeDir()
-	expected := filepath.Join(home, ".config", "keylightd", "keylightd-tray", "custom.css")
-	if path != expected {
-		t.Errorf("expected %q, got %q", expected, path)
+	palette := tinctplugin.PaletteData{
+		Colours: map[string]tinctplugin.CategorisedColour{
+			"background": {
+				Hex: "#1e1e2e",
+				RGB: tinctplugin.RGBColour{R: 30, G: 30, B: 46},
+			},
+			"foreground": {
+				Hex: "#cdd6f4",
+				RGB: tinctplugin.RGBColour{R: 205, G: 214, B: 244},
+			},
+			"surface": {
+				Hex: "#313244",
+				RGB: tinctplugin.RGBColour{R: 49, G: 50, B: 68},
+			},
+			"surfaceContainerLowest": {
+				Hex: "#11111b",
+				RGB: tinctplugin.RGBColour{R: 17, G: 17, B: 27},
+			},
+			"surfaceContainerLow": {
+				Hex: "#181825",
+				RGB: tinctplugin.RGBColour{R: 24, G: 24, B: 37},
+			},
+			"borderMuted": {
+				Hex: "#45475a",
+				RGB: tinctplugin.RGBColour{R: 69, G: 71, B: 90},
+			},
+		},
+		ThemeType: "dark",
+	}
+
+	ctx := context.Background()
+	files, err := p.Generate(ctx, palette)
+
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	// Get the content
+	var content []byte
+	for _, c := range files {
+		content = c
+		break
+	}
+
+	css := string(content)
+
+	// Check component-specific variables
+	expectedVars := []string{
+		"--slider-track: #181825",
+		"--input-bg: #11111b",
+		"--input-border: #45475a",
+		"--list-item-bg: #11111b",
+	}
+
+	for _, v := range expectedVars {
+		if !strings.Contains(css, v) {
+			t.Errorf("CSS missing component variable %q", v)
+		}
 	}
 }

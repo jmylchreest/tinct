@@ -52,14 +52,26 @@ tinct generate -i google-genai --prompt "sunset over mountains" -o keylightd-tra
 The plugin generates a single file:
 
 ```
-~/.config/keylightd/keylightd-tray/custom.css
+~/.config/keylightd/keylightd-tray/tinct-custom.css
 ```
 
 Or if `XDG_CONFIG_HOME` is set:
 
 ```
-$XDG_CONFIG_HOME/keylightd/keylightd-tray/custom.css
+$XDG_CONFIG_HOME/keylightd/keylightd-tray/tinct-custom.css
 ```
+
+## Setup
+
+After the first run, you need to import the tinct theme in your `custom.css`:
+
+```css
+@import url("tinct-custom.css");
+
+/* Your additional customizations here */
+```
+
+The plugin will remind you if the import is missing.
 
 ## Generated CSS Variables
 
@@ -79,6 +91,10 @@ The plugin generates the following CSS variables:
 | `--error` | red | Error indicators |
 | `--surface` | surface | Surface color |
 | `--overlay` | overlay | Overlay color |
+| `--slider-track` | surfaceContainerLow | Slider track background |
+| `--input-bg` | surfaceContainerLowest | Input field background |
+| `--input-border` | borderMuted | Input field border |
+| `--list-item-bg` | surfaceContainerLowest | List item background |
 
 ## Example Output
 
@@ -99,6 +115,12 @@ The plugin generates the following CSS variables:
   --error: #f38ba8;
   --surface: #313244;
   --overlay: #45475a;
+
+  /* Component-specific colors */
+  --slider-track: #181825;
+  --input-bg: #11111b;
+  --input-border: #45475a;
+  --list-item-bg: #11111b;
 }
 ```
 
@@ -108,14 +130,20 @@ keylightd-tray automatically watches for changes to custom.css and reloads the t
 
 If the theme doesn't load:
 
-1. Check the file exists:
+1. Check the tinct file exists:
+   ```bash
+   cat ~/.config/keylightd/keylightd-tray/tinct-custom.css
+   ```
+
+2. Ensure custom.css imports it:
    ```bash
    cat ~/.config/keylightd/keylightd-tray/custom.css
    ```
+   Should contain: `@import url("tinct-custom.css");`
 
-2. Verify the CSS syntax is valid
+3. Verify the CSS syntax is valid
 
-3. Restart keylightd-tray
+4. Restart keylightd-tray
 
 ## Technical Details
 

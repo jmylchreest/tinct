@@ -17,8 +17,8 @@ type Plugin struct {
 	date    string
 }
 
-// getConfigPath returns the path to the keylightd-tray custom.css file.
-func getConfigPath() (string, error) {
+// getConfigDir returns the path to the keylightd-tray config directory.
+func getConfigDir() (string, error) {
 	// Check XDG_CONFIG_HOME first
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if configHome == "" {
@@ -29,12 +29,30 @@ func getConfigPath() (string, error) {
 		configHome = filepath.Join(home, ".config")
 	}
 
-	return filepath.Join(configHome, "keylightd", "keylightd-tray", "custom.css"), nil
+	return filepath.Join(configHome, "keylightd", "keylightd-tray"), nil
 }
 
-// Generate creates a custom.css file for keylightd-tray from the palette data.
+// getTinctCSSPath returns the path to the tinct-custom.css file.
+func getTinctCSSPath() (string, error) {
+	configDir, err := getConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, "tinct-custom.css"), nil
+}
+
+// getCustomCSSPath returns the path to the custom.css file.
+func getCustomCSSPath() (string, error) {
+	configDir, err := getConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, "custom.css"), nil
+}
+
+// Generate creates a tinct-custom.css file for keylightd-tray from the palette data.
 func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
-	outputPath, err := getConfigPath()
+	outputPath, err := getTinctCSSPath()
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +147,38 @@ func (p *Plugin) generateCSS(palette tinctplugin.PaletteData) string {
 		sb.WriteString(fmt.Sprintf("  --overlay: %s;\n", surface.Hex))
 	}
 
+	sb.WriteString("\n  /* Component-specific colors */\n")
+
+	// Slider track - use surfaceContainerLow for a muted look
+	if containerLow, ok := palette.Colours["surfaceContainerLow"]; ok {
+		sb.WriteString(fmt.Sprintf("  --slider-track: %s;\n", containerLow.Hex))
+	} else if surface, ok := palette.Colours["surface"]; ok {
+		sb.WriteString(fmt.Sprintf("  --slider-track: %s;\n", surface.Hex))
+	}
+
+	// Input background - use surfaceContainerLowest for darker/muted
+	if containerLowest, ok := palette.Colours["surfaceContainerLowest"]; ok {
+		sb.WriteString(fmt.Sprintf("  --input-bg: %s;\n", containerLowest.Hex))
+	} else if bg, ok := palette.Colours["background"]; ok {
+		sb.WriteString(fmt.Sprintf("  --input-bg: %s;\n", bg.Hex))
+	}
+
+	// Input border - use borderMuted or outlineVariant for muted borders
+	if borderMuted, ok := palette.Colours["borderMuted"]; ok {
+		sb.WriteString(fmt.Sprintf("  --input-border: %s;\n", borderMuted.Hex))
+	} else if outlineVariant, ok := palette.Colours["outlineVariant"]; ok {
+		sb.WriteString(fmt.Sprintf("  --input-border: %s;\n", outlineVariant.Hex))
+	} else if surface, ok := palette.Colours["surface"]; ok {
+		sb.WriteString(fmt.Sprintf("  --input-border: %s;\n", surface.Hex))
+	}
+
+	// List item background - use surfaceContainerLowest for darker/muted
+	if containerLowest, ok := palette.Colours["surfaceContainerLowest"]; ok {
+		sb.WriteString(fmt.Sprintf("  --list-item-bg: %s;\n", containerLowest.Hex))
+	} else if bg, ok := palette.Colours["background"]; ok {
+		sb.WriteString(fmt.Sprintf("  --list-item-bg: %s;\n", bg.Hex))
+	}
+
 	sb.WriteString("}\n")
 
 	return sb.String()
@@ -141,7 +191,35 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 }
 
 // PostExecute is called after files are written.
+// It checks if custom.css imports tinct-custom.css and prompts the user if not.
 func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
+	customCSSPath, err := getCustomCSSPath()
+	if err != nil {
+		return nil // Don't fail on path errors
+	}
+
+	// Check if custom.css exists and contains the import
+	content, err := os.ReadFile(customCSSPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// custom.css doesn't exist - prompt user to create it
+			fmt.Fprintf(os.Stderr, "\n   Note: To use the tinct theme, create %s with:\n", customCSSPath)
+			fmt.Fprintf(os.Stderr, "   @import url(\"tinct-custom.css\");\n\n")
+			return nil
+		}
+		return nil // Don't fail on read errors
+	}
+
+	// Check if the import statement is present
+	importStatement := "@import url(\"tinct-custom.css\")"
+	importStatementAlt := "@import \"tinct-custom.css\""
+
+	if !strings.Contains(string(content), importStatement) && !strings.Contains(string(content), importStatementAlt) {
+		fmt.Fprintf(os.Stderr, "\n   Note: tinct-custom.css is not imported in custom.css\n")
+		fmt.Fprintf(os.Stderr, "   Add to %s:\n", customCSSPath)
+		fmt.Fprintf(os.Stderr, "   @import url(\"tinct-custom.css\");\n\n")
+	}
+
 	return nil
 }
 
