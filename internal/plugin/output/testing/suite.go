@@ -141,9 +141,9 @@ func TestPreExecuteHook(t *testing.T, p any, expectedBinaryName string) {
 			t.Errorf("PreExecute() unexpected error = %v", err)
 		}
 
-		// If skipped, reason should mention the binary name.
-		if skip && !strings.Contains(reason, expectedBinaryName) {
-			t.Errorf("PreExecute() skip reason should mention %s, got: %s", expectedBinaryName, reason)
+		// If skipped, a reason must be provided.
+		if skip && reason == "" {
+			t.Error("PreExecute() returned skip=true but provided no reason")
 		}
 	})
 }

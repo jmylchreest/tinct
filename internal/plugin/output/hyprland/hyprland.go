@@ -223,7 +223,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 
 	hyprConfigDir := filepath.Join(home, ".config", "hypr")
 	if _, err := os.Stat(hyprConfigDir); os.IsNotExist(err) {
-		return true, "hyprland config directory not found (hyprland may not be installed)", nil
+		return true, "Hyprland config directory not found (Hyprland may not be installed)", nil
 	}
 
 	// Check if hyprctl executable exists on PATH (needed for reload).
