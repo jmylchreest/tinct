@@ -37,6 +37,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/libadwaita"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
+	"github.com/jmylchreest/tinct/internal/plugin/output/ptyxis"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt5"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt6"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
@@ -171,6 +172,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(kitty.New())
 	m.outputRegistry.Register(libadwaita.New())
 	m.outputRegistry.Register(neovim.New())
+	m.outputRegistry.Register(ptyxis.New())
 	m.outputRegistry.Register(qt5.New())
 	m.outputRegistry.Register(qt6.New())
 	m.outputRegistry.Register(swayosd.New())

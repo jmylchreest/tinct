@@ -33,6 +33,7 @@ Output plugins generate configuration files for applications and devices.
 | **kde-plasma** | KDE Plasma desktop environment | `.colors` scheme files; Light/dark theme detection |
 | **kitty** | Kitty terminal emulator | Config file with 256-color palette |
 | **libadwaita** | Libadwaita applications | CSS themes for modern GNOME apps |
+| **ptyxis** | Ptyxis terminal emulator | Palette files with window dressing support |
 | **neovim** | Neovim text editor | Lua color scheme generation |
 | **qt5** | Qt5 applications | qt5ct configuration; Requires QT_QPA_PLATFORMTHEME=qt5ct |
 | **qt6** | Qt6 applications | qt6ct configuration; Requires QT_QPA_PLATFORMTHEME=qt6ct |
@@ -185,6 +186,52 @@ The plugin generates two identical themes (`tinct-a` and `tinct-b`) and alternat
 
 The user-theme extension monitors the `org.gnome.shell.extensions.user-theme name` gsettings key. When this value changes, it reloads the theme CSS. By toggling between `tinct-a` and `tinct-b`, tinct can update the theme appearance without the user seeing any intermediate default theme.
 
+#### ptyxis Plugin
+
+Generates color palettes for the Ptyxis terminal emulator with window dressing support.
+
+**Requirements:**
+- Ptyxis terminal installed
+
+**Usage:**
+```bash
+# Generate Ptyxis palette
+tinct generate -i image -p wallpaper.jpg -o ptyxis
+```
+
+**Features:**
+- Complete 16-color ANSI palette support
+- Light and dark theme variants
+- Window dressing (headerbar theming based on terminal state)
+- Bell notification styling
+- Remote session indicators
+- Superuser/root session highlighting
+
+**Output:**
+- Native: `~/.local/share/org.gnome.Ptyxis/palettes/tinct.palette`
+- Flatpak (Stable): `~/.var/app/app.devsuite.Ptyxis/data/ptyxis/palettes/tinct.palette`
+- Flatpak (Nightly): `~/.var/app/org.gnome.Ptyxis.Devel/data/ptyxis/palettes/tinct.palette`
+
+**Window Dressing:**
+
+Ptyxis supports "window dressing" - coloring the window headerbar based on terminal state:
+
+- **BellBackground:** Colors headerbar when terminal bell is triggered (uses warning color)
+- **RemoteBackground:** Colors headerbar during remote SSH sessions (uses info color)
+- **SuperuserBackground:** Colors headerbar when running as root (uses danger color)
+
+These visual indicators help distinguish terminal states at a glance.
+
+**Note:** Ptyxis uses its own palette-based theming system. The libadwaita plugin does not affect Ptyxis's headerbar - window chrome theming is controlled by the palette file itself through the special background fields.
+
+**Applying the Palette:**
+
+After generation, select the "Tinct" palette in Ptyxis preferences. For Ptyxis 49+, you can also install palettes via command line:
+
+```bash
+ptyxis --install-palette ~/.local/share/org.gnome.Ptyxis/palettes/tinct.palette
+```
+
 #### gtk3 / gtk4 / libadwaita Plugins
 
 Generate CSS themes for GTK applications.
@@ -210,6 +257,7 @@ All terminal plugins support 256-color palettes with ANSI color mapping:
 - **alacritty:** TOML configuration
 - **ghostty:** Modern terminal with palette support
 - **kitty:** Advanced terminal with 256-color palette
+- **ptyxis:** GNOME terminal with window dressing support (see detailed section above)
 
 ### LED & External Devices
 
