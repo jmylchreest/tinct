@@ -29,14 +29,14 @@ func TestGNOMEShellPlugin(t *testing.T) {
 		if dir == "" {
 			t.Error("DefaultOutputDir() should not be empty")
 		}
-		if !strings.Contains(dir, "gnome-shell") {
-			t.Errorf("DefaultOutputDir() = %s, should contain 'gnome-shell'", dir)
+		if !strings.Contains(dir, "themes") {
+			t.Errorf("DefaultOutputDir() = %s, should contain 'themes'", dir)
 		}
 	})
 
 	config := plugintesting.TestConfig{
 		ExpectedName:       "gnome-shell",
-		ExpectedFiles:      []string{"gnome-shell.css"},
+		ExpectedFiles:      []string{"tinct-a/gnome-shell/gnome-shell.css", "tinct-b/gnome-shell/gnome-shell.css"},
 		ExpectedBinaryName: "gnome-shell",
 	}
 

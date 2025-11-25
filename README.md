@@ -135,7 +135,7 @@ tinct generate -i google-genai \
 
 ```bash
 # Add official plugin repository
-tinct plugins repo add official https://github.com/jmylchreest/tinct-plugins
+tinct plugins repo add official https://raw.githubusercontent.com/jmylchreest/tinct-plugins/refs/heads/main/repository/repository.json
 
 # List all plugins
 tinct plugins list

@@ -98,7 +98,7 @@ func (p *Plugin) DefaultOutputDir() string {
 	if err != nil {
 		return ".local/share/themes/tinct/gnome-shell"
 	}
-	return filepath.Join(home, ".local", "share", "themes", "tinct", "gnome-shell")
+	return filepath.Join(home, ".local", "share", "themes")
 }
 
 // PreExecute checks if GNOME Shell and User Themes extension are installed.
@@ -140,7 +140,18 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	}
 
 	if !userExists && !systemExists {
-		return true, fmt.Sprintf("User Themes extension is not installed. Install with: gnome-extensions install %s", userThemeExtensionID), nil
+		return true, "User Themes extension is not installed. Install with:\n  Fedora/RHEL: sudo dnf install gnome-shell-extension-user-theme\n  Ubuntu/Debian: sudo apt install gnome-shell-extension-user-theme\n  Arch: sudo pacman -S gnome-shell-extension-user-theme\n  Or via browser: https://extensions.gnome.org/extension/19/user-themes/", nil
+	}
+
+	// Check if User Themes extension is enabled
+	cmd := exec.Command("gnome-extensions", "info", userThemeExtensionID)
+	output, err := cmd.Output()
+	if err == nil {
+		// Parse the output to check if State: ENABLED
+		outputStr := string(output)
+		if !strings.Contains(outputStr, "State: ENABLED") && !strings.Contains(outputStr, "State: ACTIVE") {
+			return true, fmt.Sprintf("User Themes extension is installed but not enabled. Enable with:\n  gnome-extensions enable %s\n  Then log out and back in", userThemeExtensionID), nil
+		}
 	}
 
 	return false, "", nil
@@ -159,7 +170,10 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate GNOME Shell CSS: %w", err)
 	}
-	files["gnome-shell.css"] = cssContent
+
+	// Generate both tinct-a and tinct-b themes to allow flicker-free toggling
+	files["tinct-a/gnome-shell/gnome-shell.css"] = cssContent
+	files["tinct-b/gnome-shell/gnome-shell.css"] = cssContent
 
 	return files, nil
 }
@@ -221,22 +235,40 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		currentTheme = strings.Trim(strings.TrimSpace(string(output)), "'\"")
 	}
 
-	// Only apply the theme if it's not already set to 'tinct'
-	if currentTheme != "tinct" {
+	// Determine which theme to switch to (alternate between tinct-a and tinct-b)
+	var targetTheme string
+	themeChanged := false
+
+	if currentTheme != "tinct-a" && currentTheme != "tinct-b" {
+		// Not currently using tinct, start with tinct-a
+		targetTheme = "tinct-a"
+		themeChanged = true
 		if currentTheme != "" && p.verbose {
 			fmt.Fprintf(os.Stderr, "   Previous GNOME Shell theme: %s\n", currentTheme)
 		}
-
-		cmd = exec.CommandContext(ctx, "gsettings", "set",
-			"org.gnome.shell.extensions.user-theme", "name", "tinct")
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to set GNOME Shell theme: %w", err)
+	} else {
+		// Already using tinct, toggle between a and b to reload CSS
+		if currentTheme == "tinct-a" {
+			targetTheme = "tinct-b"
+		} else {
+			targetTheme = "tinct-a"
 		}
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Toggling theme from %s to %s to reload CSS...\n", currentTheme, targetTheme)
+		}
+	}
 
-		// Always show when we actually change the theme
-		fmt.Fprintf(os.Stderr, "   gsettings: GNOME Shell theme applied: tinct\n")
-	} else if p.verbose {
-		fmt.Fprintf(os.Stderr, "   GNOME Shell theme already set to: tinct\n")
+	// Set the theme
+	cmd = exec.CommandContext(ctx, "gsettings", "set",
+		"org.gnome.shell.extensions.user-theme", "name", targetTheme)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to set GNOME Shell theme: %w", err)
+	}
+
+	if themeChanged {
+		fmt.Fprintf(os.Stderr, "   gsettings: GNOME Shell theme applied: %s\n", targetTheme)
+	} else {
+		fmt.Fprintf(os.Stderr, "   gsettings: GNOME Shell theme reloaded: %s\n", targetTheme)
 	}
 
 	// Set wallpaper if available

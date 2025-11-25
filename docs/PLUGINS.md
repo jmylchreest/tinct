@@ -131,13 +131,59 @@ plasma-apply-colorscheme TinctDark  # or TinctLight
 
 Generates GNOME Shell theme with automatic application.
 
+**Requirements:**
+- GNOME Shell installed
+- User Themes extension installed and enabled
+
+**Installation:**
+```bash
+# Fedora/RHEL
+sudo dnf install gnome-shell-extension-user-theme
+
+# Ubuntu/Debian
+sudo apt install gnome-shell-extension-user-theme
+
+# Arch
+sudo pacman -S gnome-shell-extension-user-theme
+
+# Or via browser
+# Visit https://extensions.gnome.org/extension/19/user-themes/
+```
+
+After installation, enable the extension:
+```bash
+gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com
+```
+
+Then log out and back in (or restart GNOME Shell on X11 with `Alt+F2` → `r`).
+
+**Usage:**
+```bash
+# Generate GNOME Shell theme
+tinct generate -i image -p wallpaper.jpg -o gnome-shell
+```
+
 **Features:**
 - Automatic gsettings application
-- User theme extension detection
+- User theme extension detection and validation
 - Wallpaper integration
-- Shell reload on change
+- Flicker-free theme reloading via A/B theme switching
 
-**Output:** `~/.themes/tinct-gnome-shell/gnome-shell/gnome-shell.css`
+**Output:** 
+- `~/.local/share/themes/tinct-a/gnome-shell/gnome-shell.css`
+- `~/.local/share/themes/tinct-b/gnome-shell/gnome-shell.css`
+
+(User Themes extension searches `~/.themes` and `~/.local/share/themes` - both locations are valid)
+
+**How Theme Reloading Works:**
+
+The plugin generates two identical themes (`tinct-a` and `tinct-b`) and alternates between them when updating. This approach:
+
+1. Avoids visual flashing that would occur when switching to the default theme
+2. Forces the user-theme extension to reload the CSS (which only watches gsettings changes, not file changes)
+3. Provides seamless theme updates without requiring manual shell restarts
+
+The user-theme extension monitors the `org.gnome.shell.extensions.user-theme name` gsettings key. When this value changes, it reloads the theme CSS. By toggling between `tinct-a` and `tinct-b`, tinct can update the theme appearance without the user seeing any intermediate default theme.
 
 #### gtk3 / gtk4 / libadwaita Plugins
 
@@ -227,7 +273,7 @@ tinct plugins list
 tinct plugins install <github-user>/<repo>
 
 # Add plugin repository
-tinct plugins repo add official https://github.com/jmylchreest/tinct-plugins
+tinct plugins repo add official https://raw.githubusercontent.com/jmylchreest/tinct-plugins/refs/heads/main/repository/repository.json
 
 # Sync plugins
 tinct plugins sync

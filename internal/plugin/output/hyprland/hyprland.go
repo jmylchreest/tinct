@@ -215,6 +215,17 @@ func (p *Plugin) generateStubConfig(themeData *colour.ThemeData) ([]byte, error)
 // PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
+	// Check if hyprland config directory exists to determine if Hyprland is installed.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return true, "cannot determine home directory", nil
+	}
+
+	hyprConfigDir := filepath.Join(home, ".config", "hypr")
+	if _, err := os.Stat(hyprConfigDir); os.IsNotExist(err) {
+		return true, "hyprland config directory not found (hyprland may not be installed)", nil
+	}
+
 	// Check if hyprctl executable exists on PATH (needed for reload).
 	_, err = exec.LookPath("hyprctl")
 	if err != nil {
@@ -223,12 +234,12 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 		}
 	}
 
-	// Check if config directory exists - create it if needed.
+	// Check if themes subdirectory exists - create it if needed.
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the directory.
+		// Try to create the themes directory.
 		if err := os.MkdirAll(configDir, 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
-			return true, fmt.Sprintf("hyprland config directory does not exist and cannot be created: %s", configDir), nil
+			return true, fmt.Sprintf("hyprland themes directory cannot be created: %s", configDir), nil
 		}
 	}
 
