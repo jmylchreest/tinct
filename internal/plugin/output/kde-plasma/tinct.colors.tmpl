@@ -8,9 +8,17 @@
 {{- if has . "surface" }}{{ $surface = get . "surface" }}{{ end -}}
 {{- $surfaceVariant := $surface -}}
 {{- if has . "surfaceVariant" }}{{ $surfaceVariant = get . "surfaceVariant" }}{{ end -}}
+{{- /* Muted accents for hover states and backgrounds */ -}}
+{{- $accent1Muted := $accent1 -}}
+{{- if has . "accent1Muted" }}{{ $accent1Muted = get . "accent1Muted" }}{{ end -}}
 {{- /* Additional accents for visited links and hover states */ -}}
 {{- $accent2 := $accent1 -}}
 {{- if has . "accent2" }}{{ $accent2 = get . "accent2" }}{{ end -}}
+{{- $accent2Muted := $accent2 -}}
+{{- if has . "accent2Muted" }}{{ $accent2Muted = get . "accent2Muted" }}{{ end -}}
+{{- /* Subtle hover color for views - use backgroundMuted or surfaceVariant */ -}}
+{{- $subtleHover := $surfaceVariant -}}
+{{- if has . "backgroundMuted" }}{{ $subtleHover = get . "backgroundMuted" }}{{ end -}}
 {{- /* Border/outline roles - prefer outline, then border, then muted foreground */ -}}
 {{- $border := $fg -}}
 {{- if has . "outline" }}{{ $border = get . "outline" }}{{ else if has . "border" }}{{ $border = get . "border" }}{{ else if has . "foregroundMuted" }}{{ $border = get . "foregroundMuted" }}{{ end -}}
@@ -132,7 +140,7 @@ ForegroundVisited={{ $accent2 | rgbDecimal }}
 BackgroundAlternate={{ $surface | rgbDecimal }}
 BackgroundNormal={{ $bg | rgbDecimal }}
 DecorationFocus={{ $accent1 | rgbDecimal }}
-DecorationHover={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $subtleHover | rgbDecimal }}
 ForegroundActive={{ $fg | rgbDecimal }}
 ForegroundInactive={{ $border | rgbDecimal }}
 ForegroundLink={{ $accent1 | rgbDecimal }}
