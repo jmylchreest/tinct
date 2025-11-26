@@ -17,7 +17,7 @@ var templatesFS embed.FS
 // runPlugin runs in Tinct plugin mode (legacy JSON-stdio, deprecated)
 func runPlugin() error {
 	// Read palette from stdin (JSON)
-	var palette map[string]interface{}
+	var palette map[string]any
 	decoder := json.NewDecoder(os.Stdin)
 	if err := decoder.Decode(&palette); err != nil {
 		return fmt.Errorf("failed to decode palette: %w", err)
@@ -58,7 +58,7 @@ func runPlugin() error {
 }
 
 // generateWobThemeFromMap creates wob INI content from palette map (JSON-stdio mode)
-func generateWobThemeFromMap(palette map[string]interface{}) (string, error) {
+func generateWobThemeFromMap(palette map[string]any) (string, error) {
 	// Load template from embedded filesystem
 	tmplContent, err := templatesFS.ReadFile("templates/tinct.ini.tmpl")
 	if err != nil {
@@ -68,8 +68,8 @@ func generateWobThemeFromMap(palette map[string]interface{}) (string, error) {
 	// Helper to get hex color from nested palette structure
 	getColor := func(key string) string {
 		// Access palette.colours[key].hex
-		if colours, ok := palette["colours"].(map[string]interface{}); ok {
-			if colorObj, ok := colours[key].(map[string]interface{}); ok {
+		if colours, ok := palette["colours"].(map[string]any); ok {
+			if colorObj, ok := colours[key].(map[string]any); ok {
 				if hex, ok := colorObj["hex"].(string); ok {
 					return strings.TrimPrefix(hex, "#")
 				}

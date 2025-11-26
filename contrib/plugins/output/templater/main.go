@@ -138,7 +138,7 @@ func runLegacyMode() {
 }
 
 // getConfigPath returns the config file path from plugin args or default location
-func getConfigPath(args map[string]interface{}) string {
+func getConfigPath(args map[string]any) string {
 	// Check plugin args first
 	if configPath, ok := args["config"].(string); ok && configPath != "" {
 		return expandPathSimple(configPath)
@@ -176,9 +176,9 @@ func expandPathSimple(path string) string {
 }
 
 // applyPluginArgs applies plugin arguments to override config settings
-func applyPluginArgs(config *Config, args map[string]interface{}) {
+func applyPluginArgs(config *Config, args map[string]any) {
 	// Filter templates by name if specified
-	if templates, ok := args["templates"].([]interface{}); ok {
+	if templates, ok := args["templates"].([]any); ok {
 		enabled := make(map[string]bool)
 		for _, t := range templates {
 			if name, ok := t.(string); ok {
@@ -194,7 +194,7 @@ func applyPluginArgs(config *Config, args map[string]interface{}) {
 	}
 
 	// Skip specific templates if specified
-	if skip, ok := args["skip"].([]interface{}); ok {
+	if skip, ok := args["skip"].([]any); ok {
 		skipMap := make(map[string]bool)
 		for _, s := range skip {
 			if name, ok := s.(string); ok {

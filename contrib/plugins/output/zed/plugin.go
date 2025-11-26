@@ -85,11 +85,11 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		}
 
 		// Combine both themes
-		combined := map[string]interface{}{
+		combined := map[string]any{
 			"$schema": "https://zed.dev/schema/themes/v0.2.0.json",
 			"name":    "Tinct",
 			"author":  "Tinct Color Generator",
-			"themes":  []interface{}{primaryThemeObj, alternateThemeObj},
+			"themes":  []any{primaryThemeObj, alternateThemeObj},
 		}
 
 		combinedJSON, err := json.MarshalIndent(combined, "", "  ")
@@ -101,11 +101,11 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 	}
 
 	// Single theme mode - marshal the full theme file
-	singleTheme := map[string]interface{}{
+	singleTheme := map[string]any{
 		"$schema": "https://zed.dev/schema/themes/v0.2.0.json",
 		"name":    "Tinct",
 		"author":  "Tinct Color Generator",
-		"themes":  []interface{}{primaryThemeObj},
+		"themes":  []any{primaryThemeObj},
 	}
 
 	singleJSON, err := json.MarshalIndent(singleTheme, "", "  ")
@@ -147,25 +147,25 @@ func (p *Plugin) loadTemplate(verbose bool) (*template.Template, error) {
 }
 
 // executeTemplate executes the template and extracts the theme object.
-func (p *Plugin) executeTemplate(tmpl *template.Template, themeData *colour.ThemeData) (map[string]interface{}, error) {
+func (p *Plugin) executeTemplate(tmpl *template.Template, themeData *colour.ThemeData) (map[string]any, error) {
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
 
 	// Parse the generated JSON
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
 		return nil, fmt.Errorf("failed to parse generated JSON: %w", err)
 	}
 
 	// Extract the theme object from the themes array
-	themes, ok := result["themes"].([]interface{})
+	themes, ok := result["themes"].([]any)
 	if !ok || len(themes) == 0 {
 		return nil, fmt.Errorf("invalid theme structure: missing themes array")
 	}
 
-	themeObj, ok := themes[0].(map[string]interface{})
+	themeObj, ok := themes[0].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("invalid theme object structure")
 	}
@@ -241,7 +241,7 @@ func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
 // stdLogger implements the Logger interface for template loading.
 type stdLogger struct{}
 
-func (l *stdLogger) Printf(format string, args ...interface{}) {
+func (l *stdLogger) Printf(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 

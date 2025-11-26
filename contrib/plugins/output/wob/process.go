@@ -43,7 +43,7 @@ func isWobRunning() (bool, error) {
 
 // writePIDFile writes the PID to the PID file
 func writePIDFile(paths *RuntimePaths, pid int) error {
-	return os.WriteFile(paths.PID, []byte(fmt.Sprintf("%d\n", pid)), 0600)
+	return os.WriteFile(paths.PID, fmt.Appendf(nil, "%d\n", pid), 0600)
 }
 
 // lookupWobBinary finds the wob binary on PATH

@@ -129,7 +129,7 @@ func (tp *TemplateProcessor) processTemplate(tmplConfig TemplateConfig, themeDat
 func templateFuncs() template.FuncMap {
 	return template.FuncMap{
 		// get - Get color by role name
-		"get": func(data interface{}, role string) (*ColorValue, error) {
+		"get": func(data any, role string) (*ColorValue, error) {
 			td, ok := data.(*ThemeData)
 			if !ok {
 				return nil, fmt.Errorf("get: expected *ThemeData, got %T", data)
@@ -142,7 +142,7 @@ func templateFuncs() template.FuncMap {
 		},
 
 		// has - Check if color role exists
-		"has": func(data interface{}, role string) bool {
+		"has": func(data any, role string) bool {
 			td, ok := data.(*ThemeData)
 			if !ok {
 				return false
@@ -152,7 +152,7 @@ func templateFuncs() template.FuncMap {
 		},
 
 		// themeType - Get theme type string
-		"themeType": func(data interface{}) string {
+		"themeType": func(data any) string {
 			td, ok := data.(*ThemeData)
 			if !ok {
 				return "unknown"
@@ -173,7 +173,7 @@ func templateFuncs() template.FuncMap {
 		},
 
 		// ansi - Get ANSI color code (for terminal themes)
-		"ansi": func(data interface{}, index int) (*ColorValue, error) {
+		"ansi": func(data any, index int) (*ColorValue, error) {
 			td, ok := data.(*ThemeData)
 			if !ok {
 				return nil, fmt.Errorf("ansi: expected *ThemeData, got %T", data)

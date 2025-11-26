@@ -10,7 +10,7 @@ type PaletteInput struct {
 	Colours    map[string]CategorisedColour `json:"colours"`
 	AllColours []CategorisedColour          `json:"all_colours"`
 	ThemeType  int                          `json:"theme_type"`
-	PluginArgs map[string]interface{}       `json:"plugin_args"`
+	PluginArgs map[string]any               `json:"plugin_args"`
 	DryRun     bool                         `json:"dry_run"`
 }
 
