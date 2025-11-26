@@ -25,7 +25,7 @@
 {{- $success := ansi . "green" -}}
 {{- if has . "success" }}{{ $success = get . "success" }}{{ end -}}
 [ColorEffects:Disabled]
-Color={{ $surface | rgb }}
+Color={{ $surface | rgbDecimal }}
 ColorAmount=0.5
 ColorEffect=3
 ContrastAmount=0
@@ -35,7 +35,7 @@ IntensityEffect=0
 
 [ColorEffects:Inactive]
 ChangeSelectionColor=true
-Color={{ $surface | rgb }}
+Color={{ $surface | rgbDecimal }}
 ColorAmount=0.025
 ColorEffect=0
 ContrastAmount=0.1
@@ -45,116 +45,116 @@ IntensityAmount=0
 IntensityEffect=0
 
 [Colors:Button]
-BackgroundAlternate={{ $surfaceVariant | rgb }}
-BackgroundNormal={{ $surface | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent1 | rgb }}
-ForegroundActive={{ $fg | rgb }}
-ForegroundInactive={{ $border | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $fg | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $surfaceVariant | rgbDecimal }}
+BackgroundNormal={{ $surface | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent1 | rgbDecimal }}
+ForegroundActive={{ $fg | rgbDecimal }}
+ForegroundInactive={{ $border | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $fg | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [Colors:Complementary]
-BackgroundAlternate={{ $bg | rgb }}
-BackgroundNormal={{ $surface | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent1 | rgb }}
-ForegroundActive={{ $fg | rgb }}
-ForegroundInactive={{ $border | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $fg | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $bg | rgbDecimal }}
+BackgroundNormal={{ $surface | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent1 | rgbDecimal }}
+ForegroundActive={{ $fg | rgbDecimal }}
+ForegroundInactive={{ $border | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $fg | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [Colors:Header]
-BackgroundAlternate={{ $surface | rgb }}
-BackgroundNormal={{ $surface | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent1 | rgb }}
-ForegroundActive={{ $fg | rgb }}
-ForegroundInactive={{ $border | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $fg | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $surface | rgbDecimal }}
+BackgroundNormal={{ $surface | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent1 | rgbDecimal }}
+ForegroundActive={{ $fg | rgbDecimal }}
+ForegroundInactive={{ $border | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $fg | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [Colors:Header][Inactive]
-BackgroundAlternate={{ $surface | rgb }}
-BackgroundNormal={{ $surface | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent1 | rgb }}
-ForegroundActive={{ $fg | rgb }}
-ForegroundInactive={{ $border | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $fg | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $surface | rgbDecimal }}
+BackgroundNormal={{ $surface | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent1 | rgbDecimal }}
+ForegroundActive={{ $fg | rgbDecimal }}
+ForegroundInactive={{ $border | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $fg | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [Colors:Selection]
-BackgroundAlternate={{ $accent1 | rgb }}
-BackgroundNormal={{ $accent1 | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent2 | rgb }}
-ForegroundActive={{ $onAccent | rgb }}
-ForegroundInactive={{ $onAccent | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $onAccent | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $accent1 | rgbDecimal }}
+BackgroundNormal={{ $accent1 | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent2 | rgbDecimal }}
+ForegroundActive={{ $onAccent | rgbDecimal }}
+ForegroundInactive={{ $onAccent | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $onAccent | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [Colors:Tooltip]
-BackgroundAlternate={{ $surfaceVariant | rgb }}
-BackgroundNormal={{ $surface | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent1 | rgb }}
-ForegroundActive={{ $fg | rgb }}
-ForegroundInactive={{ $border | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $fg | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $surfaceVariant | rgbDecimal }}
+BackgroundNormal={{ $surface | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent1 | rgbDecimal }}
+ForegroundActive={{ $fg | rgbDecimal }}
+ForegroundInactive={{ $border | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $fg | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [Colors:View]
-BackgroundAlternate={{ $surface | rgb }}
-BackgroundNormal={{ $bg | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent1 | rgb }}
-ForegroundActive={{ $fg | rgb }}
-ForegroundInactive={{ $border | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $fg | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $surface | rgbDecimal }}
+BackgroundNormal={{ $bg | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent1 | rgbDecimal }}
+ForegroundActive={{ $fg | rgbDecimal }}
+ForegroundInactive={{ $border | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $fg | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [Colors:Window]
-BackgroundAlternate={{ $surfaceVariant | rgb }}
-BackgroundNormal={{ $surface | rgb }}
-DecorationFocus={{ $accent1 | rgb }}
-DecorationHover={{ $accent1 | rgb }}
-ForegroundActive={{ $accent1 | rgb }}
-ForegroundInactive={{ $border | rgb }}
-ForegroundLink={{ $accent1 | rgb }}
-ForegroundNegative={{ $danger | rgb }}
-ForegroundNeutral={{ $warning | rgb }}
-ForegroundNormal={{ $fg | rgb }}
-ForegroundPositive={{ $success | rgb }}
-ForegroundVisited={{ $accent2 | rgb }}
+BackgroundAlternate={{ $surfaceVariant | rgbDecimal }}
+BackgroundNormal={{ $surface | rgbDecimal }}
+DecorationFocus={{ $accent1 | rgbDecimal }}
+DecorationHover={{ $accent1 | rgbDecimal }}
+ForegroundActive={{ $accent1 | rgbDecimal }}
+ForegroundInactive={{ $border | rgbDecimal }}
+ForegroundLink={{ $accent1 | rgbDecimal }}
+ForegroundNegative={{ $danger | rgbDecimal }}
+ForegroundNeutral={{ $warning | rgbDecimal }}
+ForegroundNormal={{ $fg | rgbDecimal }}
+ForegroundPositive={{ $success | rgbDecimal }}
+ForegroundVisited={{ $accent2 | rgbDecimal }}
 
 [General]
 ColorScheme=Tinct{{ if eq (themeType .) "dark" }}Dark{{ else }}Light{{ end }}
@@ -165,9 +165,9 @@ shadeSortColumn=true
 contrast=4
 
 [WM]
-activeBackground={{ $surface | rgb }}
-activeBlend={{ $fg | rgb }}
-activeForeground={{ $fg | rgb }}
-inactiveBackground={{ $surfaceVariant | rgb }}
-inactiveBlend={{ $border | rgb }}
-inactiveForeground={{ $border | rgb }}
+activeBackground={{ $surface | rgbDecimal }}
+activeBlend={{ $fg | rgbDecimal }}
+activeForeground={{ $fg | rgbDecimal }}
+inactiveBackground={{ $surfaceVariant | rgbDecimal }}
+inactiveBlend={{ $border | rgbDecimal }}
+inactiveForeground={{ $border | rgbDecimal }}

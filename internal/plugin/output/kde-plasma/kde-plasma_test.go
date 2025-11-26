@@ -36,7 +36,7 @@ func TestKdePlasmaPlugin(t *testing.T) {
 
 	config := plugintesting.TestConfig{
 		ExpectedName:  "kde-plasma",
-		ExpectedFiles: []string{"TinctDark.colors"}, // Default test palette is dark theme
+		ExpectedFiles: []string{"TinctDark1.colors", "TinctDark2.colors"}, // Now generates both variants
 	}
 
 	// Run generation tests.

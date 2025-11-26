@@ -125,8 +125,9 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	return false, "", nil
 }
 
-// Generate creates the KDE Plasma color scheme file.
+// Generate creates the KDE Plasma color scheme files.
 // This is called when only a single theme variant is requested.
+// Generates both variant 1 and 2 to enable alternating for plasma-apply-colorscheme reload workaround.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -134,26 +135,31 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate the KDE color scheme file
-	colorsContent, err := p.generateColorScheme(themeData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate KDE color scheme: %w", err)
-	}
-
-	var themeName string
+	// Determine base theme name
+	var baseThemeName string
 	if themeData.ThemeType() == colour.ThemeDark {
-		themeName = "TinctDark"
+		baseThemeName = "TinctDark"
 	} else {
-		themeName = "TinctLight"
+		baseThemeName = "TinctLight"
 	}
 
-	files[themeName+".colors"] = colorsContent
+	// Generate both variants (workaround for plasma-apply-colorscheme not reloading same scheme name)
+	for variant := 1; variant <= 2; variant++ {
+		colorsContent, err := p.generateColorSchemeVariant(themeData, variant)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate KDE color scheme variant %d: %w", variant, err)
+		}
+
+		fileName := fmt.Sprintf("%s%d.colors", baseThemeName, variant)
+		files[fileName] = colorsContent
+	}
 
 	return files, nil
 }
 
 // GenerateDualTheme creates both light and dark KDE Plasma color scheme files.
 // This allows KDE to automatically switch themes based on system preference.
+// Generates both variant 1 and 2 for each theme to enable alternating for plasma-apply-colorscheme reload workaround.
 func (p *Plugin) GenerateDualTheme(primaryTheme, alternateTheme *colour.ThemeData) (map[string][]byte, error) {
 	if primaryTheme == nil {
 		return nil, fmt.Errorf("primary theme data cannot be nil")
@@ -164,43 +170,52 @@ func (p *Plugin) GenerateDualTheme(primaryTheme, alternateTheme *colour.ThemeDat
 
 	files := make(map[string][]byte)
 
-	// Generate primary theme
-	primaryContent, err := p.generateColorScheme(primaryTheme)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate primary color scheme: %w", err)
-	}
-
-	var primaryName string
+	// Determine base theme names
+	var primaryBaseName string
 	if primaryTheme.ThemeType() == colour.ThemeDark {
-		primaryName = "TinctDark"
+		primaryBaseName = "TinctDark"
 	} else {
-		primaryName = "TinctLight"
-	}
-	files[primaryName+".colors"] = primaryContent
-
-	// Generate alternate theme
-	alternateContent, err := p.generateColorScheme(alternateTheme)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate alternate color scheme: %w", err)
+		primaryBaseName = "TinctLight"
 	}
 
-	var alternateName string
+	var alternateBaseName string
 	if alternateTheme.ThemeType() == colour.ThemeDark {
-		alternateName = "TinctDark"
+		alternateBaseName = "TinctDark"
 	} else {
-		alternateName = "TinctLight"
+		alternateBaseName = "TinctLight"
 	}
-	files[alternateName+".colors"] = alternateContent
+
+	// Generate both variants for primary theme
+	for variant := 1; variant <= 2; variant++ {
+		primaryContent, err := p.generateColorSchemeVariant(primaryTheme, variant)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate primary color scheme variant %d: %w", variant, err)
+		}
+		fileName := fmt.Sprintf("%s%d.colors", primaryBaseName, variant)
+		files[fileName] = primaryContent
+	}
+
+	// Generate both variants for alternate theme
+	for variant := 1; variant <= 2; variant++ {
+		alternateContent, err := p.generateColorSchemeVariant(alternateTheme, variant)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate alternate color scheme variant %d: %w", variant, err)
+		}
+		fileName := fmt.Sprintf("%s%d.colors", alternateBaseName, variant)
+		files[fileName] = alternateContent
+	}
 
 	if p.verbose {
-		fmt.Fprintf(os.Stderr, "   Generated dual-theme: %s and %s\n", primaryName, alternateName)
+		fmt.Fprintf(os.Stderr, "   Generated dual-theme with variants: %s1/2 and %s1/2\n", primaryBaseName, alternateBaseName)
 	}
 
 	return files, nil
 }
 
-// generateColorScheme generates the KDE color scheme content.
-func (p *Plugin) generateColorScheme(themeData *colour.ThemeData) ([]byte, error) {
+// generateColorSchemeVariant generates the KDE color scheme content with a specific variant number.
+// The variant number (1 or 2) is used in the ColorScheme and Name fields to enable
+// the workaround for plasma-apply-colorscheme not reloading when the scheme name is unchanged.
+func (p *Plugin) generateColorSchemeVariant(themeData *colour.ThemeData, variant int) ([]byte, error) {
 	loader := tmplloader.New("kde-plasma", templates)
 	if p.verbose {
 		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
@@ -223,23 +238,44 @@ func (p *Plugin) generateColorScheme(themeData *colour.ThemeData) ([]byte, error
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	return buf.Bytes(), nil
+	// Post-process to add variant number to ColorScheme and Name
+	content := buf.String()
+
+	// Determine theme type
+	var themeType string
+	if themeData.ThemeType() == colour.ThemeDark {
+		themeType = "Dark"
+	} else {
+		themeType = "Light"
+	}
+
+	// Replace ColorScheme and Name to include variant
+	variantStr := fmt.Sprintf("%d", variant)
+	content = strings.Replace(content,
+		fmt.Sprintf("ColorScheme=Tinct%s\n", themeType),
+		fmt.Sprintf("ColorScheme=Tinct%s%s\n", themeType, variantStr), 1)
+	content = strings.Replace(content,
+		fmt.Sprintf("Name=Tinct %s\n", themeType),
+		fmt.Sprintf("Name=Tinct %s %s\n", themeType, variantStr), 1)
+
+	return []byte(content), nil
 }
 
 // PostExecute automatically applies the KDE Plasma color scheme.
 // When dual-theme is generated, it applies the theme matching the current system preference.
+// Uses variant alternating (1/2) to workaround plasma-apply-colorscheme not reloading same scheme name.
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error {
 	if execCtx.DryRun {
 		return nil
 	}
 
-	// Determine which theme files were generated
+	// Determine which theme files were generated (check for variants)
 	hasDark := false
 	hasLight := false
 	for _, file := range generatedFiles {
-		if strings.HasSuffix(file, "TinctDark.colors") {
+		if strings.Contains(file, "TinctDark") && strings.HasSuffix(file, ".colors") {
 			hasDark = true
-		} else if strings.HasSuffix(file, "TinctLight.colors") {
+		} else if strings.Contains(file, "TinctLight") && strings.HasSuffix(file, ".colors") {
 			hasLight = true
 		}
 	}
@@ -256,46 +292,54 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Warning: plasma-apply-colorscheme not found, theme not auto-applied\n")
 			if hasDark && hasLight {
-				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctDark (or TinctLight)\n")
+				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctDark1 (or TinctLight1)\n")
 			} else if hasDark {
-				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctDark\n")
+				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctDark1\n")
 			} else {
-				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctLight\n")
+				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctLight1\n")
 			}
 		}
 		return nil
 	}
 
-	// Determine which theme to apply
-	themeName := ""
+	// Determine base theme name (without variant) based on system preference
+	var baseThemeName string
 	if hasDark && hasLight {
 		// Dual-theme: detect system preference
-		themeName = p.detectSystemColorScheme(ctx)
-		if themeName == "" {
+		detected := p.detectSystemColorScheme(ctx)
+		if strings.Contains(detected, "Dark") {
+			baseThemeName = "TinctDark"
+		} else if strings.Contains(detected, "Light") {
+			baseThemeName = "TinctLight"
+		} else {
 			// Couldn't detect, default to dark
-			themeName = "TinctDark"
+			baseThemeName = "TinctDark"
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   Could not detect system color preference, defaulting to TinctDark\n")
 			}
 		}
 	} else if hasDark {
-		themeName = "TinctDark"
+		baseThemeName = "TinctDark"
 	} else {
-		themeName = "TinctLight"
+		baseThemeName = "TinctLight"
 	}
 
+	// Determine which variant to apply by checking current scheme
+	variantToApply := p.determineVariantToApply(ctx, baseThemeName)
+	themeNameToApply := fmt.Sprintf("%s%d", baseThemeName, variantToApply)
+
 	// Apply the color scheme
-	cmd := exec.CommandContext(ctx, "plasma-apply-colorscheme", themeName)
+	cmd := exec.CommandContext(ctx, "plasma-apply-colorscheme", themeNameToApply)
 	if err := cmd.Run(); err != nil {
 		// Don't fail, just warn
 		if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Warning: Failed to apply color scheme: %v\n", err)
-			fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme %s\n", themeName)
+			fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme %s\n", themeNameToApply)
 		}
 		return nil
 	}
 
-	fmt.Fprintf(os.Stderr, "   plasma-apply-colorscheme: Applied %s\n", themeName)
+	fmt.Fprintf(os.Stderr, "   plasma-apply-colorscheme: Applied %s\n", themeNameToApply)
 
 	// Apply wallpaper if available
 	if execCtx.WallpaperPath != "" {
@@ -332,6 +376,36 @@ func (p *Plugin) applyWallpaper(ctx context.Context, wallpaperPath string) error
 
 // detectSystemColorScheme detects the current KDE system color scheme preference.
 // Returns "TinctDark" or "TinctLight", or empty string if detection fails.
+// determineVariantToApply checks the currently applied color scheme and returns
+// the variant to apply (1 or 2). This implements the alternating workaround for
+// plasma-apply-colorscheme not reloading when the scheme name is unchanged.
+//
+// Logic:
+// - If current scheme is TinctDark1 or TinctLight1, return 2
+// - If current scheme is TinctDark2 or TinctLight2, return 1
+// - Otherwise (first run or different scheme), return 1
+func (p *Plugin) determineVariantToApply(ctx context.Context, baseThemeName string) int {
+	// Get current color scheme name
+	cmd := exec.CommandContext(ctx, "kreadconfig5", "--file", "kdeglobals", "--group", "General", "--key", "ColorScheme")
+	output, err := cmd.Output()
+	if err != nil {
+		// Can't determine, default to variant 1
+		return 1
+	}
+
+	currentScheme := strings.TrimSpace(string(output))
+
+	// Check if current scheme is one of our variants
+	if currentScheme == fmt.Sprintf("%s1", baseThemeName) {
+		return 2 // Switch to variant 2
+	} else if currentScheme == fmt.Sprintf("%s2", baseThemeName) {
+		return 1 // Switch to variant 1
+	}
+
+	// Not a Tinct variant, or first run - use variant 1
+	return 1
+}
+
 func (p *Plugin) detectSystemColorScheme(ctx context.Context) string {
 	// KDE stores color scheme preference in kdeglobals
 	// We can check if the current color scheme name contains "dark" or "light"

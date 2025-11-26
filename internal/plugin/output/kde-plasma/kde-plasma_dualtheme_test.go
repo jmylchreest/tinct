@@ -42,47 +42,61 @@ func TestGenerateDualTheme(t *testing.T) {
 		t.Fatalf("GenerateDualTheme() error = %v", err)
 	}
 
-	// Verify both files were generated
-	if len(files) != 2 {
-		t.Errorf("Expected 2 files, got %d", len(files))
+	// Verify all 4 variant files were generated (2 variants x 2 themes)
+	if len(files) != 4 {
+		t.Errorf("Expected 4 files (2 variants per theme), got %d", len(files))
 	}
 
-	// Verify TinctDark.colors exists
-	darkContent, hasDark := files["TinctDark.colors"]
+	// Verify TinctDark1.colors exists (check variant 1)
+	darkContent, hasDark := files["TinctDark1.colors"]
 	if !hasDark {
-		t.Error("Missing TinctDark.colors file")
+		t.Error("Missing TinctDark1.colors file")
 	} else {
 		// Verify it contains dark theme colors
 		content := string(darkContent)
-		if !strings.Contains(content, "Name=Tinct Dark") {
-			t.Errorf("TinctDark.colors missing 'Name=Tinct Dark'")
+		if !strings.Contains(content, "Name=Tinct Dark 1") {
+			t.Errorf("TinctDark1.colors missing 'Name=Tinct Dark 1'")
 		}
 		if !strings.Contains(content, "[General]") {
-			t.Error("TinctDark.colors missing [General] section")
+			t.Error("TinctDark1.colors missing [General] section")
 		}
-		// Check for dark background color (30,30,46) - using rgb() format
-		if !strings.Contains(content, "rgb(30, 30, 46)") {
-			t.Error("TinctDark.colors missing dark background color rgb(30, 30, 46)")
+		if !strings.Contains(content, "ColorScheme=TinctDark1") {
+			t.Error("TinctDark1.colors missing 'ColorScheme=TinctDark1'")
+		}
+		// Check for dark background color (30,30,46) - using rgbDecimal format
+		if !strings.Contains(content, "30,30,46") {
+			t.Error("TinctDark1.colors missing dark background color 30,30,46")
 		}
 	}
 
-	// Verify TinctLight.colors exists
-	lightContent, hasLight := files["TinctLight.colors"]
+	// Verify TinctLight1.colors exists
+	lightContent, hasLight := files["TinctLight1.colors"]
 	if !hasLight {
-		t.Error("Missing TinctLight.colors file")
+		t.Error("Missing TinctLight1.colors file")
 	} else {
 		// Verify it contains light theme colors
 		content := string(lightContent)
-		if !strings.Contains(content, "Name=Tinct Light") {
-			t.Errorf("TinctLight.colors missing 'Name=Tinct Light'")
+		if !strings.Contains(content, "Name=Tinct Light 1") {
+			t.Errorf("TinctLight1.colors missing 'Name=Tinct Light 1'")
 		}
 		if !strings.Contains(content, "[General]") {
-			t.Error("TinctLight.colors missing [General] section")
+			t.Error("TinctLight1.colors missing [General] section")
 		}
-		// Check for light background color (239,241,245) - using rgb() format
-		if !strings.Contains(content, "rgb(239, 241, 245)") {
-			t.Error("TinctLight.colors missing light background color rgb(239, 241, 245)")
+		if !strings.Contains(content, "ColorScheme=TinctLight1") {
+			t.Error("TinctLight1.colors missing 'ColorScheme=TinctLight1'")
 		}
+		// Check for light background color (239,241,245) - using rgbDecimal format
+		if !strings.Contains(content, "239,241,245") {
+			t.Error("TinctLight1.colors missing light background color 239,241,245")
+		}
+	}
+
+	// Verify variant 2 files also exist
+	if _, ok := files["TinctDark2.colors"]; !ok {
+		t.Error("Missing TinctDark2.colors file")
+	}
+	if _, ok := files["TinctLight2.colors"]; !ok {
+		t.Error("Missing TinctLight2.colors file")
 	}
 }
 
