@@ -17,6 +17,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -97,20 +98,18 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // PreExecute checks if the qt5ct config directory exists.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if qt5ct config directory exists
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return true, "Could not determine home directory", nil
+		return true, "cannot determine home directory", nil
 	}
 
 	qt5ctConfigDir := filepath.Join(home, ".config", "qt5ct")
-	if _, err := os.Stat(qt5ctConfigDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf(
-			"qt5ct config directory does not exist (%s). Install qt5ct first:\n"+
-				"  Arch/CachyOS: sudo pacman -S qt5ct\n"+
-				"  Then set: export QT_QPA_PLATFORMTHEME=qt5ct",
-			qt5ctConfigDir,
-		), nil
+
+	// Check if qt5ct config directory exists
+	if !appdetect.IsPresentAll(nil, []string{qt5ctConfigDir}) {
+		return true, fmt.Sprintf("qt5ct config directory does not exist (%s). Install qt5ct first:\n"+
+			"  Arch/CachyOS: sudo pacman -S qt5ct\n"+
+			"  Then set: export QT_QPA_PLATFORMTHEME=qt5ct", qt5ctConfigDir), nil
 	}
 
 	return false, "", nil

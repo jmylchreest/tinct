@@ -18,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -98,9 +99,15 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // PreExecute checks if the GTK4 config directory exists.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf("GTK4 config directory does not exist (%s). Install a GTK4 application first.", configDir), nil
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return true, "cannot determine home directory", nil
+	}
+
+	gtk4ConfigDir := filepath.Join(home, ".config", "gtk-4.0")
+
+	if !appdetect.IsPresentAll(nil, []string{gtk4ConfigDir}) {
+		return true, fmt.Sprintf("GTK4 config directory does not exist (%s). Install a GTK4 application first.", gtk4ConfigDir), nil
 	}
 
 	return false, "", nil

@@ -20,6 +20,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -102,43 +103,30 @@ func (p *Plugin) DefaultOutputDir() string {
 
 // PreExecute checks if GNOME Shell and User Themes extension are installed.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if gnome-shell is installed (not running, just installed)
-	_, err = exec.LookPath("gnome-shell")
-	if err != nil {
-		return true, "gnome-shell is not installed", nil
-	}
-
-	// Check if gsettings exists (required for applying theme/wallpaper)
-	_, err = exec.LookPath("gsettings")
-	if err != nil {
-		return true, "gsettings command not found. Install gsettings (part of glib package).", nil
-	}
-
-	// Check if gnome-extensions command exists
-	_, err = exec.LookPath("gnome-extensions")
-	if err != nil {
-		return true, "gnome-extensions command not found. Install gnome-shell-extensions package.", nil
+	// Check if all required binaries are installed
+	if !appdetect.IsPresentAll([]string{"gnome-shell", "gsettings", "gnome-extensions"}, nil) {
+		if !appdetect.IsPresentAny([]string{"gnome-shell"}, nil) {
+			return true, "gnome-shell is not installed", nil
+		}
+		if !appdetect.IsPresentAny([]string{"gsettings"}, nil) {
+			return true, "gsettings command not found. Install gsettings (part of glib package).", nil
+		}
+		if !appdetect.IsPresentAny([]string{"gnome-extensions"}, nil) {
+			return true, "gnome-extensions command not found. Install gnome-shell-extensions package.", nil
+		}
 	}
 
 	// Check if User Themes extension exists (not necessarily enabled)
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return true, "Could not determine home directory", nil
+		return true, "cannot determine home directory", nil
 	}
+
 	userThemesPath := filepath.Join(home, ".local", "share", "gnome-shell", "extensions", userThemeExtensionID)
 	systemThemesPath := filepath.Join("/usr/share/gnome-shell/extensions", userThemeExtensionID)
 
-	userExists := false
-	systemExists := false
-
-	if _, err := os.Stat(userThemesPath); err == nil {
-		userExists = true
-	}
-	if _, err := os.Stat(systemThemesPath); err == nil {
-		systemExists = true
-	}
-
-	if !userExists && !systemExists {
+	// Check both user and system installation locations
+	if !appdetect.IsPresentAny(nil, []string{userThemesPath, systemThemesPath}) {
 		return true, "User Themes extension is not installed. Install with:\n  Fedora/RHEL: sudo dnf install gnome-shell-extension-user-theme\n  Ubuntu/Debian: sudo apt install gnome-shell-extension-user-theme\n  Arch: sudo pacman -S gnome-shell-extension-user-theme\n  Or via browser: https://extensions.gnome.org/extension/19/user-themes/", nil
 	}
 

@@ -6,51 +6,136 @@ import (
 	"testing"
 )
 
-func TestIsPresent_NativeBinary(t *testing.T) {
-	// Test with a binary that should exist on most systems
-	if !IsPresent("ls", "") {
-		t.Error("IsPresent() should detect 'ls' binary on PATH")
+func TestIsPresentAny_Binaries(t *testing.T) {
+	// Should find at least one existing binary
+	if !IsPresentAny([]string{"ls", "nonexistent"}, nil) {
+		t.Error("IsPresentAny() should find 'ls' in list of binaries")
 	}
 
-	// Test with a binary that definitely doesn't exist
-	if IsPresent("definitely-not-a-real-binary-name-12345", "") {
-		t.Error("IsPresent() should not detect non-existent binary")
-	}
-}
-
-func TestIsPresent_ConfigDir(t *testing.T) {
-	// Create a temporary directory
-	tmpDir := t.TempDir()
-
-	// Test with existing directory
-	if !IsPresent("", tmpDir) {
-		t.Errorf("IsPresent() should detect existing directory: %s", tmpDir)
+	// Should return false when all binaries don't exist
+	if IsPresentAny([]string{"nonexistent1", "nonexistent2"}, nil) {
+		t.Error("IsPresentAny() should return false when no binaries exist")
 	}
 
-	// Test with non-existent directory
-	if IsPresent("", filepath.Join(tmpDir, "nonexistent")) {
-		t.Error("IsPresent() should not detect non-existent directory")
+	// Should handle empty slice
+	if IsPresentAny([]string{}, nil) {
+		t.Error("IsPresentAny() should return false for empty slices")
+	}
+
+	// Should skip empty strings
+	if !IsPresentAny([]string{"", "ls", ""}, nil) {
+		t.Error("IsPresentAny() should skip empty strings and find 'ls'")
 	}
 }
 
-func TestIsPresent_BothMethods(t *testing.T) {
+func TestIsPresentAny_Directories(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpDir2 := filepath.Join(tmpDir, "subdir")
+	if err := os.Mkdir(tmpDir2, 0755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+
+	// Should find at least one existing directory
+	if !IsPresentAny(nil, []string{tmpDir, "/nonexistent"}) {
+		t.Errorf("IsPresentAny() should find existing directory: %s", tmpDir)
+	}
+
+	// Should return false when all directories don't exist
+	if IsPresentAny(nil, []string{"/nonexistent1", "/nonexistent2"}) {
+		t.Error("IsPresentAny() should return false when no directories exist")
+	}
+
+	// Should skip empty strings
+	if !IsPresentAny(nil, []string{"", tmpDir, ""}) {
+		t.Errorf("IsPresentAny() should skip empty strings and find directory: %s", tmpDir)
+	}
+}
+
+func TestIsPresentAny_BinariesAndDirectories(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Should succeed if either binary or dir exists
-	if !IsPresent("ls", tmpDir) {
-		t.Error("IsPresent() should return true when binary exists (even if dir check would fail)")
+	// Should succeed if binary exists (even if dir doesn't)
+	if !IsPresentAny([]string{"ls"}, []string{"/nonexistent"}) {
+		t.Error("IsPresentAny() should return true when binary exists")
+	}
+
+	// Should succeed if directory exists (even if binary doesn't)
+	if !IsPresentAny([]string{"nonexistent"}, []string{tmpDir}) {
+		t.Errorf("IsPresentAny() should return true when directory exists: %s", tmpDir)
 	}
 
 	// Should fail if neither exists
-	if IsPresent("nonexistent-binary", filepath.Join(tmpDir, "nonexistent")) {
-		t.Error("IsPresent() should return false when both checks fail")
+	if IsPresentAny([]string{"nonexistent"}, []string{"/nonexistent"}) {
+		t.Error("IsPresentAny() should return false when both checks fail")
 	}
 }
 
-func TestIsPresent_EmptyParams(t *testing.T) {
-	// Should return false if both params are empty
-	if IsPresent("", "") {
-		t.Error("IsPresent() should return false when both parameters are empty")
+func TestIsPresentAll_Binaries(t *testing.T) {
+	// Should require all binaries to exist
+	if !IsPresentAll([]string{"ls", "cat"}, nil) {
+		t.Error("IsPresentAll() should find both 'ls' and 'cat'")
+	}
+
+	// Should fail if any binary doesn't exist
+	if IsPresentAll([]string{"ls", "nonexistent"}, nil) {
+		t.Error("IsPresentAll() should return false when any binary doesn't exist")
+	}
+
+	// Should handle empty slice
+	if !IsPresentAll([]string{}, nil) {
+		t.Error("IsPresentAll() should return true for empty slices (vacuous truth)")
+	}
+
+	// Should skip empty strings
+	if !IsPresentAll([]string{"", "ls", ""}, nil) {
+		t.Error("IsPresentAll() should skip empty strings and check only 'ls'")
+	}
+}
+
+func TestIsPresentAll_Directories(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpDir2 := filepath.Join(tmpDir, "subdir")
+	if err := os.Mkdir(tmpDir2, 0755); err != nil {
+		t.Fatalf("Failed to create test directory: %v", err)
+	}
+
+	// Should require all directories to exist
+	if !IsPresentAll(nil, []string{tmpDir, tmpDir2}) {
+		t.Errorf("IsPresentAll() should find both directories: %s, %s", tmpDir, tmpDir2)
+	}
+
+	// Should fail if any directory doesn't exist
+	if IsPresentAll(nil, []string{tmpDir, "/nonexistent"}) {
+		t.Error("IsPresentAll() should return false when any directory doesn't exist")
+	}
+
+	// Should skip empty strings
+	if !IsPresentAll(nil, []string{"", tmpDir, ""}) {
+		t.Errorf("IsPresentAll() should skip empty strings and check only: %s", tmpDir)
+	}
+}
+
+func TestIsPresentAll_BinariesAndDirectories(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Should require both binary and directory to exist
+	if !IsPresentAll([]string{"ls"}, []string{tmpDir}) {
+		t.Errorf("IsPresentAll() should return true when both exist: ls, %s", tmpDir)
+	}
+
+	// Should fail if binary doesn't exist (even if dir does)
+	if IsPresentAll([]string{"nonexistent"}, []string{tmpDir}) {
+		t.Error("IsPresentAll() should return false when binary doesn't exist")
+	}
+
+	// Should fail if directory doesn't exist (even if binary does)
+	if IsPresentAll([]string{"ls"}, []string{"/nonexistent"}) {
+		t.Error("IsPresentAll() should return false when directory doesn't exist")
+	}
+
+	// Should fail if neither exists
+	if IsPresentAll([]string{"nonexistent"}, []string{"/nonexistent"}) {
+		t.Error("IsPresentAll() should return false when both don't exist")
 	}
 }
 
@@ -129,21 +214,27 @@ func TestDirExists(t *testing.T) {
 
 func TestGetInstallationType(t *testing.T) {
 	// Test native binary detection
-	installType := GetInstallationType("ls", "")
+	installType := GetInstallationType([]string{"ls"}, nil)
 	if installType != "native" {
-		t.Errorf("GetInstallationType(\"ls\", \"\") = %q, want \"native\"", installType)
+		t.Errorf("GetInstallationType([\"ls\"], nil) = %q, want \"native\"", installType)
 	}
 
-	// Test config-dir detection
+	// Test directory detection
 	tmpDir := t.TempDir()
-	installType = GetInstallationType("", tmpDir)
-	if installType != "config-dir" {
-		t.Errorf("GetInstallationType(\"\", tmpDir) = %q, want \"config-dir\"", installType)
+	installType = GetInstallationType(nil, []string{tmpDir})
+	if installType != "directory" {
+		t.Errorf("GetInstallationType(nil, [tmpDir]) = %q, want \"directory\"", installType)
 	}
 
 	// Test not found
-	installType = GetInstallationType("nonexistent", "/nonexistent")
+	installType = GetInstallationType([]string{"nonexistent"}, []string{"/nonexistent"})
 	if installType != "" {
-		t.Errorf("GetInstallationType(nonexistent) = %q, want \"\"", installType)
+		t.Errorf("GetInstallationType([\"nonexistent\"], [\"/nonexistent\"]) = %q, want \"\"", installType)
+	}
+
+	// Test priority: binary checks happen before directory
+	installType = GetInstallationType([]string{"ls"}, []string{tmpDir})
+	if installType != "native" {
+		t.Errorf("GetInstallationType([\"ls\"], [tmpDir]) = %q, want \"native\" (binary should take precedence)", installType)
 	}
 }

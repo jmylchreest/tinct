@@ -13,52 +13,112 @@ import (
 	"strings"
 )
 
-// IsPresent checks if an application is installed using multiple detection methods.
+// IsPresentAny checks if ANY of the specified binaries OR directories exist.
+// This is useful for checking if at least one of several optional components is present.
 //
 // Parameters:
-//   - binaryName: Name of the binary to look for on PATH (e.g., "ptyxis")
-//   - configDir: Configuration or data directory that indicates app is installed
-//     (e.g., "~/.local/share/org.gnome.Ptyxis/")
+//   - binaries: List of binary names to check (can be nil or empty)
+//   - directories: List of directories to check (can be nil or empty)
 //
-// Detection methods (in order):
-//  1. Native binary on PATH (if binaryName provided)
-//  2. Flatpak installation (if binaryName provided)
-//  3. AppImage in common locations (if binaryName provided)
-//  4. Configuration/data directory exists (if configDir provided)
-//
-// Returns true if any detection method succeeds.
+// Returns true if at least one binary OR directory is found.
+// Empty string entries in slices are ignored.
 //
 // Examples:
 //
-//	IsPresent("ptyxis", "")                                    // Check for ptyxis binary only
-//	IsPresent("", "~/.local/share/org.gnome.Ptyxis/")         // Check for config dir only
-//	IsPresent("ptyxis", "~/.local/share/org.gnome.Ptyxis/")   // Check both
-func IsPresent(binaryName, configDir string) bool {
-	// Check native PATH
-	if binaryName != "" {
-		if _, err := exec.LookPath(binaryName); err == nil {
+//	IsPresentAny([]string{"ptyxis", "kgx"}, nil)                   // Check for either binary
+//	IsPresentAny(nil, []string{"~/.config/hypr", "~/.config/i3"}) // Check for either config
+//	IsPresentAny([]string{"kitty"}, []string{"~/.config/kitty"})  // Check for binary OR config
+func IsPresentAny(binaries []string, directories []string) bool {
+	// Check binaries
+	for _, binary := range binaries {
+		if binary == "" {
+			continue
+		}
+
+		// Check native PATH
+		if _, err := exec.LookPath(binary); err == nil {
 			return true
 		}
 
 		// Check Flatpak
-		if isFlatpakInstalled(binaryName) {
+		if isFlatpakInstalled(binary) {
 			return true
 		}
 
-		// Check AppImage in common locations
-		if isAppImagePresent(binaryName) {
+		// Check AppImage
+		if isAppImagePresent(binary) {
 			return true
 		}
 	}
 
-	// Check config/data directory
-	if configDir != "" {
-		if dirExists(expandPath(configDir)) {
+	// Check directories
+	for _, dir := range directories {
+		if dir == "" {
+			continue
+		}
+		if dirExists(expandPath(dir)) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// IsPresentAll checks if ALL specified binaries AND directories exist.
+// This is useful for checking if all required components are present.
+//
+// Parameters:
+//   - binaries: List of binary names to check (can be nil or empty)
+//   - directories: List of directories to check (can be nil or empty)
+//
+// Returns true only if ALL non-empty binaries AND directories are found.
+// Empty string entries in slices are ignored.
+//
+// Examples:
+//
+//	IsPresentAll([]string{"kitty", "kitten"}, nil)                  // Require both binaries
+//	IsPresentAll(nil, []string{"~/.config/hypr"})                   // Require config dir
+//	IsPresentAll([]string{"ptyxis"}, []string{"~/.local/share/org.gnome.Ptyxis/"}) // Require both
+func IsPresentAll(binaries []string, directories []string) bool {
+	// Check all binaries
+	for _, binary := range binaries {
+		if binary == "" {
+			continue
+		}
+
+		found := false
+
+		// Check native PATH
+		if _, err := exec.LookPath(binary); err == nil {
+			found = true
+		}
+
+		// Check Flatpak
+		if !found && isFlatpakInstalled(binary) {
+			found = true
+		}
+
+		// Check AppImage
+		if !found && isAppImagePresent(binary) {
+			found = true
+		}
+
+		if !found {
+			return false
+		}
+	}
+
+	// Check all directories
+	for _, dir := range directories {
+		if dir == "" {
+			continue
+		}
+		if !dirExists(expandPath(dir)) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // isFlatpakInstalled checks if an application is installed via Flatpak.
@@ -176,25 +236,43 @@ func matchesPattern(s, pattern string) bool {
 }
 
 // GetInstallationType returns a string indicating how the application is installed.
-// Returns "native", "flatpak", "appimage", "config-dir", or "" if not found.
-func GetInstallationType(binaryName, configDir string) string {
-	if binaryName != "" {
-		if _, err := exec.LookPath(binaryName); err == nil {
+// Returns "native", "flatpak", "appimage", "directory", or "" if not found.
+//
+// Parameters:
+//   - binaries: List of binary names to check
+//   - directories: List of directories to check
+//
+// Examples:
+//
+//	GetInstallationType([]string{"ptyxis"}, nil)           // Check only for binary
+//	GetInstallationType(nil, []string{"/path/to/config"})  // Check only for directory
+func GetInstallationType(binaries []string, directories []string) string {
+	// Check binaries first
+	for _, binary := range binaries {
+		if binary == "" {
+			continue
+		}
+
+		if _, err := exec.LookPath(binary); err == nil {
 			return "native"
 		}
 
-		if isFlatpakInstalled(binaryName) {
+		if isFlatpakInstalled(binary) {
 			return "flatpak"
 		}
 
-		if isAppImagePresent(binaryName) {
+		if isAppImagePresent(binary) {
 			return "appimage"
 		}
 	}
 
-	if configDir != "" {
-		if dirExists(expandPath(configDir)) {
-			return "config-dir"
+	// Check directories
+	for _, dir := range directories {
+		if dir == "" {
+			continue
+		}
+		if dirExists(dir) {
+			return "directory"
 		}
 	}
 

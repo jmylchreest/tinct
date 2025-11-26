@@ -102,8 +102,15 @@ func (p *Plugin) DefaultOutputDir() string {
 // PreExecute checks if ptyxis is installed before generating the palette.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return true, "cannot determine home directory", nil
+	}
+
+	ptyxisDataDir := filepath.Join(home, ".local", "share", "org.gnome.Ptyxis")
+
 	// Check for ptyxis binary (native/PATH) and common Flatpak/config locations
-	if !appdetect.IsPresent("ptyxis", "~/.local/share/org.gnome.Ptyxis") {
+	if !appdetect.IsPresentAny([]string{"ptyxis"}, []string{ptyxisDataDir}) {
 		return true, "Ptyxis terminal is not installed", nil
 	}
 	return false, "", nil
@@ -170,7 +177,12 @@ func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext,
 	}
 
 	// Determine installation type to provide appropriate instructions
-	installType := appdetect.GetInstallationType("ptyxis", "~/.local/share/org.gnome.Ptyxis")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	ptyxisDataDir := filepath.Join(home, ".local", "share", "org.gnome.Ptyxis")
+	installType := appdetect.GetInstallationType([]string{"ptyxis"}, []string{ptyxisDataDir})
 
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")

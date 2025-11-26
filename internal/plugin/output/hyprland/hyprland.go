@@ -17,6 +17,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -214,14 +215,15 @@ func (p *Plugin) generateStubConfig(themeData *colour.ThemeData) ([]byte, error)
 // PreExecute checks if the config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if hyprland config directory exists to determine if Hyprland is installed.
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return true, "cannot determine home directory", nil
 	}
 
 	hyprConfigDir := filepath.Join(home, ".config", "hypr")
-	if _, err := os.Stat(hyprConfigDir); os.IsNotExist(err) {
+
+	// Check if hyprland config directory exists to determine if Hyprland is installed.
+	if !appdetect.IsPresentAll(nil, []string{hyprConfigDir}) {
 		return true, "Hyprland config directory not found (Hyprland may not be installed)", nil
 	}
 

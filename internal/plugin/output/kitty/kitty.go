@@ -155,7 +155,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if kitty executable exists (native, Flatpak, or AppImage).
-	if !appdetect.IsPresent("kitty", "") {
+	if !appdetect.IsPresentAny([]string{"kitty"}, nil) {
 		return true, "kitty executable not found on $PATH", nil
 	}
 

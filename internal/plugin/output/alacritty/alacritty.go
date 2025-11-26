@@ -157,7 +157,7 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if alacritty executable exists (native, Flatpak, or AppImage).
-	if !appdetect.IsPresent("alacritty", "") {
+	if !appdetect.IsPresentAny([]string{"alacritty"}, nil) {
 		return true, "alacritty executable not found on $PATH", nil
 	}
 
