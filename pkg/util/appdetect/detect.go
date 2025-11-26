@@ -150,8 +150,8 @@ func isFlatpakInstalled(appName string) bool {
 		}
 
 		// Check if any installed Flatpak matches the pattern
-		apps := strings.Split(string(output), "\n")
-		for _, app := range apps {
+		apps := strings.SplitSeq(string(output), "\n")
+		for app := range apps {
 			app = strings.TrimSpace(app)
 			if matchesPattern(app, pattern) {
 				return true

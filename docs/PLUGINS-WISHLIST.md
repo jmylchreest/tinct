@@ -10,6 +10,7 @@ The following plugins from this wishlist have been implemented and are available
 - ✅ **Alacritty** - Built-in plugin (`internal/plugin/output/alacritty`)
 - ✅ **Ghostty** - Built-in plugin (`internal/plugin/output/ghostty`)
 - ✅ **Kitty** - Built-in plugin (`internal/plugin/output/kitty`)
+- ✅ **Konsole** - Built-in plugin (`internal/plugin/output/konsole`)
 
 **Window Managers & Compositors:**
 - ✅ **Hyprland** - Built-in plugin (`internal/plugin/output/hyprland`)
@@ -113,6 +114,15 @@ The following plugins from this wishlist have been implemented and are available
 
 ### Desktop Environments
 
+#### KDE Icon Theme Switching
+- **Type**: Feature enhancement for kde-plasma plugin
+- **Implementation**: Use `plasma-changeicons` command to switch between Breeze (light) and Breeze-dark (dark) icon themes
+- **Popularity**: High - automatic icon theme switching improves KDE Plasma theming consistency
+- **Complexity**: Low - simple command execution based on light/dark theme detection
+- **Reference**: https://invent.kde.org/plasma/plasma-workspace/-/tree/master/shell/scripting
+- **Features**: Automatically switch icon themes when switching between light/dark color schemes
+- **Related**: Enhances kde-plasma plugin with complete theming experience
+
 #### Qt Themes
 - **Format**: Various (qss, conf)
 - **Config Location**: Platform-dependent
@@ -121,6 +131,15 @@ The following plugins from this wishlist have been implemented and are available
 - **Reference**: https://doc.qt.io/qt-6/stylesheet.html
 
 ### Development Tools
+
+#### KSyntaxHighlighting
+- **Format**: XML theme files
+- **Config Location**: `~/.local/share/org.kde.syntax-highlighting/themes/`
+- **Popularity**: High - used by Kate, KWrite, KDevelop, and other KDE applications
+- **Complexity**: Medium - XML format with comprehensive token scope mapping
+- **Reference**: https://api.kde.org/frameworks/syntax-highlighting/html/
+- **Features**: Provides syntax highlighting for 300+ languages across KDE applications
+- **Related**: Could integrate with kde-plasma plugin for unified KDE theming
 
 #### VS Code
 - **Format**: JSON
