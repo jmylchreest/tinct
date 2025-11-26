@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
@@ -68,8 +67,8 @@ func (p *Plugin) GetEmbeddedFS() any {
 }
 
 // GetFlagHelp returns help text for plugin flags.
-func (p *Plugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{
+func (p *Plugin) GetFlagHelp() []output.FlagHelp {
+	return []output.FlagHelp{
 		{
 			Name:        "kde-plasma.output-dir",
 			Type:        "string",
@@ -298,6 +297,36 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 
 	fmt.Fprintf(os.Stderr, "   plasma-apply-colorscheme: Applied %s\n", themeName)
 
+	// Apply wallpaper if available
+	if execCtx.WallpaperPath != "" {
+		if err := p.applyWallpaper(ctx, execCtx.WallpaperPath); err != nil {
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   Warning: Failed to apply wallpaper: %v\n", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// applyWallpaper applies the wallpaper using plasma-apply-wallpaperimage.
+func (p *Plugin) applyWallpaper(ctx context.Context, wallpaperPath string) error {
+	// Check if plasma-apply-wallpaperimage is available
+	if _, err := exec.LookPath("plasma-apply-wallpaperimage"); err != nil {
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Warning: plasma-apply-wallpaperimage not found, wallpaper not auto-applied\n")
+			fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-wallpaperimage %s\n", wallpaperPath)
+		}
+		return err
+	}
+
+	// Apply the wallpaper
+	cmd := exec.CommandContext(ctx, "plasma-apply-wallpaperimage", wallpaperPath)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to execute plasma-apply-wallpaperimage: %w", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "   plasma-apply-wallpaperimage: Applied %s\n", wallpaperPath)
 	return nil
 }
 
