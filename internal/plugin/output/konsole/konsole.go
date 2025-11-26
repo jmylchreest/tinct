@@ -7,7 +7,9 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -16,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/pkg/dbus"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
@@ -83,6 +86,137 @@ func (p *Plugin) GetFlagHelp() []output.FlagHelp {
 
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
+	return nil
+}
+
+// D-Bus helper functions for Konsole session management
+
+const (
+	// Konsole D-Bus service name pattern
+	konsoleServicePrefix = "org.kde.konsole"
+
+	// Konsole D-Bus interfaces
+	konsoleSessionInterface = "org.kde.konsole.Session"
+)
+
+// session represents a Konsole session accessible via D-Bus.
+type session struct {
+	ServiceName string
+	SessionPath string
+}
+
+// applyColorSchemeToAllSessions applies a color scheme to all active Konsole sessions via D-Bus.
+func applyColorSchemeToAllSessions(ctx context.Context, colorScheme string) (int, error) {
+	if !dbus.IsAvailable() {
+		return 0, nil
+	}
+
+	sessions, err := listSessions(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(sessions) == 0 {
+		return 0, nil
+	}
+
+	applied := 0
+	var lastErr error
+
+	for _, sess := range sessions {
+		if err := sess.setColorScheme(ctx, colorScheme); err != nil {
+			lastErr = err
+			continue
+		}
+		applied++
+	}
+
+	if applied == 0 && lastErr != nil {
+		return 0, fmt.Errorf("failed to apply color scheme to any session: %w", lastErr)
+	}
+
+	return applied, nil
+}
+
+// listSessions finds all active Konsole sessions on the session bus.
+func listSessions(ctx context.Context) ([]session, error) {
+	conn, err := dbus.SessionBus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to session bus: %w", err)
+	}
+	defer conn.Close()
+
+	// List all available names on the bus
+	names, err := conn.ListNames(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list bus names: %w", err)
+	}
+
+	var sessions []session
+
+	// Find all Konsole services (e.g., org.kde.konsole-12345)
+	for _, name := range names {
+		if !strings.HasPrefix(name, konsoleServicePrefix) {
+			continue
+		}
+
+		// Get session paths for this Konsole instance
+		sessionPaths, err := getSessionPaths(ctx, conn, name)
+		if err != nil {
+			// Skip this instance if we can't enumerate sessions
+			continue
+		}
+
+		for _, path := range sessionPaths {
+			sessions = append(sessions, session{
+				ServiceName: name,
+				SessionPath: path,
+			})
+		}
+	}
+
+	return sessions, nil
+}
+
+// getSessionPaths retrieves all session object paths for a Konsole service.
+func getSessionPaths(ctx context.Context, conn *dbus.Connection, serviceName string) ([]string, error) {
+	var paths []string
+
+	// Konsole typically has sessions at /Sessions/1, /Sessions/2, etc.
+	// We'll try to enumerate them by attempting to access known patterns
+	for i := 1; i <= 100; i++ { // Reasonable limit
+		sessionPath := fmt.Sprintf("/Sessions/%d", i)
+		obj := conn.Object(serviceName, sessionPath)
+
+		// Try to get a property to verify the session exists
+		_, err := obj.GetProperty(ctx, konsoleSessionInterface+".ProcessId")
+		if err != nil {
+			// Session doesn't exist or we can't access it
+			continue
+		}
+
+		paths = append(paths, sessionPath)
+	}
+
+	return paths, nil
+}
+
+// setColorScheme sets the color scheme for a Konsole session.
+func (s *session) setColorScheme(ctx context.Context, colorScheme string) error {
+	conn, err := dbus.SessionBus(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to connect to session bus: %w", err)
+	}
+	defer conn.Close()
+
+	obj := conn.Object(s.ServiceName, s.SessionPath)
+
+	// Call setProfile method with color scheme
+	err = obj.Call(ctx, konsoleSessionInterface+".setProfile", colorScheme)
+	if err != nil {
+		return fmt.Errorf("failed to set color scheme: %w", err)
+	}
+
 	return nil
 }
 
@@ -184,19 +318,49 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	return false, "", nil
 }
 
-// PostExecute provides usage instructions for applying the theme.
+// PostExecute provides usage instructions for applying the theme and attempts to reload.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, generatedFiles []string) error {
-	if p.verbose && len(generatedFiles) > 0 {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error {
+	if len(generatedFiles) == 0 {
+		return nil
+	}
+
+	// Extract scheme name from first generated file (e.g., "TinctDark.colorscheme" -> "TinctDark")
+	fileName := filepath.Base(generatedFiles[0])
+	schemeName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+
+	// Strategy 1: Try D-Bus to update all Konsole sessions (Linux only)
+	if dbus.IsAvailable() {
+		applied, err := applyColorSchemeToAllSessions(ctx, schemeName)
+		if err == nil && applied > 0 {
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "\n")
+				fmt.Fprintf(os.Stderr, "   Konsole color scheme applied to %d session(s) via D-Bus: %s\n", applied, schemeName)
+				fmt.Fprintf(os.Stderr, "\n")
+			}
+			return nil
+		}
+		// D-Bus failed, fall through to konsoleprofile
+		if p.verbose && err != nil {
+			fmt.Fprintf(os.Stderr, "   D-Bus update failed: %v\n", err)
+		}
+	}
+
+	// Strategy 2: Try konsoleprofile (only works if running inside Konsole)
+	cmd := exec.CommandContext(ctx, "konsoleprofile", fmt.Sprintf("colors=%s", schemeName))
+	if err := cmd.Run(); err != nil {
+		// konsoleprofile only works when running inside Konsole
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "\n")
+			fmt.Fprintf(os.Stderr, "   Konsole color scheme generated: %s\n", schemeName)
+			fmt.Fprintf(os.Stderr, "\n")
+			fmt.Fprintf(os.Stderr, "   The theme will apply automatically to new Konsole windows.\n")
+			fmt.Fprintf(os.Stderr, "   To apply to the current session, run: konsoleprofile colors=%s\n", schemeName)
+			fmt.Fprintf(os.Stderr, "\n")
+		}
+	} else if p.verbose {
 		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Konsole color scheme generated successfully!\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   To use this theme:\n")
-		fmt.Fprintf(os.Stderr, "   1. Open Konsole\n")
-		fmt.Fprintf(os.Stderr, "   2. Go to Settings > Edit Current Profile > Appearance\n")
-		fmt.Fprintf(os.Stderr, "   3. Select 'Tinct Dark' or 'Tinct Light' from the color scheme list\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Note: You may need to restart Konsole to see the new themes.\n")
+		fmt.Fprintf(os.Stderr, "   Konsole color scheme applied to current session: %s\n", schemeName)
 		fmt.Fprintf(os.Stderr, "\n")
 	}
 
