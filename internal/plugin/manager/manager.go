@@ -35,6 +35,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprpaper"
 	kdeplasma "github.com/jmylchreest/tinct/internal/plugin/output/kde-plasma"
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
+	"github.com/jmylchreest/tinct/internal/plugin/output/konsole"
 	"github.com/jmylchreest/tinct/internal/plugin/output/libadwaita"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
 	"github.com/jmylchreest/tinct/internal/plugin/output/ptyxis"
@@ -170,6 +171,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(hyprpaper.New())
 	m.outputRegistry.Register(kdeplasma.New())
 	m.outputRegistry.Register(kitty.New())
+	m.outputRegistry.Register(konsole.New())
 	m.outputRegistry.Register(libadwaita.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(ptyxis.New())
