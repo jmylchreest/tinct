@@ -7,17 +7,16 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -76,8 +75,8 @@ func (p *Plugin) GetEmbeddedFS() any {
 }
 
 // GetFlagHelp returns help information for all plugin flags.
-func (p *Plugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{
+func (p *Plugin) GetFlagHelp() []output.FlagHelp {
+	return []output.FlagHelp{
 		{Name: "alacritty.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/alacritty)", Required: false},
 	}
 }
@@ -157,9 +156,8 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 // PreExecute checks if alacritty is available before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if alacritty executable exists on PATH.
-	_, err = exec.LookPath("alacritty")
-	if err != nil {
+	// Check if alacritty executable exists (native, Flatpak, or AppImage).
+	if !appdetect.IsPresent("alacritty", "") {
 		return true, "alacritty executable not found on $PATH", nil
 	}
 

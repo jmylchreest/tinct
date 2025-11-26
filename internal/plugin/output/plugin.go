@@ -8,9 +8,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
-	// For FlagHelp type.
+	"github.com/jmylchreest/tinct/pkg/plugin"
 )
+
+// FlagHelp is re-exported from pkg/plugin for convenience.
+// This allows output plugins to use output.FlagHelp instead of importing protocol directly.
+type FlagHelp = plugin.FlagHelp
 
 // Plugin represents an output plugin that can generate configuration files.
 // from a categorised colour palette.
@@ -39,7 +42,7 @@ type Plugin interface {
 
 	// GetFlagHelp returns help information for plugin-specific flags.
 	// This allows dynamic help generation based on selected plugins.
-	GetFlagHelp() []input.FlagHelp
+	GetFlagHelp() []FlagHelp
 }
 
 // PreExecuteHook is an optional interface that plugins can implement to perform.

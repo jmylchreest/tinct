@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
@@ -79,8 +78,8 @@ func (p *Plugin) GetEmbeddedFS() any {
 }
 
 // GetFlagHelp returns help information for all plugin flags.
-func (p *Plugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{
+func (p *Plugin) GetFlagHelp() []output.FlagHelp {
+	return []output.FlagHelp{
 		{Name: "neovim.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/nvim/colors)", Required: false},
 		{Name: "neovim.theme-name", Type: "string", Default: "tinct", Description: "Theme name for the colorscheme", Required: false},
 	}

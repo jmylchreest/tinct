@@ -15,10 +15,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -77,8 +77,8 @@ func (p *Plugin) GetEmbeddedFS() any {
 }
 
 // GetFlagHelp returns help information for all plugin flags.
-func (p *Plugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{
+func (p *Plugin) GetFlagHelp() []output.FlagHelp {
+	return []output.FlagHelp{
 		{Name: "kitty.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/kitty/themes)", Required: false},
 	}
 }
@@ -154,9 +154,8 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 // PreExecute checks if kitty and kitten are available before generating the theme.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if kitty executable exists on PATH.
-	_, err = exec.LookPath("kitty")
-	if err != nil {
+	// Check if kitty executable exists (native, Flatpak, or AppImage).
+	if !appdetect.IsPresent("kitty", "") {
 		return true, "kitty executable not found on $PATH", nil
 	}
 

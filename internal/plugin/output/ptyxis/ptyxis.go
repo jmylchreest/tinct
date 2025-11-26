@@ -7,16 +7,16 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
+	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -75,8 +75,8 @@ func (p *Plugin) GetEmbeddedFS() any {
 }
 
 // GetFlagHelp returns help information for all plugin flags.
-func (p *Plugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{
+func (p *Plugin) GetFlagHelp() []output.FlagHelp {
+	return []output.FlagHelp{
 		{Name: "ptyxis.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.local/share/ptyxis/palettes)", Required: false},
 	}
 }
@@ -102,8 +102,8 @@ func (p *Plugin) DefaultOutputDir() string {
 // PreExecute checks if ptyxis is installed before generating the palette.
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	_, err = exec.LookPath("ptyxis")
-	if err != nil {
+	// Check for ptyxis binary (native/PATH) and common Flatpak/config locations
+	if !appdetect.IsPresent("ptyxis", "~/.local/share/org.gnome.Ptyxis") {
 		return true, "Ptyxis terminal is not installed", nil
 	}
 	return false, "", nil
@@ -155,4 +155,52 @@ func (p *Plugin) generatePalette(themeData *colour.ThemeData) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// PostExecute provides instructions for installing the palette in Ptyxis.
+// Implements the output.PostExecuteHook interface.
+func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+	if execCtx.DryRun || !p.verbose {
+		return nil
+	}
+
+	// Only show instructions if we actually wrote a palette file
+	if len(writtenFiles) == 0 {
+		return nil
+	}
+
+	// Determine installation type to provide appropriate instructions
+	installType := appdetect.GetInstallationType("ptyxis", "~/.local/share/org.gnome.Ptyxis")
+
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	fmt.Fprintf(os.Stderr, "  Ptyxis Palette Installation\n")
+	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	fmt.Fprintf(os.Stderr, "\n")
+
+	if installType == "flatpak" {
+		fmt.Fprintf(os.Stderr, "Detected Flatpak installation of Ptyxis.\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "To install the palette (Ptyxis 49+):\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "  flatpak run app.devsuite.Ptyxis --install-palette %s\n", writtenFiles[0])
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Or manually select the 'Tinct' palette in Ptyxis preferences.\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "To install the palette (Ptyxis 49+):\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "  ptyxis --install-palette %s\n", writtenFiles[0])
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "Or manually select the 'Tinct' palette in Ptyxis preferences:\n")
+		fmt.Fprintf(os.Stderr, "  Preferences → Appearance → Palette → Tinct\n")
+	}
+
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "The palette includes window dressing support:\n")
+	fmt.Fprintf(os.Stderr, "  • Bell notifications use warning color\n")
+	fmt.Fprintf(os.Stderr, "  • Remote sessions use info color\n")
+	fmt.Fprintf(os.Stderr, "  • Superuser sessions use danger color\n")
+	fmt.Fprintf(os.Stderr, "\n")
+
+	return nil
 }

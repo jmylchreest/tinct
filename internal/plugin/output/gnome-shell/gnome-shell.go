@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/common"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
@@ -71,8 +70,8 @@ func (p *Plugin) GetEmbeddedFS() any {
 }
 
 // GetFlagHelp returns help text for plugin flags.
-func (p *Plugin) GetFlagHelp() []input.FlagHelp {
-	return []input.FlagHelp{
+func (p *Plugin) GetFlagHelp() []output.FlagHelp {
+	return []output.FlagHelp{
 		{
 			Name:        "gnome-shell.output-dir",
 			Type:        "string",
