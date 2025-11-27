@@ -581,7 +581,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Plugin directory: %s\n\n", pluginDir)
+		fmt.Fprintf(os.Stderr, "Plugin directory: %s\n", pluginDir)
 	}
 
 	// Ensure plugin directory exists.
@@ -589,26 +589,39 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
-	// Update each external plugin.
-	successCount := 0
-	failCount := 0
+	// Create live table for updates
+	fmt.Fprintln(os.Stderr, "\nUpdating plugins...")
+	fmt.Fprintln(os.Stderr)
+	table := NewTable([]string{"PLUGIN", "STATUS"}).SetLive(true).WithWriter(os.Stderr)
 
+	// Get sorted plugin names
 	pluginNames := make([]string, 0, len(lock.ExternalPlugins))
 	for name := range lock.ExternalPlugins {
 		pluginNames = append(pluginNames, name)
 	}
 	sort.Strings(pluginNames)
 
+	// Initialize all rows with "Queued" status
+	for _, name := range pluginNames {
+		table.AddRowWithID(name, []string{name, "Queued"})
+	}
+
+	// Update each external plugin
+	successCount := 0
+	failCount := 0
+
 	for _, name := range pluginNames {
 		meta := lock.ExternalPlugins[name]
+		oldVersion := meta.Version
 
-		fmt.Printf("Updating %s... ", name)
+		table.UpdateRow(name, map[string]string{"STATUS": "Checking..."})
 
 		// Handle repository sources specially.
 		var pluginPath string
 		var err error
 		var skipUpdate bool
 		if meta.Source != nil && meta.Source.Type == sourceTypeRepository {
+			table.UpdateRow(name, map[string]string{"STATUS": "Downloading..."})
 			pluginPath, err = updatePluginFromRepository(meta, pluginDir, verbose)
 			// Check if error is "already up to date"
 			if err != nil && strings.Contains(err.Error(), "already up to date") {
@@ -623,23 +636,31 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			} else if meta.SourceLegacy != "" {
 				sourceForInstall = meta.SourceLegacy
 			} else {
-				fmt.Printf("✗ no source information\n")
+				table.UpdateRow(name, map[string]string{"STATUS": "✗ No source information"})
 				failCount++
 				continue
 			}
+			table.UpdateRow(name, map[string]string{"STATUS": "Downloading..."})
 			pluginPath, err = installPluginFromSource(sourceForInstall, name, pluginDir, "", verbose)
 		}
 
 		if err != nil {
-			fmt.Printf("✗ failed: %v\n", err)
+			table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("✗ %v", err)})
 			failCount++
 			continue
 		}
 
 		if skipUpdate {
-			fmt.Printf("✓ (already up to date)\n")
+			status := "Already up to date"
+			if oldVersion != "" {
+				status = fmt.Sprintf("Already up to date (%s)", oldVersion)
+			}
+			table.UpdateRow(name, map[string]string{"STATUS": status})
+			successCount++
 			continue
 		}
+
+		table.UpdateRow(name, map[string]string{"STATUS": "Installing..."})
 
 		// Query plugin for updated metadata.
 		actualName, pluginDescription, pluginType, version, _ := queryPluginMetadata(pluginPath)
@@ -663,14 +684,20 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 			Description: pluginDescription,
 		}
 
-		// Show version if available
-		if version != "" {
-			fmt.Printf("✓ (version %s)\n", version)
+		// Show version change or just new version
+		var status string
+		if oldVersion != "" && version != "" && oldVersion != version {
+			status = fmt.Sprintf("%s → %s", oldVersion, version)
+		} else if version != "" {
+			status = fmt.Sprintf("Updated (%s)", version)
 		} else {
-			fmt.Printf("✓\n")
+			status = "Updated"
 		}
+		table.UpdateRow(name, map[string]string{"STATUS": status})
 		successCount++
 	}
+
+	table.Finish()
 
 	// Save updated lock file.
 	if successCount > 0 {

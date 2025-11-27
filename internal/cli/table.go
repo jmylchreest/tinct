@@ -2,8 +2,11 @@
 package cli
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"golang.org/x/term"
 )
@@ -17,6 +20,15 @@ type Table struct {
 	terminalAwareCol      int         // Column index to size based on terminal width (-1 = none)
 	terminalAwareMinW     int         // Minimum width for terminal-aware column
 	terminalWidthOverride int         // Override terminal width for testing
+
+	// Live mode support
+	live      bool           // If true, updates in-place; if false, static output
+	rowIDs    map[string]int // Maps row ID to row index (for live mode)
+	rowOrder  []string       // Preserves insertion order of row IDs
+	writer    io.Writer      // Output writer (defaults to os.Stderr for live mode)
+	rendered  bool           // Whether table has been rendered
+	lineCount int            // Number of lines in last render
+	mu        sync.Mutex     // Protects concurrent access in live mode
 }
 
 // NewTable creates a new table with the given headers.
@@ -28,7 +40,24 @@ func NewTable(headers []string) *Table {
 		maxWidths:         make(map[int]int),
 		terminalAwareCol:  -1, // Disabled by default
 		terminalAwareMinW: 0,
+		live:              false,
+		rowIDs:            make(map[string]int),
+		rowOrder:          make([]string, 0),
+		writer:            os.Stderr,
 	}
+}
+
+// SetLive enables or disables live updating mode.
+// In live mode, the table updates in-place using ANSI cursor control.
+func (t *Table) SetLive(live bool) *Table {
+	t.live = live
+	return t
+}
+
+// WithWriter sets the output writer for the table.
+func (t *Table) WithWriter(w io.Writer) *Table {
+	t.writer = w
+	return t
 }
 
 // SetColumnMaxWidth sets a maximum width for a specific column.
@@ -46,22 +75,105 @@ func (t *Table) EnableTerminalAwareWidth(colIndex, minWidth int) {
 }
 
 // AddRow adds a row to the table.
+// For static tables, just adds the row.
+// For live tables, you should use AddRowWithID instead.
 func (t *Table) AddRow(row []string) {
-	if len(row) != len(t.headers) {
-		// Pad or truncate to match header count.
-		newRow := make([]string, len(t.headers))
-		copy(newRow, row)
-		for i := len(row); i < len(t.headers); i++ {
-			newRow[i] = ""
-		}
-		t.rows = append(t.rows, newRow)
-	} else {
-		t.rows = append(t.rows, row)
+	if t.live {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+	}
+
+	normalizedRow := t.normalizeRow(row)
+	t.rows = append(t.rows, normalizedRow)
+
+	if t.live {
+		t.renderLive()
 	}
 }
 
-// Render formats and returns the table as a string.
+// AddRowWithID adds or updates a row in the table with a unique identifier.
+// This is the preferred method for live tables.
+// id is a unique identifier for the row.
+// row is the row data matching the headers.
+func (t *Table) AddRowWithID(id string, row []string) {
+	if t.live {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+	}
+
+	normalizedRow := t.normalizeRow(row)
+
+	if idx, exists := t.rowIDs[id]; exists {
+		// Update existing row
+		t.rows[idx] = normalizedRow
+	} else {
+		// Add new row
+		t.rowIDs[id] = len(t.rows)
+		t.rowOrder = append(t.rowOrder, id)
+		t.rows = append(t.rows, normalizedRow)
+	}
+
+	if t.live {
+		t.renderLive()
+	}
+}
+
+// UpdateRow updates specific columns in an existing row identified by ID.
+// columns is a map of column name -> new value.
+func (t *Table) UpdateRow(id string, columns map[string]string) {
+	if t.live {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+	}
+
+	idx, exists := t.rowIDs[id]
+	if !exists {
+		// Create new row if it doesn't exist
+		newRow := make([]string, len(t.headers))
+		for i, header := range t.headers {
+			if val, ok := columns[header]; ok {
+				newRow[i] = val
+			}
+		}
+		t.rowIDs[id] = len(t.rows)
+		t.rowOrder = append(t.rowOrder, id)
+		t.rows = append(t.rows, newRow)
+	} else {
+		// Update existing row
+		for i, header := range t.headers {
+			if val, ok := columns[header]; ok {
+				t.rows[idx][i] = val
+			}
+		}
+	}
+
+	if t.live {
+		t.renderLive()
+	}
+}
+
+// normalizeRow pads or truncates a row to match header count.
+func (t *Table) normalizeRow(row []string) []string {
+	if len(row) == len(t.headers) {
+		return row
+	}
+
+	newRow := make([]string, len(t.headers))
+	copy(newRow, row)
+	return newRow
+}
+
+// Render formats and returns the table as a string (for static mode).
+// For live mode, use Finish() to complete the table.
 func (t *Table) Render() string {
+	if t.live {
+		// For live mode, just ensure it's rendered once more
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		t.renderLive()
+		return ""
+	}
+
 	if len(t.headers) == 0 {
 		return ""
 	}
@@ -79,6 +191,96 @@ func (t *Table) Render() string {
 
 	// Build the table string
 	return t.buildTableString(wrappedRows, colWidths)
+}
+
+// renderLive renders the table in live mode (must be called with lock held).
+func (t *Table) renderLive() {
+	if len(t.headers) == 0 {
+		return
+	}
+
+	// Move cursor up to overwrite previous render (if already rendered)
+	if t.rendered {
+		fmt.Fprintf(t.writer, "\033[%dA", t.lineCount)
+	}
+
+	// For live mode, we use simpler rendering without text wrapping
+	// to avoid complexity with cursor positioning
+	colWidths := t.calculateSimpleColumnWidths()
+
+	lineCount := 0
+
+	// Render header
+	headerParts := make([]string, len(t.headers))
+	separatorParts := make([]string, len(t.headers))
+	for i, header := range t.headers {
+		headerParts[i] = padRight(header, colWidths[i])
+		separatorParts[i] = strings.Repeat("-", colWidths[i])
+	}
+
+	fmt.Fprintf(t.writer, "\r%s\n", strings.Join(headerParts, strings.Repeat(" ", t.padding)))
+	lineCount++
+	fmt.Fprintf(t.writer, "\r%s\n", strings.Join(separatorParts, strings.Repeat(" ", t.padding)))
+	lineCount++
+
+	// Render rows
+	for _, row := range t.rows {
+		rowParts := make([]string, len(t.headers))
+		for i, cell := range row {
+			rowParts[i] = padRight(cell, colWidths[i])
+		}
+		fmt.Fprintf(t.writer, "\r%s\n", strings.Join(rowParts, strings.Repeat(" ", t.padding)))
+		lineCount++
+	}
+
+	// Clear any extra lines from previous render
+	if t.rendered {
+		for i := lineCount; i < t.lineCount; i++ {
+			fmt.Fprintf(t.writer, "\r%s\n", strings.Repeat(" ", 100))
+			lineCount++
+		}
+	}
+
+	t.lineCount = lineCount
+	t.rendered = true
+}
+
+// calculateSimpleColumnWidths calculates column widths without text wrapping.
+func (t *Table) calculateSimpleColumnWidths() []int {
+	colWidths := make([]int, len(t.headers))
+
+	// Start with header widths
+	for i, header := range t.headers {
+		colWidths[i] = len(header)
+	}
+
+	// Update based on row content
+	for _, row := range t.rows {
+		for i, cell := range row {
+			if i < len(colWidths) && len(cell) > colWidths[i] {
+				colWidths[i] = len(cell)
+			}
+		}
+	}
+
+	return colWidths
+}
+
+// Finish completes the table rendering.
+// For live mode, ensures the final state is displayed.
+// For static mode, does nothing (use Render() instead).
+func (t *Table) Finish() {
+	if !t.live {
+		return
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	// Ensure table is rendered one final time
+	if !t.rendered {
+		t.renderLive()
+	}
 }
 
 // wrapAllCells wraps text in all cells according to max width constraints.

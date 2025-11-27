@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/spf13/cobra"
 
@@ -78,6 +79,11 @@ func init() {
 }
 
 func runPluginSync(cmd *cobra.Command, args []string) error {
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return fmt.Errorf("failed to get verbose flag: %w", err)
+	}
+
 	// Read lock file.
 	lock, lockPath, err := loadPluginLock()
 	if err != nil {
@@ -90,22 +96,42 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 		}
 		return fmt.Errorf("failed to read lock file: %w", err)
 	}
-	_ = lockPath // Use the returned lockPath
 
 	if len(lock.ExternalPlugins) == 0 {
 		fmt.Println("No external plugins in lock file.")
 		return nil
 	}
 
-	fmt.Printf("Reading lock file: %s\n", lockPath)
-	fmt.Printf("Found %d plugin(s) in lock file:\n\n", len(lock.ExternalPlugins))
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Reading lock file: %s\n", lockPath)
+	}
+
+	// Create live table for sync
+	fmt.Fprintf(os.Stderr, "\nSyncing %d plugin(s)...\n", len(lock.ExternalPlugins))
+	fmt.Fprintln(os.Stderr)
+	table := NewTable([]string{"PLUGIN", "STATUS"}).SetLive(true).WithWriter(os.Stderr)
+
+	// Get sorted plugin names
+	pluginNames := make([]string, 0, len(lock.ExternalPlugins))
+	for name := range lock.ExternalPlugins {
+		pluginNames = append(pluginNames, name)
+	}
+	sort.Strings(pluginNames)
+
+	// Initialize all rows with "Queued" status
+	for _, name := range pluginNames {
+		table.AddRowWithID(name, []string{name, "Queued"})
+	}
 
 	stats := repository.SyncStats{
 		Total: len(lock.ExternalPlugins),
 	}
 
-	for name, meta := range lock.ExternalPlugins {
-		fmt.Printf("Checking %s...\n", name)
+	for _, name := range pluginNames {
+		meta := lock.ExternalPlugins[name]
+		oldVersion := meta.Version
+
+		table.UpdateRow(name, map[string]string{"STATUS": "Checking..."})
 
 		// Check if plugin exists.
 		exists := false
@@ -120,57 +146,76 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 
 		// Verify checksum if requested and available.
 		if !needsReinstall && syncVerify && meta.Source != nil && meta.Source.Checksum != "" {
+			table.UpdateRow(name, map[string]string{"STATUS": "Verifying checksum..."})
 			err := verifyPluginChecksum(meta.Path, meta.Source.Checksum)
 			if err != nil {
-				fmt.Printf("   Checksum mismatch: %v\n", err)
 				if syncForce {
-					fmt.Printf("  → Reinstalling...\n")
 					needsReinstall = true
 				} else {
+					table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("✗ Checksum mismatch: %v", err)})
 					stats.Failed++
 					continue
 				}
-			} else {
-				fmt.Printf("   Checksum verified\n")
 			}
 		}
 
 		// If we don't need to reinstall, report existing plugin.
 		if !needsReinstall {
-			fmt.Printf("   Already installed (v%s)\n", meta.Version)
+			status := "Already installed"
+			if oldVersion != "" {
+				status = fmt.Sprintf("Already installed (%s)", oldVersion)
+			}
+			table.UpdateRow(name, map[string]string{"STATUS": status})
 			stats.Existing++
 			continue
 		}
 
-		// Reinstall from source.
+		// Determine source for status display
+		var sourceDisplay string
 		switch {
 		case meta.Source != nil:
-			fmt.Printf("  → Installing from %s\n", formatPluginSource(meta.Source))
+			sourceDisplay = formatPluginSource(meta.Source)
 		case meta.SourceLegacy != "":
-			fmt.Printf("  → Installing from %s\n", meta.SourceLegacy)
+			sourceDisplay = meta.SourceLegacy
 		default:
-			fmt.Printf("   No source information available\n")
+			table.UpdateRow(name, map[string]string{"STATUS": "✗ No source information"})
 			stats.Failed++
 			continue
 		}
 
+		table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("Installing from %s...", sourceDisplay)})
+
 		if err := reinstallPlugin(meta); err != nil {
-			fmt.Printf("   Failed: %v\n", err)
-			if !syncSkipMissing {
-				stats.Failed++
+			if syncSkipMissing {
+				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("⊘ Skipped: %v", err)})
+				stats.Skipped++
 				continue
 			}
-			fmt.Printf("   Skipped\n")
-			stats.Skipped++
+			table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("✗ %v", err)})
+			stats.Failed++
 			continue
 		}
 
-		fmt.Printf("   Installed\n")
+		// Query plugin for updated metadata to get version
+		if meta.Path != "" {
+			_, _, _, version, _ := queryPluginMetadata(meta.Path)
+			if version != "" && oldVersion != "" && version != oldVersion {
+				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("%s → %s", oldVersion, version)})
+			} else if version != "" {
+				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("Installed (%s)", version)})
+			} else {
+				table.UpdateRow(name, map[string]string{"STATUS": "Installed"})
+			}
+		} else {
+			table.UpdateRow(name, map[string]string{"STATUS": "Installed"})
+		}
 		stats.Installed++
 	}
 
+	table.Finish()
+
 	// Print summary.
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	printSyncSummary(stats)
 
 	if stats.Failed > 0 && !syncSkipMissing {

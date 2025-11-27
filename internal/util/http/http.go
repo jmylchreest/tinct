@@ -27,6 +27,10 @@ type FetchOptions struct {
 
 	// Headers specifies additional HTTP headers to send with the request.
 	Headers map[string]string
+
+	// ProgressCallback is called periodically with download progress.
+	// Arguments are: bytesDownloaded, totalBytes (or -1 if unknown).
+	ProgressCallback func(current, total int64)
 }
 
 // Fetch retrieves content from a URL with context and timeout support.
@@ -65,9 +69,41 @@ func Fetch(ctx context.Context, url string, opts FetchOptions) ([]byte, error) {
 		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
+	// If progress callback is provided, use it to track download progress
+	if opts.ProgressCallback != nil {
+		return fetchWithProgress(resp, opts.ProgressCallback)
+	}
+
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return data, nil
+}
+
+// fetchWithProgress reads the response body while calling the progress callback.
+func fetchWithProgress(resp *http.Response, callback func(current, total int64)) ([]byte, error) {
+	totalBytes := resp.ContentLength // -1 if unknown
+
+	// Use a buffer to collect data while tracking progress
+	buf := make([]byte, 32*1024) // 32KB chunks
+	var data []byte
+	var downloaded int64
+
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			data = append(data, buf[:n]...)
+			downloaded += int64(n)
+			callback(downloaded, totalBytes)
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
 	}
 
 	return data, nil

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +20,8 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/compression"
 	"github.com/jmylchreest/tinct/internal/security"
+	"github.com/jmylchreest/tinct/internal/ui/progress"
+	httputil "github.com/jmylchreest/tinct/internal/util/http"
 	"github.com/ulikunitz/xz"
 )
 
@@ -236,25 +239,36 @@ func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (st
 
 // installFromHTTP downloads a plugin from an HTTP/HTTPS URL.
 func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) {
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Downloading from %s...\n", info.URL)
+	// Download the file using our HTTP utility with progress tracking
+	ctx := context.Background()
+
+	var data []byte
+	var downloadErr error
+
+	// Always show progress bar for downloads
+	var bar *progress.ProgressBar
+
+	data, downloadErr = httputil.Fetch(ctx, info.URL, httputil.FetchOptions{
+		ProgressCallback: func(current, total int64) {
+			if bar == nil && total > 0 {
+				bar = progress.NewProgressBar(total, fmt.Sprintf("Downloading %s", pluginName))
+				bar.Set(current)
+			} else if bar != nil {
+				bar.Set(current)
+			}
+		},
+	})
+
+	if bar != nil {
+		if downloadErr == nil {
+			bar.Finish(fmt.Sprintf("Downloaded %s", pluginName))
+		} else {
+			bar.Finish("Download failed")
+		}
 	}
 
-	// Download the file.
-	resp, err := http.Get(info.URL)
-	if err != nil {
-		return "", fmt.Errorf("failed to download plugin: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to download plugin: HTTP %d", resp.StatusCode)
-	}
-
-	// Read the entire response into memory for archive detection.
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read download: %w", err)
+	if downloadErr != nil {
+		return "", fmt.Errorf("failed to download plugin: %w", downloadErr)
 	}
 
 	// Determine filename from URL.
@@ -266,8 +280,9 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 	// Determine archive name (for finding plugin binary)
 	archiveName := compression.GetArchiveBaseName(filename)
 
-	// Get Content-Type from response header
-	contentType := resp.Header.Get("Content-Type")
+	// Content-Type is not available after fetch completes, but compression
+	// utilities can detect format from content and filename
+	contentType := ""
 
 	// Use shared compression utilities for extraction
 	result, err := compression.ExtractPlugin(
