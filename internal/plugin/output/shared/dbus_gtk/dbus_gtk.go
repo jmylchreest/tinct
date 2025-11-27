@@ -4,6 +4,7 @@ package dbus_gtk
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jmylchreest/tinct/pkg/dbus"
 )
@@ -35,13 +36,7 @@ func ReloadTheme(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	gsdRunning := false
-	for _, name := range names {
-		if name == xsettingsService {
-			gsdRunning = true
-			break
-		}
-	}
+	gsdRunning := slices.Contains(names, xsettingsService)
 
 	if !gsdRunning {
 		return false, nil // Not running GNOME, no error

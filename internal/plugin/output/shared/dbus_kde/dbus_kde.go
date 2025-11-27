@@ -4,6 +4,7 @@ package dbus_kde
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jmylchreest/tinct/pkg/dbus"
 )
@@ -19,7 +20,7 @@ const (
 )
 
 // ReconfigureKWin triggers KWin to reload its configuration via D-Bus.
-// This is equivalent to running: qdbus org.kde.KWin /KWin reconfigure
+// This is equivalent to running: qdbus org.kde.KWin /KWin reconfigure.
 func ReconfigureKWin(ctx context.Context) (bool, error) {
 	if !dbus.IsAvailable() {
 		return false, nil
@@ -37,13 +38,7 @@ func ReconfigureKWin(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed to list bus names: %w", err)
 	}
 
-	kwinRunning := false
-	for _, name := range names {
-		if name == kwinService {
-			kwinRunning = true
-			break
-		}
-	}
+	kwinRunning := slices.Contains(names, kwinService)
 
 	if !kwinRunning {
 		return false, nil // KWin not running, not an error
@@ -78,13 +73,7 @@ func ReconfigurePlasmaShell(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed to list bus names: %w", err)
 	}
 
-	plasmaRunning := false
-	for _, name := range names {
-		if name == plasmashellService {
-			plasmaRunning = true
-			break
-		}
-	}
+	plasmaRunning := slices.Contains(names, plasmashellService)
 
 	if !plasmaRunning {
 		return false, nil // Plasma Shell not running, not an error

@@ -15,10 +15,10 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	gtkdbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_gtk"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
-	gtkdbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_gtk"
 )
 
 //go:embed *.tmpl

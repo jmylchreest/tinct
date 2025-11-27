@@ -92,10 +92,10 @@ func (p *Plugin) Validate() error {
 // D-Bus helper functions for Konsole session management
 
 const (
-	// Konsole D-Bus service name pattern
+	// Konsole D-Bus service name pattern.
 	konsoleServicePrefix = "org.kde.konsole"
 
-	// Konsole D-Bus interfaces
+	// Konsole D-Bus interfaces.
 	konsoleSessionInterface = "org.kde.konsole.Session"
 )
 

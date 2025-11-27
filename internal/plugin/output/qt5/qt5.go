@@ -14,10 +14,10 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	kdedbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_kde"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
-	kdedbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_kde"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 

@@ -267,7 +267,7 @@ func (p *Plugin) generateColorSchemeVariant(themeData *colour.ThemeData, variant
 // When dual-theme is generated, it applies the theme matching the current system preference.
 // Both plasma-apply-colorscheme (with variant toggling) and D-Bus reload are used together:
 // - plasma-apply-colorscheme applies the .colors file system-wide
-// - D-Bus reload ensures KWin and Plasma Shell reload their configurations immediately
+// - D-Bus reload ensures KWin and Plasma Shell reload their configurations immediately.
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error {
 	if execCtx.DryRun {
 		return nil
@@ -399,7 +399,7 @@ func (p *Plugin) applyWallpaper(ctx context.Context, wallpaperPath string) error
 // Logic:
 // - If current scheme is TinctDark1 or TinctLight1, return 2
 // - If current scheme is TinctDark2 or TinctLight2, return 1
-// - Otherwise (first run or different scheme), return 1
+// - Otherwise (first run or different scheme), return 1.
 func (p *Plugin) determineVariantToApply(ctx context.Context, baseThemeName string) int {
 	// Get current color scheme name
 	cmd := exec.CommandContext(ctx, "kreadconfig5", "--file", "kdeglobals", "--group", "General", "--key", "ColorScheme")

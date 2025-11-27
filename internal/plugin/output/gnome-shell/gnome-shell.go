@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -194,7 +195,7 @@ func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
 }
 
 // reloadThemeViaDBus reloads the GNOME Shell theme by calling Main.loadTheme() via D-Bus.
-// This is equivalent to: gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell --method org.gnome.Shell.Eval 'Main.loadTheme();'
+// This is equivalent to: gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell --method org.gnome.Shell.Eval 'Main.loadTheme();'.
 func (p *Plugin) reloadThemeViaDBus(ctx context.Context) (bool, error) {
 	if !dbus.IsAvailable() {
 		return false, nil
@@ -212,13 +213,7 @@ func (p *Plugin) reloadThemeViaDBus(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("failed to list bus names: %w", err)
 	}
 
-	gnomeShellRunning := false
-	for _, name := range names {
-		if name == "org.gnome.Shell" {
-			gnomeShellRunning = true
-			break
-		}
-	}
+	gnomeShellRunning := slices.Contains(names, "org.gnome.Shell")
 
 	if !gnomeShellRunning {
 		return false, nil // GNOME Shell not running, not an error
@@ -247,7 +242,7 @@ func (p *Plugin) reloadThemeViaDBus(ctx context.Context) (bool, error) {
 
 // PostExecute applies theme settings and sets wallpaper automatically.
 // Strategy 1: D-Bus theme reload (most reliable, no theme toggling needed)
-// Strategy 2: gsettings theme toggling (fallback)
+// Strategy 2: gsettings theme toggling (fallback).
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
 	if execCtx.DryRun {
 		return nil
