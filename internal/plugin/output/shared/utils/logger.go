@@ -1,5 +1,5 @@
 // Package common provides shared utilities for output plugins.
-package common
+package utils
 
 import (
 	"fmt"

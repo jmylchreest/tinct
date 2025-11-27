@@ -17,9 +17,10 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	"github.com/jmylchreest/tinct/internal/plugin/output/common"
+	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/dbus"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
@@ -169,7 +170,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("gnome-shell", templates)
 	if p.verbose {
-		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
+		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
 
 	tmplContent, _, err := loader.Load("gnome-shell.css.tmpl")
@@ -178,7 +179,7 @@ func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
 	}
 
 	tmpl, err := template.New("gnome-shell").
-		Funcs(common.TemplateFuncs()).
+		Funcs(utils.TemplateFuncs()).
 		Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
@@ -192,7 +193,61 @@ func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// reloadThemeViaDBus reloads the GNOME Shell theme by calling Main.loadTheme() via D-Bus.
+// This is equivalent to: gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell --method org.gnome.Shell.Eval 'Main.loadTheme();'
+func (p *Plugin) reloadThemeViaDBus(ctx context.Context) (bool, error) {
+	if !dbus.IsAvailable() {
+		return false, nil
+	}
+
+	conn, err := dbus.SessionBus(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to connect to session bus: %w", err)
+	}
+	defer conn.Close()
+
+	// Check if GNOME Shell is running
+	names, err := conn.ListNames(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to list bus names: %w", err)
+	}
+
+	gnomeShellRunning := false
+	for _, name := range names {
+		if name == "org.gnome.Shell" {
+			gnomeShellRunning = true
+			break
+		}
+	}
+
+	if !gnomeShellRunning {
+		return false, nil // GNOME Shell not running, not an error
+	}
+
+	obj := conn.Object("org.gnome.Shell", "/org/gnome/Shell")
+
+	// Call Eval method with JavaScript to reload theme
+	result, err := obj.CallWithReturn(ctx, "org.gnome.Shell.Eval", "Main.loadTheme();")
+	if err != nil {
+		return false, fmt.Errorf("failed to reload theme: %w", err)
+	}
+
+	// Eval returns [success: boolean, result: string]
+	if len(result) < 1 {
+		return false, fmt.Errorf("unexpected Eval response")
+	}
+
+	success, ok := result[0].(bool)
+	if !ok || !success {
+		return false, fmt.Errorf("theme reload failed")
+	}
+
+	return true, nil
+}
+
 // PostExecute applies theme settings and sets wallpaper automatically.
+// Strategy 1: D-Bus theme reload (most reliable, no theme toggling needed)
+// Strategy 2: gsettings theme toggling (fallback)
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
 	if execCtx.DryRun {
 		return nil
@@ -213,6 +268,39 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	if !gnomeShellRunning && p.verbose {
 		fmt.Fprintf(os.Stderr, "   Warning: gnome-shell is not currently running\n")
 	}
+
+	// Strategy 1: Try D-Bus theme reload
+	reloaded, dbusErr := p.reloadThemeViaDBus(ctx)
+	if dbusErr == nil && reloaded {
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   GNOME Shell theme reloaded via D-Bus\n")
+		}
+
+		// Still set wallpaper if available (same logic as gsettings path below)
+		if execCtx.WallpaperPath != "" {
+			wallpaperURI := "file://" + execCtx.WallpaperPath
+
+			cmd := exec.CommandContext(ctx, "gsettings", "set",
+				"org.gnome.desktop.background", "picture-uri", wallpaperURI)
+			_ = cmd.Run()
+
+			cmd = exec.CommandContext(ctx, "gsettings", "set",
+				"org.gnome.desktop.background", "picture-uri-dark", wallpaperURI)
+			_ = cmd.Run()
+
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   gsettings: wallpaper set: %s\n", execCtx.WallpaperPath)
+			}
+		}
+		return nil
+	}
+
+	// D-Bus failed, fall through to gsettings toggling
+	if p.verbose && dbusErr != nil {
+		fmt.Fprintf(os.Stderr, "   Note: D-Bus reload failed, using gsettings toggle: %v\n", dbusErr)
+	}
+
+	// Strategy 2: Use gsettings theme toggling (fallback)
 
 	// Get current theme setting
 	cmd := exec.CommandContext(ctx, "gsettings", "get", "org.gnome.shell.extensions.user-theme", "name")
@@ -252,10 +340,12 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		return fmt.Errorf("failed to set GNOME Shell theme: %w", err)
 	}
 
-	if themeChanged {
-		fmt.Fprintf(os.Stderr, "   gsettings: GNOME Shell theme applied: %s\n", targetTheme)
-	} else {
-		fmt.Fprintf(os.Stderr, "   gsettings: GNOME Shell theme reloaded: %s\n", targetTheme)
+	if p.verbose {
+		if themeChanged {
+			fmt.Fprintf(os.Stderr, "   gsettings: GNOME Shell theme applied: %s\n", targetTheme)
+		} else {
+			fmt.Fprintf(os.Stderr, "   gsettings: GNOME Shell theme reloaded: %s\n", targetTheme)
+		}
 	}
 
 	// Set wallpaper if available
@@ -302,8 +392,9 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 				"org.gnome.desktop.background", "picture-options", "zoom")
 			_ = cmd.Run() //nolint:errcheck // Best effort, non-critical setting
 
-			// Always show when we actually change the wallpaper
-			fmt.Fprintf(os.Stderr, "   gsettings: wallpaper set: %s\n", execCtx.WallpaperPath)
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   gsettings: wallpaper set: %s\n", execCtx.WallpaperPath)
+			}
 		} else if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Wallpaper already set to: %s\n", execCtx.WallpaperPath)
 		}

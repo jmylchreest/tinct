@@ -15,7 +15,7 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	"github.com/jmylchreest/tinct/internal/plugin/output/common"
+	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 )
 
@@ -130,7 +130,7 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
 	loader := tmplloader.New("walker", templates)
 	if p.verbose {
-		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
+		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
 	tmplContent, fromCustom, err := loader.Load("tinct-colours.css.tmpl")
 	if err != nil {
@@ -141,7 +141,7 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct-colours.css.tmpl\n")
 	}
 
-	tmpl, err := template.New("colors").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
+	tmpl, err := template.New("colors").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse colors template: %w", err)
 	}
@@ -158,7 +158,7 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 func (p *Plugin) generateStyle(themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("walker", templates)
 	if p.verbose {
-		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
+		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
 	tmplContent, fromCustom, err := loader.Load("tinct.css.tmpl")
 	if err != nil {
@@ -169,7 +169,7 @@ func (p *Plugin) generateStyle(themeData *colour.ThemeData) ([]byte, error) {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.css.tmpl\n")
 	}
 
-	tmpl, err := template.New("style").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
+	tmpl, err := template.New("style").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse style template: %w", err)
 	}

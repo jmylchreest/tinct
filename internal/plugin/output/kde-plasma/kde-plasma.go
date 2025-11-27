@@ -16,9 +16,11 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	"github.com/jmylchreest/tinct/internal/plugin/output/common"
+	kdedbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_kde"
+	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/dbus"
 )
 
 //go:embed *.tmpl
@@ -218,7 +220,7 @@ func (p *Plugin) GenerateDualTheme(primaryTheme, alternateTheme *colour.ThemeDat
 func (p *Plugin) generateColorSchemeVariant(themeData *colour.ThemeData, variant int) ([]byte, error) {
 	loader := tmplloader.New("kde-plasma", templates)
 	if p.verbose {
-		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
+		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
 
 	tmplContent, _, err := loader.Load("tinct.colors.tmpl")
@@ -227,7 +229,7 @@ func (p *Plugin) generateColorSchemeVariant(themeData *colour.ThemeData, variant
 	}
 
 	tmpl, err := template.New("kde-plasma").
-		Funcs(common.TemplateFuncs()).
+		Funcs(utils.TemplateFuncs()).
 		Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
@@ -263,11 +265,15 @@ func (p *Plugin) generateColorSchemeVariant(themeData *colour.ThemeData, variant
 
 // PostExecute automatically applies the KDE Plasma color scheme.
 // When dual-theme is generated, it applies the theme matching the current system preference.
-// Uses variant alternating (1/2) to workaround plasma-apply-colorscheme not reloading same scheme name.
+// Both plasma-apply-colorscheme (with variant toggling) and D-Bus reload are used together:
+// - plasma-apply-colorscheme applies the .colors file system-wide
+// - D-Bus reload ensures KWin and Plasma Shell reload their configurations immediately
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error {
 	if execCtx.DryRun {
 		return nil
 	}
+
+	// Determine which theme files were generated (check for variants)
 
 	// Determine which theme files were generated (check for variants)
 	hasDark := false
@@ -328,7 +334,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	variantToApply := p.determineVariantToApply(ctx, baseThemeName)
 	themeNameToApply := fmt.Sprintf("%s%d", baseThemeName, variantToApply)
 
-	// Apply the color scheme
+	// Apply the color scheme using plasma-apply-colorscheme with variant toggling
 	cmd := exec.CommandContext(ctx, "plasma-apply-colorscheme", themeNameToApply)
 	if err := cmd.Run(); err != nil {
 		// Don't fail, just warn
@@ -340,6 +346,16 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	}
 
 	fmt.Fprintf(os.Stderr, "   plasma-apply-colorscheme: Applied %s\n", themeNameToApply)
+
+	// Trigger D-Bus reload to ensure KWin and Plasma Shell pick up the changes immediately
+	if dbus.IsAvailable() {
+		reloaded, err := kdedbus.ReloadTheme(ctx)
+		if reloaded && p.verbose {
+			fmt.Fprintf(os.Stderr, "   KDE Plasma theme reloaded via D-Bus (KWin + Plasma Shell)\n")
+		} else if err != nil && p.verbose {
+			fmt.Fprintf(os.Stderr, "   Note: D-Bus reload failed (theme still applied via plasma-apply-colorscheme): %v\n", err)
+		}
+	}
 
 	// Apply wallpaper if available
 	if execCtx.WallpaperPath != "" {

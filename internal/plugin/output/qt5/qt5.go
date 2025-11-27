@@ -14,9 +14,10 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	"github.com/jmylchreest/tinct/internal/plugin/output/common"
+	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	kdedbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_kde"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
@@ -137,7 +138,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 func (p *Plugin) generateColorScheme(themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("qt5", templates)
 	if p.verbose {
-		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
+		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
 
 	tmplContent, _, err := loader.Load("tinct.conf.tmpl")
@@ -146,7 +147,7 @@ func (p *Plugin) generateColorScheme(themeData *colour.ThemeData) ([]byte, error
 	}
 
 	tmpl, err := template.New("qt5").
-		Funcs(common.TemplateFuncs()).
+		Funcs(utils.TemplateFuncs()).
 		Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
@@ -160,10 +161,18 @@ func (p *Plugin) generateColorScheme(themeData *colour.ThemeData) ([]byte, error
 	return buf.Bytes(), nil
 }
 
-// PostExecute provides instructions for configuring Qt5.
-func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, _ []string) error {
+// PostExecute provides instructions for configuring Qt5 and attempts live reload via D-Bus.
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
 	if execCtx.DryRun {
 		return nil
+	}
+
+	// Try to trigger live Qt theme reload via KDE D-Bus (if on KDE Plasma)
+	reloaded, err := kdedbus.ReloadTheme(ctx)
+	if err != nil && p.verbose {
+		fmt.Fprintf(os.Stderr, "   Note: D-Bus theme reload failed: %v\n", err)
+	} else if reloaded && p.verbose {
+		fmt.Fprintf(os.Stderr, "   Qt5 theme reload triggered via D-Bus (KDE Plasma running apps should update)\n")
 	}
 
 	home, err := os.UserHomeDir()

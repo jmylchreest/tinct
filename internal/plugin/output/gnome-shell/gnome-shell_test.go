@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/testing"
+	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/shared/testing"
 )
 
 // TestGNOMEShellPlugin runs all standard plugin tests using shared utilities.

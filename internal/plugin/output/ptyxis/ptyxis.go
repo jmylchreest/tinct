@@ -14,7 +14,7 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	"github.com/jmylchreest/tinct/internal/plugin/output/common"
+	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
@@ -139,7 +139,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 func (p *Plugin) generatePalette(themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("ptyxis", templates)
 	if p.verbose {
-		loader.WithVerbose(true, common.NewVerboseLogger(os.Stderr))
+		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
 
 	tmplContent, fromCustom, err := loader.Load("tinct.palette.tmpl")
@@ -151,7 +151,7 @@ func (p *Plugin) generatePalette(themeData *colour.ThemeData) ([]byte, error) {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.palette.tmpl\n")
 	}
 
-	tmpl, err := template.New("palette").Funcs(common.TemplateFuncs()).Parse(string(tmplContent))
+	tmpl, err := template.New("palette").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}

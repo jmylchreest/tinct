@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/jmylchreest/tinct/internal/colour"
-	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/testing"
+	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/shared/testing"
 )
 
 // TestNeovimPlugin runs all standard plugin tests using shared utilities.

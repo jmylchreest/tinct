@@ -308,10 +308,10 @@ Test with actual Tinct commands:
 
 ### Test Utilities
 
-Use `internal/plugin/output/testing` for test helpers:
+Use `internal/plugin/output/shared/testing` for test helpers:
 
 ```go
-import "github.com/jmylchreest/tinct/internal/plugin/output/testing"
+import "github.com/jmylchreest/tinct/internal/plugin/output/shared/testing"
 
 func TestPlugin(t *testing.T) {
     palette := testing.NewTestPalette()
