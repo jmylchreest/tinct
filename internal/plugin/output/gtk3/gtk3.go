@@ -15,7 +15,6 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
-	gtkdbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_gtk"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
@@ -153,17 +152,9 @@ func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
 }
 
 // PostExecute provides instructions for configuring GTK3 and attempts live reload via D-Bus.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
+func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, _ []string) error {
 	if execCtx.DryRun {
 		return nil
-	}
-
-	// Try to trigger live GTK theme reload via GNOME Settings Daemon D-Bus
-	reloaded, err := gtkdbus.ReloadTheme(ctx)
-	if err != nil && p.verbose {
-		fmt.Fprintf(os.Stderr, "   Note: D-Bus theme reload failed: %v\n", err)
-	} else if reloaded && p.verbose {
-		fmt.Fprintf(os.Stderr, "   GTK3 theme reload triggered via D-Bus (running apps should update)\n")
 	}
 
 	configDir := p.DefaultOutputDir()
