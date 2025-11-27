@@ -26,6 +26,11 @@ import (
 //go:embed *.tmpl
 var templates embed.FS
 
+const (
+	themeDark  = "TinctDark"
+	themeLight = "TinctLight"
+)
+
 // Plugin implements the output.Plugin interface for KDE Plasma themes.
 type Plugin struct {
 	outputDir string
@@ -140,9 +145,9 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	// Determine base theme name
 	var baseThemeName string
 	if themeData.ThemeType() == colour.ThemeDark {
-		baseThemeName = "TinctDark"
+		baseThemeName = themeDark
 	} else {
-		baseThemeName = "TinctLight"
+		baseThemeName = themeLight
 	}
 
 	// Generate both variants (workaround for plasma-apply-colorscheme not reloading same scheme name)
@@ -175,16 +180,16 @@ func (p *Plugin) GenerateDualTheme(primaryTheme, alternateTheme *colour.ThemeDat
 	// Determine base theme names
 	var primaryBaseName string
 	if primaryTheme.ThemeType() == colour.ThemeDark {
-		primaryBaseName = "TinctDark"
+		primaryBaseName = themeDark
 	} else {
-		primaryBaseName = "TinctLight"
+		primaryBaseName = themeLight
 	}
 
 	var alternateBaseName string
 	if alternateTheme.ThemeType() == colour.ThemeDark {
-		alternateBaseName = "TinctDark"
+		alternateBaseName = themeDark
 	} else {
-		alternateBaseName = "TinctLight"
+		alternateBaseName = themeLight
 	}
 
 	// Generate both variants for primary theme
@@ -279,9 +284,9 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	hasDark := false
 	hasLight := false
 	for _, file := range generatedFiles {
-		if strings.Contains(file, "TinctDark") && strings.HasSuffix(file, ".colors") {
+		if strings.Contains(file, themeDark) && strings.HasSuffix(file, ".colors") {
 			hasDark = true
-		} else if strings.Contains(file, "TinctLight") && strings.HasSuffix(file, ".colors") {
+		} else if strings.Contains(file, themeLight) && strings.HasSuffix(file, ".colors") {
 			hasLight = true
 		}
 	}
@@ -314,20 +319,20 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		// Dual-theme: detect system preference
 		detected := p.detectSystemColorScheme(ctx)
 		if strings.Contains(detected, "Dark") {
-			baseThemeName = "TinctDark"
+			baseThemeName = themeDark
 		} else if strings.Contains(detected, "Light") {
-			baseThemeName = "TinctLight"
+			baseThemeName = themeLight
 		} else {
 			// Couldn't detect, default to dark
-			baseThemeName = "TinctDark"
+			baseThemeName = themeDark
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   Could not detect system color preference, defaulting to TinctDark\n")
 			}
 		}
 	} else if hasDark {
-		baseThemeName = "TinctDark"
+		baseThemeName = themeDark
 	} else {
-		baseThemeName = "TinctLight"
+		baseThemeName = themeLight
 	}
 
 	// Determine which variant to apply by checking current scheme
@@ -391,7 +396,7 @@ func (p *Plugin) applyWallpaper(ctx context.Context, wallpaperPath string) error
 }
 
 // detectSystemColorScheme detects the current KDE system color scheme preference.
-// Returns "TinctDark" or "TinctLight", or empty string if detection fails.
+// Returns themeDark or themeLight, or empty string if detection fails.
 // determineVariantToApply checks the currently applied color scheme and returns
 // the variant to apply (1 or 2). This implements the alternating workaround for
 // plasma-apply-colorscheme not reloading when the scheme name is unchanged.
@@ -430,9 +435,9 @@ func (p *Plugin) detectSystemColorScheme(ctx context.Context) string {
 	if err == nil {
 		currentScheme := strings.ToLower(strings.TrimSpace(string(output)))
 		if strings.Contains(currentScheme, "dark") {
-			return "TinctDark"
+			return themeDark
 		} else if strings.Contains(currentScheme, "light") {
-			return "TinctLight"
+			return themeLight
 		}
 	}
 
@@ -442,9 +447,9 @@ func (p *Plugin) detectSystemColorScheme(ctx context.Context) string {
 	if err == nil {
 		lnf := strings.ToLower(strings.TrimSpace(string(output)))
 		if strings.Contains(lnf, "dark") {
-			return "TinctDark"
+			return themeDark
 		} else if strings.Contains(lnf, "light") {
-			return "TinctLight"
+			return themeLight
 		}
 	}
 

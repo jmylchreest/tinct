@@ -28,7 +28,11 @@ import (
 //go:embed *.tmpl
 var templates embed.FS
 
-const userThemeExtensionID = "user-theme@gnome-shell-extensions.gcampax.github.com"
+const (
+	userThemeExtensionID = "user-theme@gnome-shell-extensions.gcampax.github.com"
+	tinctThemeA          = "tinct-a"
+	tinctThemeB          = "tinct-b"
+)
 
 // Plugin implements the output.Plugin interface for GNOME Shell themes.
 type Plugin struct {
@@ -277,11 +281,11 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 
 			cmd := exec.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-uri", wallpaperURI)
-			_ = cmd.Run()
+			_ = cmd.Run() //nolint:errcheck // Best effort wallpaper setting
 
 			cmd = exec.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-uri-dark", wallpaperURI)
-			_ = cmd.Run()
+			_ = cmd.Run() //nolint:errcheck // Best effort wallpaper setting
 
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   gsettings: wallpaper set: %s\n", execCtx.WallpaperPath)
@@ -309,19 +313,19 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	var targetTheme string
 	themeChanged := false
 
-	if currentTheme != "tinct-a" && currentTheme != "tinct-b" {
+	if currentTheme != tinctThemeA && currentTheme != tinctThemeB {
 		// Not currently using tinct, start with tinct-a
-		targetTheme = "tinct-a"
+		targetTheme = tinctThemeA
 		themeChanged = true
 		if currentTheme != "" && p.verbose {
 			fmt.Fprintf(os.Stderr, "   Previous GNOME Shell theme: %s\n", currentTheme)
 		}
 	} else {
 		// Already using tinct, toggle between a and b to reload CSS
-		if currentTheme == "tinct-a" {
-			targetTheme = "tinct-b"
+		if currentTheme == tinctThemeA {
+			targetTheme = tinctThemeB
 		} else {
-			targetTheme = "tinct-a"
+			targetTheme = tinctThemeA
 		}
 		if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Toggling theme from %s to %s to reload CSS...\n", currentTheme, targetTheme)

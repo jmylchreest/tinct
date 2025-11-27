@@ -132,7 +132,7 @@ func (m *Manager) Save() error {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	if err := os.WriteFile(m.path, data, 0644); err != nil {
+	if err := os.WriteFile(m.path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 

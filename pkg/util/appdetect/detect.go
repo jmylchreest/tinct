@@ -227,7 +227,10 @@ func expandPath(path string) string {
 func matchesPattern(s, pattern string) bool {
 	// If pattern contains *, use filepath.Match
 	if strings.Contains(pattern, "*") {
-		matched, _ := filepath.Match(pattern, s)
+		matched, err := filepath.Match(pattern, s)
+		if err != nil {
+			return false // Invalid pattern
+		}
 		return matched
 	}
 

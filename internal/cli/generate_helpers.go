@@ -195,11 +195,11 @@ func desaturatePalette(palette *colour.Palette, themeType colour.ThemeType) *col
 	adjusted := make([]color.Color, len(palette.Colors))
 	for i, c := range palette.Colors {
 		r, g, b, a := c.RGBA()
-		// Convert to 0-255 range
-		r8 := uint8(r >> 8)
-		g8 := uint8(g >> 8)
-		b8 := uint8(b >> 8)
-		a8 := uint8(a >> 8)
+		// Convert to 0-255 range (shift ensures values fit in uint8)
+		r8 := uint8(r >> 8) //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		g8 := uint8(g >> 8) //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		b8 := uint8(b >> 8) //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		a8 := uint8(a >> 8) //nolint:gosec // Safe: shifted uint32 always fits in uint8
 
 		// Convert to HSL
 		h, s, l := rgbToHSL(r8, g8, b8)

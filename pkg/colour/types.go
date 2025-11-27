@@ -97,10 +97,11 @@ func (rgba RGBA) ToRGB() RGB {
 func ToRGB(c color.Color) RGB {
 	r, g, b, _ := c.RGBA()
 	// RGBA returns values in the range [0, 65535], convert to [0, 255].
+	// The shift operation ensures values fit in uint8 range.
 	return RGB{
-		R: uint8(r >> 8),
-		G: uint8(g >> 8),
-		B: uint8(b >> 8),
+		R: uint8(r >> 8), //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		G: uint8(g >> 8), //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		B: uint8(b >> 8), //nolint:gosec // Safe: shifted uint32 always fits in uint8
 	}
 }
 
@@ -108,10 +109,11 @@ func ToRGB(c color.Color) RGB {
 func ToRGBA(c color.Color) RGBA {
 	r, g, b, a := c.RGBA()
 	// RGBA returns values in the range [0, 65535], convert to [0, 255].
+	// The shift operation ensures values fit in uint8 range.
 	return RGBA{
-		R: uint8(r >> 8),
-		G: uint8(g >> 8),
-		B: uint8(b >> 8),
-		A: uint8(a >> 8),
+		R: uint8(r >> 8), //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		G: uint8(g >> 8), //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		B: uint8(b >> 8), //nolint:gosec // Safe: shifted uint32 always fits in uint8
+		A: uint8(a >> 8), //nolint:gosec // Safe: shifted uint32 always fits in uint8
 	}
 }
