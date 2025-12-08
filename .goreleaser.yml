@@ -506,9 +506,12 @@ checksum:
   algorithm: sha256
 
 # Snapshots (non-tagged builds)
-# Format: v0.1.2-abc1234 (next version after tag with git short hash)
+# Format: v0.1.2-preview.42+abc1234 (SemVer 2.0 compatible with GitVersion-style ordering)
+# Uses commit count from git describe for reliable alphanumeric ordering
+# .Summary gives us "v0.1.11-3-gc36d0ae", we extract the "3" (commit count)
+# Build metadata (+commit) provides traceability but doesn't affect precedence
 snapshot:
-  version_template: "{{ incpatch .Version }}-{{ .ShortCommit }}-SNAPSHOT"
+  version_template: '{{ incpatch .Version }}-preview.{{ index (split .Summary "-") 1 }}+{{ .ShortCommit }}'
 
 # ============================================================================
 # CHANGELOG
