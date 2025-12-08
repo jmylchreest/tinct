@@ -1,0 +1,140 @@
+# Example GitHub Actions workflow for automated repository syncing
+# This workflow demonstrates how to use tinct-repo-manager with changelog generation
+#
+# Place this file in .github/workflows/ of your tinct-plugins repository
+
+name: Sync Plugin Repository
+
+on:
+  # Run on new releases
+  repository_dispatch:
+    types: [new-release]
+
+  # Run weekly to prune unavailable entries
+  schedule:
+    - cron: '0 2 * * 0'  # Sundays at 2 AM UTC
+
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no changes)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to push changes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Download tinct-repo-manager
+        run: |
+          # Try to download the latest release binary
+          if ! gh release download --repo jmylchreest/tinct --pattern 'tinct-repo-manager_*_Linux_x86_64.tar.gz' 2>/dev/null; then
+            echo "No pre-built binary found, building from source..."
+            # Clone tinct repository
+            git clone --depth 1 https://github.com/jmylchreest/tinct.git /tmp/tinct
+            cd /tmp/tinct
+            # Build the repo manager
+            go build -o /tmp/tinct-repo-manager ./cmd/tinct-repo-manager
+            # Move to working directory
+            mv /tmp/tinct-repo-manager ./tinct-repo-manager
+          else
+            # Extract the downloaded tarball
+            tar -xzf tinct-repo-manager_*_Linux_x86_64.tar.gz
+          fi
+          chmod +x tinct-repo-manager
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run sync with changelog
+        id: sync
+        run: |
+          # Determine dry-run flag
+          DRY_RUN_FLAG=""
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            DRY_RUN_FLAG="--dry-run"
+          fi
+
+          # Run sync and capture output
+          ./tinct-repo-manager sync \
+            --config repository/sync-config.jsonl \
+            --manifest repository/repository.json \
+            --min-protocol-version 0.0.1 \
+            --prune \
+            --prune-remove-after 720h \
+            --prune-incompatible \
+            --keep-recent 10 \
+            --changelog-output /tmp/changelog.txt \
+            --changelog-format text \
+            --verbose \
+            ${DRY_RUN_FLAG}
+
+          # Check if changes were made
+          if git diff --quiet repository/repository.json; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes to commit"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+          fi
+
+      - name: Commit and push changes
+        if: steps.sync.outputs.has_changes == 'true' && github.event.inputs.dry_run != 'true'
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Read changelog
+          if [[ -f /tmp/changelog.txt ]]; then
+            CHANGELOG=$(cat /tmp/changelog.txt)
+          else
+            CHANGELOG="No changelog generated"
+          fi
+
+          # Commit with detailed message
+          git add repository/repository.json
+          git commit -m "chore(repository): sync plugins with pruning" -m "${CHANGELOG}"
+
+          # Push changes
+          git push
+
+      - name: Upload changelog artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-changelog
+          path: /tmp/changelog.txt
+          retention-days: 30
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request' && steps.sync.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let changelog = 'No changelog available';
+            if (fs.existsSync('/tmp/changelog.txt')) {
+              changelog = fs.readFileSync('/tmp/changelog.txt', 'utf8');
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Repository Sync Results\n\n\`\`\`\n${changelog}\n\`\`\``
+            });
