@@ -506,12 +506,13 @@ checksum:
   algorithm: sha256
 
 # Snapshots (non-tagged builds)
-# Format: v0.1.2-preview.42+abc1234 (SemVer 2.0 compatible with GitVersion-style ordering)
-# Uses commit count from git describe for reliable alphanumeric ordering
-# .Summary gives us "v0.1.11-3-gc36d0ae", we extract the "3" (commit count)
+# Format: v0.1.2-preview.TIMESTAMP+abc1234 (SemVer 2.0 compatible with GitVersion-style ordering)
+# Uses timestamp for reliable alphanumeric ordering (newer = higher number)
 # Build metadata (+commit) provides traceability but doesn't affect precedence
+# Note: We use timestamp instead of commit count because GitHub Actions shallow clones
+# don't always have proper git describe output with commit counts
 snapshot:
-  version_template: '{{ incpatch .Version }}-preview.{{ index (split .Summary "-") 1 }}+{{ .ShortCommit }}'
+  version_template: "{{ incpatch .Version }}-preview.{{ .Timestamp }}+{{ .ShortCommit }}"
 
 # ============================================================================
 # CHANGELOG
