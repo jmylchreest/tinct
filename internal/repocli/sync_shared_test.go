@@ -95,11 +95,11 @@ func TestMetadataHydrationCache_SetMetadata_WithoutPending(t *testing.T) {
 		Type:            "input",
 	}
 
-	hydrated := cache.SetMetadata("test-plugin", "1.0.0", metadata, mgr, true, false)
+	hydratedCount := cache.SetMetadata("test-plugin", "1.0.0", metadata, mgr, false, false, nil)
 
 	// Should return 0 hydrated
-	if hydrated != 0 {
-		t.Errorf("Expected 0 hydrated plugins, got %d", hydrated)
+	if hydratedCount != 0 {
+		t.Errorf("Expected 0 hydrated plugins, got %d", hydratedCount)
 	}
 
 	// Verify metadata was cached
@@ -163,11 +163,11 @@ func TestMetadataHydrationCache_SetMetadata_WithPending(t *testing.T) {
 		Type:            "input",
 	}
 
-	hydrated := cache.SetMetadata("test-plugin", "1.0.0", metadata, mgr, true, false)
+	hydratedCount := cache.SetMetadata("test-plugin", "1.0.0", metadata, mgr, false, false, nil)
 
 	// Should return 2 hydrated (dry-run mode)
-	if hydrated != 2 {
-		t.Errorf("Expected 2 hydrated plugins, got %d", hydrated)
+	if hydratedCount != 2 {
+		t.Errorf("Expected 2 hydrated plugins, got %d", hydratedCount)
 	}
 
 	// Verify pending list was cleared

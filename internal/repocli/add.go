@@ -168,16 +168,16 @@ Examples:
 
 			// Add to manifest
 			if !dryRun {
-				if err := mgr.AddOrUpdatePluginVersion(pluginName, version); err != nil {
+				if _, err := mgr.AddOrUpdatePluginVersion(pluginName, version); err != nil {
 					return fmt.Errorf("failed to add plugin: %w", err)
 				}
 
 				// Set plugin metadata
 				if metadata != nil {
-					mgr.SetPluginMetadata(pluginName, metadata)
+					_ = mgr.SetPluginMetadata(pluginName, metadata)
 				} else {
 					// Use provided values
-					mgr.SetPluginMetadata(pluginName, &repomanager.PluginMetadata{
+					_ = mgr.SetPluginMetadata(pluginName, &repomanager.PluginMetadata{
 						Type: pluginType,
 					})
 				}

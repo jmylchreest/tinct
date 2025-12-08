@@ -3,6 +3,7 @@ package repocli
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/jmylchreest/tinct/internal/repomanager"
@@ -26,6 +27,8 @@ func SyncCmd() *cobra.Command {
 		pruneRemoveAfter   string
 		pruneIncompatible  bool
 		keepRecent         int
+		changelogOutput    string
+		changelogFormat    string
 	)
 
 	cmd := &cobra.Command{
@@ -73,7 +76,7 @@ Examples:
 
 			// If config is specified, delegate to config-based sync
 			if configPath != "" {
-				return syncFromConfig(configPath, manifestPath, minProtocolVersion, skipQuery, dryRun, verbose, prune, pruneRemoveAfter, pruneIncompatible, keepRecent)
+				return syncFromConfig(configPath, manifestPath, minProtocolVersion, skipQuery, dryRun, verbose, prune, pruneRemoveAfter, pruneIncompatible, keepRecent, changelogOutput, changelogFormat)
 			}
 
 			// GitHub mode - validate required flags
@@ -101,6 +104,9 @@ Examples:
 			// even if they failed before we successfully queried one
 			hydrationCache := NewMetadataHydrationCache()
 
+			// Create changelog tracker
+			changelog := NewChangeLog()
+
 			// Create a synthetic source for the shared processing function
 			source := &repomanager.SyncSource{
 				Type:    repomanager.SyncSourceGitHub,
@@ -113,7 +119,7 @@ Examples:
 			// Process using the shared function
 			totalAdded, totalSkipped, totalErrors := ProcessGitHubSourceWithProtocol(
 				source, client, mgr, minProtocolVersion, tracker, hydrationCache,
-				skipQuery, dryRun, verbose,
+				skipQuery, dryRun, verbose, changelog,
 			)
 
 			// Summary
@@ -144,7 +150,7 @@ Examples:
 					KeepRecent:          keepRecent,
 					DryRun:              dryRun,
 					Verbose:             verbose,
-				})
+				}, changelog)
 
 				fmt.Printf("\n=== Prune Summary ===\n")
 				fmt.Printf("Checked: %d\n", pruneStats.Checked)
@@ -163,14 +169,15 @@ Examples:
 				}
 			}
 
-			// Save manifest
-			saveNeeded := totalAdded > 0 || (prune && pruneStats != nil && (pruneStats.Unavailable > 0 || pruneStats.Removed > 0))
+			// Save manifest only if material changes were made
+			saveNeeded := changelog.HasMaterialChanges()
 
 			if !dryRun && saveNeeded {
 				// Only update LastPruned if we actually removed entries
 				if prune && pruneStats != nil && pruneStats.Removed > 0 {
 					now := time.Now()
 					mgr.GetManifest().LastPruned = &now
+					mgr.MarkDirty()
 				}
 
 				if err := mgr.Save(); err != nil {
@@ -181,6 +188,11 @@ Examples:
 				fmt.Println("\n(Dry run - no changes saved)")
 			} else {
 				fmt.Println("\n(No changes to save)")
+			}
+
+			// Output changelog if requested
+			if err := writeChangelog(changelog, changelogOutput, changelogFormat); err != nil {
+				return fmt.Errorf("failed to write changelog: %w", err)
 			}
 
 			return nil
@@ -206,6 +218,8 @@ Examples:
 	cmd.Flags().StringVar(&pruneRemoveAfter, "prune-remove-after", "720h", "Remove entries unavailable for duration (e.g., 720h)")
 	cmd.Flags().BoolVar(&pruneIncompatible, "prune-incompatible", false, "Remove plugin versions incompatible with current protocol")
 	cmd.Flags().IntVar(&keepRecent, "keep-recent", 0, "Keep only the N most recent versions per plugin (0 = keep all)")
+	cmd.Flags().StringVar(&changelogOutput, "changelog-output", "", "Write changelog to file (use '-' for stdout)")
+	cmd.Flags().StringVar(&changelogFormat, "changelog-format", "text", "Changelog format: text, short, json")
 
 	// Make flags mutually exclusive (either --config OR --github)
 	cmd.MarkFlagsMutuallyExclusive("config", "github")
@@ -227,6 +241,8 @@ func syncFromConfig(
 	pruneRemoveAfter string,
 	pruneIncompatible bool,
 	keepRecent int,
+	changelogOutput string,
+	changelogFormat string,
 ) error {
 	// Load config
 	fmt.Printf("Loading sync configuration from: %s\n", configPath)
@@ -258,6 +274,9 @@ func syncFromConfig(
 	// even if they failed before we successfully queried one
 	hydrationCache := NewMetadataHydrationCache()
 
+	// Create changelog tracker
+	changelog := NewChangeLog()
+
 	totalAdded := 0
 	totalSkipped := 0
 	totalErrors := 0
@@ -270,7 +289,7 @@ func syncFromConfig(
 		case repomanager.SyncSourceGitHub:
 			added, skipped, errors := ProcessGitHubSourceWithProtocol(
 				&source, client, mgr, minProtocolVersion, tracker, hydrationCache,
-				skipQuery, dryRun, verbose,
+				skipQuery, dryRun, verbose, changelog,
 			)
 			totalAdded += added
 			totalSkipped += skipped
@@ -279,7 +298,7 @@ func syncFromConfig(
 		case repomanager.SyncSourceURL:
 			added, errors := ProcessURLSourceWithProtocol(
 				&source, mgr, minProtocolVersion, tracker, hydrationCache,
-				skipQuery, dryRun, verbose,
+				skipQuery, dryRun, verbose, changelog,
 			)
 			totalAdded += added
 			totalErrors += errors
@@ -322,7 +341,7 @@ func syncFromConfig(
 			KeepRecent:          keepRecent,
 			DryRun:              dryRun,
 			Verbose:             verbose,
-		})
+		}, changelog)
 
 		fmt.Printf("\n=== Prune Summary ===\n")
 		fmt.Printf("Checked: %d\n", pruneStats.Checked)
@@ -341,14 +360,15 @@ func syncFromConfig(
 		}
 	}
 
-	// Save manifest
-	saveNeeded := totalAdded > 0 || (prune && pruneStats != nil && (pruneStats.Unavailable > 0 || pruneStats.Removed > 0))
+	// Save manifest only if material changes were made
+	saveNeeded := changelog.HasMaterialChanges()
 
 	if !dryRun && saveNeeded {
 		// Only update LastPruned if we actually removed entries
 		if prune && pruneStats != nil && pruneStats.Removed > 0 {
 			now := time.Now()
 			mgr.GetManifest().LastPruned = &now
+			mgr.MarkDirty()
 		}
 
 		if err := mgr.Save(); err != nil {
@@ -361,5 +381,30 @@ func syncFromConfig(
 		fmt.Println("\n(No changes to save)")
 	}
 
+	// Output changelog if requested
+	if err := writeChangelog(changelog, changelogOutput, changelogFormat); err != nil {
+		return fmt.Errorf("failed to write changelog: %w", err)
+	}
+
 	return nil
+}
+
+// writeChangelog writes the changelog to the specified output.
+func writeChangelog(changelog *ChangeLog, output, format string) error {
+	// Skip if no output specified
+	if output == "" {
+		return nil
+	}
+
+	// Format the changelog
+	content := changelog.Format(format)
+
+	// Write to stdout
+	if output == "-" {
+		fmt.Print(content)
+		return nil
+	}
+
+	// Write to file
+	return os.WriteFile(output, []byte(content), 0600)
 }

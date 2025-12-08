@@ -217,6 +217,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Trigger plugin repository update (preview)
+        if: success()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.PLUGIN_REPO_PAT }}
+        run: |
+          if [ -n "$GH_TOKEN" ]; then
+            echo "Triggering plugin repository sync for preview release..."
+            if gh api repos/jmylchreest/tinct-plugins/dispatches \
+              -f event_type=tinct-release \
+              -f client_payload[release_type]=preview \
+              -f client_payload[version]=${{ steps.version.outputs.tag }}; then
+              echo "✓ Successfully triggered plugin repository sync"
+            else
+              echo "⚠ Failed to trigger plugin repository sync"
+              exit 0
+            fi
+          else
+            echo "PLUGIN_REPO_PAT not configured, skipping plugin repository trigger"
+          fi
+
       - name: Prune old preview releases
         run: |
           # Keep at least 3 most recent preview releases
@@ -298,11 +319,11 @@ jobs:
           GH_TOKEN: ${{ secrets.PLUGIN_REPO_PAT }}
         run: |
           if [ -n "$GH_TOKEN" ]; then
-            echo "Triggering plugin repository sync workflow..."
-            if gh workflow run update-repository.yml \
-              --repo jmylchreest/tinct-plugins \
-              --ref main \
-              -f prune=true; then
+            echo "Triggering plugin repository sync via repository_dispatch..."
+            if gh api repos/jmylchreest/tinct-plugins/dispatches \
+              -f event_type=tinct-release \
+              -f client_payload[release_type]=stable \
+              -f client_payload[version]=${{ github.ref_name }}; then
               echo "✓ Successfully triggered plugin repository sync"
             else
               echo "⚠ Failed to trigger plugin repository sync"

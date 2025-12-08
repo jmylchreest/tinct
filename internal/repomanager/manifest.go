@@ -20,6 +20,14 @@ type ManifestManager struct {
 	dirty    bool // Tracks if manifest has been modified
 }
 
+// AddResult describes what happened during an add/update operation.
+type AddResult struct {
+	PluginAdded    bool     // True if this is a new plugin
+	VersionAdded   bool     // True if this is a new version
+	PlatformsAdded []string // List of platforms that were added
+	Updated        bool     // True if anything was updated
+}
+
 // LoadManifest loads a manifest from disk or creates a new one if it doesn't exist.
 func LoadManifest(path string) (*ManifestManager, error) {
 	data, err := os.ReadFile(path)
@@ -94,7 +102,12 @@ func (m *ManifestManager) Save() error {
 }
 
 // AddOrUpdatePluginVersion adds or updates a plugin version.
-func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *repository.Version) error {
+// Returns detailed information about what was added/updated.
+func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *repository.Version) (*AddResult, error) {
+	result := &AddResult{
+		PlatformsAdded: []string{},
+	}
+
 	plugin, exists := m.manifest.Plugins[pluginName]
 	if !exists {
 		// Create new plugin entry
@@ -104,6 +117,8 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 		}
 		m.manifest.Plugins[pluginName] = plugin
 		m.dirty = true // Mark as modified
+		result.PluginAdded = true
+		result.Updated = true
 	}
 
 	// Ensure Versions is initialized
@@ -120,14 +135,25 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 				if v.Downloads == nil {
 					plugin.Versions[i].Downloads = version.Downloads
 					m.dirty = true
+					result.Updated = true
+					// All platforms are new
+					for platform := range version.Downloads {
+						result.PlatformsAdded = append(result.PlatformsAdded, platform)
+					}
 				} else {
 					// Merge platform-specific downloads
 					for platform, download := range version.Downloads {
 						existing, exists := v.Downloads[platform]
 						// Only mark dirty if platform is new or download details changed
-						if !exists || existing.URL != download.URL || existing.Checksum != download.Checksum {
+						if !exists {
 							v.Downloads[platform] = download
 							m.dirty = true
+							result.Updated = true
+							result.PlatformsAdded = append(result.PlatformsAdded, platform)
+						} else if existing.URL != download.URL || existing.Checksum != download.Checksum {
+							v.Downloads[platform] = download
+							m.dirty = true
+							result.Updated = true
 						}
 					}
 					plugin.Versions[i].Downloads = v.Downloads
@@ -138,10 +164,12 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 			if version.Compatibility != "" && plugin.Versions[i].Compatibility != version.Compatibility {
 				plugin.Versions[i].Compatibility = version.Compatibility
 				m.dirty = true
+				result.Updated = true
 			}
 			if version.ChangelogURL != "" && plugin.Versions[i].ChangelogURL != version.ChangelogURL {
 				plugin.Versions[i].ChangelogURL = version.ChangelogURL
 				m.dirty = true
+				result.Updated = true
 			}
 
 			versionExists = true
@@ -158,9 +186,15 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 		plugin.Versions = append(plugin.Versions, *version)
 		sortVersionsNewestFirst(plugin.Versions)
 		m.dirty = true
+		result.VersionAdded = true
+		result.Updated = true
+		// All platforms are new
+		for platform := range version.Downloads {
+			result.PlatformsAdded = append(result.PlatformsAdded, platform)
+		}
 	}
 
-	return nil
+	return result, nil
 }
 
 // sortVersionsNewestFirst sorts versions by release date, newest first.
@@ -262,7 +296,10 @@ func (m *ManifestManager) MarkDirty() {
 }
 
 // SetPluginMetadata updates plugin metadata (description, author, etc.).
-func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginMetadata) {
+// Returns list of fields that were changed.
+func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginMetadata) []string {
+	changedFields := []string{}
+
 	plugin, exists := m.manifest.Plugins[pluginName]
 	if !exists {
 		plugin = &repository.Plugin{
@@ -276,18 +313,22 @@ func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginM
 	if metadata.Type != "" && plugin.Type != metadata.Type {
 		plugin.Type = metadata.Type
 		m.dirty = true
+		changedFields = append(changedFields, "type")
 	}
 	if metadata.Description != "" && plugin.Description != metadata.Description {
 		plugin.Description = metadata.Description
 		m.dirty = true
+		changedFields = append(changedFields, "description")
 	}
 	if metadata.Author != "" && plugin.Author != metadata.Author {
 		plugin.Author = metadata.Author
 		m.dirty = true
+		changedFields = append(changedFields, "author")
 	}
 	if metadata.Repository != "" && plugin.Repository != metadata.Repository {
 		plugin.Repository = metadata.Repository
 		m.dirty = true
+		changedFields = append(changedFields, "repository")
 	}
 	if len(metadata.Tags) > 0 {
 		// Check if tags actually changed
@@ -303,12 +344,16 @@ func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginM
 		if tagsChanged {
 			plugin.Tags = metadata.Tags
 			m.dirty = true
+			changedFields = append(changedFields, "tags")
 		}
 	}
 	if metadata.License != "" && plugin.License != metadata.License {
 		plugin.License = metadata.License
 		m.dirty = true
+		changedFields = append(changedFields, "license")
 	}
+
+	return changedFields
 }
 
 // SetManifestMetadata updates top-level manifest metadata.

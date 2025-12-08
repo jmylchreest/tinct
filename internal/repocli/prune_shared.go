@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jmylchreest/tinct/internal/repomanager"
+	tincversion "github.com/jmylchreest/tinct/internal/version"
 )
 
 // PruneStats tracks pruning statistics.
@@ -42,7 +43,7 @@ func PruneManifest(
 		KeepRecent:          0,
 		DryRun:              dryRun,
 		Verbose:             verbose,
-	})
+	}, nil)
 }
 
 // PruneManifestWithOptions performs comprehensive pruning on a manifest with advanced options.
@@ -51,6 +52,7 @@ func PruneManifest(
 func PruneManifestWithOptions(
 	mgr *repomanager.ManifestManager,
 	opts *PruneOptions,
+	changelog *ChangeLog,
 ) *PruneStats {
 
 	manifest := mgr.GetManifest()
@@ -71,20 +73,25 @@ func PruneManifestWithOptions(
 			if opts.PruneIncompatible && version.Compatibility != "" {
 				compatible, err := repomanager.IsProtocolCompatible(version.Compatibility)
 				if err != nil || !compatible {
+					var reason string
+					if err != nil {
+						reason = err.Error()
+					} else {
+						reason = fmt.Sprintf("protocol version %s incompatible with tinct %s",
+							version.Compatibility, tincversion.Version)
+					}
 					if opts.Verbose {
-						var reason string
-						if err != nil {
-							reason = err.Error()
-						} else {
-							reason = fmt.Sprintf("protocol version %s incompatible with tinct %s",
-								version.Compatibility, "0.0.1")
-						}
 						fmt.Printf("  Removing incompatible version: %s %s - %s\n",
 							pluginName, version.Version, reason)
 					}
 					versionsToRemove = append(versionsToRemove, vi)
 					stats.Incompatible++
 					stats.Removed++
+
+					// Track in changelog
+					if changelog != nil {
+						changelog.RemoveEntry(pluginName, version.Version, "incompatible protocol")
+					}
 					continue
 				}
 			}
@@ -98,12 +105,17 @@ func PruneManifestWithOptions(
 				shouldKeep, filterReason := validator.ShouldKeepDownload(download.URL)
 				if !shouldKeep {
 					if opts.Verbose {
-						fmt.Printf("  Filter validation failed: %s %s (%s) - %s\n",
+						fmt.Printf("  Removing %s %s (%s): %s\n",
 							pluginName, version.Version, platform, filterReason)
 					}
 					platformsToRemove = append(platformsToRemove, platform)
 					stats.FilterFailed++
 					stats.Removed++
+
+					// Track in changelog if this removes the whole version
+					if changelog != nil && len(version.Downloads) == 1 {
+						changelog.RemoveEntry(pluginName, version.Version, filterReason)
+					}
 					continue
 				}
 
@@ -111,12 +123,19 @@ func PruneManifestWithOptions(
 				if opts.RemoveAfterDuration > 0 && download.UnavailableSince != nil {
 					unavailableDuration := time.Since(*download.UnavailableSince)
 					if unavailableDuration > opts.RemoveAfterDuration {
+						timeUnavailable := unavailableDuration.Round(time.Hour).String()
 						if opts.Verbose {
-							fmt.Printf("  Removing: %s %s (%s) - unavailable for %v\n",
-								pluginName, version.Version, platform, unavailableDuration.Round(time.Hour))
+							fmt.Printf("  Removing %s %s (%s): unavailable for %s\n",
+								pluginName, version.Version, platform, timeUnavailable)
 						}
 						platformsToRemove = append(platformsToRemove, platform)
 						stats.Removed++
+
+						// Track in changelog if this removes the whole version
+						if changelog != nil && len(version.Downloads) == 1 {
+							changelog.RemoveEntry(pluginName, version.Version,
+								fmt.Sprintf("unavailable for %s", timeUnavailable))
+						}
 						continue
 					}
 				}
@@ -178,6 +197,11 @@ func PruneManifestWithOptions(
 					if opts.Verbose {
 						fmt.Printf("  Removed version %s (no downloads left)\n", version.Version)
 					}
+
+					// Track in changelog
+					if changelog != nil {
+						changelog.RemoveEntry(pluginName, version.Version, "no downloads left")
+					}
 				}
 			}
 		}
@@ -202,6 +226,13 @@ func PruneManifestWithOptions(
 			if opts.Verbose {
 				fmt.Printf("  Keeping only %d most recent versions of %s (removing %d old versions)\n",
 					opts.KeepRecent, pluginName, oldVersionCount)
+			}
+
+			// Track removed versions in changelog
+			if changelog != nil && !opts.DryRun {
+				for i := opts.KeepRecent; i < len(plugin.Versions); i++ {
+					changelog.RemoveEntry(pluginName, plugin.Versions[i].Version, "old version pruned")
+				}
 			}
 
 			if !opts.DryRun {

@@ -119,7 +119,7 @@ func TestManifestManager_AddOrUpdatePluginVersion_NewPlugin(t *testing.T) {
 		},
 	}
 
-	err := mgr.AddOrUpdatePluginVersion("test-plugin", version)
+	_, err := mgr.AddOrUpdatePluginVersion("test-plugin", version)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestManifestManager_AddOrUpdatePluginVersion_DuplicateDownload(t *testing.T
 		},
 	}
 
-	err := mgr.AddOrUpdatePluginVersion("test-plugin", version)
+	_, err := mgr.AddOrUpdatePluginVersion("test-plugin", version)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestManifestManager_AddOrUpdatePluginVersion_NewPlatform(t *testing.T) {
 		},
 	}
 
-	err := mgr.AddOrUpdatePluginVersion("test-plugin", version)
+	_, err := mgr.AddOrUpdatePluginVersion("test-plugin", version)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

@@ -54,6 +54,7 @@ func (c *MetadataHydrationCache) SetMetadata(
 	mgr *repomanager.ManifestManager,
 	dryRun bool,
 	verbose bool,
+	changelog *ChangeLog,
 ) int {
 
 	key := fmt.Sprintf("%s:%s", pluginName, version)
@@ -93,15 +94,32 @@ func (c *MetadataHydrationCache) SetMetadata(
 
 		// Add to manifest
 		if !dryRun {
-			if err := mgr.AddOrUpdatePluginVersion(pending.PluginName, version); err != nil {
+			result, err := mgr.AddOrUpdatePluginVersion(pending.PluginName, version)
+			if err != nil {
 				if verbose {
 					fmt.Printf("      Error hydrating: %v\n", err)
 				}
 				continue
 			}
 
+			// Track changes in changelog
+			if result != nil && result.Updated && changelog != nil {
+				if result.PluginAdded {
+					changelog.AddPlugin(pending.PluginName, pending.PluginVersion, result.PlatformsAdded)
+				} else if result.VersionAdded {
+					changelog.AddVersion(pending.PluginName, pending.PluginVersion, result.PlatformsAdded)
+				} else if len(result.PlatformsAdded) > 0 {
+					for _, platform := range result.PlatformsAdded {
+						changelog.AddPlatform(pending.PluginName, pending.PluginVersion, platform)
+					}
+				}
+			}
+
 			// Update plugin metadata
-			mgr.SetPluginMetadata(pending.PluginName, metadata)
+			fields := mgr.SetPluginMetadata(pending.PluginName, metadata)
+			if len(fields) > 0 && changelog != nil {
+				changelog.UpdateMetadata(pending.PluginName, fields)
+			}
 		}
 
 		hydrated++
@@ -176,6 +194,7 @@ func ProcessGitHubSourceWithProtocol(
 	skipQuery bool,
 	dryRun bool,
 	verbose bool,
+	changelog *ChangeLog,
 ) (added int, skipped int, errors int) {
 	// Parse GitHub repo
 	owner, repo, err := repomanager.ParseGitHubRepo(source.Repo)
@@ -286,7 +305,7 @@ func ProcessGitHubSourceWithProtocol(
 						}
 
 						// Store metadata and hydrate any pending plugins
-						hydratedCount := hydrationCache.SetMetadata(pluginName, pluginVersion, metadata, mgr, dryRun, verbose)
+						hydratedCount := hydrationCache.SetMetadata(pluginName, pluginVersion, metadata, mgr, dryRun, verbose, changelog)
 						if hydratedCount > 0 {
 							added += hydratedCount
 							if verbose {
@@ -308,7 +327,10 @@ func ProcessGitHubSourceWithProtocol(
 
 					// Update plugin metadata
 					if !dryRun {
-						mgr.SetPluginMetadata(pluginName, metadata)
+						fields := mgr.SetPluginMetadata(pluginName, metadata)
+						if len(fields) > 0 && changelog != nil {
+							changelog.UpdateMetadata(pluginName, fields)
+						}
 					}
 				}
 			}
@@ -331,10 +353,24 @@ func ProcessGitHubSourceWithProtocol(
 
 			// Add to manifest
 			if !dryRun {
-				if err := mgr.AddOrUpdatePluginVersion(pluginName, version); err != nil {
+				result, err := mgr.AddOrUpdatePluginVersion(pluginName, version)
+				if err != nil {
 					fmt.Printf("      Error: %v\n", err)
 					errors++
 					continue
+				}
+
+				// Track changes in changelog
+				if result != nil && result.Updated && changelog != nil {
+					if result.PluginAdded {
+						changelog.AddPlugin(pluginName, pluginVersion, result.PlatformsAdded)
+					} else if result.VersionAdded {
+						changelog.AddVersion(pluginName, pluginVersion, result.PlatformsAdded)
+					} else if len(result.PlatformsAdded) > 0 {
+						for _, platform := range result.PlatformsAdded {
+							changelog.AddPlatform(pluginName, pluginVersion, platform)
+						}
+					}
 				}
 			}
 
@@ -362,6 +398,7 @@ func ProcessURLSourceWithProtocol(
 	skipQuery bool,
 	dryRun bool,
 	verbose bool,
+	changelog *ChangeLog,
 ) (added int, errors int) {
 
 	fmt.Printf("  URL: %s\n", source.URL)
@@ -443,7 +480,7 @@ func ProcessURLSourceWithProtocol(
 				}
 
 				// Store metadata and hydrate any pending plugins
-				hydratedCount := hydrationCache.SetMetadata(source.Plugin, pluginVersion, metadata, mgr, dryRun, verbose)
+				hydratedCount := hydrationCache.SetMetadata(source.Plugin, pluginVersion, metadata, mgr, dryRun, verbose, changelog)
 				if hydratedCount > 0 && verbose {
 					fmt.Printf("  Hydrated %d pending plugin(s)\n", hydratedCount)
 				}
@@ -459,7 +496,10 @@ func ProcessURLSourceWithProtocol(
 
 			// Update plugin metadata
 			if !dryRun {
-				mgr.SetPluginMetadata(source.Plugin, metadata)
+				fields := mgr.SetPluginMetadata(source.Plugin, metadata)
+				if len(fields) > 0 && changelog != nil {
+					changelog.UpdateMetadata(source.Plugin, fields)
+				}
 			}
 		}
 	}
@@ -488,9 +528,23 @@ func ProcessURLSourceWithProtocol(
 
 	// Add to manifest
 	if !dryRun {
-		if err := mgr.AddOrUpdatePluginVersion(source.Plugin, version); err != nil {
+		result, err := mgr.AddOrUpdatePluginVersion(source.Plugin, version)
+		if err != nil {
 			fmt.Printf("  Error: %v\n", err)
 			return 0, 1
+		}
+
+		// Track changes in changelog
+		if result != nil && result.Updated && changelog != nil {
+			if result.PluginAdded {
+				changelog.AddPlugin(source.Plugin, pluginVersion, result.PlatformsAdded)
+			} else if result.VersionAdded {
+				changelog.AddVersion(source.Plugin, pluginVersion, result.PlatformsAdded)
+			} else if len(result.PlatformsAdded) > 0 {
+				for _, platform := range result.PlatformsAdded {
+					changelog.AddPlatform(source.Plugin, pluginVersion, platform)
+				}
+			}
 		}
 	}
 

@@ -57,6 +57,7 @@ go build -o tinct-repo-manager ./cmd/tinct-repo-manager
   --min-protocol-version 0.0.1 \
   --prune \
   --prune-remove-after 720h \
+  --changelog-output /tmp/changelog.txt \
   --verbose
 
 # Or sync from specific GitHub release
@@ -148,9 +149,32 @@ This repository is automatically updated via GitHub Actions:
 
 The workflow:
 1. Downloads the latest `tinct-repo-manager` binary from GitHub releases (or builds from source as fallback)
-2. Executes `sync --config sync-config.jsonl --min-protocol-version 0.0.1` with the configuration
+2. Executes `sync --config sync-config.jsonl --min-protocol-version 0.0.1` with changelog tracking
 3. Validates the manifest
-4. Commits changes if any plugins were updated
+4. Commits changes with detailed changelog if any plugins were updated
+
+### Changelog Feature
+
+The repository manager now tracks all changes during sync operations and generates detailed commit messages showing exactly what changed. Instead of generic "sync plugins" messages, you get detailed changelogs like:
+
+```
+New versions:
+  - random v0.1.11 (linux_amd64, darwin_amd64, darwin_arm64)
+  - templater v0.1.11 (linux_amd64, darwin_amd64, darwin_arm64)
+
+Removed:
+  - old-plugin v0.8.0 (unavailable for 720h)
+
+Summary: +2 versions -1 removed
+```
+
+See [Changelog Documentation](../../docs/REPOSITORY-CHANGELOG.md) for details on:
+- How changelog tracking works
+- Setting up GitHub Actions with changelog
+- Troubleshooting common issues
+- Migration guide for existing setups
+
+Example workflow: [example-sync-workflow.yml](example-sync-workflow.yml)
 
 ## Contributing
 
