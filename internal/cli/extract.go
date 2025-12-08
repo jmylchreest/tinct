@@ -22,6 +22,7 @@ var (
 	extractFormat      string
 	extractOutput      string
 	extractShowPreview bool
+	extractBackend     string
 )
 
 // extractCmd represents the extract command.
@@ -79,6 +80,7 @@ func init() {
 	extractCmd.Flags().StringVarP(&extractFormat, "format", "f", "palette", "output format (palette, hex, rgb, json, categorised)")
 	extractCmd.Flags().StringVarP(&extractOutput, "output", "o", "", "output file (default: stdout)")
 	extractCmd.Flags().BoolVar(&extractShowPreview, "preview", false, "show colour previews in terminal")
+	extractCmd.Flags().StringVar(&extractBackend, "backend", "kmeans", "Colour extraction backend (kmeans)")
 }
 
 // runExtract executes the extract command.
@@ -121,6 +123,7 @@ func runExtract(cmd *cobra.Command, args []string) error {
 	inputOpts := input.GenerateOptions{
 		Verbose:         verbose,
 		DryRun:          false,
+		Backend:         extractBackend,
 		ColourOverrides: []string{},
 		PluginArgs:      make(map[string]any),
 	}
