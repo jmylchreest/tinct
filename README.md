@@ -31,8 +31,8 @@ cd tinct && go build -o tinct ./cmd/tinct
 ### Basic Usage
 
 ```bash
-# Preview colors from an image
-tinct extract --preview --categorise wallpaper.jpg
+# Extract colors from an image
+tinct extract -i image -p ~/Pictures/wallpaper.jpg
 
 # Apply theme to all configured applications
 tinct generate -i image -p ~/Pictures/wallpaper.jpg -o all
