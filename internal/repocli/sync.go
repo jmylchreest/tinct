@@ -263,6 +263,9 @@ func syncFromConfig(
 		return fmt.Errorf("failed to load manifest: %w", err)
 	}
 
+	// Create snapshot of manifest before sync for diff calculation
+	mgr.CreateSnapshot()
+
 	// Create GitHub client (reused for all GitHub sources)
 	client := repomanager.NewGitHubClient()
 
@@ -274,7 +277,8 @@ func syncFromConfig(
 	// even if they failed before we successfully queried one
 	hydrationCache := NewMetadataHydrationCache()
 
-	// Create changelog tracker
+	// Create temporary changelog tracker for operations (not used for final output)
+	// We'll build the real changelog from the manifest diff
 	changelog := NewChangeLog()
 
 	totalAdded := 0
@@ -360,8 +364,14 @@ func syncFromConfig(
 		}
 	}
 
-	// Save manifest only if material changes were made
-	saveNeeded := changelog.HasMaterialChanges()
+	// Compute the actual diff between snapshot and current state
+	manifestDiff := mgr.ComputeDiff()
+
+	// Build the real changelog from the manifest diff
+	realChangelog := BuildFromManifestDiff(manifestDiff)
+
+	// Save manifest only if there are actual changes
+	saveNeeded := realChangelog.HasMaterialChanges()
 
 	if !dryRun && saveNeeded {
 		// Only update LastPruned if we actually removed entries
@@ -381,8 +391,8 @@ func syncFromConfig(
 		fmt.Println("\n(No changes to save)")
 	}
 
-	// Output changelog if requested
-	if err := writeChangelog(changelog, changelogOutput, changelogFormat); err != nil {
+	// Output changelog if requested (use the real changelog based on diff)
+	if err := writeChangelog(realChangelog, changelogOutput, changelogFormat); err != nil {
 		return fmt.Errorf("failed to write changelog: %w", err)
 	}
 

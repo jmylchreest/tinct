@@ -17,7 +17,8 @@ import (
 type ManifestManager struct {
 	manifest *repository.Manifest
 	path     string
-	dirty    bool // Tracks if manifest has been modified
+	dirty    bool                 // Tracks if manifest has been modified
+	snapshot *repository.Manifest // Snapshot of manifest before sync for diff calculation
 }
 
 // AddResult describes what happened during an add/update operation.
@@ -68,6 +69,7 @@ func LoadManifest(path string) (*ManifestManager, error) {
 	return &ManifestManager{
 		manifest: &manifest,
 		path:     path,
+		snapshot: nil, // Snapshot is created on-demand
 	}, nil
 }
 
@@ -78,8 +80,17 @@ func (m *ManifestManager) Save() error {
 		return nil
 	}
 
-	// Update LastUpdated timestamp
-	m.manifest.LastUpdated = time.Now()
+	// Only update LastUpdated timestamp if we have material changes
+	// This prevents the timestamp from causing spurious commits when nothing actually changed
+	if m.snapshot != nil {
+		diff := m.ComputeDiff()
+		if diff != nil && (len(diff.PluginsAdded) > 0 || len(diff.PluginsRemoved) > 0 || len(diff.PluginsChanged) > 0) {
+			m.manifest.LastUpdated = time.Now()
+		}
+	} else {
+		// No snapshot means we can't compute diff, so assume material changes
+		m.manifest.LastUpdated = time.Now()
+	}
 
 	// Use json.Encoder with SetEscapeHTML(false) to prevent escaping <, >, & in compatibility strings
 	var buf bytes.Buffer
@@ -374,4 +385,187 @@ func (m *ManifestManager) SetManifestMetadata(name, description, url, maintained
 		m.manifest.MaintainedBy = maintainedBy
 		m.dirty = true
 	}
+}
+
+// CreateSnapshot creates a deep copy of the current manifest state.
+// This should be called before starting a sync operation.
+func (m *ManifestManager) CreateSnapshot() {
+	// Create a deep copy by marshaling and unmarshaling
+	data, err := json.Marshal(m.manifest)
+	if err != nil {
+		// If we can't create a snapshot, just skip it
+		return
+	}
+
+	var snapshot repository.Manifest
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return
+	}
+
+	m.snapshot = &snapshot
+}
+
+// ManifestDiff represents the differences between two manifest states.
+type ManifestDiff struct {
+	PluginsAdded   map[string]*repository.Plugin // Plugins that didn't exist before
+	PluginsRemoved map[string]*repository.Plugin // Plugins that were removed
+	PluginsChanged map[string]*PluginVersionDiff // Plugins with version changes
+}
+
+// PluginVersionDiff represents version changes for a single plugin.
+type PluginVersionDiff struct {
+	VersionsAdded    map[string]*repository.Version // version -> Version
+	VersionsRemoved  map[string]*repository.Version // version -> Version
+	PlatformsChanged map[string]*PlatformDiff       // version -> platform changes
+}
+
+// PlatformDiff represents platform changes for a version.
+type PlatformDiff struct {
+	Added   []string // platforms added
+	Removed []string // platforms removed
+}
+
+// ComputeDiff compares the current manifest with the snapshot and returns differences.
+// Returns nil if no snapshot was created.
+func (m *ManifestManager) ComputeDiff() *ManifestDiff {
+	if m.snapshot == nil {
+		return nil
+	}
+
+	diff := &ManifestDiff{
+		PluginsAdded:   make(map[string]*repository.Plugin),
+		PluginsRemoved: make(map[string]*repository.Plugin),
+		PluginsChanged: make(map[string]*PluginVersionDiff),
+	}
+
+	// Find added and changed plugins
+	for name, currentPlugin := range m.manifest.Plugins {
+		snapshotPlugin, existed := m.snapshot.Plugins[name]
+
+		if !existed {
+			// Entire plugin is new
+			diff.PluginsAdded[name] = currentPlugin
+		} else {
+			// Check for version differences
+			versionDiff := computePluginVersionDiff(snapshotPlugin, currentPlugin)
+			if versionDiff != nil {
+				diff.PluginsChanged[name] = versionDiff
+			}
+		}
+	}
+
+	// Find removed plugins
+	for name, snapshotPlugin := range m.snapshot.Plugins {
+		if _, exists := m.manifest.Plugins[name]; !exists {
+			diff.PluginsRemoved[name] = snapshotPlugin
+		}
+	}
+
+	return diff
+}
+
+// computePluginVersionDiff compares versions between old and new plugin states.
+func computePluginVersionDiff(oldPlugin, newPlugin *repository.Plugin) *PluginVersionDiff {
+	// Build maps for easier comparison
+	oldVersions := make(map[string]*repository.Version)
+	for i := range oldPlugin.Versions {
+		v := &oldPlugin.Versions[i]
+		oldVersions[v.Version] = v
+	}
+
+	newVersions := make(map[string]*repository.Version)
+	for i := range newPlugin.Versions {
+		v := &newPlugin.Versions[i]
+		newVersions[v.Version] = v
+	}
+
+	diff := &PluginVersionDiff{
+		VersionsAdded:    make(map[string]*repository.Version),
+		VersionsRemoved:  make(map[string]*repository.Version),
+		PlatformsChanged: make(map[string]*PlatformDiff),
+	}
+
+	hasChanges := false
+
+	// Find added versions and platform changes
+	for ver, newVer := range newVersions {
+		oldVer, existed := oldVersions[ver]
+
+		if !existed {
+			// Entire version is new
+			diff.VersionsAdded[ver] = newVer
+			hasChanges = true
+		} else {
+			// Check for platform differences
+			platformDiff := computePlatformDiff(oldVer, newVer)
+			if platformDiff != nil {
+				diff.PlatformsChanged[ver] = platformDiff
+				hasChanges = true
+			}
+		}
+	}
+
+	// Find removed versions
+	for ver, oldVer := range oldVersions {
+		if _, exists := newVersions[ver]; !exists {
+			diff.VersionsRemoved[ver] = oldVer
+			hasChanges = true
+		}
+	}
+
+	if !hasChanges {
+		return nil
+	}
+
+	return diff
+}
+
+// computePlatformDiff compares platforms between old and new versions.
+func computePlatformDiff(oldVer, newVer *repository.Version) *PlatformDiff {
+	if oldVer.Downloads == nil && newVer.Downloads == nil {
+		return nil
+	}
+
+	oldPlatforms := make(map[string]bool)
+	if oldVer.Downloads != nil {
+		for platform := range oldVer.Downloads {
+			oldPlatforms[platform] = true
+		}
+	}
+
+	newPlatforms := make(map[string]bool)
+	if newVer.Downloads != nil {
+		for platform := range newVer.Downloads {
+			newPlatforms[platform] = true
+		}
+	}
+
+	diff := &PlatformDiff{
+		Added:   []string{},
+		Removed: []string{},
+	}
+
+	// Find added platforms
+	for platform := range newPlatforms {
+		if !oldPlatforms[platform] {
+			diff.Added = append(diff.Added, platform)
+		}
+	}
+
+	// Find removed platforms
+	for platform := range oldPlatforms {
+		if !newPlatforms[platform] {
+			diff.Removed = append(diff.Removed, platform)
+		}
+	}
+
+	if len(diff.Added) == 0 && len(diff.Removed) == 0 {
+		return nil
+	}
+
+	// Sort for consistent output
+	sort.Strings(diff.Added)
+	sort.Strings(diff.Removed)
+
+	return diff
 }

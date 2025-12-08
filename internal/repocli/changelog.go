@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/jmylchreest/tinct/internal/repomanager"
 )
 
 // ChangeLog tracks all changes made during a sync operation.
@@ -252,6 +254,68 @@ func (c *ChangeLog) String() string {
 	sb.WriteString("\n")
 
 	return sb.String()
+}
+
+// BuildFromManifestDiff creates a changelog from a manifest diff.
+// This is the proper way to build a changelog based on actual changes to the repository.
+func BuildFromManifestDiff(diff *repomanager.ManifestDiff) *ChangeLog {
+	if diff == nil {
+		return NewChangeLog()
+	}
+
+	changelog := NewChangeLog()
+
+	// Process newly added plugins
+	for name, plugin := range diff.PluginsAdded {
+		if len(plugin.Versions) > 0 {
+			// Use the newest version for the plugin addition
+			version := plugin.Versions[0]
+			platforms := []string{}
+			if version.Downloads != nil {
+				for platform := range version.Downloads {
+					platforms = append(platforms, platform)
+				}
+			}
+			sort.Strings(platforms)
+			changelog.AddPlugin(name, version.Version, platforms)
+		}
+	}
+
+	// Process changed plugins
+	for name, versionDiff := range diff.PluginsChanged {
+		// Process added versions
+		for version, ver := range versionDiff.VersionsAdded {
+			platforms := []string{}
+			if ver.Downloads != nil {
+				for platform := range ver.Downloads {
+					platforms = append(platforms, platform)
+				}
+			}
+			sort.Strings(platforms)
+			changelog.AddVersion(name, version, platforms)
+		}
+
+		// Process platform changes
+		for version, platformDiff := range versionDiff.PlatformsChanged {
+			for _, platform := range platformDiff.Added {
+				changelog.AddPlatform(name, version, platform)
+			}
+		}
+
+		// Process removed versions
+		for version := range versionDiff.VersionsRemoved {
+			changelog.RemoveEntry(name, version, "old version pruned")
+		}
+	}
+
+	// Process removed plugins (all versions)
+	for name, plugin := range diff.PluginsRemoved {
+		for _, version := range plugin.Versions {
+			changelog.RemoveEntry(name, version.Version, "plugin removed")
+		}
+	}
+
+	return changelog
 }
 
 // consolidateByPlugin groups all changes by plugin name for easier diff-style display.

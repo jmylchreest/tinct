@@ -4,6 +4,9 @@ package repocli
 import (
 	"strings"
 	"testing"
+
+	"github.com/jmylchreest/tinct/internal/plugin/repository"
+	"github.com/jmylchreest/tinct/internal/repomanager"
 )
 
 func TestChangeLogConsolidatedFormat(t *testing.T) {
@@ -231,4 +234,148 @@ func TestChangeLogDesiredFormat(t *testing.T) {
 
 	// Print output for manual verification during development
 	t.Logf("Changelog output:\n%s", output)
+}
+
+func TestBuildFromManifestDiff(t *testing.T) {
+	// Create a mock manifest diff
+	diff := &repomanager.ManifestDiff{
+		PluginsAdded:   make(map[string]*repository.Plugin),
+		PluginsRemoved: make(map[string]*repository.Plugin),
+		PluginsChanged: make(map[string]*repomanager.PluginVersionDiff),
+	}
+
+	// Add a new plugin
+	diff.PluginsAdded["newplugin"] = &repository.Plugin{
+		Name: "newplugin",
+		Versions: []repository.Version{
+			{
+				Version: "1.0.0",
+				Downloads: map[string]*repository.Download{
+					"linux_x86":   {},
+					"linux_arm64": {},
+				},
+			},
+		},
+	}
+
+	// Add a changed plugin with version additions and removals
+	diff.PluginsChanged["dunstify"] = &repomanager.PluginVersionDiff{
+		VersionsAdded: map[string]*repository.Version{
+			"0.1.3": {
+				Version: "0.1.3",
+				Downloads: map[string]*repository.Download{
+					"linux_arm64": {},
+					"linux_arm":   {},
+					"linux_x86":   {},
+				},
+			},
+			"0.1.2": {
+				Version: "0.1.2",
+				Downloads: map[string]*repository.Download{
+					"linux_arm64": {},
+				},
+			},
+		},
+		VersionsRemoved: map[string]*repository.Version{
+			"0.0.1": {
+				Version:   "0.0.1",
+				Downloads: map[string]*repository.Download{},
+			},
+		},
+		PlatformsChanged: map[string]*repomanager.PlatformDiff{
+			"0.1.2": {
+				Added:   []string{"linux_arm", "linux_x86"},
+				Removed: []string{},
+			},
+		},
+	}
+
+	// Build changelog from diff
+	changelog := BuildFromManifestDiff(diff)
+
+	if changelog.IsEmpty() {
+		t.Fatal("Expected non-empty changelog")
+	}
+
+	output := changelog.String()
+
+	// Verify new plugin is listed
+	if !strings.Contains(output, "New plugins:") {
+		t.Error("Expected 'New plugins:' section")
+	}
+	if !strings.Contains(output, "newplugin") {
+		t.Error("Expected newplugin in output")
+	}
+
+	// Verify updated plugins section
+	if !strings.Contains(output, "Updated plugins:") {
+		t.Error("Expected 'Updated plugins:' section")
+	}
+	if !strings.Contains(output, "- dunstify:") {
+		t.Error("Expected dunstify in updated plugins")
+	}
+
+	// Verify added versions
+	if !strings.Contains(output, "Added: v0.1.3") {
+		t.Error("Expected version 0.1.3 to be listed as added")
+	}
+	if !strings.Contains(output, "Added: v0.1.2") {
+		t.Error("Expected version 0.1.2 to be listed as added")
+	}
+
+	// Verify removed versions
+	if !strings.Contains(output, "Pruned: v0.0.1") {
+		t.Error("Expected version 0.0.1 to be listed as pruned")
+	}
+
+	// Verify platforms are consolidated
+	if !strings.Contains(output, "linux_arm64") && !strings.Contains(output, "linux_arm") {
+		t.Error("Expected platforms to be shown in output")
+	}
+
+	t.Logf("Diff-based changelog output:\n%s", output)
+}
+
+func TestBuildFromManifestDiffEmpty(t *testing.T) {
+	// Test with nil diff
+	changelog := BuildFromManifestDiff(nil)
+	if !changelog.IsEmpty() {
+		t.Error("Expected empty changelog for nil diff")
+	}
+
+	// Test with empty diff
+	diff := &repomanager.ManifestDiff{
+		PluginsAdded:   make(map[string]*repository.Plugin),
+		PluginsRemoved: make(map[string]*repository.Plugin),
+		PluginsChanged: make(map[string]*repomanager.PluginVersionDiff),
+	}
+	changelog = BuildFromManifestDiff(diff)
+	if !changelog.IsEmpty() {
+		t.Error("Expected empty changelog for empty diff")
+	}
+}
+
+func TestBuildFromManifestDiffNoChanges(t *testing.T) {
+	// When running sync twice with no actual changes, the diff should be empty
+	// and produce "No changes" output
+	diff := &repomanager.ManifestDiff{
+		PluginsAdded:   make(map[string]*repository.Plugin),
+		PluginsRemoved: make(map[string]*repository.Plugin),
+		PluginsChanged: make(map[string]*repomanager.PluginVersionDiff),
+	}
+
+	changelog := BuildFromManifestDiff(diff)
+	output := changelog.String()
+
+	if output != "No changes" {
+		t.Errorf("Expected 'No changes', got: %s", output)
+	}
+
+	if !changelog.IsEmpty() {
+		t.Error("Expected changelog to be empty")
+	}
+
+	if changelog.HasMaterialChanges() {
+		t.Error("Expected no material changes")
+	}
 }
