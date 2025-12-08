@@ -25,6 +25,21 @@ type ChangeLog struct {
 	MetadataUpdated []MetadataUpdate
 }
 
+// PluginChanges represents all changes for a single plugin.
+type PluginChanges struct {
+	Plugin          string
+	VersionsAdded   []VersionChange
+	VersionsRemoved []VersionChange
+}
+
+// VersionChange represents changes to a specific version.
+type VersionChange struct {
+	Version          string
+	PlatformsAdded   []string
+	PlatformsRemoved []string
+	Reason           string // For removals: "old version pruned", etc.
+}
+
 // PluginAddition represents a newly added plugin.
 type PluginAddition struct {
 	Name      string
@@ -124,10 +139,11 @@ func (c *ChangeLog) IsEmpty() bool {
 }
 
 // HasMaterialChanges returns true if there are changes beyond just metadata updates.
+// Platform additions alone don't count as material changes to avoid noise from
+// adding platforms to old versions that immediately get pruned.
 func (c *ChangeLog) HasMaterialChanges() bool {
 	return len(c.PluginsAdded) > 0 ||
 		len(c.VersionsAdded) > 0 ||
-		len(c.PlatformsAdded) > 0 ||
 		len(c.EntriesRemoved) > 0
 }
 
@@ -136,6 +152,9 @@ func (c *ChangeLog) String() string {
 	if c.IsEmpty() {
 		return "No changes"
 	}
+
+	// Consolidate changes by plugin
+	pluginChanges := c.consolidateByPlugin()
 
 	var sb strings.Builder
 
@@ -151,49 +170,52 @@ func (c *ChangeLog) String() string {
 		}
 	}
 
-	// New versions
-	if len(c.VersionsAdded) > 0 {
-		sb.WriteString("\nNew versions:\n")
-		sort.Slice(c.VersionsAdded, func(i, j int) bool {
-			if c.VersionsAdded[i].Plugin == c.VersionsAdded[j].Plugin {
-				return c.VersionsAdded[i].Version > c.VersionsAdded[j].Version
+	// Updated plugins (consolidated view)
+	updatedPlugins := []string{}
+	for plugin := range pluginChanges {
+		// Skip if it's a new plugin
+		isNew := false
+		for _, p := range c.PluginsAdded {
+			if p.Name == plugin {
+				isNew = true
+				break
 			}
-			return c.VersionsAdded[i].Plugin < c.VersionsAdded[j].Plugin
-		})
-		for _, v := range c.VersionsAdded {
-			platforms := strings.Join(v.Platforms, ", ")
-			sb.WriteString(fmt.Sprintf("  - %s v%s (%s)\n", v.Plugin, v.Version, platforms))
+		}
+		if !isNew {
+			updatedPlugins = append(updatedPlugins, plugin)
 		}
 	}
 
-	// New platforms
-	if len(c.PlatformsAdded) > 0 {
-		sb.WriteString("\nPlatform additions:\n")
-		sort.Slice(c.PlatformsAdded, func(i, j int) bool {
-			if c.PlatformsAdded[i].Plugin == c.PlatformsAdded[j].Plugin {
-				if c.PlatformsAdded[i].Version == c.PlatformsAdded[j].Version {
-					return c.PlatformsAdded[i].Platform < c.PlatformsAdded[j].Platform
+	if len(updatedPlugins) > 0 {
+		sort.Strings(updatedPlugins)
+		sb.WriteString("\nUpdated plugins:\n")
+
+		for _, plugin := range updatedPlugins {
+			changes := pluginChanges[plugin]
+			sb.WriteString(fmt.Sprintf("\n  - %s:\n", plugin))
+
+			// Show added versions with their platforms
+			if len(changes.VersionsAdded) > 0 {
+				sort.Slice(changes.VersionsAdded, func(i, j int) bool {
+					return changes.VersionsAdded[i].Version > changes.VersionsAdded[j].Version
+				})
+				for _, v := range changes.VersionsAdded {
+					if len(v.PlatformsAdded) > 0 {
+						platforms := strings.Join(v.PlatformsAdded, ", ")
+						sb.WriteString(fmt.Sprintf("    - Added: v%s (%s)\n", v.Version, platforms))
+					}
 				}
-				return c.PlatformsAdded[i].Version > c.PlatformsAdded[j].Version
 			}
-			return c.PlatformsAdded[i].Plugin < c.PlatformsAdded[j].Plugin
-		})
-		for _, p := range c.PlatformsAdded {
-			sb.WriteString(fmt.Sprintf("  - %s v%s: added %s\n", p.Plugin, p.Version, p.Platform))
-		}
-	}
 
-	// Removed entries
-	if len(c.EntriesRemoved) > 0 {
-		sb.WriteString("\nRemoved:\n")
-		sort.Slice(c.EntriesRemoved, func(i, j int) bool {
-			if c.EntriesRemoved[i].Plugin == c.EntriesRemoved[j].Plugin {
-				return c.EntriesRemoved[i].Version > c.EntriesRemoved[j].Version
+			// Show removed versions with their reason
+			if len(changes.VersionsRemoved) > 0 {
+				sort.Slice(changes.VersionsRemoved, func(i, j int) bool {
+					return changes.VersionsRemoved[i].Version > changes.VersionsRemoved[j].Version
+				})
+				for _, v := range changes.VersionsRemoved {
+					sb.WriteString(fmt.Sprintf("    - Pruned: v%s (%s)\n", v.Version, v.Reason))
+				}
 			}
-			return c.EntriesRemoved[i].Plugin < c.EntriesRemoved[j].Plugin
-		})
-		for _, r := range c.EntriesRemoved {
-			sb.WriteString(fmt.Sprintf("  - %s v%s (%s)\n", r.Plugin, r.Version, r.Reason))
 		}
 	}
 
@@ -230,6 +252,86 @@ func (c *ChangeLog) String() string {
 	sb.WriteString("\n")
 
 	return sb.String()
+}
+
+// consolidateByPlugin groups all changes by plugin name for easier diff-style display.
+func (c *ChangeLog) consolidateByPlugin() map[string]*PluginChanges {
+	result := make(map[string]*PluginChanges)
+
+	// Process version additions
+	for _, v := range c.VersionsAdded {
+		if _, exists := result[v.Plugin]; !exists {
+			result[v.Plugin] = &PluginChanges{
+				Plugin:          v.Plugin,
+				VersionsAdded:   []VersionChange{},
+				VersionsRemoved: []VersionChange{},
+			}
+		}
+		result[v.Plugin].VersionsAdded = append(result[v.Plugin].VersionsAdded, VersionChange{
+			Version:        v.Version,
+			PlatformsAdded: v.Platforms,
+		})
+	}
+
+	// Process platform additions (add to existing versions or create new entries)
+	platformsByVersion := make(map[string]map[string][]string) // plugin -> version -> platforms
+	for _, p := range c.PlatformsAdded {
+		if _, exists := platformsByVersion[p.Plugin]; !exists {
+			platformsByVersion[p.Plugin] = make(map[string][]string)
+		}
+		platformsByVersion[p.Plugin][p.Version] = append(platformsByVersion[p.Plugin][p.Version], p.Platform)
+	}
+
+	for plugin, versions := range platformsByVersion {
+		if _, exists := result[plugin]; !exists {
+			result[plugin] = &PluginChanges{
+				Plugin:          plugin,
+				VersionsAdded:   []VersionChange{},
+				VersionsRemoved: []VersionChange{},
+			}
+		}
+
+		for version, platforms := range versions {
+			// Check if this version already exists in VersionsAdded
+			found := false
+			for i, v := range result[plugin].VersionsAdded {
+				if v.Version == version {
+					// Merge platforms
+					result[plugin].VersionsAdded[i].PlatformsAdded = append(
+						result[plugin].VersionsAdded[i].PlatformsAdded,
+						platforms...,
+					)
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				// This is a platform addition to an existing version
+				result[plugin].VersionsAdded = append(result[plugin].VersionsAdded, VersionChange{
+					Version:        version,
+					PlatformsAdded: platforms,
+				})
+			}
+		}
+	}
+
+	// Process removals
+	for _, r := range c.EntriesRemoved {
+		if _, exists := result[r.Plugin]; !exists {
+			result[r.Plugin] = &PluginChanges{
+				Plugin:          r.Plugin,
+				VersionsAdded:   []VersionChange{},
+				VersionsRemoved: []VersionChange{},
+			}
+		}
+		result[r.Plugin].VersionsRemoved = append(result[r.Plugin].VersionsRemoved, VersionChange{
+			Version: r.Version,
+			Reason:  r.Reason,
+		})
+	}
+
+	return result
 }
 
 // Format formats the changelog in a specific format.
