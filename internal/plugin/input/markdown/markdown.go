@@ -14,9 +14,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/shared/themeformat"
+	"github.com/jmylchreest/tinct/internal/version"
 )
-
-const version = "0.0.1"
 
 // Plugin implements the input.Plugin interface for markdown theme loading.
 type Plugin struct {
@@ -43,7 +42,7 @@ func (p *Plugin) Description() string {
 
 // Version returns the plugin version.
 func (p *Plugin) Version() string {
-	return version
+	return version.Version
 }
 
 // RegisterFlags registers plugin-specific flags with the cobra command.

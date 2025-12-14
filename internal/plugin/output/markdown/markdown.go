@@ -14,9 +14,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/shared/themeformat"
+	"github.com/jmylchreest/tinct/internal/version"
 )
-
-const version = "0.0.1"
 
 // Plugin implements the output.Plugin interface for markdown theme export.
 type Plugin struct {
@@ -50,7 +49,7 @@ func (p *Plugin) Description() string {
 
 // Version returns the plugin version.
 func (p *Plugin) Version() string {
-	return version
+	return version.Version
 }
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
@@ -103,7 +102,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	theme := &themeformat.Theme{
 		Name:      p.name,
 		Version:   "1.0",
-		Generator: fmt.Sprintf("tinct v%s", version),
+		Generator: fmt.Sprintf("tinct v%s", version.Version),
 		Generated: time.Now(),
 		Source:    nil, // Could be populated from input plugin metadata in future
 		Colors:    make([]themeformat.Color, 0),

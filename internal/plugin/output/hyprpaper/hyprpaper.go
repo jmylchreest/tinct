@@ -18,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/version"
 )
 
 // isValidPath checks if a path is safe to use in commands.
@@ -66,7 +67,7 @@ func (p *Plugin) Description() string {
 
 // Version returns the plugin version.
 func (p *Plugin) Version() string {
-	return "0.0.1"
+	return version.Version
 }
 
 // RegisterFlags registers plugin-specific flags with the cobra command.

@@ -31,6 +31,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/commonflags"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/regions"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/seed"
+	"github.com/jmylchreest/tinct/internal/version"
 )
 
 const (
@@ -100,7 +101,7 @@ func (p *Plugin) Description() string {
 
 // Version returns the plugin version.
 func (p *Plugin) Version() string {
-	return "0.0.1"
+	return version.Version
 }
 
 // RegisterFlags registers plugin-specific flags.

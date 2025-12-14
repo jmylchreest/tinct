@@ -16,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
+	"github.com/jmylchreest/tinct/internal/version"
 )
 
 // Plugin implements the input.Plugin interface for remote CSS palette fetching.
@@ -45,7 +46,7 @@ func (p *Plugin) Description() string {
 
 // Version returns the plugin version.
 func (p *Plugin) Version() string {
-	return "0.0.1"
+	return version.Version
 }
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
