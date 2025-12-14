@@ -174,7 +174,7 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Download and install from URL.
-	pluginPath, err := installPluginFromSource(download.URL, "", pluginDir, sourceTypeHTTP, verbose)
+	pluginPath, err := installPluginFromSource(download.URL, "", pluginDir, sourceTypeHTTP, verbose, false)
 	if err != nil {
 		return fmt.Errorf("failed to install plugin: %w", err)
 	}

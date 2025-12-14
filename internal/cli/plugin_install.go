@@ -42,7 +42,8 @@ type PluginSourceInfo struct {
 
 // installPluginFromSource installs a plugin from various source types.
 // If forcedSourceType is non-empty, it overrides auto-detection.
-func installPluginFromSource(source, pluginName, pluginDir, forcedSourceType string, verbose bool) (string, error) {
+// If quiet is true, progress bar messages are suppressed (useful when a table displays status).
+func installPluginFromSource(source, pluginName, pluginDir, forcedSourceType string, verbose, quiet bool) (string, error) {
 	// Parse source to determine type.
 	sourceType, sourceInfo := parsePluginSource(source)
 
@@ -64,7 +65,7 @@ func installPluginFromSource(source, pluginName, pluginDir, forcedSourceType str
 	case sourceTypeLocal:
 		return installFromLocal(sourceInfo, pluginDir, verbose)
 	case sourceTypeHTTP:
-		return installFromHTTP(sourceInfo, pluginName, pluginDir, verbose)
+		return installFromHTTP(sourceInfo, pluginName, pluginDir, verbose, quiet)
 	case sourceTypeGit:
 		return installFromGit(sourceInfo, pluginName, pluginDir, verbose)
 	default:
@@ -238,18 +239,22 @@ func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (st
 }
 
 // installFromHTTP downloads a plugin from an HTTP/HTTPS URL.
-func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) {
+// If quiet is true, progress bar messages are suppressed.
+func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbose, quiet bool) (string, error) {
 	// Download the file using our HTTP utility with progress tracking
 	ctx := context.Background()
 
 	var data []byte
 	var downloadErr error
 
-	// Always show progress bar for downloads
+	// Show progress bar for downloads unless in quiet mode
 	var bar *progress.ProgressBar
 
 	data, downloadErr = httputil.Fetch(ctx, info.URL, httputil.FetchOptions{
 		ProgressCallback: func(current, total int64) {
+			if quiet {
+				return // Skip progress bar in quiet mode
+			}
 			if bar == nil && total > 0 {
 				bar = progress.NewProgressBar(total, fmt.Sprintf("Downloading %s", pluginName))
 				bar.Set(current)
@@ -260,7 +265,10 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 	})
 
 	if bar != nil {
-		if downloadErr == nil {
+		// In quiet mode, don't print final message (table will show status)
+		if quiet {
+			bar.Finish("")
+		} else if downloadErr == nil {
 			bar.Finish(fmt.Sprintf("Downloaded %s", pluginName))
 		} else {
 			bar.Finish("Download failed")

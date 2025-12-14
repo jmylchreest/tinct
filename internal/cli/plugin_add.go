@@ -69,7 +69,7 @@ func resolvePluginSource(source, pluginDir, forcedSourceType string, verbose boo
 	}
 	// Note: Caller is responsible for cleanup if needed
 
-	tmpPath, err := installPluginFromSource(source, "", tmpDir, forcedSourceType, verbose)
+	tmpPath, err := installPluginFromSource(source, "", tmpDir, forcedSourceType, verbose, false)
 	if err != nil {
 		os.RemoveAll(tmpDir)
 		return "", false, err

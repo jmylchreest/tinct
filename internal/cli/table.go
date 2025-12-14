@@ -22,14 +22,15 @@ type Table struct {
 	terminalWidthOverride int         // Override terminal width for testing
 
 	// Live mode support
-	live      bool           // If true, updates in-place; if false, static output
-	isTTY     bool           // Whether the output is a TTY (supports ANSI codes)
-	rowIDs    map[string]int // Maps row ID to row index (for live mode)
-	rowOrder  []string       // Preserves insertion order of row IDs
-	writer    io.Writer      // Output writer (defaults to os.Stderr for live mode)
-	rendered  bool           // Whether table has been rendered
-	lineCount int            // Number of lines in last render
-	mu        sync.Mutex     // Protects concurrent access in live mode
+	live       bool           // If true, updates in-place; if false, static output
+	isTTY      bool           // Whether the output is a TTY (supports ANSI codes)
+	batching   bool           // If true, defer rendering until EndBatch() is called
+	rowIDs     map[string]int // Maps row ID to row index (for live mode)
+	rowOrder   []string       // Preserves insertion order of row IDs
+	writer     io.Writer      // Output writer (defaults to os.Stderr for live mode)
+	rendered   bool           // Whether table has been rendered
+	lineCount  int            // Number of lines in last render
+	mu         sync.Mutex     // Protects concurrent access in live mode
 }
 
 // NewTable creates a new table with the given headers.
@@ -49,13 +50,15 @@ func NewTable(headers []string) *Table {
 }
 
 // SetLive enables or disables live updating mode.
-// In live mode, the table updates in-place using ANSI cursor control.
-// Live mode is automatically disabled if output is not a TTY.
+// In live mode, the table collects updates and renders the final state at Finish().
+// Intermediate updates are not rendered to avoid terminal compatibility issues.
 func (t *Table) SetLive(live bool) *Table {
 	t.live = live
 	// Check if writer is a TTY (supports ANSI escape codes)
 	if live {
 		t.isTTY = isWriterTTY(t.writer)
+		// In live mode, always batch updates until Finish() is called
+		t.batching = true
 	}
 	return t
 }
@@ -66,6 +69,26 @@ func (t *Table) WithWriter(w io.Writer) *Table {
 	// Re-check TTY status if live mode is enabled
 	if t.live {
 		t.isTTY = isWriterTTY(w)
+	}
+	return t
+}
+
+// StartBatch begins a batch operation where rendering is deferred.
+// Call EndBatch() to render the accumulated changes.
+func (t *Table) StartBatch() *Table {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.batching = true
+	return t
+}
+
+// EndBatch ends a batch operation and renders the table.
+func (t *Table) EndBatch() *Table {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.batching = false
+	if t.live {
+		t.renderLive()
 	}
 	return t
 }
@@ -96,7 +119,7 @@ func (t *Table) AddRow(row []string) {
 	normalizedRow := t.normalizeRow(row)
 	t.rows = append(t.rows, normalizedRow)
 
-	if t.live {
+	if t.live && !t.batching {
 		t.renderLive()
 	}
 }
@@ -123,7 +146,7 @@ func (t *Table) AddRowWithID(id string, row []string) {
 		t.rows = append(t.rows, normalizedRow)
 	}
 
-	if t.live {
+	if t.live && !t.batching {
 		t.renderLive()
 	}
 }
@@ -157,7 +180,7 @@ func (t *Table) UpdateRow(id string, columns map[string]string) {
 		}
 	}
 
-	if t.live {
+	if t.live && !t.batching {
 		t.renderLive()
 	}
 }
@@ -312,7 +335,7 @@ func (t *Table) calculateSimpleColumnWidths() []int {
 }
 
 // Finish completes the table rendering.
-// For live mode, ensures the final state is displayed.
+// For live mode, renders the final state (all updates were collected without rendering).
 // For static mode, does nothing (use Render() instead).
 func (t *Table) Finish() {
 	if !t.live {
@@ -322,15 +345,10 @@ func (t *Table) Finish() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	// For non-TTY, render the final state (since intermediate updates were skipped)
-	if !t.isTTY {
-		t.renderStatic()
-		return
-	}
-
-	// Ensure table is rendered one final time
+	// Render the final state - use static rendering to avoid terminal compatibility issues
 	if !t.rendered {
-		t.renderLive()
+		t.renderStatic()
+		t.rendered = true
 	}
 }
 

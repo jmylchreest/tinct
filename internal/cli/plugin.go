@@ -539,8 +539,8 @@ func updatePluginFromRepository(meta *ExternalPluginMeta, pluginDir string, verb
 		return "", fmt.Errorf("already up to date (version %s)", meta.Source.Version)
 	}
 
-	// Download and install from URL.
-	pluginPath, err := installPluginFromSource(download.URL, "", pluginDir, sourceTypeHTTP, verbose)
+	// Download and install from URL (quiet=true since caller shows table status).
+	pluginPath, err := installPluginFromSource(download.URL, "", pluginDir, sourceTypeHTTP, verbose, true)
 	if err != nil {
 		return "", fmt.Errorf("failed to download plugin: %w", err)
 	}
@@ -602,6 +602,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	sort.Strings(pluginNames)
 
 	// Initialize all rows with "Queued" status
+	// In live mode, rendering is deferred until Finish() is called
 	for _, name := range pluginNames {
 		table.AddRowWithID(name, []string{name, "Queued"})
 	}
@@ -641,7 +642,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			table.UpdateRow(name, map[string]string{"STATUS": "Downloading..."})
-			pluginPath, err = installPluginFromSource(sourceForInstall, name, pluginDir, "", verbose)
+			pluginPath, err = installPluginFromSource(sourceForInstall, name, pluginDir, "", verbose, true)
 		}
 
 		if err != nil {

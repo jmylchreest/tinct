@@ -119,6 +119,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 	sort.Strings(pluginNames)
 
 	// Initialize all rows with "Queued" status
+	// In live mode, rendering is deferred until Finish() is called
 	for _, name := range pluginNames {
 		table.AddRowWithID(name, []string{name, "Queued"})
 	}
