@@ -326,6 +326,55 @@ jobs:
             dist/**/*.tar.gz
             dist/**/*.zip
 
+      - name: Delete old releases
+        if: success()
+        run: |
+          # Keep only the N most recent stable releases (default: 10, configurable via workflow_dispatch)
+          KEEP_RELEASES=${{ github.event.inputs.keep_releases || 10 }}
+
+          echo "Managing release history..."
+          echo "Keep releases: $KEEP_RELEASES"
+
+          # Get all non-prerelease releases sorted by creation date (newest first)
+          echo "Fetching all stable releases..."
+          RELEASES=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft,createdAt \
+            --jq '[.[] | select(.isPrerelease == false)] | sort_by(.createdAt) | reverse')
+
+          # Count total stable releases
+          TOTAL_RELEASES=$(echo "$RELEASES" | jq 'length')
+          echo "Found $TOTAL_RELEASES stable releases"
+
+          if [ "$TOTAL_RELEASES" -le "$KEEP_RELEASES" ]; then
+            echo "Only $TOTAL_RELEASES stable releases found, keeping all"
+          else
+            # Get releases to delete (those beyond the keep threshold)
+            RELEASES_TO_DELETE=$(echo "$RELEASES" | jq -r --argjson keep "$KEEP_RELEASES" '
+              .[$keep:] | .[].tagName
+            ')
+
+            if [ -n "$RELEASES_TO_DELETE" ]; then
+              echo "Releases to delete:"
+              echo "$RELEASES_TO_DELETE"
+
+              # Delete each old release
+              echo "$RELEASES_TO_DELETE" | while IFS= read -r tag; do
+                if [ -n "$tag" ]; then
+                  echo "Deleting release $tag..."
+                  if gh release delete "$tag" --yes; then
+                    echo "Successfully deleted $tag"
+                  else
+                    echo "Failed to delete $tag"
+                  fi
+                fi
+              done
+            else
+              echo "No releases need to be deleted"
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
       - name: Trigger plugin repository update
         if: success()
         continue-on-error: true
@@ -346,52 +395,3 @@ jobs:
           else
             echo "PLUGIN_REPO_PAT not configured, skipping plugin repository trigger"
           fi
-
-      - name: Mark old releases as drafts
-        if: success()
-        run: |
-          # Keep only the N most recent stable releases visible (default: 10, configurable via workflow_dispatch)
-          KEEP_RELEASES=${{ github.event.inputs.keep_releases || 10 }}
-
-          echo "📦 Managing release history..."
-          echo "Keep visible releases: $KEEP_RELEASES"
-
-          # Get all non-prerelease releases sorted by creation date (newest first)
-          echo "Fetching all stable releases..."
-          RELEASES=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft,createdAt \
-            --jq '[.[] | select(.isPrerelease == false)] | sort_by(.createdAt) | reverse')
-
-          # Count total stable releases
-          TOTAL_RELEASES=$(echo "$RELEASES" | jq 'length')
-          echo "Found $TOTAL_RELEASES stable releases"
-
-          if [ "$TOTAL_RELEASES" -le "$KEEP_RELEASES" ]; then
-            echo "✅ Only $TOTAL_RELEASES stable releases found, keeping all visible"
-          else
-            # Get releases to mark as draft (those beyond the keep threshold)
-            RELEASES_TO_DRAFT=$(echo "$RELEASES" | jq -r --argjson keep "$KEEP_RELEASES" '
-              .[$keep:] | .[] | select(.isDraft == false) | .tagName
-            ')
-
-            if [ -n "$RELEASES_TO_DRAFT" ]; then
-              echo "📝 Releases to mark as draft:"
-              echo "$RELEASES_TO_DRAFT"
-
-              # Mark each release as draft using gh release edit
-              echo "$RELEASES_TO_DRAFT" | while IFS= read -r tag; do
-                if [ -n "$tag" ]; then
-                  echo "Marking release $tag as draft..."
-                  if gh release edit "$tag" --draft; then
-                    echo "✅ Successfully marked $tag as draft"
-                  else
-                    echo "⚠️  Failed to mark $tag as draft"
-                  fi
-                fi
-              done
-            else
-              echo "✅ No releases need to be marked as draft"
-            fi
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
