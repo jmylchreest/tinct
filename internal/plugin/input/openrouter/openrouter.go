@@ -370,9 +370,9 @@ type ImageURL struct {
 
 // APIError represents an API error response.
 type APIError struct {
-	Message string      `json:"message"`
-	Type    string      `json:"type"`
-	Code    interface{} `json:"code"` // Can be string or number depending on provider
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Code    any    `json:"code"` // Can be string or number depending on provider
 }
 
 // CodeString returns the error code as a string.
@@ -515,10 +515,10 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 	// Parse MIME type from "data:image/jpeg;base64"
 	mimeType := ""
 	header := parts[0] // e.g., "data:image/jpeg;base64"
-	if strings.HasPrefix(header, "data:") {
-		header = strings.TrimPrefix(header, "data:")
-		if idx := strings.Index(header, ";"); idx != -1 {
-			mimeType = header[:idx]
+	if after, ok := strings.CutPrefix(header, "data:"); ok {
+		header = after
+		if before, _, ok := strings.Cut(header, ";"); ok {
+			mimeType = before
 		}
 	}
 

@@ -41,7 +41,7 @@ func extractFromZip(data []byte, targetFile, archiveName, destDir string, verbos
 	}
 
 	var best *candidate
-	var foundFiles []string
+	foundFiles := make([]string, 0, len(zr.File))
 
 	for _, f := range zr.File {
 		if f.FileInfo().IsDir() {

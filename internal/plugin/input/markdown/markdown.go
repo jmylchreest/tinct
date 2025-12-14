@@ -196,7 +196,7 @@ func (p *Plugin) handleWallpaper(theme *themeformat.Theme, verbose bool) error {
 	p.wallpaperPath = filepath.Join(outputDir, wallpaperFilename)
 
 	// Write wallpaper file
-	if err := os.WriteFile(p.wallpaperPath, data, 0644); err != nil {
+	if err := os.WriteFile(p.wallpaperPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write wallpaper: %w", err)
 	}
 
@@ -230,10 +230,15 @@ func parseHex(hex string) (colour.RGB, error) {
 		return colour.RGB{}, fmt.Errorf("invalid hex colour: %w", err)
 	}
 
+	// Bounds check (hex pairs can only be 0-255, but validate explicitly)
+	if r > 255 || g > 255 || b > 255 {
+		return colour.RGB{}, fmt.Errorf("invalid hex colour values: r=%d, g=%d, b=%d", r, g, b)
+	}
+
 	return colour.RGB{
-		R: uint8(r),
-		G: uint8(g),
-		B: uint8(b),
+		R: uint8(r), // #nosec G115 -- bounds checked above
+		G: uint8(g), // #nosec G115 -- bounds checked above
+		B: uint8(b), // #nosec G115 -- bounds checked above
 	}, nil
 }
 

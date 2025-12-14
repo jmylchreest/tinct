@@ -301,7 +301,7 @@ func TestGenerateDryRun(t *testing.T) {
 		t.Errorf("DryRun should not return error, got: %v", err)
 	}
 	if palette == nil {
-		t.Error("DryRun should return a palette")
+		t.Fatal("DryRun should return a palette")
 	}
 	if len(palette.Colors) != 0 {
 		t.Errorf("DryRun should return empty palette, got %d colors", len(palette.Colors))

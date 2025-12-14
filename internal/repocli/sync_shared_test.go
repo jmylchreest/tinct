@@ -187,10 +187,10 @@ func TestProtocolVersionTracker_NewTracker(t *testing.T) {
 	tracker := NewProtocolVersionTracker()
 
 	if tracker == nil {
-		t.Error("Expected non-nil tracker")
+		t.Fatal("Expected non-nil tracker")
 	}
 	if tracker.failures == nil {
-		t.Error("Expected failures map to be initialized")
+		t.Fatal("Expected failures map to be initialized")
 	}
 	if len(tracker.failures) != 0 {
 		t.Errorf("Expected empty failures map, got %d entries", len(tracker.failures))

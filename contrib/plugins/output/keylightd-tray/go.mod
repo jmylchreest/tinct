@@ -5,7 +5,7 @@ go 1.25.1
 require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
-	github.com/jmylchreest/tinct v0.1.11
+	github.com/jmylchreest/tinct v0.1.13
 )
 
 require (

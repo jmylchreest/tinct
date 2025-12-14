@@ -86,7 +86,7 @@ func TestNewFilter(t *testing.T) {
 	filter := NewFilter(include, exclude)
 
 	if filter == nil {
-		t.Error("Expected non-nil filter")
+		t.Fatal("Expected non-nil filter")
 	}
 
 	if len(filter.Include) != 1 {
