@@ -377,16 +377,11 @@ jobs:
               echo "📝 Releases to mark as draft:"
               echo "$RELEASES_TO_DRAFT"
 
-              # Mark each release as draft
+              # Mark each release as draft using gh release edit
               echo "$RELEASES_TO_DRAFT" | while IFS= read -r tag; do
                 if [ -n "$tag" ]; then
                   echo "Marking release $tag as draft..."
-                  if gh api \
-                    --method PATCH \
-                    -H "Accept: application/vnd.github+json" \
-                    -H "X-GitHub-Api-Version: 2022-11-28" \
-                    "/repos/${{ github.repository }}/releases/tags/$tag" \
-                    -f draft=true; then
+                  if gh release edit "$tag" --draft; then
                     echo "✅ Successfully marked $tag as draft"
                   else
                     echo "⚠️  Failed to mark $tag as draft"
