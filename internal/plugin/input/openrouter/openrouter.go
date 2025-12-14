@@ -324,9 +324,24 @@ type ImageURL struct {
 
 // APIError represents an API error response.
 type APIError struct {
-	Message string `json:"message"`
-	Type    string `json:"type"`
-	Code    string `json:"code"`
+	Message string      `json:"message"`
+	Type    string      `json:"type"`
+	Code    interface{} `json:"code"` // Can be string or number depending on provider
+}
+
+// CodeString returns the error code as a string.
+func (e *APIError) CodeString() string {
+	if e.Code == nil {
+		return ""
+	}
+	switch v := e.Code.(type) {
+	case string:
+		return v
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	default:
+		return fmt.Sprintf("%v", e.Code)
+	}
 }
 
 // generateImage calls OpenRouter API to create an image.
