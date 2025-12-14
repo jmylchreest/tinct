@@ -165,21 +165,28 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		return colour.NewPalette([]color.Color{}), nil
 	}
 
-	// Determine image path
-	imagePath, err := p.getImagePath(model)
+	// Determine base image path (without extension)
+	imageBasePath, err := p.getImageBasePath(model)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine image path: %w", err)
 	}
 
-	// Generate image if needed
-	if commonflags.CacheOverwrite || !fileExists(imagePath) {
+	// Check for existing cached image (any supported extension)
+	var imagePath string
+	if !commonflags.CacheOverwrite {
+		imagePath = findCachedImage(imageBasePath)
+	}
+
+	// Generate image if not cached
+	if imagePath == "" {
 		enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
 		additionalPrompt := enhancedPrompt[len(aiflags.Prompt):]
 		fmt.Fprintf(os.Stderr, "[openrouter] model=%s prompt=\"%s\" additional=\"%s\"\n",
 			model, aiflags.Prompt, additionalPrompt)
 		fmt.Fprintf(os.Stderr, "Waiting for response...\n")
 
-		if err := p.generateImage(ctx, model, imagePath, opts.Verbose); err != nil {
+		imagePath, err = p.generateImage(ctx, model, imageBasePath, opts.Verbose)
+		if err != nil {
 			return nil, fmt.Errorf("failed to generate image: %w", err)
 		}
 
@@ -213,10 +220,12 @@ func (p *Plugin) WallpaperPath() string {
 	return p.loadedImagePath
 }
 
-// getImagePath determines where to save/load the generated image.
-func (p *Plugin) getImagePath(model string) (string, error) {
+// getImageBasePath determines the base path (without extension) for the generated image.
+// The actual extension is determined after we know the image format from the API response.
+func (p *Plugin) getImageBasePath(model string) (string, error) {
 	if !commonflags.CacheEnabled {
-		tmpFile, err := os.CreateTemp("", "tinct-openrouter-*.png")
+		// For temp files, create without extension - we'll rename after
+		tmpFile, err := os.CreateTemp("", "tinct-openrouter-*")
 		if err != nil {
 			return "", fmt.Errorf("failed to create temp file: %w", err)
 		}
@@ -234,10 +243,47 @@ func (p *Plugin) getImagePath(model string) (string, error) {
 	if filename == "" {
 		hash := sha256.Sum256([]byte(aiflags.Prompt + model))
 		hashStr := hex.EncodeToString(hash[:])[:16]
-		filename = fmt.Sprintf("openrouter-%s.png", hashStr)
+		// Return without extension - will be added based on actual image format
+		filename = fmt.Sprintf("openrouter-%s", hashStr)
+	} else {
+		// If user provided a filename, strip any extension - we'll add the correct one
+		ext := filepath.Ext(filename)
+		if ext != "" {
+			filename = strings.TrimSuffix(filename, ext)
+		}
 	}
 
 	return filepath.Join(cacheDir, filename), nil
+}
+
+// getExtensionForMIME returns the file extension for an image MIME type.
+func getExtensionForMIME(mimeType string) string {
+	switch mimeType {
+	case "image/jpeg", "image/jpg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	default:
+		// Default to png for unknown types
+		return ".png"
+	}
+}
+
+// findCachedImage looks for an existing cached image with any supported extension.
+// Returns the full path if found, empty string if not found.
+func findCachedImage(basePath string) string {
+	extensions := []string{".png", ".jpg", ".jpeg", ".webp", ".gif"}
+	for _, ext := range extensions {
+		path := basePath + ext
+		if fileExists(path) {
+			return path
+		}
+	}
+	return ""
 }
 
 // getAPIKey retrieves the OpenRouter API key from the environment.
@@ -345,10 +391,12 @@ func (e *APIError) CodeString() string {
 }
 
 // generateImage calls OpenRouter API to create an image.
-func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, verbose bool) error {
+// outputBasePath is the path without extension - the actual extension is determined
+// from the API response and the final path is returned.
+func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) {
 	apiKey, err := getAPIKey()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Build the prompt with negative prompt if applicable
@@ -392,13 +440,13 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, ve
 	// Marshal request
 	reqBody, err := json.Marshal(request)
 	if err != nil {
-		return fmt.Errorf("failed to marshal request: %w", err)
+		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	// Create HTTP request
 	req, err := http.NewRequestWithContext(ctx, "POST", apiBaseURL+"/chat/completions", bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -410,14 +458,14 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, ve
 	client := &http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("API request failed: %w", err)
+		return "", fmt.Errorf("API request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response: %w", err)
+		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if verbose {
@@ -426,55 +474,74 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, ve
 
 	// Check for HTTP errors
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse response
 	var response ChatCompletionResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
+		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	// Check for API error
 	if response.Error != nil {
-		return fmt.Errorf("API error: %s", response.Error.Message)
+		return "", fmt.Errorf("API error: %s", response.Error.Message)
 	}
 
 	// Check for choices
 	if len(response.Choices) == 0 {
-		return fmt.Errorf("no choices in response")
+		return "", fmt.Errorf("no choices in response")
 	}
 
 	// Get image from response
 	choice := response.Choices[0]
 	if len(choice.Message.Images) == 0 {
-		return fmt.Errorf("no images in response (model may not support image generation)")
+		return "", fmt.Errorf("no images in response (model may not support image generation)")
 	}
 
 	// Extract base64 image data
 	imageURL := choice.Message.Images[0].ImageURL.URL
 	if !strings.HasPrefix(imageURL, "data:image/") {
-		return fmt.Errorf("unexpected image URL format: %s", imageURL[:min(50, len(imageURL))])
+		return "", fmt.Errorf("unexpected image URL format: %s", imageURL[:min(50, len(imageURL))])
 	}
 
 	// Parse data URL: data:image/png;base64,<data>
+	// Extract MIME type to determine file extension
 	parts := strings.SplitN(imageURL, ",", 2)
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid data URL format")
+		return "", fmt.Errorf("invalid data URL format")
+	}
+
+	// Parse MIME type from "data:image/jpeg;base64"
+	mimeType := ""
+	header := parts[0] // e.g., "data:image/jpeg;base64"
+	if strings.HasPrefix(header, "data:") {
+		header = strings.TrimPrefix(header, "data:")
+		if idx := strings.Index(header, ";"); idx != -1 {
+			mimeType = header[:idx]
+		}
+	}
+
+	// Determine file extension based on MIME type
+	ext := getExtensionForMIME(mimeType)
+	actualPath = outputBasePath + ext
+
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Image format: %s (extension: %s)\n", mimeType, ext)
 	}
 
 	imageBytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		return fmt.Errorf("failed to decode image data: %w", err)
+		return "", fmt.Errorf("failed to decode image data: %w", err)
 	}
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
 	}
 
-	// Write image to file
-	if err := os.WriteFile(outputPath, imageBytes, 0o600); err != nil {
-		return fmt.Errorf("failed to write image to file: %w", err)
+	// Write image to file with correct extension
+	if err := os.WriteFile(actualPath, imageBytes, 0o600); err != nil {
+		return "", fmt.Errorf("failed to write image to file: %w", err)
 	}
 
 	// Save metadata alongside the image
@@ -485,16 +552,16 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, ve
 		Model:          model,
 		AspectRatio:    commonflags.AspectRatio,
 		CreatedAt:      time.Now(),
-		ImagePath:      outputPath,
+		ImagePath:      actualPath,
 		ImageSize_:     len(imageBytes),
 		FinishReason:   choice.FinishReason,
 	}
 
-	if err := p.saveMetadata(outputPath, metadata); err != nil && verbose {
+	if err := p.saveMetadata(actualPath, metadata); err != nil && verbose {
 		fmt.Fprintf(os.Stderr, "Warning: failed to save metadata: %v\n", err)
 	}
 
-	return nil
+	return actualPath, nil
 }
 
 // saveMetadata saves generation metadata as a JSON file alongside the image.
@@ -870,15 +937,39 @@ type PricingInfo struct {
 	CompletionCost float64 // Cost per output token
 }
 
-// Typical token usage for image generation requests (based on observed usage).
-const (
-	typicalInputTokens  = 3000 // ~3000 input tokens for prompt + system
-	typicalOutputTokens = 1500 // ~1500 output tokens for response
-)
-
 // Minimum cost threshold - values below this are considered essentially free/zero
 // This helps filter out negligible per-image costs when token pricing is the real cost
 const minSignificantCost = 0.0001 // $0.0001
+
+// getTypicalTokenUsage returns estimated input/output tokens based on provider.
+// Different providers have very different token usage patterns for image generation:
+//   - OpenAI: Image returned separately, low token counts
+//   - Gemini: Image encoded as output tokens, high output counts
+//
+// Observed actual costs (same prompt across models):
+//   - openai/gpt-5-image: $0.022 -> ~1500 input, ~700 output
+//   - openai/gpt-5-image-mini: $0.008 -> ~1500 input, ~700 output
+//   - google/gemini-2.5-flash-image: $0.0387 -> ~3000 input, ~14500 output
+//   - google/gemini-3-pro-image-preview: $0.139 -> ~3000 input, ~5500 output
+func getTypicalTokenUsage(modelID string) (inputTokens, outputTokens int) {
+	switch {
+	case strings.HasPrefix(modelID, "google/gemini-2.5"):
+		// Gemini 2.5 Flash encodes image as ~14500 output tokens
+		return 3000, 14500
+	case strings.HasPrefix(modelID, "google/gemini-3"):
+		// Gemini 3 Pro has lower output but higher per-token cost
+		return 3000, 5500
+	case strings.HasPrefix(modelID, "google/"):
+		// Other Google models - use Gemini 3 estimates as default
+		return 3000, 5500
+	case strings.HasPrefix(modelID, "openai/"):
+		// OpenAI returns image separately, low token usage
+		return 1500, 700
+	default:
+		// Conservative default for unknown providers
+		return 2000, 2000
+	}
+}
 
 // getPricingInfo extracts detailed pricing information from a model.
 func getPricingInfo(model Model) PricingInfo {
@@ -930,24 +1021,29 @@ func isModelFree(model Model) bool {
 	return getPricingInfo(model).Type == PricingFree
 }
 
-// getModelCost estimates the cost for a typical image generation request.
-// For per-image pricing, returns the image cost.
-// For per-request pricing, returns the request cost.
-// For per-token pricing, estimates based on typical token usage.
+// getModelCost estimates the total cost for a typical image generation request.
+// This includes per-image/request costs PLUS estimated token costs.
+// Token usage varies significantly by provider (see getTypicalTokenUsage).
 func getModelCost(model Model) float64 {
 	info := getPricingInfo(model)
+
+	// Get provider-specific token estimates
+	inputTokens, outputTokens := getTypicalTokenUsage(model.ID)
+
+	// Calculate token costs
+	tokenCost := (float64(inputTokens) * info.PromptCost) +
+		(float64(outputTokens) * info.CompletionCost)
 
 	switch info.Type {
 	case PricingFree:
 		return 0
 	case PricingPerImage:
-		return info.ImageCost
+		// Image cost PLUS token costs (hybrid pricing like Gemini)
+		return info.ImageCost + tokenCost
 	case PricingPerRequest:
-		return info.RequestCost
+		return info.RequestCost + tokenCost
 	case PricingPerToken:
-		// Estimate cost based on typical token usage
-		return (float64(typicalInputTokens) * info.PromptCost) +
-			(float64(typicalOutputTokens) * info.CompletionCost)
+		return tokenCost
 	default:
 		return 0
 	}
@@ -956,19 +1052,29 @@ func getModelCost(model Model) float64 {
 // formatPricing returns a human-readable pricing string for display.
 func formatPricing(model Model) string {
 	info := getPricingInfo(model)
+	estimated := getModelCost(model)
+
+	// Check if model has token costs in addition to base pricing
+	hasTokenCosts := info.PromptCost > 0 || info.CompletionCost > 0
 
 	switch info.Type {
 	case PricingFree:
 		return "free"
 	case PricingPerImage:
+		if hasTokenCosts {
+			// Hybrid pricing (image + tokens) like Gemini
+			return fmt.Sprintf("$%.4f/image + tokens (~$%.4f total)", info.ImageCost, estimated)
+		}
 		return fmt.Sprintf("$%.4f/image", info.ImageCost)
 	case PricingPerRequest:
+		if hasTokenCosts {
+			return fmt.Sprintf("$%.4f/request + tokens (~$%.4f total)", info.RequestCost, estimated)
+		}
 		return fmt.Sprintf("$%.4f/request", info.RequestCost)
 	case PricingPerToken:
 		// Display per-million tokens for readability
 		promptPerM := info.PromptCost * 1_000_000
 		completionPerM := info.CompletionCost * 1_000_000
-		estimated := getModelCost(model)
 		return fmt.Sprintf("$%.2f/M input, $%.2f/M output (~$%.4f/image)", promptPerM, completionPerM, estimated)
 	default:
 		return "unknown"

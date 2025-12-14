@@ -409,50 +409,67 @@ func TestIsModelFree(t *testing.T) {
 	}
 }
 
-// TestGetModelCost tests the getModelCost function.
+// TestGetModelCost tests the getModelCost function with real model IDs.
 func TestGetModelCost(t *testing.T) {
-	// Model with image cost
-	modelWithImage := Model{
-		Pricing: Pricing{
-			Image:      "0.02",
-			Prompt:     "0.001",
-			Completion: "0.002",
-		},
-	}
-	cost := getModelCost(modelWithImage)
-	if cost != 0.02 {
-		t.Errorf("Expected image cost 0.02, got %v", cost)
+	// Helper for approximate float comparison
+	approxEqual := func(a, b float64) bool {
+		const epsilon = 0.0001
+		diff := a - b
+		if diff < 0 {
+			diff = -diff
+		}
+		return diff < epsilon
 	}
 
-	// Model with request cost but no image cost
-	modelWithRequest := Model{
+	// Gemini 2.5 Flash - hybrid pricing with high output tokens
+	// Actual observed: $0.0387
+	geminiFlash := Model{
+		ID: "google/gemini-2.5-flash-image",
 		Pricing: Pricing{
-			Request:    "0.01",
-			Prompt:     "0.001",
-			Completion: "0.002",
+			Image:      "0.001238",
+			Prompt:     "0.0000003",
+			Completion: "0.0000025",
+		},
+	}
+	cost := getModelCost(geminiFlash)
+	// Expected: 0.001238 + (3000 * 0.0000003) + (14500 * 0.0000025) = ~0.0384
+	expectedGeminiFlash := 0.001238 + (3000 * 0.0000003) + (14500 * 0.0000025)
+	if !approxEqual(cost, expectedGeminiFlash) {
+		t.Errorf("Gemini Flash: expected ~%v, got %v", expectedGeminiFlash, cost)
+	}
+
+	// OpenAI GPT-5 Image - token-based with low usage
+	// Actual observed: $0.022
+	gpt5Image := Model{
+		ID: "openai/gpt-5-image",
+		Pricing: Pricing{
+			Image:      "0.00001", // negligible
+			Prompt:     "0.00001",
+			Completion: "0.00001",
+		},
+	}
+	cost = getModelCost(gpt5Image)
+	// Expected: (1500 * 0.00001) + (700 * 0.00001) = 0.015 + 0.007 = 0.022
+	expectedGPT5 := (1500 * 0.00001) + (700 * 0.00001)
+	if !approxEqual(cost, expectedGPT5) {
+		t.Errorf("GPT-5 Image: expected ~%v, got %v", expectedGPT5, cost)
+	}
+
+	// Model with pure request cost (no token costs, unknown provider)
+	modelWithRequest := Model{
+		ID: "unknown/model",
+		Pricing: Pricing{
+			Request: "0.01",
 		},
 	}
 	cost = getModelCost(modelWithRequest)
 	if cost != 0.01 {
-		t.Errorf("Expected request cost 0.01, got %v", cost)
-	}
-
-	// Model with only token costs - should estimate based on typical usage
-	modelWithTokens := Model{
-		Pricing: Pricing{
-			Prompt:     "0.000001", // $1/M tokens
-			Completion: "0.000002", // $2/M tokens
-		},
-	}
-	cost = getModelCost(modelWithTokens)
-	// Expected: (3000 * 0.000001) + (1500 * 0.000002) = 0.003 + 0.003 = 0.006
-	expectedCost := (float64(typicalInputTokens) * 0.000001) + (float64(typicalOutputTokens) * 0.000002)
-	if cost != expectedCost {
-		t.Errorf("Expected token-based cost %v, got %v", expectedCost, cost)
+		t.Errorf("Expected pure request cost 0.01, got %v", cost)
 	}
 
 	// Free model
 	freeModel := Model{
+		ID: "some/free-model",
 		Pricing: Pricing{},
 	}
 	cost = getModelCost(freeModel)
