@@ -5,7 +5,7 @@ Internal plugin for generating images using Google's Imagen models via the offic
 ## Features
 
 - Direct integration with `google.golang.org/genai` SDK
-- Support for Imagen 3, Imagen 4, Imagen 4 Ultra, and Imagen 4 Fast
+- Support for Imagen 3, Imagen 4, Imagen 4 Ultra, Imagen 4 Fast, and Gemini 2.5 Flash Image
 - Automatic image caching
 - Region/border colour sampling for ambient lighting
 - Wallpaper passthrough support
@@ -27,15 +27,15 @@ Get an API key at: https://aistudio.google.com/apikey
 ### Basic Usage
 
 ```bash
-tinct generate -i google-genai --prompt "sunset over mountains" -o kitty
+tinct generate -i google-genai --ai.prompt "sunset over mountains" -o kitty
 ```
 
 ### With Specific Model
 
 ```bash
 tinct generate -i google-genai \
-  --prompt "cyberpunk city at night" \
-  --model "imagen-4.0-ultra-generate-001" \
+  --ai.prompt "cyberpunk city at night" \
+  --ai.model "imagen-4.0-ultra-generate-001" \
   --aspect-ratio "21:9" \
   -o kitty
 ```
@@ -44,7 +44,7 @@ tinct generate -i google-genai \
 
 ```bash
 tinct generate -i google-genai \
-  --prompt "forest landscape" \
+  --ai.prompt "forest landscape" \
   --extract-ambience \
   --regions 16 \
   -o wled-ambient
@@ -53,39 +53,59 @@ tinct generate -i google-genai \
 ### List Available Models
 
 ```bash
-# In Go code
-import "github.com/jmylchreest/tinct/internal/plugin/input/googlegenai"
-
-googlegenai.ListModels()
+tinct generate -i google-genai --ai.list-models
 ```
 
 ## Available Flags
 
+The plugin uses three categories of flags:
+
+### Shared AI Flags (ai.* prefix)
+
+These flags are shared across all AI image generation plugins.
+
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--prompt` | string | *required* | Text description for image generation |
-| `--model` | string | `imagen-4.0-fast-generate-001` | Imagen model to use |
-| `--aspect-ratio` | string | `16:9` | Image aspect ratio (1:1, 3:4, 4:3, 9:16, 16:9, 21:9) |
-| `--negative-prompt` | string | - | Description of what to discourage |
-| `--genai-backend` | string | `gemini-api` | Backend (gemini-api or vertex-ai) |
+| `--ai.prompt` | string | *required* | Text description for AI image generation |
+| `--ai.model` | string | `auto` | AI model to use (auto uses gemini-2.5-flash-image) |
+| `--ai.list-models` | bool | `false` | List available AI models and exit |
+| `--ai.no-extended-prompt` | bool | `false` | Disable automatic wallpaper prompt enhancements |
+| `--ai.no-negative-prompt` | bool | `false` | Disable default negative prompt |
+| `--ai.negative-prompt` | string | - | Custom negative prompt to discourage certain elements |
+
+### Common Flags (unprefixed)
+
+These flags are shared across multiple input plugins.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
 | `--count` | int | `32` | Number of colours to extract |
+| `--aspect-ratio` | string | `16:9` | Image aspect ratio (1:1, 3:4, 4:3, 9:16, 16:9, 21:9) |
+| `--cache` | bool | `true` | Enable image caching |
+| `--cache-dir` | string | `~/.cache/tinct/generated` | Cache directory |
+| `--cache-filename` | string | *auto* | Custom cache filename |
+| `--cache-overwrite` | bool | `false` | Overwrite existing cache |
 | `--extract-ambience` | bool | `false` | Extract edge/corner colours |
 | `--regions` | int | `8` | Number of edge regions (4, 8, 12, 16) |
 | `--sample-percent` | int | `10` | Percentage of edge to sample (1-50) |
 | `--sample-method` | string | `average` | Sampling method (average or dominant) |
 | `--seed-mode` | string | `content` | Seed mode (content, manual, random) |
 | `--seed-value` | int64 | `0` | Manual seed value |
-| `--cache` | bool | `true` | Enable image caching |
-| `--cache-dir` | string | `~/.cache/tinct/google-genai` | Cache directory |
-| `--cache-filename` | string | *auto* | Custom cache filename |
-| `--cache-overwrite` | bool | `false` | Overwrite existing cache |
+
+### Plugin-Specific Flags (googlegenai.* prefix)
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--googlegenai.backend` | string | `gemini-api` | Backend (gemini-api or vertex-ai) |
+| `--googlegenai.image-size` | string | `2K` | Image size (1K or 2K, only for Imagen Standard/Ultra models) |
 
 ## Available Models
 
 | Model ID | Description | Cost per Image |
 |----------|-------------|----------------|
+| `gemini-2.5-flash-image` | Gemini 2.5 Flash Image (default) | $0.039 |
 | `imagen-3.0-generate-002` | Imagen 3 (stable) | Standard |
-| `imagen-4.0-fast-generate-001` | Imagen 4 Fast (default) | $0.02 |
+| `imagen-4.0-fast-generate-001` | Imagen 4 Fast | $0.02 |
 | `imagen-4.0-generate-001` | Imagen 4 (flagship) | $0.04 |
 | `imagen-4.0-ultra-generate-001` | Imagen 4 Ultra | $0.06 |
 
@@ -103,6 +123,8 @@ googlegenai.ListModels()
   - `internal/colour` - K-means colour extraction
   - `internal/image` - Smart image loading
   - `internal/plugin/input/shared/regions` - Region sampling
+  - `internal/plugin/input/shared/aiflags` - Shared AI flags
+  - `internal/plugin/input/shared/commonflags` - Shared common flags
 
 ### Architecture
 
@@ -113,7 +135,7 @@ googlegenai.ListModels()
    - Extracts colours using k-means
    - Optionally extracts region colours for ambient lighting
 
-2. **Image Generation** - Calls `GenerateImages` API
+2. **Image Generation** - Calls `GenerateImages` or `GenerateContent` API
    - Enhances prompt for wallpaper suitability
    - Configures aspect ratio and format
    - Handles safety filtering
@@ -142,17 +164,30 @@ The plugin can be tested with dry-run mode:
 ```bash
 # Test validation
 tinct generate -i google-genai --dry-run -o kitty
-# Error: input plugin validation failed: prompt is required
+# Error: input plugin validation failed: --ai.prompt is required
 
-# Test with prompt
-tinct generate -i google-genai --prompt "test" --dry-run -o kitty
-# Will attempt to generate (requires GOOGLE_API_KEY)
+# Test with prompt (dry-run skips API call)
+tinct generate -i google-genai --ai.prompt "test" --dry-run -o kitty
+
+# List models (does not require prompt)
+tinct generate -i google-genai --ai.list-models
 ```
 
 ## Cost Considerations
 
+- **Gemini 2.5 Flash Image**: $0.039/image (default, multimodal)
 - **Imagen 4 Fast**: $0.02/image (recommended for frequent use)
 - **Imagen 4**: $0.04/image (balanced quality/cost)
 - **Imagen 4 Ultra**: $0.06/image (highest quality)
 
 Enable caching to minimize costs by reusing generated images.
+
+## Comparison with OpenRouter Plugin
+
+| Feature | Google GenAI | OpenRouter |
+|---------|--------------|-----------|
+| Model Variety | Google models only | Many providers (Flux, DALL-E, etc.) |
+| Pricing | Per-model pricing | Variable, includes free options |
+| Auto Selection | Uses gemini-2.5-flash-image | Cheapest model by default |
+| API Key | `GOOGLE_API_KEY` | `OPENROUTER_API_KEY` |
+| Negative Prompts | Native API support (Vertex AI) | Via prompt enhancement |

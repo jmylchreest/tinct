@@ -21,6 +21,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/image"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/aiflags"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/commonflags"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/regions"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/seed"
 )
@@ -75,63 +77,19 @@ type ImageMetadata struct {
 
 // Plugin implements the input.Plugin interface for Google Imagen image generation.
 type Plugin struct {
-	prompt         string
-	model          string
-	aspectRatio    string
-	imageSize      string
-	negativePrompt string
-	backend        string
-	colours        int
-
-	// Region extraction (ambient lighting)
-	extractAmbience bool
-	regions         int
-	samplePercent   int
-	sampleMethod    string
-
-	// Seed configuration
-	seedMode  string
-	seedValue int64
-
-	// Caching
-	cacheEnabled   bool
-	cacheDir       string
-	cacheFilename  string
-	cacheOverwrite bool
-
-	// Model listing
-	listModels bool
+	// Plugin-specific flags (not shared)
+	backend   string
+	imageSize string
 
 	// Wallpaper support
 	loadedImagePath string
-
-	// Prompt control flags
-	noExtendedPrompt bool
-	noNegativePrompt bool
 }
 
 // New creates a new Google Gen AI input plugin with default settings.
 func New() *Plugin {
-	home, err := os.UserHomeDir()
-	defaultCacheDir := ".cache/tinct/google-genai"
-	if err == nil {
-		defaultCacheDir = filepath.Join(home, ".cache", "tinct", "google-genai")
-	}
-
 	return &Plugin{
-		model:           defaultModel,
-		aspectRatio:     "16:9",
-		imageSize:       "2K",
-		backend:         defaultBackend,
-		colours:         32,
-		extractAmbience: false,
-		regions:         8,
-		samplePercent:   10,
-		sampleMethod:    "average",
-		seedMode:        "content",
-		cacheEnabled:    true,
-		cacheDir:        defaultCacheDir,
-		cacheOverwrite:  false,
+		backend:   defaultBackend,
+		imageSize: "2K",
 	}
 }
 
@@ -152,46 +110,29 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.prompt, "prompt", "", "Text description for image generation (required)")
-	cmd.Flags().StringVar(&p.model, "model", p.model, "Imagen model to use")
-	cmd.Flags().StringVar(&p.aspectRatio, "aspect-ratio", p.aspectRatio, "Image aspect ratio (1:1, 3:4, 4:3, 9:16, 16:9, 21:9)")
-	cmd.Flags().StringVar(&p.imageSize, "image-size", p.imageSize, "Image size (1K or 2K, only for Standard/Ultra models)")
-	cmd.Flags().StringVar(&p.negativePrompt, "negative-prompt", "", "Description of what to discourage")
-	cmd.Flags().StringVar(&p.backend, "genai-backend", p.backend, "Google Gen AI backend to use (gemini-api or vertex-ai)")
-	cmd.Flags().IntVar(&p.colours, "count", p.colours, "Number of colors to extract")
+	// Register shared AI flags (prompt, model, list-models, etc.)
+	aiflags.RegisterFlags(cmd)
 
-	// Region extraction flags
-	cmd.Flags().BoolVar(&p.extractAmbience, "extract-ambience", p.extractAmbience, "Extract edge/corner colors for ambient lighting")
-	cmd.Flags().IntVar(&p.regions, "regions", p.regions, "Number of edge regions (4, 8, 12, 16)")
-	cmd.Flags().IntVar(&p.samplePercent, "sample-percent", p.samplePercent, "Percentage of edge to sample (1-50)")
-	cmd.Flags().StringVar(&p.sampleMethod, "sample-method", p.sampleMethod, "Sampling method (average or dominant)")
+	// Register shared common flags (count, aspect-ratio, cache, regions, seed, etc.)
+	commonflags.RegisterFlags(cmd)
 
-	// Seed flags
-	cmd.Flags().StringVar(&p.seedMode, "seed-mode", p.seedMode, "Seed mode (content, manual, random)")
-	cmd.Flags().Int64Var(&p.seedValue, "seed-value", p.seedValue, "Manual seed value")
-
-	// Cache flags
-	cmd.Flags().BoolVar(&p.cacheEnabled, "cache", p.cacheEnabled, "Enable image caching")
-	cmd.Flags().StringVar(&p.cacheDir, "cache-dir", p.cacheDir, "Cache directory")
-	cmd.Flags().StringVar(&p.cacheFilename, "cache-filename", "", "Custom cache filename")
-	cmd.Flags().BoolVar(&p.cacheOverwrite, "cache-overwrite", p.cacheOverwrite, "Overwrite existing cache")
-
-	// Model listing flag
-	cmd.Flags().BoolVar(&p.listModels, "list-models", false, "List available Imagen models and exit")
-
-	// Prompt control flags
-	cmd.Flags().BoolVar(&p.noExtendedPrompt, "no-extended-prompt", false, "Disable automatic wallpaper prompt enhancements")
-	cmd.Flags().BoolVar(&p.noNegativePrompt, "no-negative-prompt", false, "Disable default negative prompt")
+	// Register plugin-specific flags with googlegenai prefix
+	if cmd.Flags().Lookup("googlegenai.backend") == nil {
+		cmd.Flags().StringVar(&p.backend, "googlegenai.backend", p.backend, "Google Gen AI backend (gemini-api or vertex-ai)")
+	}
+	if cmd.Flags().Lookup("googlegenai.image-size") == nil {
+		cmd.Flags().StringVar(&p.imageSize, "googlegenai.image-size", p.imageSize, "Image size (1K or 2K, only for Imagen Standard/Ultra models)")
+	}
 }
 
 // Validate checks if required inputs are configured.
 func (p *Plugin) Validate() error {
 	// Skip validation if just listing models
-	if p.listModels {
+	if aiflags.ListModels {
 		return nil
 	}
-	if p.prompt == "" {
-		return fmt.Errorf("prompt is required")
+	if aiflags.Prompt == "" {
+		return fmt.Errorf("--ai.prompt is required")
 	}
 	return nil
 }
@@ -199,45 +140,51 @@ func (p *Plugin) Validate() error {
 // Generate creates an image using Google Gen AI and extracts colors.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
 	// If list-models flag is set, list models and exit
-	if p.listModels {
+	if aiflags.ListModels {
 		if err := p.listAvailableModels(ctx, opts.Verbose); err != nil {
 			return nil, fmt.Errorf("failed to list models: %w", err)
 		}
 		os.Exit(0)
 	}
 
+	// Determine model to use
+	model := aiflags.Model
+	if model == "" || model == "auto" {
+		model = defaultModel
+	}
+
 	if opts.Verbose {
 		fmt.Fprintf(os.Stderr, "Google Gen AI Plugin Configuration:\n")
-		fmt.Fprintf(os.Stderr, "  Prompt: %s\n", p.prompt)
-		fmt.Fprintf(os.Stderr, "  Model: %s\n", p.model)
+		fmt.Fprintf(os.Stderr, "  Prompt: %s\n", aiflags.Prompt)
+		fmt.Fprintf(os.Stderr, "  Model: %s\n", model)
 		fmt.Fprintf(os.Stderr, "  Backend: %s\n", p.backend)
-		fmt.Fprintf(os.Stderr, "  Aspect Ratio: %s\n", p.aspectRatio)
-		fmt.Fprintf(os.Stderr, "  Cache: %v (dir: %s)\n", p.cacheEnabled, p.cacheDir)
-		fmt.Fprintf(os.Stderr, "  Colors: %d\n", p.colours)
+		fmt.Fprintf(os.Stderr, "  Aspect Ratio: %s\n", commonflags.AspectRatio)
+		fmt.Fprintf(os.Stderr, "  Cache: %v (dir: %s)\n", commonflags.CacheEnabled, commonflags.CacheDir)
+		fmt.Fprintf(os.Stderr, "  Colors: %d\n", commonflags.Count)
 	}
 
 	if opts.DryRun {
 		if opts.Verbose {
-			fmt.Fprintf(os.Stderr, "DRY-RUN MODE: Would generate image with prompt: %s\n", p.prompt)
+			fmt.Fprintf(os.Stderr, "DRY-RUN MODE: Would generate image with prompt: %s\n", aiflags.Prompt)
 		}
 		return colour.NewPalette([]color.Color{}), nil
 	}
 
 	// Determine image path
-	imagePath, err := p.getImagePath()
+	imagePath, err := p.getImagePath(model)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine image path: %w", err)
 	}
 
 	// Generate image if needed
-	if p.cacheOverwrite || !fileExists(imagePath) {
-		enhancedPrompt := p.enhancePromptForWallpaper(p.prompt)
-		additionalPrompt := enhancedPrompt[len(p.prompt):]
+	if commonflags.CacheOverwrite || !fileExists(imagePath) {
+		enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
+		additionalPrompt := enhancedPrompt[len(aiflags.Prompt):]
 		fmt.Fprintf(os.Stderr, "[google-genai] backend=%s model=%s prompt=\"%s\" additional=\"%s\"\n",
-			p.backend, p.model, p.prompt, additionalPrompt)
+			p.backend, model, aiflags.Prompt, additionalPrompt)
 		fmt.Fprintf(os.Stderr, "Waiting for response...\n")
 
-		if err := p.generateImage(ctx, imagePath, opts.Verbose); err != nil {
+		if err := p.generateImage(ctx, model, imagePath, opts.Verbose); err != nil {
 			return nil, fmt.Errorf("failed to generate image: %w", err)
 		}
 
@@ -251,7 +198,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 
 	// Extract colors
 	if opts.Verbose {
-		fmt.Fprintf(os.Stderr, "Extracting %d colors from image using k-means...\n", p.colours)
+		fmt.Fprintf(os.Stderr, "Extracting %d colors from image using k-means...\n", commonflags.Count)
 	}
 
 	palette, err := p.extractColors(imagePath, opts.Verbose)
@@ -272,8 +219,8 @@ func (p *Plugin) WallpaperPath() string {
 }
 
 // getImagePath determines where to save/load the generated image.
-func (p *Plugin) getImagePath() (string, error) {
-	if !p.cacheEnabled {
+func (p *Plugin) getImagePath(model string) (string, error) {
+	if !commonflags.CacheEnabled {
 		tmpFile, err := os.CreateTemp("", "tinct-genai-*.png")
 		if err != nil {
 			return "", fmt.Errorf("failed to create temp file: %w", err)
@@ -282,18 +229,20 @@ func (p *Plugin) getImagePath() (string, error) {
 		return tmpFile.Name(), nil
 	}
 
-	if err := os.MkdirAll(p.cacheDir, 0o755); err != nil {
+	// Use plugin-specific subdirectory
+	cacheDir := filepath.Join(commonflags.CacheDir, "google-genai")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
-	filename := p.cacheFilename
+	filename := commonflags.CacheFilename
 	if filename == "" {
-		hash := sha256.Sum256([]byte(p.prompt + p.model))
+		hash := sha256.Sum256([]byte(aiflags.Prompt + model))
 		hashStr := hex.EncodeToString(hash[:])[:16]
 		filename = fmt.Sprintf("genai-%s.png", hashStr)
 	}
 
-	return filepath.Join(p.cacheDir, filename), nil
+	return filepath.Join(cacheDir, filename), nil
 }
 
 // clientSetup encapsulates client configuration, creation, and logging.
@@ -337,7 +286,7 @@ func (p *Plugin) clientSetup(ctx context.Context, verbose bool) (*genai.Client, 
 // enhancePromptForWallpaper adds wallpaper-specific enhancements to a user prompt.
 // Returns the original prompt unchanged if noExtendedPrompt is enabled.
 func (p *Plugin) enhancePromptForWallpaper(basePrompt string) string {
-	if p.noExtendedPrompt {
+	if aiflags.NoExtendedPrompt {
 		return basePrompt
 	}
 	return basePrompt + wallpaperEnhancement
@@ -345,7 +294,10 @@ func (p *Plugin) enhancePromptForWallpaper(basePrompt string) string {
 
 // buildNegativePrompt constructs the final negative prompt by combining
 // user-provided and default negative prompts.
-func buildNegativePrompt(userPrompt string) string {
+func buildNegativePrompt(userPrompt string, noNegative bool) string {
+	if noNegative {
+		return ""
+	}
 	if userPrompt == "" {
 		return defaultNegativePrompt
 	}
@@ -359,47 +311,47 @@ func isGeminiModel(model string) bool {
 
 // generateImage calls Google Gen AI SDK to create an image.
 // Routes to appropriate generation method based on model type.
-func (p *Plugin) generateImage(ctx context.Context, outputPath string, verbose bool) error {
-	if isGeminiModel(p.model) {
-		return p.generateImageWithGemini(ctx, outputPath, verbose)
+func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, verbose bool) error {
+	if isGeminiModel(model) {
+		return p.generateImageWithGemini(ctx, model, outputPath, verbose)
 	}
-	return p.generateImageWithImagen(ctx, outputPath, verbose)
+	return p.generateImageWithImagen(ctx, model, outputPath, verbose)
 }
 
 // generateImageWithImagen generates an image using the Imagen API (GenerateImages).
-func (p *Plugin) generateImageWithImagen(ctx context.Context, outputPath string, verbose bool) error {
+func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath string, verbose bool) error {
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
 		return err
 	}
 
 	// Enhance prompt for wallpaper suitability
-	enhancedPrompt := p.enhancePromptForWallpaper(p.prompt)
+	enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
 
 	// Build generation config
 	genConfig := &genai.GenerateImagesConfig{
 		NumberOfImages: 1,
-		AspectRatio:    p.aspectRatio,
+		AspectRatio:    commonflags.AspectRatio,
 		OutputMIMEType: "image/png",
 	}
 
 	// Set image size if supported (only for Standard and Ultra models)
-	if p.imageSize != "" && (p.model == "imagen-4.0-generate-001" || p.model == "imagen-4.0-ultra-generate-001") {
+	if p.imageSize != "" && (model == "imagen-4.0-generate-001" || model == "imagen-4.0-ultra-generate-001") {
 		genConfig.ImageSize = p.imageSize
 	}
 
 	// Build negative prompt to avoid borders, frames, and unwanted elements
 	// Note: Negative prompts are only supported in Vertex AI backend, not Gemini API
-	if client.ClientConfig().Backend == genai.BackendVertexAI && !p.noNegativePrompt {
-		genConfig.NegativePrompt = buildNegativePrompt(p.negativePrompt)
-	} else if p.negativePrompt != "" && !p.noNegativePrompt {
+	if client.ClientConfig().Backend == genai.BackendVertexAI && !aiflags.NoNegativePrompt {
+		genConfig.NegativePrompt = buildNegativePrompt(aiflags.NegativePrompt, aiflags.NoNegativePrompt)
+	} else if aiflags.NegativePrompt != "" && !aiflags.NoNegativePrompt {
 		// Gemini API doesn't support negative prompts, warn user if they provided one
 		fmt.Fprintf(os.Stderr, "Warning: Negative prompts are not supported with Gemini API backend (only Vertex AI)\n")
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Calling GenerateImages with model: %s\n", p.model)
-		fmt.Fprintf(os.Stderr, "  Aspect ratio: %s\n", p.aspectRatio)
+		fmt.Fprintf(os.Stderr, "Calling GenerateImages with model: %s\n", model)
+		fmt.Fprintf(os.Stderr, "  Aspect ratio: %s\n", commonflags.AspectRatio)
 		if genConfig.ImageSize != "" {
 			fmt.Fprintf(os.Stderr, "  Image size: %s\n", genConfig.ImageSize)
 		}
@@ -412,7 +364,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, outputPath string,
 	}
 
 	// Generate images
-	response, err := client.Models.GenerateImages(ctx, p.model, enhancedPrompt, genConfig)
+	response, err := client.Models.GenerateImages(ctx, model, enhancedPrompt, genConfig)
 	if err != nil {
 		return fmt.Errorf("image generation failed: %w", err)
 	}
@@ -451,12 +403,12 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, outputPath string,
 
 	// Save metadata alongside the image
 	metadata := &ImageMetadata{
-		Prompt:            p.prompt,
+		Prompt:            aiflags.Prompt,
 		EnhancedPrompt:    enhancedPrompt,
 		NegativePrompt:    genConfig.NegativePrompt,
-		Model:             p.model,
+		Model:             model,
 		Backend:           p.backend,
-		AspectRatio:       p.aspectRatio,
+		AspectRatio:       commonflags.AspectRatio,
 		ImageSize:         p.imageSize,
 		CreatedAt:         time.Now(),
 		ImagePath:         outputPath,
@@ -483,18 +435,18 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, outputPath string,
 }
 
 // generateImageWithGemini generates an image using the Gemini API (GenerateContent).
-func (p *Plugin) generateImageWithGemini(ctx context.Context, outputPath string, verbose bool) error {
+func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputPath string, verbose bool) error {
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
 		return err
 	}
 
 	// Enhance prompt for wallpaper suitability
-	enhancedPrompt := p.enhancePromptForWallpaper(p.prompt)
+	enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Calling GenerateContent with model: %s\n", p.model)
-		fmt.Fprintf(os.Stderr, "  Aspect ratio: %s\n", p.aspectRatio)
+		fmt.Fprintf(os.Stderr, "Calling GenerateContent with model: %s\n", model)
+		fmt.Fprintf(os.Stderr, "  Aspect ratio: %s\n", commonflags.AspectRatio)
 		fmt.Fprintf(os.Stderr, "  Enhanced prompt: %s\n", enhancedPrompt)
 	}
 
@@ -505,14 +457,14 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, outputPath string,
 	}
 
 	// Create the prompt with system instructions for aspect ratio
-	promptText := fmt.Sprintf("Generate an image with aspect ratio %s: %s", p.aspectRatio, enhancedPrompt)
+	promptText := fmt.Sprintf("Generate an image with aspect ratio %s: %s", commonflags.AspectRatio, enhancedPrompt)
 
 	// Build content array with text prompt
 	// genai.Text() returns []*Content, which we can use directly
 	contents := genai.Text(promptText)
 
 	// Generate content
-	response, err := client.Models.GenerateContent(ctx, p.model, contents, genConfig)
+	response, err := client.Models.GenerateContent(ctx, model, contents, genConfig)
 	if err != nil {
 		return fmt.Errorf("image generation failed: %w", err)
 	}
@@ -555,11 +507,11 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, outputPath string,
 
 	// Save metadata alongside the image
 	metadata := &ImageMetadata{
-		Prompt:         p.prompt,
+		Prompt:         aiflags.Prompt,
 		EnhancedPrompt: enhancedPrompt,
-		Model:          p.model,
+		Model:          model,
 		Backend:        p.backend,
-		AspectRatio:    p.aspectRatio,
+		AspectRatio:    commonflags.AspectRatio,
 		CreatedAt:      time.Now(),
 		ImagePath:      outputPath,
 		ImageSize_:     len(imageBytes),
@@ -602,7 +554,7 @@ func (p *Plugin) extractColors(imagePath string, verbose bool) (*colour.Palette,
 	extractorOpts := colour.ExtractorOptions{}
 
 	// Parse seed mode
-	seedMode, err := seed.ParseMode(p.seedMode)
+	seedMode, err := seed.ParseMode(commonflags.SeedMode)
 	if err != nil {
 		return nil, fmt.Errorf("invalid seed mode: %w", err)
 	}
@@ -613,7 +565,8 @@ func (p *Plugin) extractColors(imagePath string, verbose bool) (*colour.Palette,
 		Value: nil,
 	}
 	if seedMode == seed.ModeManual {
-		seedConfig.Value = &p.seedValue
+		seedValue := commonflags.SeedValue
+		seedConfig.Value = &seedValue
 	}
 
 	calculatedSeed, err := seed.Calculate(img, imagePath, seedConfig)
@@ -628,9 +581,9 @@ func (p *Plugin) extractColors(imagePath string, verbose bool) (*colour.Palette,
 
 	if verbose {
 		if extractorOpts.Seed != nil {
-			fmt.Fprintf(os.Stderr, "Using seed mode: %s (seed: %d)\n", p.seedMode, calculatedSeed)
+			fmt.Fprintf(os.Stderr, "Using seed mode: %s (seed: %d)\n", commonflags.SeedMode, calculatedSeed)
 		} else {
-			fmt.Fprintf(os.Stderr, "Using seed mode: %s (non-deterministic)\n", p.seedMode)
+			fmt.Fprintf(os.Stderr, "Using seed mode: %s (non-deterministic)\n", commonflags.SeedMode)
 		}
 	}
 
@@ -641,31 +594,31 @@ func (p *Plugin) extractColors(imagePath string, verbose bool) (*colour.Palette,
 	}
 
 	// Extract main palette colors
-	palette, err := extractor.Extract(img, p.colours)
+	palette, err := extractor.Extract(img, commonflags.Count)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract colors: %w", err)
 	}
 
 	// If ambience extraction is disabled, return main colors
-	if !p.extractAmbience {
+	if !commonflags.ExtractAmbience {
 		return palette, nil
 	}
 
 	// Extract region colors for ambient lighting
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Also extracting %d edge/corner regions using %s method\n", p.regions, p.sampleMethod)
+		fmt.Fprintf(os.Stderr, "Also extracting %d edge/corner regions using %s method\n", commonflags.Regions, commonflags.SampleMethod)
 	}
 
 	// Convert regions count to configuration
-	regionConfig, err := regions.ConfigurationFromInt(p.regions)
+	regionConfig, err := regions.ConfigurationFromInt(commonflags.Regions)
 	if err != nil {
 		return nil, fmt.Errorf("invalid regions configuration: %w", err)
 	}
 
 	// Create region sampler
 	sampler := &regions.Sampler{
-		SamplePercent: p.samplePercent,
-		Method:        p.sampleMethod,
+		SamplePercent: commonflags.SamplePercent,
+		Method:        commonflags.SampleMethod,
 	}
 
 	// Extract colors from regions
@@ -709,26 +662,29 @@ func fileExists(path string) bool {
 // GetFlagHelp returns help information for all plugin flags.
 func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 	return []input.FlagHelp{
-		{Name: "prompt", Type: "string", Default: "", Description: "Text description for image generation (required)", Required: true},
-		{Name: "model", Type: "string", Default: defaultModel, Description: "Image generation model to use", Required: false},
-		{Name: "aspect-ratio", Type: "string", Default: "16:9", Description: "Image aspect ratio (1:1, 3:4, 4:3, 9:16, 16:9, 21:9)", Required: false},
-		{Name: "image-size", Type: "string", Default: "2K", Description: "Image size (1K or 2K, only for Standard/Ultra models)", Required: false},
-		{Name: "negative-prompt", Type: "string", Default: "", Description: "Description of what to discourage", Required: false},
-		{Name: "genai-backend", Type: "string", Default: defaultBackend, Description: "Google Gen AI backend (gemini-api or vertex-ai)", Required: false},
+		// Shared AI flags
+		{Name: "ai.prompt", Type: "string", Default: "", Description: "Text description for AI image generation (required)", Required: true},
+		{Name: "ai.model", Type: "string", Default: defaultModel, Description: "AI model to use for image generation", Required: false},
+		{Name: "ai.list-models", Type: "bool", Default: "false", Description: "List available AI models and exit", Required: false},
+		{Name: "ai.no-extended-prompt", Type: "bool", Default: "false", Description: "Disable automatic wallpaper prompt enhancements", Required: false},
+		{Name: "ai.no-negative-prompt", Type: "bool", Default: "false", Description: "Disable default negative prompt", Required: false},
+		{Name: "ai.negative-prompt", Type: "string", Default: "", Description: "Custom negative prompt to discourage certain elements", Required: false},
+		// Shared common flags
 		{Name: "count", Type: "int", Default: "32", Description: "Number of colors to extract", Required: false},
+		{Name: "aspect-ratio", Type: "string", Default: "16:9", Description: "Image aspect ratio (1:1, 3:4, 4:3, 9:16, 16:9, 21:9)", Required: false},
+		{Name: "cache", Type: "bool", Default: "true", Description: "Enable image caching", Required: false},
+		{Name: "cache-dir", Type: "string", Default: commonflags.GetDefaultCacheDir(), Description: "Cache directory", Required: false},
+		{Name: "cache-filename", Type: "string", Default: "", Description: "Custom cache filename", Required: false},
+		{Name: "cache-overwrite", Type: "bool", Default: "false", Description: "Overwrite existing cache", Required: false},
 		{Name: "extract-ambience", Type: "bool", Default: "false", Description: "Extract edge/corner colors for ambient lighting", Required: false},
 		{Name: "regions", Type: "int", Default: "8", Description: "Number of edge regions (4, 8, 12, 16)", Required: false},
 		{Name: "sample-percent", Type: "int", Default: "10", Description: "Percentage of edge to sample (1-50)", Required: false},
 		{Name: "sample-method", Type: "string", Default: "average", Description: "Sampling method (average or dominant)", Required: false},
 		{Name: "seed-mode", Type: "string", Default: "content", Description: "Seed mode (content, manual, random)", Required: false},
 		{Name: "seed-value", Type: "int64", Default: "0", Description: "Manual seed value", Required: false},
-		{Name: "cache", Type: "bool", Default: "true", Description: "Enable image caching", Required: false},
-		{Name: "cache-dir", Type: "string", Default: p.cacheDir, Description: "Cache directory", Required: false},
-		{Name: "cache-filename", Type: "string", Default: "", Description: "Custom cache filename", Required: false},
-		{Name: "cache-overwrite", Type: "bool", Default: "false", Description: "Overwrite existing cache", Required: false},
-		{Name: "list-models", Type: "bool", Default: "false", Description: "List available Imagen models and exit", Required: false},
-		{Name: "no-extended-prompt", Type: "bool", Default: "false", Description: "Disable automatic wallpaper prompt enhancements", Required: false},
-		{Name: "no-negative-prompt", Type: "bool", Default: "false", Description: "Disable default negative prompt", Required: false},
+		// Plugin-specific flags
+		{Name: "googlegenai.backend", Type: "string", Default: defaultBackend, Description: "Google Gen AI backend (gemini-api or vertex-ai)", Required: false},
+		{Name: "googlegenai.image-size", Type: "string", Default: "2K", Description: "Image size (1K or 2K, only for Imagen Standard/Ultra models)", Required: false},
 	}
 }
 

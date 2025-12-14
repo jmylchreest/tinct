@@ -216,10 +216,7 @@ func (p *ProgressBar) render() {
 		percent = float64(p.current) / float64(p.total) * 100
 	}
 
-	filled := int(float64(p.width) * (float64(p.current) / float64(p.total)))
-	if filled > p.width {
-		filled = p.width
-	}
+	filled := min(int(float64(p.width)*(float64(p.current)/float64(p.total))), p.width)
 
 	bar := strings.Repeat("█", filled) + strings.Repeat("░", p.width-filled)
 
