@@ -61,7 +61,7 @@ jobs:
           else
             # Get releases to mark as draft (those beyond the keep threshold)
             RELEASES_TO_DRAFT=$(echo "$RELEASES" | jq -r --argjson keep "$KEEP_RELEASES" '
-              .[$keep:] | .[] | .tagName
+              .[$keep:] | .[] | select(.isDraft == false) | .tagName
             ')
 
             if [ -n "$RELEASES_TO_DRAFT" ]; then
