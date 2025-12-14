@@ -12,6 +12,18 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      keep_releases:
+        description: 'Number of most recent releases to keep visible (default: 10)'
+        required: false
+        type: number
+        default: 10
+      keep_prereleases:
+        description: 'Number of most recent pre-releases to keep (default: 3)'
+        required: false
+        type: number
+        default: 3
 
 permissions:
   contents: write
@@ -241,15 +253,16 @@ jobs:
 
       - name: Prune old preview releases
         run: |
-          # Keep at least 3 most recent preview releases
+          # Keep at least N most recent preview releases (default: 3, configurable via workflow_dispatch)
           # Also delete any previews older than the most recent tagged release
-          MIN_KEEP=3
+          MIN_KEEP=${{ github.event.inputs.keep_prereleases || 3 }}
 
           echo "Finding most recent tagged release..."
           LATEST_TAG_DATE=$(gh release list --limit 100 --json tagName,isPrerelease,createdAt \
             --jq '[.[] | select(.isPrerelease == false)] | sort_by(.createdAt) | reverse | .[0].createdAt' || echo "")
 
           echo "Latest tagged release date: $LATEST_TAG_DATE"
+          echo "Keeping at least $MIN_KEEP preview releases"
 
           echo "Fetching preview releases to prune..."
           gh release list --limit 100 --json tagName,isPrerelease,createdAt \
@@ -333,3 +346,57 @@ jobs:
           else
             echo "PLUGIN_REPO_PAT not configured, skipping plugin repository trigger"
           fi
+
+      - name: Mark old releases as drafts
+        if: success()
+        run: |
+          # Keep only the N most recent stable releases visible (default: 10, configurable via workflow_dispatch)
+          KEEP_RELEASES=${{ github.event.inputs.keep_releases || 10 }}
+
+          echo "📦 Managing release history..."
+          echo "Keep visible releases: $KEEP_RELEASES"
+
+          # Get all non-prerelease releases sorted by creation date (newest first)
+          echo "Fetching all stable releases..."
+          RELEASES=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft,createdAt \
+            --jq '[.[] | select(.isPrerelease == false)] | sort_by(.createdAt) | reverse')
+
+          # Count total stable releases
+          TOTAL_RELEASES=$(echo "$RELEASES" | jq 'length')
+          echo "Found $TOTAL_RELEASES stable releases"
+
+          if [ "$TOTAL_RELEASES" -le "$KEEP_RELEASES" ]; then
+            echo "✅ Only $TOTAL_RELEASES stable releases found, keeping all visible"
+          else
+            # Get releases to mark as draft (those beyond the keep threshold)
+            RELEASES_TO_DRAFT=$(echo "$RELEASES" | jq -r --argjson keep "$KEEP_RELEASES" '
+              .[$keep:] | .[] | select(.isDraft == false) | .tagName
+            ')
+
+            if [ -n "$RELEASES_TO_DRAFT" ]; then
+              echo "📝 Releases to mark as draft:"
+              echo "$RELEASES_TO_DRAFT"
+
+              # Mark each release as draft
+              echo "$RELEASES_TO_DRAFT" | while IFS= read -r tag; do
+                if [ -n "$tag" ]; then
+                  echo "Marking release $tag as draft..."
+                  if gh api \
+                    --method PATCH \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    "/repos/${{ github.repository }}/releases/tags/$tag" \
+                    -f draft=true; then
+                    echo "✅ Successfully marked $tag as draft"
+                  else
+                    echo "⚠️  Failed to mark $tag as draft"
+                  fi
+                fi
+              done
+            else
+              echo "✅ No releases need to be marked as draft"
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
