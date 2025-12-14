@@ -1,0 +1,167 @@
+# GitHub Actions workflow for managing release history
+# Marks old releases as drafts and prunes old pre-releases
+# This helps limit what tinct-plugin/repo manager needs to parse
+
+name: Manage Releases
+
+on:
+  # Allow manual trigger with parameters
+  workflow_dispatch:
+    inputs:
+      keep_releases:
+        description: 'Number of most recent releases to keep visible (default: 10)'
+        required: false
+        type: number
+        default: 10
+      keep_prereleases:
+        description: 'Number of most recent pre-releases to keep (default: 3)'
+        required: false
+        type: number
+        default: 3
+      dry_run:
+        description: 'Run in dry-run mode (no changes)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  manage-releases:
+    name: Manage Release History
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Mark old releases as drafts
+        run: |
+          KEEP_RELEASES=${{ github.event.inputs.keep_releases }}
+          DRY_RUN=${{ github.event.inputs.dry_run }}
+
+          echo "📦 Managing release history..."
+          echo "Keep visible releases: $KEEP_RELEASES"
+          echo "Dry run mode: $DRY_RUN"
+          echo ""
+
+          # Get all non-prerelease releases sorted by creation date (newest first)
+          echo "Fetching all stable releases..."
+          RELEASES=$(gh release list --limit 100 --json tagName,isPrerelease,isDraft,createdAt \
+            --jq '[.[] | select(.isPrerelease == false)] | sort_by(.createdAt) | reverse')
+
+          # Count total stable releases
+          TOTAL_RELEASES=$(echo "$RELEASES" | jq 'length')
+          echo "Found $TOTAL_RELEASES stable releases"
+          echo ""
+
+          if [ "$TOTAL_RELEASES" -le "$KEEP_RELEASES" ]; then
+            echo "✅ Only $TOTAL_RELEASES stable releases found, keeping all visible"
+          else
+            # Get releases to mark as draft (those beyond the keep threshold)
+            RELEASES_TO_DRAFT=$(echo "$RELEASES" | jq -r --argjson keep "$KEEP_RELEASES" '
+              .[$keep:] | .[] | .tagName
+            ')
+
+            if [ -n "$RELEASES_TO_DRAFT" ]; then
+              echo "📝 Releases to mark as draft:"
+              echo "$RELEASES_TO_DRAFT"
+              echo ""
+
+              # Mark each release as draft
+              echo "$RELEASES_TO_DRAFT" | while IFS= read -r tag; do
+                if [ -n "$tag" ]; then
+                  if [ "$DRY_RUN" == "true" ]; then
+                    echo "[DRY RUN] Would mark release $tag as draft"
+                  else
+                    echo "Marking release $tag as draft..."
+                    if gh api \
+                      --method PATCH \
+                      -H "Accept: application/vnd.github+json" \
+                      -H "X-GitHub-Api-Version: 2022-11-28" \
+                      "/repos/${{ github.repository }}/releases/tags/$tag" \
+                      -f draft=true; then
+                      echo "✅ Successfully marked $tag as draft"
+                    else
+                      echo "⚠️  Failed to mark $tag as draft"
+                    fi
+                  fi
+                fi
+              done
+            else
+              echo "✅ No releases need to be marked as draft"
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prune old pre-releases
+        run: |
+          KEEP_PRERELEASES=${{ github.event.inputs.keep_prereleases }}
+          DRY_RUN=${{ github.event.inputs.dry_run }}
+
+          echo ""
+          echo "🗑️  Managing pre-releases..."
+          echo "Keep pre-releases: $KEEP_PRERELEASES"
+          echo ""
+
+          # Get all pre-releases sorted by creation date (newest first)
+          echo "Fetching all pre-releases..."
+          PRERELEASES=$(gh release list --limit 100 --json tagName,isPrerelease,createdAt \
+            --jq '[.[] | select(.isPrerelease == true)] | sort_by(.createdAt) | reverse')
+
+          # Count total pre-releases
+          TOTAL_PRERELEASES=$(echo "$PRERELEASES" | jq 'length')
+          echo "Found $TOTAL_PRERELEASES pre-releases"
+          echo ""
+
+          if [ "$TOTAL_PRERELEASES" -le "$KEEP_PRERELEASES" ]; then
+            echo "✅ Only $TOTAL_PRERELEASES pre-releases found, keeping all"
+          else
+            # Get pre-releases to delete (those beyond the keep threshold)
+            PRERELEASES_TO_DELETE=$(echo "$PRERELEASES" | jq -r --argjson keep "$KEEP_PRERELEASES" '
+              .[$keep:] | .[] | .tagName
+            ')
+
+            if [ -n "$PRERELEASES_TO_DELETE" ]; then
+              echo "🗑️  Pre-releases to delete:"
+              echo "$PRERELEASES_TO_DELETE"
+              echo ""
+
+              # Delete each old pre-release
+              echo "$PRERELEASES_TO_DELETE" | while IFS= read -r tag; do
+                if [ -n "$tag" ]; then
+                  if [ "$DRY_RUN" == "true" ]; then
+                    echo "[DRY RUN] Would delete pre-release $tag"
+                  else
+                    echo "Deleting pre-release $tag..."
+                    if gh release delete "$tag" --yes; then
+                      echo "✅ Successfully deleted $tag"
+                    else
+                      echo "⚠️  Failed to delete $tag"
+                    fi
+                  fi
+                fi
+              done
+            else
+              echo "✅ No pre-releases need to be deleted"
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "### ✅ Release Management Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Configuration:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Keep visible releases: ${{ github.event.inputs.keep_releases }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Keep pre-releases: ${{ github.event.inputs.keep_prereleases }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry run mode: ${{ github.event.inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "ℹ️ This was a dry run. No actual changes were made." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Changes have been applied to the release history." >> $GITHUB_STEP_SUMMARY
+          fi
