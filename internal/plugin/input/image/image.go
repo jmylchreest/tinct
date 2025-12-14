@@ -49,7 +49,7 @@ type Plugin struct {
 	seedValue int64  // Seed value (only used when seedMode is "manual")
 
 	// Remote image caching (for wallpaper support).
-	cacheEnabled   bool   // Enable caching of remote images (default: false)
+	cacheEnabled   bool   // Enable caching of remote images (default: true)
 	cacheDir       string // Directory to cache downloaded images
 	cacheFilename  string // Filename for cached image (empty = auto-generate from URL hash)
 	cacheOverwrite bool   // Allow overwriting existing cached images
@@ -61,7 +61,8 @@ type Plugin struct {
 // New creates a new image input plugin with default settings.
 func New() *Plugin {
 	// Check environment variables for cache settings.
-	cacheEnabled := false
+	// Default to true so remote images are cached for wallpaper support.
+	cacheEnabled := true
 	if val := os.Getenv("TINCT_IMAGE_CACHE"); val != "" {
 		if parsed, err := strconv.ParseBool(val); err == nil {
 			cacheEnabled = parsed

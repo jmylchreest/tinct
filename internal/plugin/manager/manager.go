@@ -20,6 +20,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/file"
 	"github.com/jmylchreest/tinct/internal/plugin/input/googlegenai"
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
+	"github.com/jmylchreest/tinct/internal/plugin/input/markdown"
 	"github.com/jmylchreest/tinct/internal/plugin/input/openrouter"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
@@ -38,6 +39,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/kitty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/konsole"
 	"github.com/jmylchreest/tinct/internal/plugin/output/libadwaita"
+	markdownout "github.com/jmylchreest/tinct/internal/plugin/output/markdown"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
 	"github.com/jmylchreest/tinct/internal/plugin/output/ptyxis"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt5"
@@ -155,6 +157,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	// Register input plugins.
 	m.inputRegistry.Register(image.New())
 	m.inputRegistry.Register(file.New())
+	m.inputRegistry.Register(markdown.New())
 	m.inputRegistry.Register(remotejson.New())
 	m.inputRegistry.Register(remotecss.New())
 	m.inputRegistry.Register(googlegenai.New())
@@ -175,6 +178,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(kitty.New())
 	m.outputRegistry.Register(konsole.New())
 	m.outputRegistry.Register(libadwaita.New())
+	m.outputRegistry.Register(markdownout.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(ptyxis.New())
 	m.outputRegistry.Register(qt5.New())

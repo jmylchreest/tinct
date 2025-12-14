@@ -135,7 +135,7 @@ tinct generate -i image -p wallpaper.jpg --image.seed-mode random -o hyprland
 | `--image.sample-method` | | `average` | Sampling method: `average` or `dominant` |
 | `--image.seed-mode` | | `content` | Seed mode: `content`, `filepath`, `manual`, `random` |
 | `--image.seed-value` | | `0` | Seed value (only used with `seed-mode=manual`) |
-| `--image.cache` | | `false` | Enable caching of remote images for wallpaper support |
+| `--image.cache` | | `true` | Enable caching of remote images for wallpaper support |
 | `--image.cache-dir` | | `~/.cache/tinct/images` | Directory to cache downloaded images |
 | `--image.cache-filename` | | *(auto)* | Filename for cached image (default: URL hash) |
 | `--image.cache-overwrite` | | `false` | Allow overwriting existing cached images |

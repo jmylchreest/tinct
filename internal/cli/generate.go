@@ -160,7 +160,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Phase 11: Print summary.
-	return printGenerationSummary(successCount)
+	return printGenerationSummary(successCount, executions)
 }
 
 // runGlobalHookScript executes a global hook script if it exists.

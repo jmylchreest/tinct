@@ -119,6 +119,36 @@ tinct generate -i google-genai \
   -o all
 ```
 
+### Save and Restore Themes
+
+Save any theme to a portable markdown file with embedded wallpaper:
+
+```bash
+# Save theme from online wallpaper to a markdown file
+tinct generate -i image \
+  -p "https://example.com/wallpaper.jpg" \
+  -o markdown \
+  --markdown.name "Mountain Sunset" \
+  --markdown.include-thumbnail
+
+# The theme is saved to ~/.config/tinct/themes/mountain-sunset.md
+```
+
+Restore the theme later from the markdown file:
+
+```bash
+# Restore theme and wallpaper from the saved markdown file
+tinct generate -i markdown \
+  --markdown.path ~/.config/tinct/themes/mountain-sunset.md
+
+# The wallpaper is automatically extracted and applied
+```
+
+This workflow allows you to:
+- Share complete themes (colors + wallpaper) as single portable files
+- Version control your themes in git
+- Restore your exact setup on a new machine
+
 ## Documentation
 
 | Document | Description |

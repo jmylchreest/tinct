@@ -661,7 +661,7 @@ func runPostExecutionHooks(ctx context.Context, executions []pluginExecution, wa
 }
 
 // printGenerationSummary prints the final summary of the generation process.
-func printGenerationSummary(successCount int) error {
+func printGenerationSummary(successCount int, executions []pluginExecution) error {
 	if generateDryRun {
 		return nil
 	}
@@ -670,6 +670,21 @@ func printGenerationSummary(successCount int) error {
 	if successCount > 0 {
 		fmt.Printf(" Done! Generated %d output plugin(s)\n", successCount)
 		return nil
+	}
+
+	// Collect failure reasons to help user understand what went wrong
+	var failureReasons []string
+	for _, exec := range executions {
+		if exec.skip && exec.skipReason != "" {
+			failureReasons = append(failureReasons, fmt.Sprintf("  %s: %s", exec.plugin.Name(), exec.skipReason))
+		}
+	}
+
+	if len(failureReasons) > 0 {
+		fmt.Fprintf(os.Stderr, "\nPlugin failures:\n")
+		for _, reason := range failureReasons {
+			fmt.Fprintf(os.Stderr, "%s\n", reason)
+		}
 	}
 
 	return fmt.Errorf("no output plugins succeeded")

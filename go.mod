@@ -15,6 +15,7 @@ require (
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/term v0.38.0
 	google.golang.org/genai v1.39.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
