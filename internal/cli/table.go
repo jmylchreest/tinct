@@ -23,6 +23,7 @@ type Table struct {
 
 	// Live mode support
 	live      bool           // If true, updates in-place; if false, static output
+	isTTY     bool           // Whether the output is a TTY (supports ANSI codes)
 	rowIDs    map[string]int // Maps row ID to row index (for live mode)
 	rowOrder  []string       // Preserves insertion order of row IDs
 	writer    io.Writer      // Output writer (defaults to os.Stderr for live mode)
@@ -49,14 +50,23 @@ func NewTable(headers []string) *Table {
 
 // SetLive enables or disables live updating mode.
 // In live mode, the table updates in-place using ANSI cursor control.
+// Live mode is automatically disabled if output is not a TTY.
 func (t *Table) SetLive(live bool) *Table {
 	t.live = live
+	// Check if writer is a TTY (supports ANSI escape codes)
+	if live {
+		t.isTTY = isWriterTTY(t.writer)
+	}
 	return t
 }
 
 // WithWriter sets the output writer for the table.
 func (t *Table) WithWriter(w io.Writer) *Table {
 	t.writer = w
+	// Re-check TTY status if live mode is enabled
+	if t.live {
+		t.isTTY = isWriterTTY(w)
+	}
 	return t
 }
 
@@ -199,6 +209,15 @@ func (t *Table) renderLive() {
 		return
 	}
 
+	// If not a TTY, only render once (no cursor control available)
+	if !t.isTTY {
+		if !t.rendered {
+			t.renderStatic()
+			t.rendered = true
+		}
+		return
+	}
+
 	// Move cursor up to overwrite previous render (if already rendered)
 	if t.rendered {
 		fmt.Fprintf(t.writer, "\033[%dA", t.lineCount)
@@ -218,9 +237,10 @@ func (t *Table) renderLive() {
 		separatorParts[i] = strings.Repeat("-", colWidths[i])
 	}
 
-	fmt.Fprintf(t.writer, "\r%s\n", strings.Join(headerParts, strings.Repeat(" ", t.padding)))
+	// Use \033[K to clear to end of line for clean overwrites
+	fmt.Fprintf(t.writer, "\r%s\033[K\n", strings.Join(headerParts, strings.Repeat(" ", t.padding)))
 	lineCount++
-	fmt.Fprintf(t.writer, "\r%s\n", strings.Join(separatorParts, strings.Repeat(" ", t.padding)))
+	fmt.Fprintf(t.writer, "\r%s\033[K\n", strings.Join(separatorParts, strings.Repeat(" ", t.padding)))
 	lineCount++
 
 	// Render rows
@@ -229,20 +249,45 @@ func (t *Table) renderLive() {
 		for i, cell := range row {
 			rowParts[i] = padRight(cell, colWidths[i])
 		}
-		fmt.Fprintf(t.writer, "\r%s\n", strings.Join(rowParts, strings.Repeat(" ", t.padding)))
+		fmt.Fprintf(t.writer, "\r%s\033[K\n", strings.Join(rowParts, strings.Repeat(" ", t.padding)))
 		lineCount++
 	}
 
 	// Clear any extra lines from previous render
 	if t.rendered {
 		for i := lineCount; i < t.lineCount; i++ {
-			fmt.Fprintf(t.writer, "\r%s\n", strings.Repeat(" ", 100))
+			fmt.Fprintf(t.writer, "\r\033[K\n")
 			lineCount++
 		}
 	}
 
 	t.lineCount = lineCount
 	t.rendered = true
+}
+
+// renderStatic renders the table once without cursor control (for non-TTY output).
+func (t *Table) renderStatic() {
+	colWidths := t.calculateSimpleColumnWidths()
+
+	// Render header
+	headerParts := make([]string, len(t.headers))
+	separatorParts := make([]string, len(t.headers))
+	for i, header := range t.headers {
+		headerParts[i] = padRight(header, colWidths[i])
+		separatorParts[i] = strings.Repeat("-", colWidths[i])
+	}
+
+	fmt.Fprintf(t.writer, "%s\n", strings.Join(headerParts, strings.Repeat(" ", t.padding)))
+	fmt.Fprintf(t.writer, "%s\n", strings.Join(separatorParts, strings.Repeat(" ", t.padding)))
+
+	// Render rows
+	for _, row := range t.rows {
+		rowParts := make([]string, len(t.headers))
+		for i, cell := range row {
+			rowParts[i] = padRight(cell, colWidths[i])
+		}
+		fmt.Fprintf(t.writer, "%s\n", strings.Join(rowParts, strings.Repeat(" ", t.padding)))
+	}
 }
 
 // calculateSimpleColumnWidths calculates column widths without text wrapping.
@@ -276,6 +321,12 @@ func (t *Table) Finish() {
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	// For non-TTY, render the final state (since intermediate updates were skipped)
+	if !t.isTTY {
+		t.renderStatic()
+		return
+	}
 
 	// Ensure table is rendered one final time
 	if !t.rendered {
@@ -539,4 +590,13 @@ func (t *Table) applyTerminalAwareWidth(colWidths []int) {
 	// Set the max width for wrapping and update column width
 	t.maxWidths[t.terminalAwareCol] = availableWidth
 	colWidths[t.terminalAwareCol] = availableWidth
+}
+
+// isWriterTTY checks if a writer is a terminal (TTY) that supports ANSI escape codes.
+func isWriterTTY(w io.Writer) bool {
+	// Check if the writer is a file with a valid file descriptor
+	if f, ok := w.(*os.File); ok {
+		return term.IsTerminal(int(f.Fd()))
+	}
+	return false
 }
