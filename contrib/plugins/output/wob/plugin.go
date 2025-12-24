@@ -30,7 +30,7 @@ func runPlugin() error {
 	}
 
 	themesDir := filepath.Join(homeDir, ".config", "wob", "themes")
-	if err := os.MkdirAll(themesDir, 0755); err != nil { // #nosec G301 - Themes directory needs standard permissions
+	if err := os.MkdirAll(themesDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create themes directory: %w", err)
 	}
 
@@ -42,7 +42,7 @@ func runPlugin() error {
 		return fmt.Errorf("failed to generate theme: %w", err)
 	}
 
-	if err := os.WriteFile(themeFile, []byte(themeContent), 0644); err != nil { // #nosec G306 - Theme file needs standard read permissions
+	if err := os.WriteFile(themeFile, []byte(themeContent), 0o600); err != nil {
 		return fmt.Errorf("failed to write theme file: %w", err)
 	}
 

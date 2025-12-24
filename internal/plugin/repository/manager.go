@@ -427,7 +427,7 @@ func (m *Manager) loadConfig() error {
 // saveConfig saves the repository configuration.
 func (m *Manager) saveConfig() error {
 	// Ensure directory exists.
-	if err := os.MkdirAll(filepath.Dir(m.configPath), 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
+	if err := os.MkdirAll(filepath.Dir(m.configPath), 0o750); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -436,7 +436,7 @@ func (m *Manager) saveConfig() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(m.configPath, data, 0o644); err != nil { //nolint:gosec // G306: Config file needs standard read permissions
+	if err := os.WriteFile(m.configPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 
@@ -451,7 +451,7 @@ func (m *Manager) getManifestCachePath(repoName string) string {
 // saveManifestCache saves a manifest to cache.
 func (m *Manager) saveManifestCache(repoName string, manifest *Manifest) error {
 	// Ensure cache directory exists.
-	if err := os.MkdirAll(m.cachePath, 0o755); err != nil { // #nosec G301 - Cache directory needs standard permissions
+	if err := os.MkdirAll(m.cachePath, 0o750); err != nil {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -462,7 +462,7 @@ func (m *Manager) saveManifestCache(repoName string, manifest *Manifest) error {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	if err := os.WriteFile(cachePath, data, 0o644); err != nil { //nolint:gosec // G306: Cache file needs standard read permissions
+	if err := os.WriteFile(cachePath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write cache: %w", err)
 	}
 

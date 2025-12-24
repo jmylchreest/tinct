@@ -145,12 +145,12 @@ func (l *Loader) DumpTemplate(filename string, force bool) error {
 
 	// Create directory if it doesn't exist.
 	outputDir := filepath.Dir(outputPath)
-	if err := os.MkdirAll(outputDir, 0o755); err != nil { // #nosec G301 - Template directory needs standard permissions
+	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create directory %q: %w", outputDir, err)
 	}
 
 	// Write file.
-	if err := os.WriteFile(outputPath, content, 0o644); err != nil { //nolint:gosec // G306: Template file needs standard read permissions
+	if err := os.WriteFile(outputPath, content, 0o600); err != nil {
 		return fmt.Errorf("failed to write template to %q: %w", outputPath, err)
 	}
 

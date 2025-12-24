@@ -81,7 +81,7 @@ func DownloadAndCache(ctx context.Context, url string, opts CacheOptions) (strin
 	}
 
 	// Create cache directory if it doesn't exist.
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil { // #nosec G301 - Cache directory needs standard permissions
+	if err := os.MkdirAll(cacheDir, 0o750); err != nil {
 		return "", fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
@@ -109,7 +109,7 @@ func DownloadAndCache(ctx context.Context, url string, opts CacheOptions) (strin
 	}
 
 	// Write to cache file.
-	if err := os.WriteFile(cachedPath, data, 0o644); err != nil { //nolint:gosec // G306: Cache files need standard read permissions
+	if err := os.WriteFile(cachedPath, data, 0o600); err != nil {
 		return "", fmt.Errorf("failed to write cached image: %w", err)
 	}
 
