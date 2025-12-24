@@ -178,7 +178,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		// Try to create the directory.
-		if err := os.MkdirAll(configDir, 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
+		if err := os.MkdirAll(configDir, 0o750); err != nil {
 			return true, fmt.Sprintf("neovim colors directory not found and could not be created: %s", configDir), nil
 		}
 		if p.verbose {

@@ -317,7 +317,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil { // #nosec G301 - Plugin directory needs standard permissions
+	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
@@ -585,7 +585,7 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil { // #nosec G301 - Plugin directory needs standard permissions
+	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 

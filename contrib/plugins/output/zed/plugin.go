@@ -204,7 +204,7 @@ func (p *Plugin) writeThemeFiles(content []byte) (map[string][]byte, error) {
 	files := make(map[string][]byte)
 	for _, outputDir := range outputDirs {
 		// Create themes directory if it doesn't exist.
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
+		if err := os.MkdirAll(outputDir, 0o750); err != nil {
 			return nil, fmt.Errorf("failed to create themes directory %q: %w", outputDir, err)
 		}
 

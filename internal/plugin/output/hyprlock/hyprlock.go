@@ -163,7 +163,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	configDir := p.DefaultOutputDir()
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
 		// For hyprlock, we can create the directory since it's straightforward.
-		if err := os.MkdirAll(configDir, 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
+		if err := os.MkdirAll(configDir, 0o750); err != nil {
 			return true, fmt.Sprintf("hypr config directory does not exist and cannot be created: %s", configDir), nil
 		}
 	}

@@ -468,7 +468,7 @@ func savePalette(palette *colour.CategorisedPalette, path string) error {
 	// Ensure directory exists.
 	dir := filepath.Dir(path)
 	if dir != "." && dir != "" {
-		if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 - Output directory needs standard permissions
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
@@ -537,7 +537,7 @@ func writeFile(path string, content []byte, verbose bool) error {
 
 	// Ensure directory exists.
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 - Output directory needs standard permissions
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 

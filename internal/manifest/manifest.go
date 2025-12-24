@@ -123,7 +123,7 @@ func (m *Manager) Save() error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(m.path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("failed to create manifest directory: %w", err)
 	}
 

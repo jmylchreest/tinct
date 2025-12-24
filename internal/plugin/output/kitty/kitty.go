@@ -172,7 +172,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	themesDir := p.DefaultOutputDir()
 	if _, err := os.Stat(themesDir); os.IsNotExist(err) {
 		// Try to create the themes directory.
-		if err := os.MkdirAll(themesDir, 0o755); err != nil { // #nosec G301 - Config directory needs standard permissions
+		if err := os.MkdirAll(themesDir, 0o750); err != nil {
 			return true, fmt.Sprintf("failed to create kitty themes directory: %s", themesDir), nil
 		}
 		if p.verbose {
