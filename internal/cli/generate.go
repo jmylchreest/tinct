@@ -295,8 +295,14 @@ func buildFilteredFlagSet(inputPlugin string, outputPlugins []string) map[string
 		}
 	}
 
-	// Add selected output plugin flags
-	if len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll {
+	// Add output plugin flags - either specific plugins or all enabled plugins
+	if len(outputPlugins) > 0 && outputPlugins[0] == pluginTypeAll {
+		// Include flags for all enabled output plugins
+		for _, plugin := range sharedPluginManager.AllOutputPlugins() {
+			addFlagHelpToSet(filteredFlags, plugin.GetFlagHelp())
+		}
+	} else if len(outputPlugins) > 0 {
+		// Include flags for specifically selected output plugins
 		for _, outputName := range outputPlugins {
 			if plugin, ok := sharedPluginManager.GetOutputPlugin(outputName); ok {
 				addFlagHelpToSet(filteredFlags, plugin.GetFlagHelp())
@@ -369,8 +375,19 @@ func buildPluginSpecificHelp(inputPlugin string, outputPlugins []string) string 
 		}
 	}
 
-	// Show output plugin descriptions if specified
-	if len(outputPlugins) > 0 && outputPlugins[0] != pluginTypeAll {
+	// Show output plugin descriptions - either specific plugins or all enabled plugins
+	if len(outputPlugins) > 0 && outputPlugins[0] == pluginTypeAll {
+		// List all enabled output plugins
+		allPlugins := sharedPluginManager.AllOutputPlugins()
+		if len(allPlugins) > 0 {
+			help.WriteString("Output Plugins (all enabled):\n")
+			for _, plugin := range allPlugins {
+				help.WriteString(fmt.Sprintf("  %s - %s\n", plugin.Name(), plugin.Description()))
+			}
+			help.WriteString("\n")
+		}
+	} else if len(outputPlugins) > 0 {
+		// List specifically selected output plugins
 		help.WriteString("Output Plugins:\n")
 		for _, outputName := range outputPlugins {
 			if plugin, ok := sharedPluginManager.GetOutputPlugin(outputName); ok {
