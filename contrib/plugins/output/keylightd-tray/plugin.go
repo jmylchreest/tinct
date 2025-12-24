@@ -73,7 +73,7 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 
 	// Create the directory if it doesn't exist
 	outputDir := filepath.Dir(coloursPath)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create config directory %q: %w", outputDir, err)
 	}
 
@@ -223,7 +223,7 @@ func (p *Plugin) checkImport() {
 	}
 
 	// Check if custom.css exists and contains the import
-	content, err := os.ReadFile(customCSSPath)
+	content, err := os.ReadFile(customCSSPath) // #nosec G304 -- Config file path from XDG config dir
 	if err != nil {
 		if os.IsNotExist(err) {
 			// custom.css doesn't exist - prompt user to create it

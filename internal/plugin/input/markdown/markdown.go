@@ -182,7 +182,7 @@ func (p *Plugin) handleWallpaper(theme *themeformat.Theme, verbose bool) error {
 	}
 
 	// Create output directory if needed
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create wallpaper directory: %w", err)
 	}
 

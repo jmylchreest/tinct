@@ -16,7 +16,7 @@ import (
 
 // ParseFile reads and parses a markdown theme file.
 func ParseFile(path string) (*Theme, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- User-provided theme file path is intentional
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
@@ -98,7 +98,7 @@ func DecodeWallpaper(theme *Theme, basePath string) ([]byte, string, error) {
 			// Relative to the theme file
 			path = filepath.Join(filepath.Dir(basePath), path)
 		}
-		data, err := os.ReadFile(path)
+		data, err := os.ReadFile(path) // #nosec G304 -- User-provided wallpaper path is intentional
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to read wallpaper file: %w", err)
 		}

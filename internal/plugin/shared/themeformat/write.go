@@ -41,7 +41,9 @@ func Generate(theme *Theme, includeThumbnail bool, thumbnailData string) (string
 	if err := encoder.Encode(theme); err != nil {
 		return "", fmt.Errorf("failed to encode front matter: %w", err)
 	}
-	encoder.Close()
+	if err := encoder.Close(); err != nil {
+		return "", fmt.Errorf("failed to close encoder: %w", err)
+	}
 	buf.WriteString("---\n\n")
 
 	// Write markdown body

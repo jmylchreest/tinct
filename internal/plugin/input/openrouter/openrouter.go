@@ -230,13 +230,13 @@ func (p *Plugin) getImageBasePath(model string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to create temp file: %w", err)
 		}
-		tmpFile.Close()
+		_ = tmpFile.Close() // File will be rewritten; close error is not actionable
 		return tmpFile.Name(), nil
 	}
 
 	// Use plugin-specific subdirectory
 	cacheDir := filepath.Join(commonflags.CacheDir, "openrouter")
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+	if err := os.MkdirAll(cacheDir, 0o750); err != nil {
 		return "", fmt.Errorf("failed to create cache directory: %w", err)
 	}
 

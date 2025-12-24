@@ -94,7 +94,7 @@ func (tp *TemplateProcessor) processTemplate(tmplConfig TemplateConfig, themeDat
 	// Create output directory if needed
 	if tp.config.Settings.CreateDirs {
 		outputDir := filepath.Dir(tmplConfig.OutputPath)
-		if err := os.MkdirAll(outputDir, 0755); err != nil { // #nosec G301 - Output directory needs standard permissions
+		if err := os.MkdirAll(outputDir, 0o750); err != nil {
 			result.Error = fmt.Errorf("failed to create output directory: %w", err)
 			return result
 		}
