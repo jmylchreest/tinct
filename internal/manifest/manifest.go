@@ -290,7 +290,7 @@ func (m *Manager) VerifyFile(path string) (bool, bool, error) {
 	}
 
 	// Read current file
-	content, err := os.ReadFile(absPath)
+	content, err := os.ReadFile(absPath) // #nosec G304 -- Path from manifest tracking
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, false, nil

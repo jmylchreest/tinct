@@ -31,7 +31,7 @@ type AddResult struct {
 
 // LoadManifest loads a manifest from disk or creates a new one if it doesn't exist.
 func LoadManifest(path string) (*ManifestManager, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- Manifest path from repo manager
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Create new manifest with placeholder metadata

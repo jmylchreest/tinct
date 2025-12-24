@@ -183,7 +183,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	qt6ctConfigPath := filepath.Join(home, ".config", "qt6ct", "qt6ct.conf")
 
 	// Check if qt6ct.conf exists and uses the tinct color scheme
-	content, err := os.ReadFile(qt6ctConfigPath)
+	content, err := os.ReadFile(qt6ctConfigPath) // #nosec G304 -- Standard config path
 	alreadyConfigured := false
 	if err == nil {
 		// Check if custom palette is set and points to tinct

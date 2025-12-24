@@ -521,7 +521,7 @@ func runFilesAdopt(_ *cobra.Command, args []string) error {
 			}
 
 			// Check if file exists.
-			content, err := os.ReadFile(absPath)
+			content, err := os.ReadFile(absPath) // #nosec G304 -- Path from manifest, validated above
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: cannot read %s: %v\n", path, err)
 				continue

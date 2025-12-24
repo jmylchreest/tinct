@@ -162,14 +162,14 @@ func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext,
 	settingsIniPath := filepath.Join(configDir, "settings.ini")
 
 	// Check if gtk.css has our import
-	content, err := os.ReadFile(gtkCSSPath)
+	content, err := os.ReadFile(gtkCSSPath) // #nosec G304 -- Config path from DefaultOutputDir
 	alreadyConfigured := false
 	if err == nil {
 		alreadyConfigured = strings.Contains(string(content), `@import url("tinct-gtk3.css")`)
 	}
 
 	// Check if settings.ini uses adw-gtk3 theme
-	settingsContent, err := os.ReadFile(settingsIniPath)
+	settingsContent, err := os.ReadFile(settingsIniPath) // #nosec G304 -- Config path from XDG config dir
 	usesAdwGtk3 := false
 	currentTheme := ""
 	if err == nil {

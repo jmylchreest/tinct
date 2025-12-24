@@ -41,7 +41,7 @@ type SyncConfig struct {
 
 // LoadSyncConfig loads a sync configuration from a JSONL file.
 func LoadSyncConfig(path string) (*SyncConfig, error) {
-	file, err := os.Open(path)
+	file, err := os.Open(path) // #nosec G304 -- Config path from CLI argument
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}

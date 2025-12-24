@@ -213,7 +213,7 @@ func (p *Plugin) checkForConflictingTheme() {
 	}
 
 	kittyConf := filepath.Join(home, ".config", "kitty", "kitty.conf")
-	content, err := os.ReadFile(kittyConf)
+	content, err := os.ReadFile(kittyConf) // #nosec G304 -- Standard config path
 	if err != nil {
 		return // File doesn't exist or can't be read
 	}
