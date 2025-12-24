@@ -71,7 +71,7 @@ func resolvePluginSource(source, pluginDir, forcedSourceType string, verbose boo
 
 	tmpPath, err := installPluginFromSource(source, "", tmpDir, forcedSourceType, verbose, false)
 	if err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir) // Cleanup on error; remove failure is not actionable
 		return "", false, err
 	}
 

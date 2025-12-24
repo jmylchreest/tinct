@@ -77,7 +77,7 @@ func QueryPlugin(downloadURL string) (*PluginMetadata, error) {
 	}
 
 	// Make executable (if not already)
-	if err := os.Chmod(result.Path, 0755); err != nil {
+	if err := os.Chmod(result.Path, 0o755); err != nil { // #nosec G302 -- Plugin executable needs execute permission
 		return nil, fmt.Errorf("failed to make plugin executable: %w", err)
 	}
 
@@ -88,7 +88,7 @@ func QueryPlugin(downloadURL string) (*PluginMetadata, error) {
 // QueryScriptPlugin queries a script-based plugin (no download needed).
 func QueryScriptPlugin(scriptPath string) (*PluginMetadata, error) {
 	// Make executable
-	if err := os.Chmod(scriptPath, 0755); err != nil {
+	if err := os.Chmod(scriptPath, 0o755); err != nil { // #nosec G302 -- Script executable needs execute permission
 		return nil, fmt.Errorf("failed to make script executable: %w", err)
 	}
 
