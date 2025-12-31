@@ -1,0 +1,132 @@
+/* Tinct colour palette for histui (GTK4)
+ * https://github.com/jmylchreest/tinct
+ *
+ * Generated theme: {{ themeType . }}
+ *
+ * This file provides:
+ * 1. @define-color overrides for libadwaita named colors (used by default theme)
+ * 2. CSS custom properties for use in custom themes
+ *
+ * Usage in your theme.css:
+ *
+ *   @import "tinct-colors.css";
+ *   @import "default/theme.css";
+ *
+ * The @define-color statements override libadwaita colors, so the default
+ * theme will automatically use tinct colours.
+ *
+ * For custom themes, use the --tinct-* CSS custom properties:
+ *
+ *   .notification-popup {
+ *       background-color: var(--tinct-background);
+ *       color: var(--tinct-foreground);
+ *   }
+ *
+ * For transparency, use GTK4's alpha() function:
+ *
+ *   background-color: alpha(@window_bg_color, 0.85);
+ */
+
+/* =============================================================================
+ * LIBADWAITA NAMED COLOR OVERRIDES
+ * These override the default libadwaita colors used by the default theme.
+ * Must be defined BEFORE importing themes that use them.
+ * ============================================================================= */
+
+/* Window colors */
+@define-color window_bg_color {{ get . "background" | hex }};
+@define-color window_fg_color {{ get . "foreground" | hex }};
+
+/* View/content area colors */
+@define-color view_bg_color {{ get . "surface" | hex }};
+@define-color view_fg_color {{ get . "onSurface" | hex }};
+
+/* Accent colors */
+@define-color accent_bg_color {{ get . "accent1" | hex }};
+@define-color accent_fg_color {{ get . "onAccent1" | hex }};
+@define-color accent_color {{ get . "accent1" | hex }};
+
+/* Borders */
+@define-color borders {{ get . "border" | hex }};
+
+/* Semantic/status colors */
+@define-color error_color {{ get . "danger" | hex }};
+@define-color warning_color {{ get . "warning" | hex }};
+@define-color success_color {{ get . "success" | hex }};
+
+/* Card/surface colors */
+@define-color card_bg_color {{ get . "surface" | hex }};
+@define-color card_fg_color {{ get . "onSurface" | hex }};
+
+/* Headerbar colors */
+@define-color headerbar_bg_color {{ get . "surfaceContainer" | hex }};
+@define-color headerbar_fg_color {{ get . "foreground" | hex }};
+
+/* Popover colors */
+@define-color popover_bg_color {{ get . "surfaceContainerHigh" | hex }};
+@define-color popover_fg_color {{ get . "foreground" | hex }};
+
+/* =============================================================================
+ * TINCT CSS CUSTOM PROPERTIES
+ * For use in custom themes that prefer CSS variables over named colors.
+ * ============================================================================= */
+
+* {
+    /* Core colours */
+    --tinct-background: {{ get . "background" | hex }};
+    --tinct-background-muted: {{ get . "backgroundMuted" | hex }};
+    --tinct-foreground: {{ get . "foreground" | hex }};
+    --tinct-foreground-muted: {{ get . "foregroundMuted" | hex }};
+
+    /* Accent colours */
+    --tinct-accent1: {{ get . "accent1" | hex }};
+    --tinct-accent1-muted: {{ get . "accent1Muted" | hex }};
+    --tinct-accent2: {{ get . "accent2" | hex }};
+    --tinct-accent2-muted: {{ get . "accent2Muted" | hex }};
+    --tinct-accent3: {{ get . "accent3" | hex }};
+    --tinct-accent3-muted: {{ get . "accent3Muted" | hex }};
+    --tinct-accent4: {{ get . "accent4" | hex }};
+    --tinct-accent4-muted: {{ get . "accent4Muted" | hex }};
+
+    /* Semantic colours */
+    --tinct-danger: {{ get . "danger" | hex }};
+    --tinct-warning: {{ get . "warning" | hex }};
+    --tinct-success: {{ get . "success" | hex }};
+    --tinct-info: {{ get . "info" | hex }};
+
+    /* Surface colours */
+    --tinct-surface: {{ get . "surface" | hex }};
+    --tinct-on-surface: {{ get . "onSurface" | hex }};
+    --tinct-outline: {{ get . "outline" | hex }};
+    --tinct-border: {{ get . "border" | hex }};
+
+    /* Surface variants */
+    --tinct-surface-variant: {{ get . "surfaceVariant" | hex }};
+    --tinct-on-surface-variant: {{ get . "onSurfaceVariant" | hex }};
+    --tinct-border-muted: {{ get . "borderMuted" | hex }};
+    --tinct-outline-variant: {{ get . "outlineVariant" | hex }};
+
+    /* On-colours for accents */
+    --tinct-on-accent1: {{ get . "onAccent1" | hex }};
+    --tinct-on-accent2: {{ get . "onAccent2" | hex }};
+    --tinct-on-accent3: {{ get . "onAccent3" | hex }};
+    --tinct-on-accent4: {{ get . "onAccent4" | hex }};
+
+    /* On-colours for semantics */
+    --tinct-on-danger: {{ get . "onDanger" | hex }};
+    --tinct-on-warning: {{ get . "onWarning" | hex }};
+    --tinct-on-success: {{ get . "onSuccess" | hex }};
+    --tinct-on-info: {{ get . "onInfo" | hex }};
+
+    /* Inverse colours */
+    --tinct-inverse-surface: {{ get . "inverseSurface" | hex }};
+    --tinct-inverse-on-surface: {{ get . "inverseOnSurface" | hex }};
+    --tinct-inverse-primary: {{ get . "inversePrimary" | hex }};
+
+    /* Container elevation levels */
+    --tinct-surface-container-lowest: {{ get . "surfaceContainerLowest" | hex }};
+    --tinct-surface-container-low: {{ get . "surfaceContainerLow" | hex }};
+    --tinct-surface-container: {{ get . "surfaceContainer" | hex }};
+    --tinct-surface-container-high: {{ get . "surfaceContainerHigh" | hex }};
+    --tinct-surface-container-highest: {{ get . "surfaceContainerHighest" | hex }};
+}

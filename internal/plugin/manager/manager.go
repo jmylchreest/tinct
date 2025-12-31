@@ -31,6 +31,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/ghostty"
 	gnomeshell "github.com/jmylchreest/tinct/internal/plugin/output/gnome-shell"
 	"github.com/jmylchreest/tinct/internal/plugin/output/gtk3"
+	"github.com/jmylchreest/tinct/internal/plugin/output/histui"
 	"github.com/jmylchreest/tinct/internal/plugin/output/gtk4"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
@@ -171,6 +172,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(gnomeshell.New())
 	m.outputRegistry.Register(gtk3.New())
 	m.outputRegistry.Register(gtk4.New())
+	m.outputRegistry.Register(histui.New())
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(hyprlock.New())
 	m.outputRegistry.Register(hyprpaper.New())
