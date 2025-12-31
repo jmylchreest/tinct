@@ -1,0 +1,117 @@
+# GitHub Actions Workflow: Version Documentation
+# Create documentation version snapshot for a release
+#
+# Triggers:
+#   - Manual dispatch with tag selection (for retroactive versioning)
+#
+# Note: For new releases, docs versioning is handled by build-release.yml
+# This workflow is for manually creating versions for existing tags.
+
+name: Version Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to version (e.g., v0.0.3)"
+        required: true
+        type: string
+      deploy:
+        description: "Deploy documentation after versioning"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  version:
+    name: Create Documentation Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate tag format
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Tag must be in format v*.*.* (e.g., v0.0.3)"
+            exit 1
+          fi
+          echo "Tag format valid: $TAG"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Verify tag exists
+        run: |
+          if ! git rev-parse "${{ inputs.tag }}" >/dev/null 2>&1; then
+            echo "Error: Tag ${{ inputs.tag }} does not exist"
+            exit 1
+          fi
+          echo "Tag exists: ${{ inputs.tag }}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Install dependencies
+        working-directory: docs
+        run: npm ci
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${{ inputs.tag }}"
+          VERSION="${VERSION#v}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Creating documentation for version: $VERSION"
+
+      - name: Check if version already exists
+        id: check
+        working-directory: docs
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          if [ -f "versions.json" ] && grep -q "\"$VERSION\"" versions.json; then
+            echo "Version $VERSION already exists in versions.json"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version $VERSION does not exist yet"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create documentation version
+        if: steps.check.outputs.exists != 'true'
+        working-directory: docs
+        run: npm run docusaurus docs:version ${{ steps.version.outputs.VERSION }}
+
+      - name: Commit version files
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/versioned_docs docs/versioned_sidebars docs/versions.json
+          git commit -m "docs: add version ${{ steps.version.outputs.VERSION }}"
+          git push
+
+      - name: Skip message
+        if: steps.check.outputs.exists == 'true'
+        run: echo "Skipping - version ${{ steps.version.outputs.VERSION }} already exists"
+
+  deploy:
+    name: Deploy Documentation
+    needs: version
+    if: inputs.deploy
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
+    secrets: inherit
