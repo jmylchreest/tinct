@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -19,6 +21,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/util/semver"
 )
 
 // isValidPath checks if a path is safe to use in commands.
@@ -32,8 +35,18 @@ func isValidPath(path string) bool {
 	return cleaned == path
 }
 
-//go:embed *.tmpl
+//go:embed *.tmpl templates
 var templates embed.FS
+
+// versionRegex matches the hyprpaper version from "hyprpaper -h" output.
+// Example: "┏ hyprpaper v0.8.0"
+var versionRegex = regexp.MustCompile(`hyprpaper\s+v(\d+\.\d+(?:\.\d+)?)`)
+
+// Cached version to avoid repeated exec calls.
+var (
+	cachedVersion     string
+	cachedVersionOnce sync.Once
+)
 
 // GetEmbeddedTemplates returns the embedded template filesystem.
 // This is used by the template management commands.
@@ -87,6 +100,52 @@ func (p *Plugin) GetEmbeddedFS() any {
 	return templates
 }
 
+// GetTargetVersion returns the installed hyprpaper version.
+// Implements the output.VersionedPlugin interface.
+// This enables version-specific templates for hyprpaper configuration changes.
+func (p *Plugin) GetTargetVersion() string {
+	cachedVersionOnce.Do(func() {
+		cachedVersion = detectHyprpaperVersion(p.verbose)
+	})
+	return cachedVersion
+}
+
+// detectHyprpaperVersion runs "hyprpaper -h" to get the version.
+func detectHyprpaperVersion(verbose bool) string {
+	// hyprpaper -h outputs version in the header: "┏ hyprpaper v0.8.0"
+	output, err := exec.Command("hyprpaper", "-h").Output()
+	if err == nil {
+		if v := parseHyprpaperVersion(string(output)); v != "" {
+			return v
+		}
+	}
+
+	return ""
+}
+
+// parseHyprpaperVersion extracts the version number from hyprpaper help output.
+func parseHyprpaperVersion(output string) string {
+	matches := versionRegex.FindStringSubmatch(output)
+	if len(matches) >= 2 {
+		return strings.TrimSpace(matches[1])
+	}
+	return ""
+}
+
+// isVersion08OrNewer checks if the detected version is 0.8.0 or newer.
+func (p *Plugin) isVersion08OrNewer() bool {
+	targetVersion := p.GetTargetVersion()
+	if targetVersion == "" {
+		return false
+	}
+	v := semver.Parse(targetVersion)
+	v08 := semver.Parse("0.8.0")
+	if v == nil || v08 == nil {
+		return false
+	}
+	return v.GreaterThanOrEqual(v08)
+}
+
 // GetFlagHelp returns help information for all plugin flags.
 func (p *Plugin) GetFlagHelp() []output.FlagHelp {
 	return []output.FlagHelp{
@@ -134,11 +193,23 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateConfig creates the configuration file.
 func (p *Plugin) generateConfig(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support.
+	// Load template with custom override and versioned template support.
 	loader := tmplloader.New("hyprpaper", templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
+
+	// Enable versioned template selection based on installed hyprpaper version.
+	targetVersion := p.GetTargetVersion()
+	if targetVersion != "" {
+		loader.WithTargetVersion(targetVersion)
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Detected hyprpaper version: %s\n", targetVersion)
+		}
+	} else if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Could not detect hyprpaper version, using default templates\n")
+	}
+
 	tmplContent, fromCustom, err := loader.Load("tinct.conf.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config template: %w", err)
@@ -186,20 +257,32 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 
 // PostExecute applies the wallpaper using hyprpaper after files are written.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
+	// For v0.8.0+, setup symlink since source= is not supported.
+	if p.isVersion08OrNewer() {
+		if err := p.setupConfigSymlink(writtenFiles); err != nil {
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   Warning: failed to setup config symlink: %v\n", err)
+			}
+			// Don't return error - symlink is optional, user can do it manually.
+		}
+	}
+
 	// If we have a wallpaper path, try to apply it.
 	if execCtx.WallpaperPath == "" {
 		return nil
 	}
 
 	// Check if hyprpaper is running before trying to set wallpaper.
-	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
-	if err := cmd.Run(); err != nil {
-		// hyprpaper not running - skip wallpaper application.
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Skipping wallpaper application (hyprpaper not running)\n")
+	// Note: v0.8.0 removed listloaded/listactive, so we skip the check and just try.
+	if !p.isVersion08OrNewer() {
+		cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
+		if err := cmd.Run(); err != nil {
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   Skipping wallpaper application (hyprpaper not running)\n")
+			}
+			return nil
 		}
-		return nil
 	}
 
 	if err := p.setWallpaper(ctx, execCtx.WallpaperPath); err != nil {
@@ -208,6 +291,68 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		}
 		// Don't return error - wallpaper setting is optional.
 		return nil
+	}
+
+	return nil
+}
+
+// setupConfigSymlink creates a symlink from hyprpaper.conf to tinct-hyprpaper.conf.
+// This is needed for hyprpaper v0.8.0+ which doesn't support source= includes.
+// If hyprpaper.conf exists and is not already our symlink, it's backed up first.
+func (p *Plugin) setupConfigSymlink(writtenFiles []string) error {
+	// Find the tinct-hyprpaper.conf in written files.
+	var tinctConfigPath string
+	for _, f := range writtenFiles {
+		if filepath.Base(f) == "tinct-hyprpaper.conf" {
+			tinctConfigPath = f
+			break
+		}
+	}
+	if tinctConfigPath == "" {
+		return nil // No config file written, nothing to symlink.
+	}
+
+	// Determine the hyprpaper.conf path (same directory).
+	configDir := filepath.Dir(tinctConfigPath)
+	hyprpaperConf := filepath.Join(configDir, "hyprpaper.conf")
+	backupPath := filepath.Join(configDir, "hyprpaper.conf.bak")
+
+	// Check current state of hyprpaper.conf.
+	linkTarget, err := os.Readlink(hyprpaperConf)
+	if err == nil {
+		// It's a symlink - check if it already points to our file.
+		if linkTarget == "tinct-hyprpaper.conf" || linkTarget == tinctConfigPath {
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   Config symlink already exists: %s -> %s\n", hyprpaperConf, linkTarget)
+			}
+			return nil
+		}
+		// Symlink points elsewhere - remove it so we can recreate.
+		if err := os.Remove(hyprpaperConf); err != nil {
+			return fmt.Errorf("failed to remove existing symlink: %w", err)
+		}
+	} else if os.IsNotExist(err) {
+		// Doesn't exist - we can create the symlink.
+	} else {
+		// It's a regular file (or other error) - check if it exists.
+		if _, statErr := os.Stat(hyprpaperConf); statErr == nil {
+			// Regular file exists - back it up.
+			if p.verbose {
+				fmt.Fprintf(os.Stderr, "   Backing up existing config: %s -> %s\n", hyprpaperConf, backupPath)
+			}
+			if err := os.Rename(hyprpaperConf, backupPath); err != nil {
+				return fmt.Errorf("failed to backup existing config: %w", err)
+			}
+		}
+	}
+
+	// Create symlink using relative path.
+	if err := os.Symlink("tinct-hyprpaper.conf", hyprpaperConf); err != nil {
+		return fmt.Errorf("failed to create symlink: %w", err)
+	}
+
+	if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Created config symlink: %s -> tinct-hyprpaper.conf\n", hyprpaperConf)
 	}
 
 	return nil
@@ -226,6 +371,40 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 		return fmt.Errorf("invalid wallpaper path: contains suspicious characters")
 	}
 
+	// Check if we're using 0.8.0+ IPC syntax.
+	if p.isVersion08OrNewer() {
+		return p.setWallpaperV08(ctx, absPath)
+	}
+
+	return p.setWallpaperLegacy(ctx, absPath)
+}
+
+// setWallpaperV08 applies the wallpaper using hyprpaper 0.8.0+ IPC syntax.
+// New format: hyprctl hyprpaper wallpaper '[monitor],[path],[fit_mode]'
+func (p *Plugin) setWallpaperV08(ctx context.Context, absPath string) error {
+	// In 0.8.0+, the wallpaper command format is: "monitor,path,fit_mode"
+	// Empty monitor = fallback/wildcard, fit_mode is optional
+	arg := "," + absPath + ","
+	if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Running: hyprctl hyprpaper wallpaper '%s'\n", arg)
+	}
+
+	// #nosec G204 -- hyprctl is a system command with validated absolute path for wallpaper.
+	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "wallpaper", arg)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to set wallpaper: %w (output: %s)", err, strings.TrimSpace(string(output)))
+	}
+
+	if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Set wallpaper using hyprpaper 0.8+ IPC: %s (output: %s)\n", absPath, strings.TrimSpace(string(output)))
+	}
+
+	return nil
+}
+
+// setWallpaperLegacy applies the wallpaper using pre-0.8.0 hyprpaper IPC syntax.
+func (p *Plugin) setWallpaperLegacy(ctx context.Context, absPath string) error {
 	// Get current wallpaper assignments (monitors and/or wildcard).
 	assignments, err := p.getActiveWallpaperAssignments(ctx)
 	if err != nil {
