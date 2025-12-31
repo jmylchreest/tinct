@@ -12,7 +12,7 @@ function HeroSection() {
         <h1 className={styles.title}>
           t<span className={styles.titleAccent}>inct</span>
         </h1>
-        <p className={styles.pronunciation}>/tikt/</p>
+        <p className={styles.pronunciation}>/tiŋ(k)t/</p>
         <p className={styles.tagline}>
           An extensible colour palette generator and theme manager for unified
           theming across your entire environment.

@@ -65,7 +65,7 @@ tinct generate -i image -p ~/wallpaper.jpg \
 | 4 | top, right, bottom, left |
 | 8 | corners and edges |
 | 12 | corners, edges, and inner points |
-| 16 | Full grid including center positions |
+| 16 | Full grid including centre positions |
 
 ### Sampling methods
 

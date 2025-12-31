@@ -97,7 +97,7 @@ Adds inner corner positions.
 
 ### 16 regions
 
-Full grid including center positions.
+Full grid including centre positions.
 
 ### Output roles
 

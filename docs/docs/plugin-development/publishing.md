@@ -261,7 +261,7 @@ To add your plugin to the official tinct-plugins repository:
    - Link to source repository
 
 Requirements:
-- Open source under a compatible license
+- Open source under a compatible licence
 - Follows naming conventions
 - Provides binaries for common platforms
 - Includes checksums
