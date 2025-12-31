@@ -138,19 +138,6 @@ const sidebars: SidebarsConfig = {
             },
           ],
         },
-        {
-          type: 'category',
-          label: 'External Plugins',
-          link: {
-            type: 'doc',
-            id: 'plugins/external/index',
-          },
-          items: [
-            'plugins/external/protocols',
-            'plugins/external/creating',
-            'plugins/external/repository',
-          ],
-        },
       ],
     },
     {
@@ -165,6 +152,20 @@ const sidebars: SidebarsConfig = {
         'templating/color-access',
         'templating/format-conversion',
         'templating/versioned',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Plugin Development',
+      link: {
+        type: 'doc',
+        id: 'plugin-development/index',
+      },
+      items: [
+        'plugin-development/protocols',
+        'plugin-development/creating',
+        'plugin-development/hooks',
+        'plugin-development/publishing',
       ],
     },
   ],

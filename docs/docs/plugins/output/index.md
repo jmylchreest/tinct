@@ -126,4 +126,4 @@ Generated files are tracked in `~/.config/tinct/.tinct-manifest.json`.
 ## See also
 
 - [Plugin overview](/docs/plugins/overview) - Architecture
-- [External plugins](/docs/plugins/external) - Custom plugins
+- [Plugin development](/docs/plugin-development) - Creating custom plugins

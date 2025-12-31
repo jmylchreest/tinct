@@ -193,5 +193,5 @@ export TINCT_ENABLED_PLUGINS="image,hyprland,kitty,waybar"
 
 ## See also
 
-- [External plugins](/docs/plugins/external) - Creating custom plugins
-- [Plugin repository](/docs/plugins/external/repository) - Repository system
+- [Plugin development](/docs/plugin-development) - Creating custom plugins
+- [Publishing plugins](/docs/plugin-development/publishing) - Repository system

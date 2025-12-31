@@ -49,7 +49,7 @@ Generate configuration files for applications:
 - Two protocols: JSON-stdio and go-plugin
 - Loaded on demand
 
-See [External plugins](/docs/plugins/external) for details.
+See [Plugin development](/docs/plugin-development) for details.
 
 ## Plugin lifecycle
 
@@ -127,4 +127,4 @@ tinct plugins list
 
 - [Input plugins](/docs/plugins/input) - Colour source plugins
 - [Output plugins](/docs/plugins/output) - Application plugins
-- [External plugins](/docs/plugins/external) - Creating custom plugins
+- [Plugin development](/docs/plugin-development) - Creating custom plugins
