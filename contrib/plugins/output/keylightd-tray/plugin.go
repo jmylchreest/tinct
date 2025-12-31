@@ -85,8 +85,8 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		fmt.Fprintf(os.Stderr, "   Generating keylightd-tray theme\n")
 	}
 
-	// Check if custom.css imports tinct-custom.css and warn if not
-	p.checkImport()
+	// Check if custom.css imports tinct-custom.css and warn if not (only in verbose mode)
+	p.checkImport(palette.Verbose)
 
 	return map[string][]byte{
 		coloursPath: []byte(coloursCSS),
@@ -216,7 +216,12 @@ func (p *Plugin) generateCustomCSS() string {
 }
 
 // checkImport checks if custom.css imports tinct-custom.css and prints a warning if not.
-func (p *Plugin) checkImport() {
+// Messages are only shown when verbose mode is enabled.
+func (p *Plugin) checkImport(verbose bool) {
+	if !verbose {
+		return
+	}
+
 	customCSSPath, err := getCustomCSSPath()
 	if err != nil {
 		return
