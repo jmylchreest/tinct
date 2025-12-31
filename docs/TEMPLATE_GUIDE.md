@@ -13,6 +13,7 @@ Complete guide to using templates in tinct output plugins, including all availab
 - [Complete Colour Role List](#complete-colour-role-list)
 - [External Plugin Integration](#external-plugin-integration)
 - [Examples](#examples)
+- [Versioned Templates](#versioned-templates)
 
 ---
 
@@ -947,6 +948,144 @@ tmpl, err := template.New("theme").Funcs(common.TemplateFuncs()).Parse(content)
 {{ get . "scrim" | hexAlpha }}    # #00000052
 {{ get . "scrim" | rgba }}        # rgba(0, 0, 0, 0.32)
 ```
+
+---
+
+## Versioned Templates
+
+Versioned templates allow plugins to support multiple versions of target applications that have breaking configuration changes between versions.
+
+### How It Works
+
+1. **Version Detection**: Plugins implementing `output.VersionedPlugin` can detect the installed version of the target application
+2. **Template Selection**: The template loader checks for version-specific templates in `templates/{version}/` subdirectories
+3. **Best Match**: The loader selects the highest version that doesn't exceed the detected target version
+4. **Fallback**: If no suitable versioned template is found, the default template is used
+
+### Directory Structure
+
+```
+internal/plugin/output/hyprland/
+├── tinct.conf.tmpl              # Default template (for older versions)
+├── tinct-colours.conf.tmpl      # Default colours template
+└── templates/
+    └── 0.53/
+        └── tinct.conf.tmpl      # Template for Hyprland v0.53+
+```
+
+### Template Resolution Order
+
+1. **Custom templates** (`~/.config/tinct/templates/{plugin}/`) - highest priority
+2. **Versioned templates** (`templates/{version}/`) - if target version is set
+3. **Default templates** (root level) - fallback
+
+### Example: Hyprland Windowrule Syntax
+
+Hyprland v0.53 changed the windowrule syntax. Here's how versioned templates handle this:
+
+**Default template (pre-0.53):**
+```go
+# Old windowrule syntax
+windowrule = bordercolor $dangerRGB, title:^(.*[Ee]rror.*)$
+windowrule = bordercolor $warningRGB, title:^(.*[Ww]arning.*)$
+windowrule = bordercolor $successRGB, title:^(.*[Ss]uccess.*)$
+```
+
+**templates/0.53/tinct.conf.tmpl (v0.53+):**
+```go
+# New windowrule syntax with descriptive names
+windowrule {
+    name = tinct-error-border
+    border_color = $dangerRGB
+    match:title = ^(.*[Ee]rror.*)$
+}
+
+windowrule {
+    name = tinct-warning-border
+    border_color = $warningRGB
+    match:title = ^(.*[Ww]arning.*)$
+}
+
+windowrule {
+    name = tinct-success-border
+    border_color = $successRGB
+    match:title = ^(.*[Ss]uccess.*)$
+}
+```
+
+### Implementing VersionedPlugin
+
+To add version support to a plugin, implement the `output.VersionedPlugin` interface:
+
+```go
+// GetTargetVersion returns the installed application version.
+// Returns empty string if version cannot be determined.
+func (p *Plugin) GetTargetVersion() string {
+    // Example: Parse version from command output
+    output, err := exec.Command("myapp", "--version").Output()
+    if err != nil {
+        return ""
+    }
+    // Parse and return version string (e.g., "1.2.3")
+    return parseVersion(string(output))
+}
+```
+
+### Using Versioned Templates in Generate
+
+Update your template loading to use the target version:
+
+```go
+func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
+    loader := tmplloader.New("myplugin", templates)
+
+    // Enable versioned template selection
+    if targetVersion := p.GetTargetVersion(); targetVersion != "" {
+        loader.WithTargetVersion(targetVersion)
+    }
+
+    // Load template - will check versioned subdirectories
+    content, _, err := loader.Load("theme.conf.tmpl")
+    if err != nil {
+        return nil, err
+    }
+
+    // ... rest of template execution
+}
+```
+
+### Verbose Logging
+
+When verbose mode is enabled, the template loader logs version selection:
+
+```
+   Detected Hyprland version: 0.53.0
+   Using versioned template: templates/0.53/tinct.conf.tmpl (target: 0.53.0)
+```
+
+Or when falling back:
+
+```
+   Could not detect Hyprland version, using default templates
+   Using default embedded template: tinct.conf.tmpl
+```
+
+### Version Matching Rules
+
+- Version strings should be in semantic version format (e.g., "0.53.0", "1.2.3")
+- The loader finds the **highest** version directory that is **less than or equal to** the target
+- Examples:
+  - Target `0.53.0` with dirs `[0.52, 0.53]` → uses `0.53`
+  - Target `0.52.5` with dirs `[0.52, 0.53]` → uses `0.52`
+  - Target `0.55.0` with dirs `[0.52, 0.53]` → uses `0.53` (highest available)
+  - Target `0.50.0` with dirs `[0.52, 0.53]` → uses default (no suitable version)
+
+### Best Practices
+
+1. **Descriptive names**: Use meaningful names for versioned features (e.g., `tinct-error-border` not `windowrule-1`)
+2. **Document changes**: Add comments explaining what changed between versions
+3. **Test both paths**: Ensure both old and new templates work correctly
+4. **Graceful fallback**: Always provide a default template for older versions
 
 ---
 

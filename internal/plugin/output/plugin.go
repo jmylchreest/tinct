@@ -93,6 +93,33 @@ type TemplateProvider interface {
 	GetEmbeddedFS() any
 }
 
+// VersionedPlugin is an optional interface that plugins can implement to support
+// version-specific templates. When implemented, the template loader will select
+// the most appropriate template based on the target application's version.
+//
+// This is useful for applications that change their configuration format between
+// versions (e.g., Hyprland's windowrule syntax changed in v0.53).
+//
+// When this interface is implemented:
+//   - GetTargetVersion() is called to get the installed application version
+//   - Templates can be organized in version subdirectories (e.g., templates/0.53/)
+//   - The loader selects the highest version that doesn't exceed the target version
+//   - Falls back to default templates if no suitable versioned template is found
+//
+// Example directory structure:
+//
+//	internal/plugin/output/hyprland/
+//	├── tinct.conf.tmpl           # Default template (for older versions)
+//	└── templates/
+//	    └── 0.53/
+//	        └── tinct.conf.tmpl   # Template for v0.53+
+type VersionedPlugin interface {
+	// GetTargetVersion returns the version of the target application.
+	// Returns an empty string if the version cannot be determined.
+	// The version string should be in semantic version format (e.g., "0.53.0").
+	GetTargetVersion() string
+}
+
 // DualThemePlugin is an optional interface that plugins can implement to support
 // generating both light and dark theme variants in a single execution.
 //

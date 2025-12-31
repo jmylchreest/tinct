@@ -9,6 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -21,8 +24,18 @@ import (
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
-//go:embed *.tmpl
+//go:embed *.tmpl templates
 var templates embed.FS
+
+// versionRegex matches the Hyprland version from "hyprland --version" or "hyprctl version" output.
+// Example: "Hyprland 0.53.0 built from branch..."
+var versionRegex = regexp.MustCompile(`Hyprland\s+(\d+\.\d+(?:\.\d+)?)`)
+
+// Cached version to avoid repeated exec calls.
+var (
+	cachedVersion     string
+	cachedVersionOnce sync.Once
+)
 
 // GetEmbeddedTemplates returns the embedded template filesystem.
 // This is used by the template management commands.
@@ -82,6 +95,46 @@ func (p *Plugin) SetVerbose(verbose bool) {
 // Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() any {
 	return templates
+}
+
+// GetTargetVersion returns the installed Hyprland version.
+// Implements the output.VersionedPlugin interface.
+// This enables version-specific templates for Hyprland configuration changes.
+func (p *Plugin) GetTargetVersion() string {
+	cachedVersionOnce.Do(func() {
+		cachedVersion = detectHyprlandVersion(p.verbose)
+	})
+	return cachedVersion
+}
+
+// detectHyprlandVersion runs "hyprctl version" or "hyprland --version" to get the version.
+func detectHyprlandVersion(verbose bool) string {
+	// Try hyprctl version first (works when Hyprland is running)
+	output, err := exec.Command("hyprctl", "version").Output()
+	if err == nil {
+		if v := parseHyprlandVersion(string(output)); v != "" {
+			return v
+		}
+	}
+
+	// Fall back to hyprland --version
+	output, err = exec.Command("hyprland", "--version").Output()
+	if err == nil {
+		if v := parseHyprlandVersion(string(output)); v != "" {
+			return v
+		}
+	}
+
+	return ""
+}
+
+// parseHyprlandVersion extracts the version number from Hyprland version output.
+func parseHyprlandVersion(output string) string {
+	matches := versionRegex.FindStringSubmatch(output)
+	if len(matches) >= 2 {
+		return strings.TrimSpace(matches[1])
+	}
+	return ""
 }
 
 // GetFlagHelp returns help information for all plugin flags.
@@ -155,11 +208,23 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateTheme creates the main theme configuration file with colour variables.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support.
+	// Load template with custom override and versioned template support.
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
+
+	// Enable versioned template selection based on installed Hyprland version.
+	targetVersion := p.GetTargetVersion()
+	if targetVersion != "" {
+		loader.WithTargetVersion(targetVersion)
+		if p.verbose {
+			fmt.Fprintf(os.Stderr, "   Detected Hyprland version: %s\n", targetVersion)
+		}
+	} else if p.verbose {
+		fmt.Fprintf(os.Stderr, "   Could not detect Hyprland version, using default templates\n")
+	}
+
 	tmplContent, fromCustom, err := loader.Load("tinct-colours.conf.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
@@ -185,11 +250,18 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 
 // generateStubConfig creates an example configuration file showing how to use the theme.
 func (p *Plugin) generateStubConfig(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support.
+	// Load template with custom override and versioned template support.
 	loader := tmplloader.New("hyprland", templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
+
+	// Enable versioned template selection based on installed Hyprland version.
+	targetVersion := p.GetTargetVersion()
+	if targetVersion != "" {
+		loader.WithTargetVersion(targetVersion)
+	}
+
 	tmplContent, fromCustom, err := loader.Load("tinct.conf.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read example template: %w", err)

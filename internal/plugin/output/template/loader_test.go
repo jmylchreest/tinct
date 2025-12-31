@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-//go:embed testdata/*.tmpl
+//go:embed testdata/*.tmpl templates/*/*.tmpl
 var testEmbedFS embed.FS
 
 func TestLoader_Load(t *testing.T) {
@@ -364,4 +364,131 @@ func TestLoader_GetInfo(t *testing.T) {
 			t.Error("expected to use custom template")
 		}
 	})
+}
+
+func TestLoader_VersionedTemplates(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	loader := &Loader{
+		pluginName: "testplugin",
+		embedFS:    testEmbedFS,
+		customBase: tmpDir,
+	}
+
+	t.Run("loads default template when no version specified", func(t *testing.T) {
+		content, fromCustom, err := loader.Load("testdata/test.tmpl")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if fromCustom {
+			t.Error("expected embedded template")
+		}
+		// Should load the default template, not versioned
+		if !strings.Contains(string(content), "Test Template") {
+			t.Errorf("expected default template content, got: %s", string(content))
+		}
+	})
+
+	t.Run("loads versioned template when version matches exactly", func(t *testing.T) {
+		loader.targetVersion = "0.53.0"
+		content, _, err := loader.Load("test.tmpl")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Should load the 0.53 template
+		if !strings.Contains(string(content), "Version 0.53") {
+			t.Errorf("expected 0.53 template content, got: %s", string(content))
+		}
+		if !strings.Contains(string(content), "tinct-error-border") {
+			t.Errorf("expected new syntax with descriptive name, got: %s", string(content))
+		}
+	})
+
+	t.Run("loads older versioned template when target is between versions", func(t *testing.T) {
+		loader.targetVersion = "0.52.5"
+		content, _, err := loader.Load("test.tmpl")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Should load the 0.52 template (highest that doesn't exceed target)
+		if !strings.Contains(string(content), "Version 0.52") {
+			t.Errorf("expected 0.52 template content, got: %s", string(content))
+		}
+	})
+
+	t.Run("loads newer version template when target is higher", func(t *testing.T) {
+		loader.targetVersion = "0.55.0"
+		content, _, err := loader.Load("test.tmpl")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Should load the 0.53 template (highest available)
+		if !strings.Contains(string(content), "Version 0.53") {
+			t.Errorf("expected 0.53 template content, got: %s", string(content))
+		}
+	})
+
+	t.Run("falls back to default when target is older than all versions", func(t *testing.T) {
+		loader.targetVersion = "0.50.0"
+		content, _, err := loader.Load("testdata/test.tmpl")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Should load the default template
+		if !strings.Contains(string(content), "Test Template") {
+			t.Errorf("expected default template content, got: %s", string(content))
+		}
+	})
+
+	t.Run("custom template takes priority over versioned", func(t *testing.T) {
+		// Create a custom template
+		customPath := filepath.Join(tmpDir, "testplugin", "test.tmpl")
+		if err := os.MkdirAll(filepath.Dir(customPath), 0o755); err != nil {
+			t.Fatalf("failed to create dir: %v", err)
+		}
+		customContent := "# Custom template\n"
+		if err := os.WriteFile(customPath, []byte(customContent), 0o644); err != nil {
+			t.Fatalf("failed to write file: %v", err)
+		}
+
+		loader.targetVersion = "0.53.0"
+		content, fromCustom, err := loader.Load("test.tmpl")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !fromCustom {
+			t.Error("expected custom template to take priority")
+		}
+		if !strings.Contains(string(content), "Custom template") {
+			t.Errorf("expected custom template content, got: %s", string(content))
+		}
+	})
+}
+
+func TestLoader_FindVersionDirectories(t *testing.T) {
+	loader := &Loader{
+		pluginName: "testplugin",
+		embedFS:    testEmbedFS,
+		customBase: t.TempDir(),
+	}
+
+	versions, err := loader.findVersionDirectories()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should find 0.52 and 0.53
+	if len(versions) != 2 {
+		t.Errorf("expected 2 versions, got %d: %v", len(versions), versions)
+	}
+
+	// Should be sorted
+	if len(versions) >= 2 {
+		if versions[0] != "0.52" {
+			t.Errorf("expected first version to be 0.52, got %s", versions[0])
+		}
+		if versions[1] != "0.53" {
+			t.Errorf("expected second version to be 0.53, got %s", versions[1])
+		}
+	}
 }
