@@ -1,0 +1,11 @@
+{
+  "prompt": "photorealistic image of a gentoo penguin typing on a laptop. THe background to the image should be a single dark monotone colour and the central image of the penguin should be fairly small, the dark colour should be a variant on a grey/blue. Have the penguin wear a very lovely but fairyl small red santa hat",
+  "enhanced_prompt": "photorealistic image of a gentoo penguin typing on a laptop. THe background to the image should be a single dark monotone colour and the central image of the penguin should be fairly small, the dark colour should be a variant on a grey/blue. Have the penguin wear a very lovely but fairyl small red santa hat, high quality desktop wallpaper suitable for widescreen and ultrawidescreen computer monitors, edge-to-edge composition, full bleed, seamless edges, vibrant colors, no borders, no frames, no padding",
+  "model": "imagen-4.0-ultra-generate-001",
+  "backend": "gemini-api",
+  "aspect_ratio": "16:9",
+  "image_size": "2K",
+  "created_at": "2025-12-21T23:19:40.877221625Z",
+  "image_path": "/home/johnm/.cache/tinct/generated/google-genai/genai-22cafd215a97e8b1.png",
+  "image_bytes": 4026730
+}

@@ -1,0 +1,11 @@
+{
+  "prompt": "using a predominantly dark teal monotone background, create a photorealistic image of a gentoo penguin using a laptop. the overall image of the penguin/laptop should be quite small in the center of the image.",
+  "enhanced_prompt": "using a predominantly dark teal monotone background, create a photorealistic image of a gentoo penguin using a laptop. the overall image of the penguin/laptop should be quite small in the center of the image., high quality desktop wallpaper suitable for widescreen and ultrawidescreen computer monitors, edge-to-edge composition, full bleed, seamless edges, vibrant colors, no borders, no frames, no padding",
+  "model": "imagen-4.0-ultra-generate-001",
+  "backend": "gemini-api",
+  "aspect_ratio": "16:9",
+  "image_size": "2K",
+  "created_at": "2025-12-31T19:41:49.547402944Z",
+  "image_path": "/home/johnm/.cache/tinct/generated/google-genai/genai-4a93950d0a9a8012.png",
+  "image_bytes": 3519690
+}
