@@ -168,6 +168,7 @@ const sidebars: SidebarsConfig = {
         'plugin-development/publishing',
       ],
     },
+    'changelog',
   ],
 };
 
