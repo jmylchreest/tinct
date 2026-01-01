@@ -30,6 +30,10 @@ func (m *mockInputPlugin) WallpaperPath() string {
 	return m.wallpaper
 }
 
+func (m *mockInputPlugin) WallpaperRawPath() string {
+	return m.wallpaper
+}
+
 func (m *mockInputPlugin) GetFlagHelp() []FlagHelp {
 	return m.flagHelp
 }

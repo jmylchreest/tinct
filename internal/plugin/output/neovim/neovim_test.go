@@ -27,7 +27,7 @@ func TestNeovimPlugin_ContentValidation(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)

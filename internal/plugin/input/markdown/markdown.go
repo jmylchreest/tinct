@@ -22,7 +22,8 @@ type Plugin struct {
 	path             string
 	extractWallpaper bool
 	wallpaperDir     string
-	wallpaperPath    string // Stores the path to extracted/referenced wallpaper
+	wallpaperPath    string // Stores the canonical path to extracted/referenced wallpaper
+	rawWallpaperPath string // Stores the original path from the theme file (for external refs)
 }
 
 // New creates a new markdown input plugin.
@@ -69,9 +70,22 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 	}
 }
 
-// WallpaperPath returns the path to the wallpaper (extracted or referenced).
+// WallpaperPath returns the canonical path to the wallpaper (extracted or referenced).
+// For external references, this is the resolved absolute path.
+// For embedded wallpapers, this is the path to the extracted file.
 // Implements the input.WallpaperProvider interface.
 func (p *Plugin) WallpaperPath() string {
+	return p.wallpaperPath
+}
+
+// WallpaperRawPath returns the original path from the theme file.
+// For external references, this is the path as written in the theme file.
+// For embedded wallpapers, this is the same as WallpaperPath (extracted file path).
+// Implements the input.WallpaperProvider interface.
+func (p *Plugin) WallpaperRawPath() string {
+	if p.rawWallpaperPath != "" {
+		return p.rawWallpaperPath
+	}
 	return p.wallpaperPath
 }
 
@@ -140,6 +154,9 @@ func (p *Plugin) handleWallpaper(theme *themeformat.Theme, verbose bool) error {
 	// If wallpaper is external reference
 	if !wp.Embedded {
 		if wp.Path != "" {
+			// Store the raw path as it appears in the theme file
+			p.rawWallpaperPath = wp.Path
+
 			// Resolve relative path against theme file location
 			if !filepath.IsAbs(wp.Path) {
 				p.wallpaperPath = filepath.Join(filepath.Dir(p.path), wp.Path)

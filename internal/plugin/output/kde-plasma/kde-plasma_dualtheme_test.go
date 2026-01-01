@@ -30,8 +30,8 @@ func TestGenerateDualTheme(t *testing.T) {
 	}
 
 	// Create theme data
-	darkTheme := colour.NewThemeData(darkPalette, "", "")
-	lightTheme := colour.NewThemeData(lightPalette, "", "")
+	darkTheme := colour.NewThemeData(darkPalette, "", "", "")
+	lightTheme := colour.NewThemeData(lightPalette, "", "", "")
 
 	// Create plugin
 	plugin := New()
@@ -105,7 +105,7 @@ func TestGenerateDualThemeWithNilPrimary(t *testing.T) {
 		Colours:   map[pkgcolour.Role]pkgcolour.CategorisedColour{},
 		ThemeType: pkgcolour.ThemeLight,
 	}
-	lightTheme := colour.NewThemeData(lightPalette, "", "")
+	lightTheme := colour.NewThemeData(lightPalette, "", "", "")
 
 	plugin := New()
 	_, err := plugin.GenerateDualTheme(nil, lightTheme)
@@ -119,7 +119,7 @@ func TestGenerateDualThemeWithNilAlternate(t *testing.T) {
 		Colours:   map[pkgcolour.Role]pkgcolour.CategorisedColour{},
 		ThemeType: pkgcolour.ThemeDark,
 	}
-	darkTheme := colour.NewThemeData(darkPalette, "", "")
+	darkTheme := colour.NewThemeData(darkPalette, "", "", "")
 
 	plugin := New()
 	_, err := plugin.GenerateDualTheme(darkTheme, nil)

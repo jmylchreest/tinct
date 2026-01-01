@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -56,7 +57,10 @@ type Plugin struct {
 	cacheOverwrite bool   // Allow overwriting existing cached images
 
 	// Wallpaper support.
-	loadedImagePath string // Stores the actual path to the loaded image (for wallpaper setting)
+	loadedImagePath    string // Stores the canonical path to the loaded image (for wallpaper setting)
+	rawWallpaperPath   string // Stores the literal user input path before canonicalization
+	userProvidedTilde  bool   // True if user provided a tilde-prefixed path
+	userProvidedPrefix string // The tilde prefix if user provided one (e.g., "~" or "~user")
 }
 
 // New creates a new image input plugin with default settings.
@@ -176,10 +180,21 @@ func (p *Plugin) Validate() error {
 	return nil
 }
 
-// WallpaperPath returns the path to the source image for wallpaper setting.
+// WallpaperPath returns the canonical path to the source image for wallpaper setting.
+// The path is resolved to be usable from any working directory:
+// - Relative paths are converted to absolute paths
+// - Tilde-prefixed paths (~/...) are preserved for portability
+// - URLs are returned as-is
 // Implements the input.WallpaperProvider interface.
 func (p *Plugin) WallpaperPath() string {
 	return p.loadedImagePath
+}
+
+// WallpaperRawPath returns the literal path as provided by the user.
+// This is the unmodified input before any path canonicalization.
+// Implements the input.WallpaperProvider interface.
+func (p *Plugin) WallpaperRawPath() string {
+	return p.rawWallpaperPath
 }
 
 // GetFlagHelp returns help information for all plugin flags.
@@ -200,6 +215,54 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 	}
 }
 
+// canonicalizePath converts a path to a canonical form suitable for use in templates.
+// - URLs are returned as-is
+// - Tilde-prefixed paths (~/...) are preserved for portability, but the rest is made absolute
+// - Relative paths are converted to absolute paths
+// - Absolute paths are returned as-is
+func canonicalizePath(path string) string {
+	// URLs are returned as-is
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return path
+	}
+
+	// Check for tilde prefix
+	if strings.HasPrefix(path, "~/") {
+		// User specified ~/path - expand and then re-substitute ~ for portability
+		home, err := os.UserHomeDir()
+		if err != nil {
+			// Can't get home dir, return as-is
+			return path
+		}
+		// Expand the tilde to get the real path
+		expandedPath := filepath.Join(home, path[2:])
+		// Make it absolute (handles any .. or . in the path)
+		absPath, err := filepath.Abs(expandedPath)
+		if err != nil {
+			return path
+		}
+		// Re-substitute $HOME with ~ for portability
+		if strings.HasPrefix(absPath, home) {
+			return "~" + absPath[len(home):]
+		}
+		return absPath
+	}
+
+	// Check for ~user/ prefix (less common but should work)
+	if strings.HasPrefix(path, "~") {
+		// ~user/path - just make it absolute without tilde substitution
+		// Let the shell or application expand it
+		return path
+	}
+
+	// For non-tilde paths, convert to absolute
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return absPath
+}
+
 // Generate creates a raw colour palette by extracting colours from the image.
 // Returns only the extracted colors - categorization happens separately.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
@@ -208,6 +271,9 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		return nil, fmt.Errorf("invalid backend: %s (only kmeans is currently supported)", opts.Backend)
 	}
 
+	// Store the original user input as raw path
+	p.rawWallpaperPath = p.path
+
 	// Resolve the path - if it's a directory, select a random image.
 	resolvedPath, err := image.ResolveImagePath(p.path)
 	if err != nil {
@@ -215,8 +281,13 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	}
 
 	// If a random image was selected from a directory, log it.
-	if opts.Verbose && resolvedPath != p.path {
-		fmt.Printf("→ Selected random image from directory: %s\n", resolvedPath)
+	// Also update the raw path to reflect the actual selected file.
+	if resolvedPath != p.path {
+		if opts.Verbose {
+			fmt.Printf("→ Selected random image from directory: %s\n", resolvedPath)
+		}
+		// Update raw path to the selected file (still relative if original was relative)
+		p.rawWallpaperPath = resolvedPath
 	}
 
 	// For remote images (HTTP/HTTPS), optionally download and cache them for wallpaper support.
@@ -254,8 +325,8 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		return nil, fmt.Errorf("failed to load image: %w", err)
 	}
 
-	// Store the wallpaper path (local file for remote images, original path otherwise).
-	p.loadedImagePath = wallpaperPath
+	// Store the canonical wallpaper path (absolute or tilde-prefixed for portability).
+	p.loadedImagePath = canonicalizePath(wallpaperPath)
 
 	// Calculate seed based on configured mode using shared utility.
 	// Use the resolved path for filepath-based seeds.

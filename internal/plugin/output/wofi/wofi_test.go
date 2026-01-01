@@ -26,7 +26,7 @@ func TestWofiPlugin_ContentValidation(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
@@ -59,7 +59,7 @@ func TestWofiPlugin_GenerateWithLightTheme(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeLight)
 	plugin := New()
 
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
@@ -109,7 +109,7 @@ func TestWofiPlugin_GetEmbeddedTemplates(t *testing.T) {
 // TestWofiPlugin_PrepareThemeData tests theme data preparation.
 func TestWofiPlugin_PrepareThemeData(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
-	data := colour.NewThemeData(palette, "", "")
+	data := colour.NewThemeData(palette, "", "", "")
 
 	// Check that PaletteHelper is created properly.
 	if data == nil {

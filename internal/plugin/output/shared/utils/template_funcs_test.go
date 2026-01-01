@@ -34,7 +34,7 @@ func createTestPalette() *colour.CategorisedPalette {
 // TestTemplateFuncs_Get tests the get function.
 func TestTemplateFuncs_Get(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tmpl, err := template.New("test").Funcs(TemplateFuncs()).Parse(`{{ get . "background" | hex }}`)
 	if err != nil {
@@ -55,7 +55,7 @@ func TestTemplateFuncs_Get(t *testing.T) {
 // TestTemplateFuncs_GetSafe tests the getSafe function.
 func TestTemplateFuncs_GetSafe(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	t.Run("ValidRole", func(t *testing.T) {
 		tmpl, err := template.New("test").Funcs(TemplateFuncs()).Parse(`{{ getSafe . "background" | hex }}`)
@@ -91,7 +91,7 @@ func TestTemplateFuncs_GetSafe(t *testing.T) {
 // TestTemplateFuncs_Has tests the has function.
 func TestTemplateFuncs_Has(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tests := []struct {
 		role     string
@@ -129,7 +129,7 @@ func TestTemplateFuncs_Has(t *testing.T) {
 // TestTemplateFuncs_GetByIndex tests the getByIndex function.
 func TestTemplateFuncs_GetByIndex(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	t.Run("ValidIndex", func(t *testing.T) {
 		tmpl, err := template.New("test").Funcs(TemplateFuncs()).Parse(`{{ getByIndex . 0 | hex }}`)
@@ -165,7 +165,7 @@ func TestTemplateFuncs_GetByIndex(t *testing.T) {
 // TestTemplateFuncs_HexFormats tests hex color format functions.
 func TestTemplateFuncs_HexFormats(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tests := []struct {
 		name     string
@@ -212,7 +212,7 @@ func TestTemplateFuncs_HexFormats(t *testing.T) {
 // TestTemplateFuncs_RGBFormats tests RGB color format functions.
 func TestTemplateFuncs_RGBFormats(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tests := []struct {
 		name     string
@@ -269,7 +269,7 @@ func TestTemplateFuncs_RGBFormats(t *testing.T) {
 // TestTemplateFuncs_WithAlpha tests the withAlpha function.
 func TestTemplateFuncs_WithAlpha(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	// Use withAlpha with explicit arguments instead of piping
 	tmpl, err := template.New("test").Funcs(TemplateFuncs()).Parse(`{{ withAlpha (get . "background") 0.5 | hexAlpha }}`)
@@ -292,7 +292,7 @@ func TestTemplateFuncs_WithAlpha(t *testing.T) {
 // TestTemplateFuncs_Metadata tests color metadata functions.
 func TestTemplateFuncs_Metadata(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tests := []struct {
 		name     string
@@ -331,7 +331,7 @@ func TestTemplateFuncs_Metadata(t *testing.T) {
 // TestTemplateFuncs_PaletteMetadata tests palette metadata functions.
 func TestTemplateFuncs_PaletteMetadata(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tests := []struct {
 		name     string
@@ -373,7 +373,7 @@ func TestTemplateFuncs_PaletteMetadata(t *testing.T) {
 // TestTemplateFuncs_StringManipulation tests string manipulation functions.
 func TestTemplateFuncs_StringManipulation(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tests := []struct {
 		name     string
@@ -425,7 +425,7 @@ func TestTemplateFuncs_StringManipulation(t *testing.T) {
 // TestTemplateFuncs_ANSIColors tests ANSI color functions.
 func TestTemplateFuncs_ANSIColors(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	t.Run("ValidANSIColor", func(t *testing.T) {
 		tmpl, err := template.New("test").Funcs(TemplateFuncs()).Parse(`{{ ansi . "red" | hex }}`)
@@ -461,7 +461,7 @@ func TestTemplateFuncs_ANSIColors(t *testing.T) {
 // TestTemplateFuncs_AllColorsIteration tests iterating over all colors.
 func TestTemplateFuncs_AllColorsIteration(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tmpl, err := template.New("test").Funcs(TemplateFuncs()).Parse(`{{ range allColors . }}{{ . | hex }}{{ end }}`)
 	if err != nil {
@@ -488,7 +488,7 @@ func TestTemplateFuncs_AllColorsIteration(t *testing.T) {
 // TestTemplateFuncs_AllRolesIteration tests iterating over all roles.
 func TestTemplateFuncs_AllRolesIteration(t *testing.T) {
 	palette := createTestPalette()
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 
 	tmpl, err := template.New("test").Funcs(TemplateFuncs()).Parse(`{{ range allRoles . }}{{ . }}{{ end }}`)
 	if err != nil {

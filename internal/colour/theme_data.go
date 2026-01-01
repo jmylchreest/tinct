@@ -36,9 +36,10 @@ func (td *ThemeData) GetPaletteHelper() *pkgcolour.PaletteHelper {
 }
 
 // NewThemeData creates a new ThemeData instance with the given palette.
-// Optional wallpaperPath and themeName can be provided (pass empty strings if not needed).
+// Optional wallpaperPath, wallpaperRawPath and themeName can be provided (pass empty strings if not needed).
+// wallpaperPath is the canonical/resolved path, wallpaperRawPath is the literal user input.
 // This is the internal factory that works with internal CategorisedPalette.
-func NewThemeData(palette *CategorisedPalette, wallpaperPath, themeName string) *ThemeData {
+func NewThemeData(palette *CategorisedPalette, wallpaperPath, wallpaperRawPath, themeName string) *ThemeData {
 	// Convert internal CategorisedPalette to pkg version.
 	pkgPalette := &pkgcolour.CategorisedPalette{
 		Colours:    make(map[pkgcolour.Role]pkgcolour.CategorisedColour),
@@ -54,7 +55,7 @@ func NewThemeData(palette *CategorisedPalette, wallpaperPath, themeName string) 
 	copy(pkgPalette.AllColours, palette.AllColours)
 
 	return &ThemeData{
-		ThemeData:       pkgcolour.NewThemeData(pkgPalette, wallpaperPath, themeName),
+		ThemeData:       pkgcolour.NewThemeData(pkgPalette, wallpaperPath, wallpaperRawPath, themeName),
 		internalPalette: palette,
 	}
 }

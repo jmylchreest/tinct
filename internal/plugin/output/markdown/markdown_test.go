@@ -96,7 +96,7 @@ func TestPlugin_Generate(t *testing.T) {
 		Role:   colour.RoleAccent1,
 	}
 
-	themeData := colour.NewThemeData(palette, "", "Test Theme")
+	themeData := colour.NewThemeData(palette, "", "", "Test Theme")
 
 	p := New()
 	p.name = "Test Theme"
@@ -169,7 +169,7 @@ func TestPlugin_Generate_WithWallpaper(t *testing.T) {
 		Role:   colour.RoleBackground,
 	}
 
-	themeData := colour.NewThemeData(palette, "", "Test Theme")
+	themeData := colour.NewThemeData(palette, "", "", "Test Theme")
 	themeData.WallpaperPath = wallpaperPath
 
 	p := New()
@@ -223,7 +223,7 @@ func TestPlugin_Generate_ExternalWallpaper(t *testing.T) {
 		Role:   colour.RoleBackground,
 	}
 
-	themeData := colour.NewThemeData(palette, "", "Test Theme")
+	themeData := colour.NewThemeData(palette, "", "", "Test Theme")
 	themeData.WallpaperPath = wallpaperPath
 
 	p := New()
@@ -268,7 +268,7 @@ func TestPlugin_Generate_WithAmbientColors(t *testing.T) {
 		Role:   colour.RolePositionBottomRight,
 	}
 
-	themeData := colour.NewThemeData(palette, "", "Test Theme")
+	themeData := colour.NewThemeData(palette, "", "", "Test Theme")
 
 	p := New()
 	p.name = "Ambient Theme"

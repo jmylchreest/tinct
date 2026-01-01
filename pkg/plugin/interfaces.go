@@ -14,9 +14,18 @@ type InputPlugin interface {
 	// GetMetadata returns plugin metadata.
 	GetMetadata() PluginInfo
 
-	// WallpaperPath returns the path to a wallpaper image, if available.
+	// WallpaperPath returns the canonical path to a wallpaper image, if available.
+	// This path is resolved to be usable from any working directory:
+	// - Relative paths are converted to absolute paths
+	// - Tilde-prefixed paths (~/...) are preserved for portability
+	// - URLs are returned as-is
 	// Returns empty string if no wallpaper is available.
 	WallpaperPath() string
+
+	// WallpaperRawPath returns the literal path as provided by the user.
+	// This is the unmodified input before any path canonicalization.
+	// Returns empty string if no wallpaper is available.
+	WallpaperRawPath() string
 
 	// GetFlagHelp returns help information for plugin flags.
 	GetFlagHelp() []FlagHelp

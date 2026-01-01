@@ -238,13 +238,58 @@ colour{{ $i }} {{ $colour | hex }}
 
 ## Context fields
 
-Templates receive a `ThemeData` struct:
+Templates receive a `ThemeData` struct with the following fields:
+
+### `.WallpaperPath`
+
+The canonical path to the source image, suitable for use in configuration files.
+
+**Path canonicalization:**
+
+| Input type | Output |
+|------------|--------|
+| Relative path (`images/wall.png`) | Absolute path (`/home/user/images/wall.png`) |
+| Tilde path (`~/Pictures/wall.png`) | Preserved with tilde (`~/Pictures/wall.png`) |
+| URL (`https://...`) with caching | Local cached path (`~/.cache/tinct/images/abc123.jpg`) |
+| URL without caching | Original URL |
+
+Tilde paths are preserved for portability across machines with different `$HOME` values.
 
 ```go
 {{- if .WallpaperPath }}
-wallpaper {{ .WallpaperPath }}
+wallpaper = {{ .WallpaperPath }}
 {{- end }}
+```
 
+### `.WallpaperRawPath`
+
+The literal path as provided by the user, before any canonicalization.
+
+This is useful for:
+- Displaying the original input to users
+- Logging or debugging
+- Preserving the exact user intent
+
+```go
+{{- if .WallpaperRawPath }}
+# Source: {{ .WallpaperRawPath }}
+{{- end }}
+```
+
+**Examples:**
+
+| User input | `.WallpaperPath` | `.WallpaperRawPath` |
+|------------|------------------|---------------------|
+| `./images/wall.png` | `/home/user/project/images/wall.png` | `./images/wall.png` |
+| `~/Pictures/wall.png` | `~/Pictures/wall.png` | `~/Pictures/wall.png` |
+| `https://example.com/img.jpg` | `~/.cache/tinct/images/abc123.jpg` | `https://example.com/img.jpg` |
+| `/abs/path/wall.png` | `/abs/path/wall.png` | `/abs/path/wall.png` |
+
+### `.ThemeName`
+
+The name of the theme (if provided via `--theme-name`).
+
+```go
 {{- if .ThemeName }}
 theme {{ .ThemeName }}
 {{- end }}

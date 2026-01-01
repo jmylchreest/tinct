@@ -54,8 +54,14 @@ type ANSIColors struct {
 // This is the primary data structure passed to templates and external plugins.
 type ThemeData struct {
 	*PaletteHelper
+	// WallpaperPath is the canonical path to the wallpaper image, resolved for use
+	// from any working directory. Relative paths are made absolute, but tilde-prefixed
+	// paths (~/...) are preserved for portability across machines.
 	WallpaperPath string
-	ThemeName     string
+	// WallpaperRawPath is the literal path as provided by the user, before any
+	// canonicalization. Useful when the user wants to reference the original input.
+	WallpaperRawPath string
+	ThemeName        string
 }
 
 // GetPaletteHelper returns the embedded PaletteHelper.
@@ -66,7 +72,8 @@ func (td *ThemeData) GetPaletteHelper() *PaletteHelper {
 
 // NewThemeData creates a ThemeData wrapper from a CategorisedPalette.
 // This is called by tinct when preparing data for plugins.
-func NewThemeData(palette *CategorisedPalette, wallpaperPath, themeName string) *ThemeData {
+// wallpaperPath is the canonical/resolved path, wallpaperRawPath is the literal user input.
+func NewThemeData(palette *CategorisedPalette, wallpaperPath, wallpaperRawPath, themeName string) *ThemeData {
 	// Build color map and indexed array from palette.
 	colors := make(map[Role]ColorValue, len(palette.Colours))
 	indexed := make([]ColorValue, 0, len(palette.AllColours))
@@ -90,8 +97,9 @@ func NewThemeData(palette *CategorisedPalette, wallpaperPath, themeName string) 
 	helper := NewPaletteHelper(palette.ThemeType, colors, indexed)
 
 	return &ThemeData{
-		PaletteHelper: helper,
-		WallpaperPath: wallpaperPath,
-		ThemeName:     themeName,
+		PaletteHelper:    helper,
+		WallpaperPath:    wallpaperPath,
+		WallpaperRawPath: wallpaperRawPath,
+		ThemeName:        themeName,
 	}
 }

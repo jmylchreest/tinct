@@ -110,7 +110,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Phase 3: Generate input palette.
-	rawPalette, wallpaperPath, err := generateInputPalette(ctx, inputPlugin)
+	rawPalette, wallpaperPath, wallpaperRawPath, err := generateInputPalette(ctx, inputPlugin)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 	executions := preparePluginExecutions(ctx, outputPlugins)
 
 	// Phase 9: Generate and write files.
-	successCount := generateAndWriteFiles(executions, palette, alternatePalette, wallpaperPath)
+	successCount := generateAndWriteFiles(executions, palette, alternatePalette, wallpaperPath, wallpaperRawPath)
 
 	// Phase 10: Run post-execute hooks.
 	if !generateDryRun {

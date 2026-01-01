@@ -216,8 +216,18 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	return palette, nil
 }
 
-// WallpaperPath returns the path to the generated image for wallpaper use.
+// WallpaperPath returns the canonical path to the generated image for wallpaper use.
+// For AI-generated images, this is always an absolute path to the cached image.
+// Implements the input.WallpaperProvider interface.
 func (p *Plugin) WallpaperPath() string {
+	return p.loadedImagePath
+}
+
+// WallpaperRawPath returns the literal path as provided by the user.
+// For AI-generated images, this is the same as WallpaperPath since there's
+// no user-provided input path - the path is generated based on the prompt hash.
+// Implements the input.WallpaperProvider interface.
+func (p *Plugin) WallpaperRawPath() string {
 	return p.loadedImagePath
 }
 

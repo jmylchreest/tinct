@@ -625,13 +625,23 @@ func (p *ExternalInputPlugin) GetFlagHelp() []input.FlagHelp {
 	return flagHelp
 }
 
-// WallpaperPath returns the wallpaper path from the last plugin execution.
+// WallpaperPath returns the canonical wallpaper path from the last plugin execution.
 // Implements the input.WallpaperProvider interface for external plugins.
 func (p *ExternalInputPlugin) WallpaperPath() string {
 	if p.lastExecutor == nil {
 		return ""
 	}
 	return p.lastExecutor.GetWallpaperPath()
+}
+
+// WallpaperRawPath returns the raw wallpaper path from the last plugin execution.
+// This is the literal path as provided by the user before any canonicalization.
+// Implements the input.WallpaperProvider interface for external plugins.
+func (p *ExternalInputPlugin) WallpaperRawPath() string {
+	if p.lastExecutor == nil {
+		return ""
+	}
+	return p.lastExecutor.GetWallpaperRawPath()
 }
 
 // ExternalOutputPlugin wraps an external executable as an output plugin.

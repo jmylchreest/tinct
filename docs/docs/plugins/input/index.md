@@ -61,7 +61,16 @@ Some plugins provide a wallpaper for output plugins:
 | openrouter | Generated image |
 | markdown | Embedded wallpaper |
 
-Output plugins like `hyprpaper` use this to set the wallpaper automatically.
+Two template fields are available:
+
+| Field | Description |
+|-------|-------------|
+| `.WallpaperPath` | Canonical path (resolved relative paths, cached URLs) |
+| `.WallpaperRawPath` | Literal user input (original path/URL) |
+
+Output plugins like `hyprpaper` use `.WallpaperPath` to set the wallpaper automatically.
+
+See [Template functions: Context fields](/docs/templating/functions#context-fields) for details.
 
 ## Choosing an input
 

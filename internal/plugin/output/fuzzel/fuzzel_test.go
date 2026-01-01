@@ -26,7 +26,7 @@ func TestFuzzelPlugin_ContentValidation(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
@@ -88,7 +88,7 @@ func TestFuzzelPlugin_GetEmbeddedTemplates(t *testing.T) {
 func TestFuzzelPlugin_PrepareThemeData(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 
-	data := colour.NewThemeData(palette, "", "")
+	data := colour.NewThemeData(palette, "", "", "")
 
 	// Check that PaletteHelper is created properly.
 	if data == nil {
@@ -119,7 +119,7 @@ func TestFuzzelPlugin_ColorFormatting(t *testing.T) {
 	palette := plugintesting.CreateTestPalette(colour.ThemeDark)
 	plugin := New()
 
-	themeData := colour.NewThemeData(palette, "", "")
+	themeData := colour.NewThemeData(palette, "", "", "")
 	files, err := plugin.Generate(themeData)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)

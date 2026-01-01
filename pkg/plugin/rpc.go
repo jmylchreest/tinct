@@ -71,6 +71,12 @@ func (s *InputPluginRPCServer) WallpaperPath(_ any, resp *string) error {
 	return nil
 }
 
+// WallpaperRawPath implements the RPC method for fetching raw wallpaper path.
+func (s *InputPluginRPCServer) WallpaperRawPath(_ any, resp *string) error {
+	*resp = s.Impl.WallpaperRawPath()
+	return nil
+}
+
 // GetFlagHelp implements the RPC method for fetching flag help.
 func (s *InputPluginRPCServer) GetFlagHelp(_ any, resp *[]FlagHelp) error {
 	*resp = s.Impl.GetFlagHelp()
@@ -122,6 +128,16 @@ func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 func (c *InputPluginRPCClient) WallpaperPath() string {
 	var path string
 	err := c.client.Call("Plugin.WallpaperPath", new(any), &path)
+	if err != nil {
+		return ""
+	}
+	return path
+}
+
+// WallpaperRawPath calls the remote WallpaperRawPath method.
+func (c *InputPluginRPCClient) WallpaperRawPath() string {
+	var path string
+	err := c.client.Call("Plugin.WallpaperRawPath", new(any), &path)
 	if err != nil {
 		return ""
 	}

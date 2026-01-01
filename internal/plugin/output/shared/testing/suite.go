@@ -54,7 +54,7 @@ func TestBasicInterface(t *testing.T, p output.Plugin, expectedName string, expe
 func TestGeneration(t *testing.T, p output.Plugin, expectedFiles []string) {
 	t.Run("Generate", func(t *testing.T) {
 		palette := CreateTestPalette(colour.ThemeDark)
-		themeData := colour.NewThemeData(palette, "", "")
+		themeData := colour.NewThemeData(palette, "", "", "")
 		files, err := p.Generate(themeData)
 		if err != nil {
 			t.Fatalf("Generate() error = %v", err)
@@ -80,7 +80,7 @@ func TestGeneration(t *testing.T, p output.Plugin, expectedFiles []string) {
 
 	t.Run("GenerateWithLightTheme", func(t *testing.T) {
 		palette := CreateTestPalette(colour.ThemeLight)
-		themeData := colour.NewThemeData(palette, "", "")
+		themeData := colour.NewThemeData(palette, "", "", "")
 		files, err := p.Generate(themeData)
 		if err != nil {
 			t.Fatalf("Generate() error = %v", err)

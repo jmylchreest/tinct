@@ -66,7 +66,8 @@ func getAndValidateInputPlugin() (input.Plugin, error) {
 }
 
 // generateInputPalette generates a raw palette from the input plugin.
-func generateInputPalette(ctx context.Context, inputPlugin input.Plugin) (*colour.Palette, string, error) {
+// Returns the palette, canonical wallpaper path, and raw wallpaper path.
+func generateInputPalette(ctx context.Context, inputPlugin input.Plugin) (*colour.Palette, string, string, error) {
 	if generateVerbose {
 		fmt.Fprintf(os.Stderr, " Input plugin: %s\n", inputPlugin.Name())
 		fmt.Fprintf(os.Stderr, "   %s\n", inputPlugin.Description())
@@ -78,20 +79,20 @@ func generateInputPalette(ctx context.Context, inputPlugin input.Plugin) (*colou
 	// Generate raw palette from input plugin.
 	rawPalette, err := inputPlugin.Generate(ctx, inputOpts)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to generate palette: %w", err)
+		return nil, "", "", fmt.Errorf("failed to generate palette: %w", err)
 	}
 
 	if generateVerbose {
 		fmt.Fprintf(os.Stderr, "   Generated raw palette (%d colours)\n", len(rawPalette.Colors))
 	}
 
-	// Extract wallpaper path if available.
-	wallpaperPath := extractWallpaperPath(inputPlugin)
+	// Extract wallpaper paths if available.
+	wallpaperPath, wallpaperRawPath := extractWallpaperPaths(inputPlugin)
 	if generateVerbose && wallpaperPath != "" {
 		fmt.Fprintf(os.Stderr, "   Wallpaper source: %s\n", wallpaperPath)
 	}
 
-	return rawPalette, wallpaperPath, nil
+	return rawPalette, wallpaperPath, wallpaperRawPath, nil
 }
 
 // buildInputOptions creates input plugin options.
@@ -120,12 +121,13 @@ func buildInputOptions() input.GenerateOptions {
 	return inputOpts
 }
 
-// extractWallpaperPath extracts wallpaper path from input plugin if it provides one.
-func extractWallpaperPath(inputPlugin input.Plugin) string {
+// extractWallpaperPaths extracts both canonical and raw wallpaper paths from input plugin.
+// Returns (canonicalPath, rawPath) - both may be empty if plugin doesn't provide wallpapers.
+func extractWallpaperPaths(inputPlugin input.Plugin) (string, string) {
 	if provider, ok := inputPlugin.(input.WallpaperProvider); ok {
-		return provider.WallpaperPath()
+		return provider.WallpaperPath(), provider.WallpaperRawPath()
 	}
-	return ""
+	return "", ""
 }
 
 // categorizePalette categorizes a raw palette for both primary and alternate themes.
@@ -488,7 +490,7 @@ func shouldSkipFromPreHook(ctx context.Context, plugin output.Plugin, exec *plug
 }
 
 // generateAndWriteFiles generates files from plugins and writes them to disk.
-func generateAndWriteFiles(executions []pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath string) int {
+func generateAndWriteFiles(executions []pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath, wallpaperRawPath string) int {
 	successCount := 0
 	firstOutputPlugin := true
 
@@ -503,7 +505,7 @@ func generateAndWriteFiles(executions []pluginExecution, palette *colour.Categor
 			firstOutputPlugin = false
 		}
 
-		if processPluginGeneration(exec, palette, alternatePalette, wallpaperPath) {
+		if processPluginGeneration(exec, palette, alternatePalette, wallpaperPath, wallpaperRawPath) {
 			successCount++
 		}
 	}
@@ -512,7 +514,7 @@ func generateAndWriteFiles(executions []pluginExecution, palette *colour.Categor
 }
 
 // processPluginGeneration generates and writes files for a single plugin.
-func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath string) bool {
+func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath, wallpaperRawPath string) bool {
 	plugin := exec.plugin
 
 	if generateVerbose {
@@ -526,8 +528,8 @@ func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedP
 	// Check if plugin supports dual-theme generation
 	if dualThemePlugin, ok := plugin.(output.DualThemePlugin); ok && alternatePalette != nil {
 		// Generate both themes
-		primaryThemeData := colour.NewThemeData(palette, wallpaperPath, "")
-		alternateThemeData := colour.NewThemeData(alternatePalette, wallpaperPath, "")
+		primaryThemeData := colour.NewThemeData(palette, wallpaperPath, wallpaperRawPath, "")
+		alternateThemeData := colour.NewThemeData(alternatePalette, wallpaperPath, wallpaperRawPath, "")
 
 		files, err = dualThemePlugin.GenerateDualTheme(primaryThemeData, alternateThemeData)
 		if err != nil {
@@ -538,7 +540,7 @@ func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedP
 		}
 	} else {
 		// Standard single-theme generation
-		themeData := colour.NewThemeData(palette, wallpaperPath, "")
+		themeData := colour.NewThemeData(palette, wallpaperPath, wallpaperRawPath, "")
 
 		// If this is an external plugin and we have an alternate palette, set it
 		if alternatePalette != nil {

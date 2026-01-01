@@ -27,13 +27,14 @@ import (
 
 // PluginExecutor provides a unified interface for executing plugins.
 type PluginExecutor struct {
-	path              string
-	protocolType      protocol.PluginType
-	client            *goplug.Client
-	rpcClient         any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
-	verbose           bool
-	lastWallpaperPath string        // Stores wallpaper path from JSON stdio plugins
-	processRunner     ProcessRunner // Abstraction for running external processes
+	path                 string
+	protocolType         protocol.PluginType
+	client               *goplug.Client
+	rpcClient            any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
+	verbose              bool
+	lastWallpaperPath    string        // Stores canonical wallpaper path from JSON stdio plugins
+	lastWallpaperRawPath string        // Stores raw wallpaper path from JSON stdio plugins
+	processRunner        ProcessRunner // Abstraction for running external processes
 }
 
 // NewWithVerbose creates a new PluginExecutor with verbose logging control.
@@ -133,7 +134,7 @@ func (e *PluginExecutor) GetFlagHelp(ctx context.Context) ([]input.FlagHelp, err
 	}
 }
 
-// GetWallpaperPath retrieves the wallpaper path from an input plugin if available.
+// GetWallpaperPath retrieves the canonical wallpaper path from an input plugin if available.
 // Works for both go-plugin RPC and JSON stdio protocols.
 func (e *PluginExecutor) GetWallpaperPath() string {
 	switch e.protocolType {
@@ -152,6 +153,32 @@ func (e *PluginExecutor) GetWallpaperPath() string {
 	case protocol.PluginTypeJSON:
 		// For JSON stdio plugins, return stored value
 		return e.lastWallpaperPath
+
+	default:
+		return ""
+	}
+}
+
+// GetWallpaperRawPath retrieves the raw wallpaper path from an input plugin if available.
+// This is the literal path as provided by the user before any canonicalization.
+// Works for both go-plugin RPC and JSON stdio protocols.
+func (e *PluginExecutor) GetWallpaperRawPath() string {
+	switch e.protocolType {
+	case protocol.PluginTypeGoPlugin:
+		// For RPC plugins, query via RPC
+		if e.rpcClient == nil {
+			return ""
+		}
+
+		if inputClient, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
+			return inputClient.WallpaperRawPath()
+		}
+
+		return ""
+
+	case protocol.PluginTypeJSON:
+		// For JSON stdio plugins, return stored value
+		return e.lastWallpaperRawPath
 
 	default:
 		return ""
@@ -348,7 +375,8 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 			G uint8 `json:"g"`
 			B uint8 `json:"b"`
 		} `json:"colors"`
-		WallpaperPath string `json:"wallpaper_path,omitempty"`
+		WallpaperPath    string `json:"wallpaper_path,omitempty"`
+		WallpaperRawPath string `json:"wallpaper_raw_path,omitempty"`
 	}
 
 	if err := json.Unmarshal(stdoutBytes, &response); err == nil && len(response.Colors) > 0 {
@@ -356,8 +384,13 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 		for i, rgb := range response.Colors {
 			colors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
 		}
-		// Store wallpaper path if provided
+		// Store wallpaper paths if provided
 		e.lastWallpaperPath = response.WallpaperPath
+		e.lastWallpaperRawPath = response.WallpaperRawPath
+		// If raw path not provided, default to canonical path
+		if e.lastWallpaperRawPath == "" && e.lastWallpaperPath != "" {
+			e.lastWallpaperRawPath = e.lastWallpaperPath
+		}
 		return colors, nil
 	}
 

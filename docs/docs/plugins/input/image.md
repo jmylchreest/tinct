@@ -131,7 +131,43 @@ export TINCT_IMAGE_CACHE_OVERWRITE=false
 
 ## Wallpaper provision
 
-The image plugin provides the input image as a wallpaper path. Output plugins like `hyprpaper` use this to:
+The image plugin provides the input image as a wallpaper path for templates and output plugins.
+
+### Path handling
+
+The plugin provides two path variants for templates:
+
+| Template field | Description |
+|----------------|-------------|
+| `.WallpaperPath` | Canonical path (resolved for config files) |
+| `.WallpaperRawPath` | Literal user input (for display/logging) |
+
+### Path canonicalization
+
+`.WallpaperPath` is resolved for reliable use in configuration files:
+
+| Input | `.WallpaperPath` | `.WallpaperRawPath` |
+|-------|------------------|---------------------|
+| `./images/wall.png` | `/home/user/project/images/wall.png` | `./images/wall.png` |
+| `~/Pictures/wall.png` | `~/Pictures/wall.png` | `~/Pictures/wall.png` |
+| `https://example.com/img.jpg` | `~/.cache/tinct/images/abc123.jpg` | `https://example.com/img.jpg` |
+
+**Notes:**
+- Relative paths become absolute (work from any directory)
+- Tilde paths are preserved for portability across machines
+- URLs are cached locally; the cached path is returned
+
+### Usage in templates
+
+```go
+{{- if .WallpaperPath }}
+# Wallpaper (canonical): {{ .WallpaperPath }}
+# Original input: {{ .WallpaperRawPath }}
+wallpaper = {{ .WallpaperPath }}
+{{- end }}
+```
+
+Output plugins like `hyprpaper` use `.WallpaperPath` to:
 
 1. Copy the image to a standard location
 2. Update configuration to use it

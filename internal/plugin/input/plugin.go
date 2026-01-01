@@ -56,9 +56,18 @@ type ThemeHinter interface {
 // to provide the source wallpaper path. This is used with the --set-wallpaper flag
 // to allow output plugins to set the wallpaper alongside the generated themes.
 type WallpaperProvider interface {
-	// WallpaperPath returns the path to the source wallpaper image.
+	// WallpaperPath returns the canonical path to the source wallpaper image.
+	// This path is resolved to be usable from any working directory:
+	// - Relative paths are converted to absolute paths
+	// - Tilde-prefixed paths (~/...) are preserved for portability
+	// - URLs are returned as-is
 	// Returns empty string if no wallpaper is available.
 	WallpaperPath() string
+
+	// WallpaperRawPath returns the literal path as provided by the user.
+	// This is the unmodified input before any path canonicalization.
+	// Returns empty string if no wallpaper is available.
+	WallpaperRawPath() string
 }
 
 // Plugin represents an input plugin that generates a colour palette.
