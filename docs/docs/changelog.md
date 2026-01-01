@@ -2,22 +2,18 @@
 sidebar_position: 100
 ---
 
-# Changelog
+## [0.2.0](https://github.com/jmylchreest/tinct/compare/v0.1.21...v0.2.0) (2026-01-01)
 
-All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+### Features
 
-## [Unreleased]
+* **docs:** add automated changelog generation ([0656c3f](https://github.com/jmylchreest/tinct/commit/0656c3ff5ddacff905e6009a9669c5b59d0db20f))
 
-### Added
-- Docusaurus documentation site at [jmylchreest.github.io/tinct](https://jmylchreest.github.io/tinct/)
-- Versioned template system for breaking config changes
-- Plugin development documentation with protocols, hooks, and publishing guides
+## [0.1.21](https://github.com/jmylchreest/tinct/compare/v0.1.20...v0.1.21) (2025-12-31)
 
-### Changed
-- Simplified README with links to documentation site
+## [0.1.20](https://github.com/jmylchreest/tinct/compare/v0.1.18...v0.1.20) (2025-12-31)
 
-### Fixed
-- hyprpaper v0.8.0 support with versioned templates
+## [0.1.18](https://github.com/jmylchreest/tinct/compare/v0.1.17...v0.1.18) (2025-12-24)
+
+## [0.1.17](https://github.com/jmylchreest/tinct/compare/v0.1.16...v0.1.17) (2025-12-14)
+
