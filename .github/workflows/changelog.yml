@@ -2,7 +2,7 @@
 # Automatically generates CHANGELOG.md from conventional commits
 #
 # Trigger: Push to main branch
-# Output: Updated CHANGELOG.md (symlinked to docs/docs/changelog.md)
+# Output: Updated CHANGELOG.md (copied to docs/docs/changelog.md)
 
 name: Generate Changelog
 
@@ -58,11 +58,15 @@ jobs:
             mv CHANGELOG.tmp CHANGELOG.md
           fi
 
+      - name: Copy to docs
+        if: steps.changelog.outputs.skipped == 'false'
+        run: cp CHANGELOG.md docs/docs/changelog.md
+
       - name: Commit changes
         if: steps.changelog.outputs.skipped == 'false'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add CHANGELOG.md
+          git add CHANGELOG.md docs/docs/changelog.md
           git diff --staged --quiet || git commit -m "docs: update changelog [skip ci]"
           git push
