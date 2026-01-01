@@ -13,4 +13,13 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 ## [Unreleased]
 
 ### Added
-- **ci:** auto-update changelog from conventional commits
+- Docusaurus documentation site at [jmylchreest.github.io/tinct](https://jmylchreest.github.io/tinct/)
+- Versioned template system for breaking config changes
+- Plugin development documentation with protocols, hooks, and publishing guides
+- Automated changelog generation from conventional commits
+
+### Changed
+- Simplified README with links to documentation site
+
+### Fixed
+- hyprpaper v0.8.0 support with versioned templates
