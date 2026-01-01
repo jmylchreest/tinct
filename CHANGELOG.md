@@ -9,6 +9,11 @@ sidebar_position: 100
 
 * **docs:** add automated changelog generation ([0656c3f](https://github.com/jmylchreest/tinct/commit/0656c3ff5ddacff905e6009a9669c5b59d0db20f))
 
+
+### Bug Fixes
+
+* **docs:** replace symlink with copy for changelog ([f426585](https://github.com/jmylchreest/tinct/commit/f4265853eac70573a5f1cb0cb605700e12e3911a))
+
 ## [0.1.21](https://github.com/jmylchreest/tinct/compare/v0.1.20...v0.1.21) (2025-12-31)
 
 ## [0.1.20](https://github.com/jmylchreest/tinct/compare/v0.1.18...v0.1.20) (2025-12-31)
