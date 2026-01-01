@@ -1,0 +1,177 @@
+# GitHub Actions Workflow: Update Changelog
+# Automatically updates [Unreleased] section from conventional commits
+#
+# Trigger: Push to main branch
+# Output: Updated CHANGELOG.md with entries under [Unreleased]
+
+name: Update Changelog
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'docs/docs/changelog.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    name: Update Changelog
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get last tag
+        id: last_tag
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "tag=${LAST_TAG}" >> $GITHUB_OUTPUT
+          echo "Last tag: ${LAST_TAG:-none}"
+
+      - name: Generate changelog entries
+        id: generate
+        run: |
+          LAST_TAG="${{ steps.last_tag.outputs.tag }}"
+
+          # Get commits since last tag (or all commits if no tag)
+          if [ -n "$LAST_TAG" ]; then
+            RANGE="${LAST_TAG}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+
+          echo "Analyzing commits in range: $RANGE"
+
+          # Parse conventional commits and group by type
+          ADDED=""
+          CHANGED=""
+          FIXED=""
+
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+
+            # Extract type and message from conventional commit
+            if [[ "$line" =~ ^feat(\(.*\))?:\ (.+)$ ]]; then
+              SCOPE="${BASH_REMATCH[1]}"
+              MSG="${BASH_REMATCH[2]}"
+              SCOPE="${SCOPE//[()]/}"
+              if [ -n "$SCOPE" ]; then
+                ADDED="${ADDED}- **${SCOPE}:** ${MSG}\n"
+              else
+                ADDED="${ADDED}- ${MSG}\n"
+              fi
+            elif [[ "$line" =~ ^fix(\(.*\))?:\ (.+)$ ]]; then
+              SCOPE="${BASH_REMATCH[1]}"
+              MSG="${BASH_REMATCH[2]}"
+              SCOPE="${SCOPE//[()]/}"
+              if [ -n "$SCOPE" ]; then
+                FIXED="${FIXED}- **${SCOPE}:** ${MSG}\n"
+              else
+                FIXED="${FIXED}- ${MSG}\n"
+              fi
+            elif [[ "$line" =~ ^(refactor|perf|style)(\(.*\))?:\ (.+)$ ]]; then
+              TYPE="${BASH_REMATCH[1]}"
+              SCOPE="${BASH_REMATCH[2]}"
+              MSG="${BASH_REMATCH[3]}"
+              SCOPE="${SCOPE//[()]/}"
+              if [ -n "$SCOPE" ]; then
+                CHANGED="${CHANGED}- **${SCOPE}:** ${MSG}\n"
+              else
+                CHANGED="${CHANGED}- ${MSG}\n"
+              fi
+            fi
+          done < <(git log --pretty=format:"%s" $RANGE 2>/dev/null)
+
+          # Build the unreleased section content
+          CONTENT=""
+          if [ -n "$ADDED" ]; then
+            CONTENT="${CONTENT}### Added\n${ADDED}\n"
+          fi
+          if [ -n "$CHANGED" ]; then
+            CONTENT="${CONTENT}### Changed\n${CHANGED}\n"
+          fi
+          if [ -n "$FIXED" ]; then
+            CONTENT="${CONTENT}### Fixed\n${FIXED}\n"
+          fi
+
+          if [ -z "$CONTENT" ]; then
+            echo "No conventional commits found"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found changelog entries"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            # Save to file for the next step
+            echo -e "$CONTENT" > /tmp/changelog_entries.txt
+          fi
+
+      - name: Update CHANGELOG.md
+        if: steps.generate.outputs.has_changes == 'true'
+        run: |
+          # Read the generated entries
+          ENTRIES=$(cat /tmp/changelog_entries.txt)
+
+          # Create new changelog with updated [Unreleased] section
+          # Keep frontmatter and header, replace [Unreleased] content
+
+          awk -v entries="$ENTRIES" '
+            BEGIN { in_unreleased = 0; printed_entries = 0 }
+            /^## \[Unreleased\]/ {
+              print
+              in_unreleased = 1
+              next
+            }
+            /^## \[/ && in_unreleased {
+              # Hit next version section, print entries first if not done
+              if (!printed_entries) {
+                print ""
+                printf "%s", entries
+                printed_entries = 1
+              }
+              in_unreleased = 0
+              print
+              next
+            }
+            in_unreleased && /^### / {
+              # Skip old unreleased subsections
+              next
+            }
+            in_unreleased && /^- / {
+              # Skip old unreleased items
+              next
+            }
+            in_unreleased && /^$/ {
+              # Skip empty lines in unreleased
+              next
+            }
+            { print }
+            END {
+              # If we never hit another version section, print entries now
+              if (in_unreleased && !printed_entries) {
+                print ""
+                printf "%s", entries
+              }
+            }
+          ' CHANGELOG.md > CHANGELOG.tmp
+
+          mv CHANGELOG.tmp CHANGELOG.md
+
+          # Copy to docs
+          cp CHANGELOG.md docs/docs/changelog.md
+
+      - name: Commit changes
+        if: steps.generate.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add CHANGELOG.md docs/docs/changelog.md
+          git diff --staged --quiet || git commit -m "docs: update changelog [skip ci]"
+          git push
