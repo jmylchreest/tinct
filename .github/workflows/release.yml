@@ -413,6 +413,7 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -433,6 +434,38 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Creating documentation for version: $VERSION"
 
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          # Get the previous tag before this one
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -2 | tail -1)
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREV_TAG"
+
+      - name: Update changelog
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
+          TAG_NAME="${GITHUB_REF_NAME}"
+          DATE=$(date +%Y-%m-%d)
+
+          # Check if changelog has [Unreleased] section
+          if grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo "Updating changelog: converting [Unreleased] to [$VERSION]"
+
+            # Replace [Unreleased] with versioned header
+            sed -i "s/## \[Unreleased\]/## [$VERSION] - $DATE\n\n## [Unreleased]/" CHANGELOG.md
+
+            # Copy to docs
+            cp CHANGELOG.md docs/docs/changelog.md
+
+            echo "updated=true" >> $GITHUB_OUTPUT
+          else
+            echo "No [Unreleased] section found, skipping changelog update"
+            echo "updated=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Check if version already exists
         id: check
         working-directory: docs
@@ -451,12 +484,12 @@ jobs:
         run: npm run docusaurus docs:version "${{ steps.version.outputs.VERSION }}"
 
       - name: Commit version files
-        if: steps.check.outputs.exists != 'true'
+        if: steps.check.outputs.exists != 'true' || steps.changelog.outputs.updated == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add docs/versioned_docs docs/versioned_sidebars docs/versions.json
-          git commit -m "docs: add version ${{ steps.version.outputs.VERSION }}"
+          git add CHANGELOG.md docs/docs/changelog.md docs/versioned_docs docs/versioned_sidebars docs/versions.json || true
+          git diff --staged --quiet || git commit -m "docs: add version ${{ steps.version.outputs.VERSION }}"
           git push
 
   # Deploy documentation - runs after versioning
