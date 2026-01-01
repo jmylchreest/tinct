@@ -94,3 +94,8 @@ mem.prof
 # Generated files
 completions/
 cosign.key
+
+# Documentation (Docusaurus)
+docs/.docusaurus/
+docs/build/
+docs/node_modules/
