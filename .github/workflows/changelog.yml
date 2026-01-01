@@ -1,8 +1,8 @@
 # GitHub Actions Workflow: Generate Changelog
 # Automatically generates CHANGELOG.md from conventional commits
 #
-# Trigger: Push to main branch, tag creation
-# Output: Updated CHANGELOG.md and docs/docs/changelog.md
+# Trigger: Push to main branch
+# Output: Updated CHANGELOG.md (symlinked to docs/docs/changelog.md)
 
 name: Generate Changelog
 
@@ -12,7 +12,6 @@ on:
       - main
     paths-ignore:
       - 'CHANGELOG.md'
-      - 'docs/docs/changelog.md'
   workflow_dispatch:
 
 permissions:
@@ -40,26 +39,30 @@ jobs:
           skip-tag: true
           git-push: false
           preset: conventionalcommits
+          # Preserve frontmatter for Docusaurus
+          fallback-version: "0.0.0"
 
-      - name: Copy changelog to docs
+      - name: Ensure frontmatter preserved
         if: steps.changelog.outputs.skipped == 'false'
         run: |
-          # Create docs changelog with frontmatter
-          cat > docs/docs/changelog.md << 'FRONTMATTER'
+          # Check if frontmatter exists, add if missing
+          if ! head -1 CHANGELOG.md | grep -q "^---"; then
+            # Prepend frontmatter
+            cat > CHANGELOG.tmp << 'EOF'
           ---
           sidebar_position: 100
           ---
 
-          FRONTMATTER
-
-          # Append the generated changelog
-          cat CHANGELOG.md >> docs/docs/changelog.md
+          EOF
+            cat CHANGELOG.md >> CHANGELOG.tmp
+            mv CHANGELOG.tmp CHANGELOG.md
+          fi
 
       - name: Commit changes
         if: steps.changelog.outputs.skipped == 'false'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add CHANGELOG.md docs/docs/changelog.md
+          git add CHANGELOG.md
           git diff --staged --quiet || git commit -m "docs: update changelog [skip ci]"
           git push

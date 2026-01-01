@@ -1,3 +1,7 @@
+---
+sidebar_position: 100
+---
+
 ## [0.2.0](https://github.com/jmylchreest/tinct/compare/v0.1.21...v0.2.0) (2026-01-01)
 
 
@@ -12,4 +16,3 @@
 ## [0.1.18](https://github.com/jmylchreest/tinct/compare/v0.1.17...v0.1.18) (2025-12-24)
 
 ## [0.1.17](https://github.com/jmylchreest/tinct/compare/v0.1.16...v0.1.17) (2025-12-14)
-
