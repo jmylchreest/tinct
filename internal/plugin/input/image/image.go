@@ -217,49 +217,32 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 
 // canonicalizePath converts a path to a canonical form suitable for use in templates.
 // - URLs are returned as-is
-// - Tilde-prefixed paths (~/...) are preserved for portability, but the rest is made absolute
+// - If userProvidedTilde is true and path is under $HOME, re-substitute ~ for portability
 // - Relative paths are converted to absolute paths
 // - Absolute paths are returned as-is
-func canonicalizePath(path string) string {
+func canonicalizePath(path string, userProvidedTilde bool) string {
 	// URLs are returned as-is
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		return path
 	}
 
-	// Check for tilde prefix
-	if strings.HasPrefix(path, "~/") {
-		// User specified ~/path - expand and then re-substitute ~ for portability
-		home, err := os.UserHomeDir()
-		if err != nil {
-			// Can't get home dir, return as-is
-			return path
-		}
-		// Expand the tilde to get the real path
-		expandedPath := filepath.Join(home, path[2:])
-		// Make it absolute (handles any .. or . in the path)
-		absPath, err := filepath.Abs(expandedPath)
-		if err != nil {
-			return path
-		}
-		// Re-substitute $HOME with ~ for portability
-		if strings.HasPrefix(absPath, home) {
-			return "~" + absPath[len(home):]
-		}
-		return absPath
-	}
-
-	// Check for ~user/ prefix (less common but should work)
-	if strings.HasPrefix(path, "~") {
-		// ~user/path - just make it absolute without tilde substitution
-		// Let the shell or application expand it
-		return path
-	}
-
-	// For non-tilde paths, convert to absolute
+	// Make the path absolute first
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return path
 	}
+
+	// If user originally provided a tilde path, re-substitute ~ for portability
+	if userProvidedTilde {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return absPath
+		}
+		if strings.HasPrefix(absPath, home) {
+			return "~" + absPath[len(home):]
+		}
+	}
+
 	return absPath
 }
 
@@ -273,6 +256,9 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 
 	// Store the original user input as raw path
 	p.rawWallpaperPath = p.path
+
+	// Track if user provided a tilde path for later canonicalization
+	p.userProvidedTilde = strings.HasPrefix(p.path, "~/")
 
 	// Resolve the path - if it's a directory, select a random image.
 	resolvedPath, err := image.ResolveImagePath(p.path)
@@ -326,7 +312,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	}
 
 	// Store the canonical wallpaper path (absolute or tilde-prefixed for portability).
-	p.loadedImagePath = canonicalizePath(wallpaperPath)
+	p.loadedImagePath = canonicalizePath(wallpaperPath, p.userProvidedTilde)
 
 	// Calculate seed based on configured mode using shared utility.
 	// Use the resolved path for filepath-based seeds.

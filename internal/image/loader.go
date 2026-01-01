@@ -22,6 +22,20 @@ import (
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
 )
 
+// ExpandTilde expands a tilde prefix in a path to the user's home directory.
+// Returns the original path unchanged if it doesn't start with ~ or if
+// home directory lookup fails.
+func ExpandTilde(path string) string {
+	if !strings.HasPrefix(path, "~/") {
+		return path
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	return filepath.Join(home, path[2:])
+}
+
 // Loader handles loading images from various sources.
 type Loader interface {
 	// Load loads an image from the given path.
@@ -79,6 +93,7 @@ func (l *FileLoader) Load(path string) (image.Image, error) {
 // For local files, it verifies the file exists and can be decoded.
 // For directories, it verifies the directory exists (actual scanning happens later).
 // For HTTP(S) URLs, it just validates the URL format (actual fetching happens later).
+// Tilde paths (~/...) are expanded to the user's home directory.
 func ValidateImagePath(path string) error {
 	// Check if path is empty.
 	if path == "" {
@@ -92,8 +107,11 @@ func ValidateImagePath(path string) error {
 		return nil
 	}
 
+	// Expand tilde paths before validation.
+	expandedPath := ExpandTilde(path)
+
 	// Local file path validation.
-	info, err := os.Stat(path)
+	info, err := os.Stat(expandedPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("image file or directory not found: %s", path)
@@ -108,7 +126,7 @@ func ValidateImagePath(path string) error {
 
 	// Attempt to decode the image config to verify it's a supported format.
 	// This will work with any format that the image library supports.
-	file, err := os.Open(path) // #nosec G304 - User-specified image path, intended to be read
+	file, err := os.Open(expandedPath) // #nosec G304 - User-specified image path, intended to be read
 	if err != nil {
 		return fmt.Errorf("failed to open image file: %w", err)
 	}
@@ -200,25 +218,29 @@ func SelectRandomImage(imagePaths []string) (string, error) {
 // If the path is a directory, it scans for images and returns a random one.
 // If the path is a file, it returns the path as-is.
 // For HTTP(S) URLs, it returns the URL as-is.
+// Tilde paths (~/...) are expanded to the user's home directory.
 func ResolveImagePath(path string) (string, error) {
 	// URLs are returned as-is.
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		return path, nil
 	}
 
+	// Expand tilde paths.
+	expandedPath := ExpandTilde(path)
+
 	// Check if path exists.
-	info, err := os.Stat(path)
+	info, err := os.Stat(expandedPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to access path: %w", err)
 	}
 
-	// If it's a file, return as-is.
+	// If it's a file, return the expanded path.
 	if !info.IsDir() {
-		return path, nil
+		return expandedPath, nil
 	}
 
 	// It's a directory - scan for images and select randomly.
-	imageFiles, err := ScanDirectoryForImages(path)
+	imageFiles, err := ScanDirectoryForImages(expandedPath)
 	if err != nil {
 		return "", err
 	}
