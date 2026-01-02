@@ -120,6 +120,12 @@ func (p *RandomPlugin) WallpaperPath() string {
 	return ""
 }
 
+// WallpaperRawPath returns an empty string as random plugin doesn't provide wallpapers.
+// This implements the required InputPlugin interface method.
+func (p *RandomPlugin) WallpaperRawPath() string {
+	return ""
+}
+
 // GetFlagHelp returns help information for plugin flags.
 // This implements the required InputPlugin interface method.
 func (p *RandomPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
