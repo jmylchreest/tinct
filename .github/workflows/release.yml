@@ -453,11 +453,13 @@ jobs:
             echo "Updating changelog: adding [$VERSION] section after [Unreleased]"
 
             # Use awk to insert new version header after [Unreleased]
+            # Format: version on heading line, date on separate line in italics
             awk -v ver="$VERSION" -v date="$DATE" '
               /^## \[Unreleased\]/ {
                 print
                 print ""
-                print "## [" ver "] - " date
+                print "## [" ver "]"
+                print "*" date "*"
                 next
               }
               { print }
