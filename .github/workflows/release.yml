@@ -446,16 +446,22 @@ jobs:
         id: changelog
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
-          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
-          TAG_NAME="${GITHUB_REF_NAME}"
           DATE=$(date +%Y-%m-%d)
 
           # Check if changelog has [Unreleased] section
           if grep -q "## \[Unreleased\]" CHANGELOG.md; then
-            echo "Updating changelog: converting [Unreleased] to [$VERSION]"
+            echo "Updating changelog: adding [$VERSION] section after [Unreleased]"
 
-            # Replace [Unreleased] with versioned header
-            sed -i "s/## \[Unreleased\]/## [$VERSION] - $DATE\n\n## [Unreleased]/" CHANGELOG.md
+            # Use awk to insert new version header after [Unreleased]
+            awk -v ver="$VERSION" -v date="$DATE" '
+              /^## \[Unreleased\]/ {
+                print
+                print ""
+                print "## [" ver "] - " date
+                next
+              }
+              { print }
+            ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
 
             # Copy to docs
             cp CHANGELOG.md docs/docs/changelog.md
