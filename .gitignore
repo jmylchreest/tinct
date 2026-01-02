@@ -99,3 +99,4 @@ cosign.key
 docs/.docusaurus/
 docs/build/
 docs/node_modules/
+contrib/plugins/input/random/random
