@@ -170,7 +170,6 @@
         "id": "changelog/index"
       },
       "items": [
-        "changelog/unreleased",
         "changelog/v0.1.22",
         "changelog/v0.1.21",
         "changelog/v0.1.20",
