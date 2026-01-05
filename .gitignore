@@ -100,3 +100,6 @@ docs/.docusaurus/
 docs/build/
 docs/node_modules/
 contrib/plugins/input/random/random
+
+# Claude Code local settings
+.claude/*.local.*
