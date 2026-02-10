@@ -31,8 +31,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/ghostty"
 	gnomeshell "github.com/jmylchreest/tinct/internal/plugin/output/gnome-shell"
 	"github.com/jmylchreest/tinct/internal/plugin/output/gtk3"
-	"github.com/jmylchreest/tinct/internal/plugin/output/histui"
 	"github.com/jmylchreest/tinct/internal/plugin/output/gtk4"
+	"github.com/jmylchreest/tinct/internal/plugin/output/histui"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprpaper"
@@ -41,6 +41,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/konsole"
 	"github.com/jmylchreest/tinct/internal/plugin/output/libadwaita"
 	markdownout "github.com/jmylchreest/tinct/internal/plugin/output/markdown"
+	"github.com/jmylchreest/tinct/internal/plugin/output/mc"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
 	"github.com/jmylchreest/tinct/internal/plugin/output/ptyxis"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt5"
@@ -180,6 +181,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(kitty.New())
 	m.outputRegistry.Register(konsole.New())
 	m.outputRegistry.Register(libadwaita.New())
+	m.outputRegistry.Register(mc.New())
 	m.outputRegistry.Register(markdownout.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(ptyxis.New())
