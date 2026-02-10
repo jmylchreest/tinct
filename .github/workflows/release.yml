@@ -510,4 +510,6 @@ jobs:
       pages: write
       id-token: write
     uses: ./.github/workflows/docs.yml
+    with:
+      ref: main
     secrets: inherit

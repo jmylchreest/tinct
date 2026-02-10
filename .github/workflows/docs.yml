@@ -19,6 +19,12 @@ on:
 
   # Allow calling from other workflows
   workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to checkout (defaults to github.sha)'
+        type: string
+        required: false
+        default: ''
 
 # Sets permissions of the GITHUB_TOKEN
 permissions:
@@ -44,6 +50,7 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
