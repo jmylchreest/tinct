@@ -275,6 +275,38 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: opencode (Go)
+  - id: tinct-plugin-opencode
+    main: .
+    binary: tinct-plugin-opencode
+    dir: ./contrib/plugins/output/opencode
+
+    # Build for multiple platforms (OpenCode is cross-platform)
+    goos:
+      - linux
+      - darwin
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm64
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
   # Plugin: keylightd-tray (Go)
   - id: tinct-plugin-keylightd-tray
     main: .
@@ -473,6 +505,31 @@ archives:
       - src: contrib/plugins/output/zed/README.md
         dst: README.md
       - src: contrib/plugins/output/zed/templates/*.tmpl
+        dst: templates/
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-opencode-archive
+    ids:
+      - tinct-plugin-opencode
+    name_template: >-
+      tinct-plugin-opencode_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    files:
+      - src: contrib/plugins/output/opencode/README.md
+        dst: README.md
+      - src: contrib/plugins/output/opencode/templates/*.tmpl
         dst: templates/
       - src: LICENSE
         dst: LICENSE
@@ -731,6 +788,36 @@ aurs:
       done
     install: .goreleaser/aur-install-scripts/plugin-zed.install
 
+  # Plugin: opencode
+  - name: tinct-plugin-opencode-bin
+    ids:
+      - tinct-plugin-opencode-archive
+    homepage: "https://github.com/jmylchreest/tinct"
+    description: "OpenCode theme plugin for Tinct"
+    maintainers:
+      - "John Mylchreest <jmylchreest@gmail.com>"
+    license: MIT
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-opencode-bin.git"
+    depends:
+      - tinct
+    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    package: |-
+      # bin
+      install -Dm755 "./tinct-plugin-opencode" "${pkgdir}/usr/bin/tinct-plugin-opencode"
+
+      # license
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-opencode/LICENSE"
+
+      # sbom
+      for sbom in *.sbom.json; do
+        if [ -f "$sbom" ]; then
+          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-opencode/sbom.json"
+          break
+        fi
+      done
+    install: .goreleaser/aur-install-scripts/plugin-opencode.install
+
   # Plugin: keylightd-tray
   - name: tinct-plugin-keylightd-tray-bin
     ids:
@@ -810,6 +897,7 @@ release:
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-templater_{{.Version}}_Linux_x86_64.tar.gz:templater
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-dunstify_{{.Version}}_Linux_x86_64.tar.gz:dunstify
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-zed_{{.Version}}_Linux_x86_64.tar.gz:zed
+    tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-opencode_{{.Version}}_Linux_x86_64.tar.gz:opencode
     tinct plugins add https://github.com/jmylchreest/tinct/releases/download/{{.Tag}}/tinct-plugin-keylightd-tray_{{.Version}}_Linux_x86_64.tar.gz:keylightd-tray
     ```
 
@@ -820,6 +908,7 @@ release:
     tinct plugins add ./templater
     tinct plugins add ./dunstify
     tinct plugins add ./zed
+    tinct plugins add ./opencode
     tinct plugins add ./keylightd-tray
     ```
 
