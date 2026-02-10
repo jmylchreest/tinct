@@ -34,6 +34,7 @@ func TemplateFuncs() template.FuncMap {
 		"rgbDecimal":  rgbDecimalFunc,
 		"rgbaDecimal": rgbaDecimalFunc,
 		"rgbSpaces":   rgbSpacesFunc,
+		"xterm256":    xterm256Func,
 
 		// Alpha manipulation.
 		"withAlpha": withAlphaFunc,
@@ -226,6 +227,14 @@ func allColorsFunc(data any) []colour.ColorValue {
 func countFunc(data any) int {
 	ph := extractPaletteHelper(data)
 	return ph.Count()
+}
+
+// xterm256Func converts a ColorValue to the nearest xterm-256 color index string.
+// Returns a string like "color123" suitable for applications that use xterm-256 color
+// references (e.g., Midnight Commander, tmux). Skips system colors 0-15 for
+// terminal-independent behavior.
+func xterm256Func(cv colour.ColorValue) string {
+	return colour.NearestXterm256String(cv.R(), cv.G(), cv.B())
 }
 
 // ansiFunc finds the closest color to a given ANSI color name.
