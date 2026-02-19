@@ -17,7 +17,9 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/manifest"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/commonflags"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
+	"github.com/jmylchreest/tinct/internal/telemetry"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
@@ -88,7 +90,6 @@ func init() {
 func runGenerate(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
-	// Phase 0: Initialize manifest manager for file tracking.
 	var err error
 	generateManifestManager, err = manifest.NewManager("")
 	if err != nil {
@@ -98,69 +99,58 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load manifest: %w", err)
 	}
 
-	// Phase 1: Load and configure plugins.
 	if err := loadAndConfigurePlugins(); err != nil {
 		return err
 	}
 
-	// Phase 2: Get and validate input plugin.
 	inputPlugin, err := getAndValidateInputPlugin()
 	if err != nil {
 		return err
 	}
 
-	// Phase 3: Generate input palette.
 	rawPalette, wallpaperPath, wallpaperRawPath, err := generateInputPalette(ctx, inputPlugin)
 	if err != nil {
 		return err
 	}
 
-	// Phase 4: Categorize the palette (primary + alternate for dual-theme support).
 	palette, alternatePalette := categorizePalette(rawPalette, inputPlugin, !globalNoDesaturation)
 
-	// Phase 5: Handle palette output (preview/save).
 	if err := handlePaletteOutput(palette); err != nil {
 		return err
 	}
 
-	// Phase 6: Select output plugins.
 	outputPlugins, err := selectOutputPlugins()
 	if err != nil {
 		return err
 	}
 
-	// Phase 7: Run global pre-hook.
 	if err := runGlobalHookScript(ctx, "pre-generate", generateVerbose, generateDryRun); err != nil {
 		if generateVerbose {
 			fmt.Fprintf(os.Stderr, " Global pre-hook failed: %v\n", err)
 		}
 	}
 
-	// Phase 8: Validate plugins and run pre-execute hooks.
 	executions := preparePluginExecutions(ctx, outputPlugins)
-
-	// Phase 9: Generate and write files.
 	successCount := generateAndWriteFiles(executions, palette, alternatePalette, wallpaperPath, wallpaperRawPath)
 
-	// Phase 10: Run post-execute hooks.
 	if !generateDryRun {
 		runPostExecutionHooks(ctx, executions, wallpaperPath)
 
-		// Run global post-hook.
 		if err := runGlobalHookScript(ctx, "post-generate", generateVerbose, generateDryRun); err != nil {
 			if generateVerbose {
 				fmt.Fprintf(os.Stderr, " Global post-hook failed: %v\n", err)
 			}
 		}
 
-		// Save manifest with tracked files.
 		if err := generateManifestManager.Save(); err != nil {
 			fmt.Fprintf(os.Stderr, " Warning: failed to save manifest: %v\n", err)
 		}
 	}
 
-	// Phase 11: Print summary.
-	return printGenerationSummary(successCount, executions)
+	summaryErr := printGenerationSummary(successCount, executions)
+	sendGenerateTelemetry(executions, successCount, palette)
+
+	return summaryErr
 }
 
 // runGlobalHookScript executes a global hook script if it exists.
@@ -555,4 +545,57 @@ func writeFile(path string, content []byte, verbose bool) error {
 	}
 
 	return nil
+}
+
+// sendGenerateTelemetry sends anonymous telemetry events for the generate command.
+// This is synchronous, fire-and-forget, and fails silently. It never affects the CLI's behaviour.
+// It sends:
+//   - One "generate" summary event with overall stats
+//   - One "plugin_used" event per output plugin (for per-plugin popularity analytics)
+func sendGenerateTelemetry(executions []pluginExecution, successCount int, palette *colour.CategorisedPalette) {
+	client := telemetry.New()
+	if !client.IsEnabled() {
+		return
+	}
+
+	// Collect output plugin names and count external plugins.
+	pluginNames := make([]string, 0, len(executions))
+	externalCount := 0
+	for _, exec := range executions {
+		pluginNames = append(pluginNames, exec.plugin.Name())
+		if _, ok := exec.plugin.(*manager.ExternalOutputPlugin); ok {
+			externalCount++
+		}
+	}
+
+	// Determine theme type string.
+	themeType := ""
+	if palette != nil {
+		themeType = palette.ThemeType.String()
+	}
+
+	// Send the summary event.
+	summaryEvent := telemetry.NewGenerateEvent(telemetry.GenerateEventParams{
+		InputPlugin:         generateInputPlugin,
+		OutputPlugins:       pluginNames,
+		SuccessCount:        successCount,
+		ThemeType:           themeType,
+		SeedMode:            commonflags.SeedMode,
+		Backend:             generateBackend,
+		ExtractAmbience:     commonflags.ExtractAmbience,
+		DryRun:              generateDryRun,
+		DualTheme:           !globalNoDesaturation,
+		ExternalPluginCount: externalCount,
+	})
+	client.Send(summaryEvent)
+
+	// Send one event per output plugin for per-plugin popularity and failure analytics.
+	for _, exec := range executions {
+		isExternal := false
+		if _, ok := exec.plugin.(*manager.ExternalOutputPlugin); ok {
+			isExternal = true
+		}
+		succeeded := !exec.skip && len(exec.writtenFiles) > 0
+		client.Send(telemetry.NewPluginUsedEvent(exec.plugin.Name(), isExternal, succeeded))
+	}
 }
