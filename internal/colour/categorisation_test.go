@@ -196,7 +196,7 @@ func TestGenerateFallbackSemanticColours(t *testing.T) {
 	}
 }
 
-func TestCategoriseWithSemanticFallbacks(t *testing.T) {
+func TestCategoriseWithSemanticFallbacks(t *testing.T) { //nolint:gocognit // comprehensive test matrix
 	tests := []struct {
 		name      string
 		colors    []color.Color

@@ -247,7 +247,7 @@ func (p *Plugin) reloadThemeViaDBus(ctx context.Context) (bool, error) {
 // PostExecute applies theme settings and sets wallpaper automatically.
 // Strategy 1: D-Bus theme reload (most reliable, no theme toggling needed)
 // Strategy 2: gsettings theme toggling (fallback).
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error { //nolint:gocognit // multi-strategy GNOME theme application with fallbacks
 	if execCtx.DryRun {
 		return nil
 	}

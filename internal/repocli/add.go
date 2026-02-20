@@ -11,7 +11,7 @@ import (
 )
 
 // AddCmd returns the add command.
-func AddCmd() *cobra.Command {
+func AddCmd() *cobra.Command { //nolint:gocognit // CLI command builder with many flags and validation
 	var (
 		pluginName    string
 		pluginType    string

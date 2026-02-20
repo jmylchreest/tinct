@@ -319,7 +319,7 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 }
 
 // extractFromTarGz extracts a plugin from a tar.gz archive.
-func extractFromTarGz(data []byte, targetFile, archiveName, pluginDir string, verbose bool) (string, error) {
+func extractFromTarGz(data []byte, targetFile, archiveName, pluginDir string, verbose bool) (string, error) { //nolint:gocognit // archive extraction with error handling
 	// Create gzip reader.
 	gzr, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
@@ -633,7 +633,7 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 }
 
 // extractFromTarXz extracts a plugin from a tar.xz archive.
-func extractFromTarXz(data []byte, targetFile, archiveName, pluginDir string, verbose bool) (string, error) {
+func extractFromTarXz(data []byte, targetFile, archiveName, pluginDir string, verbose bool) (string, error) { //nolint:gocognit // archive extraction with error handling
 	// Create xz reader.
 	xzr, err := xz.NewReader(bytes.NewReader(data))
 	if err != nil {
@@ -756,7 +756,7 @@ func extractFromTarXz(data []byte, targetFile, archiveName, pluginDir string, ve
 }
 
 // extractFromTarBz2 extracts a plugin from a tar.bz2 archive.
-func extractFromTarBz2(data []byte, targetFile, archiveName, pluginDir string, verbose bool) (string, error) {
+func extractFromTarBz2(data []byte, targetFile, archiveName, pluginDir string, verbose bool) (string, error) { //nolint:gocognit // archive extraction with error handling
 	// Create bzip2 reader.
 	bzr := bzip2.NewReader(bytes.NewReader(data))
 

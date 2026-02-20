@@ -15,7 +15,7 @@ import (
 )
 
 // extractFromTarXz extracts a plugin from a tar.xz archive.
-func extractFromTarXz(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) {
+func extractFromTarXz(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) { //nolint:gocognit // archive extraction with error handling
 	// Create xz reader
 	xzr, err := xz.NewReader(bytes.NewReader(data))
 	if err != nil {

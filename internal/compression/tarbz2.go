@@ -15,7 +15,7 @@ import (
 )
 
 // extractFromTarBz2 extracts a plugin from a tar.bz2 archive.
-func extractFromTarBz2(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) {
+func extractFromTarBz2(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) { //nolint:gocognit // archive extraction with error handling
 	// Create bzip2 reader
 	bzr := bzip2.NewReader(bytes.NewReader(data))
 

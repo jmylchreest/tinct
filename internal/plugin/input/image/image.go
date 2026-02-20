@@ -67,7 +67,7 @@ type Plugin struct {
 // Cache settings are read from tinct.toml (with env var overrides already applied).
 func New() *Plugin {
 	// Load config — env var overrides are applied by config.Load().
-	cfg, _ := config.Load()
+	cfg, _ := config.Load() //nolint:errcheck // nil cfg handled below
 
 	cacheEnabled := true
 	cacheDir := ""
@@ -245,7 +245,7 @@ func canonicalizePath(path string, userProvidedTilde bool) string {
 
 // Generate creates a raw colour palette by extracting colours from the image.
 // Returns only the extracted colors - categorization happens separately.
-func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) { //nolint:gocognit // image processing with multiple backends and fallbacks
 	// Validate the backend first before doing any expensive operations.
 	if opts.Backend != "kmeans" {
 		return nil, fmt.Errorf("invalid backend: %s (only kmeans is currently supported)", opts.Backend)

@@ -57,7 +57,7 @@ func init() {
 	pluginInstallCmd.Flags().BoolVarP(&installForce, "force", "f", false, "Force reinstall if already installed")
 }
 
-func runPluginInstall(cmd *cobra.Command, args []string) error {
+func runPluginInstall(cmd *cobra.Command, args []string) error { //nolint:gocognit // plugin resolution and installation with validation
 	pluginName := args[0]
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {

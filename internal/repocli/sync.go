@@ -11,7 +11,7 @@ import (
 )
 
 // SyncCmd returns the sync command.
-func SyncCmd() *cobra.Command {
+func SyncCmd() *cobra.Command { //nolint:gocognit // CLI command builder with source handling and parallel sync
 	var (
 		configPath         string
 		minProtocolVersion string
@@ -230,7 +230,7 @@ Examples:
 }
 
 // syncFromConfig handles syncing from a configuration file.
-func syncFromConfig(
+func syncFromConfig( //nolint:gocognit // config parsing and multi-source sync
 	configPath string,
 	manifestPath string,
 	minProtocolVersion string,

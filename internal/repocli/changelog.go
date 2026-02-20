@@ -150,7 +150,7 @@ func (c *ChangeLog) HasMaterialChanges() bool {
 }
 
 // String formats the changelog as a human-readable string.
-func (c *ChangeLog) String() string {
+func (c *ChangeLog) String() string { //nolint:gocognit // formatted output with sections, categories, and markdown
 	if c.IsEmpty() {
 		return "No changes"
 	}
@@ -258,7 +258,7 @@ func (c *ChangeLog) String() string {
 
 // BuildFromManifestDiff creates a changelog from a manifest diff.
 // This is the proper way to build a changelog based on actual changes to the repository.
-func BuildFromManifestDiff(diff *repomanager.ManifestDiff) *ChangeLog {
+func BuildFromManifestDiff(diff *repomanager.ManifestDiff) *ChangeLog { //nolint:gocognit // diff processing with categorization
 	if diff == nil {
 		return NewChangeLog()
 	}

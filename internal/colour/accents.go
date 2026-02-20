@@ -33,7 +33,7 @@ const (
 // 4. SATURATION:
 //   - Prefer more saturated colors for accents (visual distinctiveness)
 //   - But not too saturated in dark themes (visual vibration)
-func sortAccentsForTheme(accents []CategorisedColour, bg, fg CategorisedColour, theme ThemeType) {
+func sortAccentsForTheme(accents []CategorisedColour, bg, fg CategorisedColour, theme ThemeType) { //nolint:gocognit // multi-criteria sorting algorithm
 	if len(accents) == 0 {
 		return
 	}

@@ -11,6 +11,8 @@
 
 # Contrib plugin binaries (any tinct-plugin-* binary anywhere under contrib/)
 contrib/**/tinct-plugin-*
+# Also ignore non-standard named binaries
+contrib/plugins/input/random/random
 
 # Test binary, built with `go test -c`
 *.test

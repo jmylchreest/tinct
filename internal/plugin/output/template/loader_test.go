@@ -366,7 +366,7 @@ func TestLoader_GetInfo(t *testing.T) {
 	})
 }
 
-func TestLoader_VersionedTemplates(t *testing.T) {
+func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehensive versioning test
 	tmpDir := t.TempDir()
 
 	loader := &Loader{

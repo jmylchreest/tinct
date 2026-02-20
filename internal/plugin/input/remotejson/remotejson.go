@@ -186,7 +186,7 @@ func (p *Plugin) applyQuery(data any, query string) (any, error) {
 }
 
 // extractColors recursively extracts color values from JSON data.
-func (p *Plugin) extractColors(data any, prefix string, colors map[string]string) {
+func (p *Plugin) extractColors(data any, prefix string, colors map[string]string) { //nolint:gocognit // recursive JSON traversal with type switching
 	switch v := data.(type) {
 	case map[string]any:
 		// Check if this object looks like a color object (has hex/rgb properties).

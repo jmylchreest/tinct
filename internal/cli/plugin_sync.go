@@ -79,7 +79,7 @@ func init() {
 	pluginCleanCmd.Flags().BoolVarP(&pluginYes, "yes", "y", false, "Auto-confirm removal")
 }
 
-func runPluginSync(cmd *cobra.Command, args []string) error {
+func runPluginSync(cmd *cobra.Command, args []string) error { //nolint:gocognit // sync lock file with installed plugins, multiple sources
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)

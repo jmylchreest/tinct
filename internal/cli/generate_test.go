@@ -36,7 +36,7 @@ func createValidPNG(t *testing.T, path string) {
 
 // TestGenerateCommand comprehensively tests the generate command.
 // This single test function covers multiple scenarios to avoid Cobra flag conflicts.
-func TestGenerateCommand(t *testing.T) {
+func TestGenerateCommand(t *testing.T) { //nolint:gocognit // comprehensive test scenarios
 	// Create temp directory and test image.
 	tempDir, err := os.MkdirTemp("", "tinct-cli-tests-")
 	if err != nil {

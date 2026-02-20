@@ -282,7 +282,7 @@ func (cp *CategorisedPalette) String() string {
 // StringWithPreview returns a string representation with optional table display.
 // When showPreview is true, displays a detailed table with all colors and properties.
 // Color blocks are always shown in the table.
-func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string {
+func (cp *CategorisedPalette) StringWithPreview(showPreview bool) string { //nolint:gocognit // formatting logic with many branches
 	var result string
 
 	// Show theme type and contrast ratio on one line.

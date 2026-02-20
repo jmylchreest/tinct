@@ -287,7 +287,7 @@ func runCacheList() error {
 }
 
 // runFilesDelete deletes tracked files.
-func runFilesDelete(_ *cobra.Command, args []string) error {
+func runFilesDelete(_ *cobra.Command, args []string) error { //nolint:gocognit // multiple deletion modes with error handling
 	// Handle cache deletion separately.
 	if filesCache {
 		return runCacheDelete(args)
@@ -369,7 +369,7 @@ func runFilesDelete(_ *cobra.Command, args []string) error {
 }
 
 // runCacheDelete deletes cached files.
-func runCacheDelete(args []string) error {
+func runCacheDelete(args []string) error { //nolint:gocognit // multiple cache types with selective deletion
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get home directory: %w", err)
@@ -481,7 +481,7 @@ func runCacheDelete(args []string) error {
 }
 
 // runFilesAdopt adopts existing files into the manifest for a specific plugin.
-func runFilesAdopt(_ *cobra.Command, args []string) error {
+func runFilesAdopt(_ *cobra.Command, args []string) error { //nolint:gocognit // file discovery and manifest update
 	mgr, err := manifest.NewManager("")
 	if err != nil {
 		return fmt.Errorf("failed to create manifest manager: %w", err)

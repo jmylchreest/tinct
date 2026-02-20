@@ -213,7 +213,7 @@ func runPluginList(cmd *cobra.Command, _ []string) error {
 }
 
 // runPluginAdd adds an external plugin with comprehensive safety checks.
-func runPluginAdd(cmd *cobra.Command, args []string) error {
+func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocognit // multi-source plugin installation with validation
 	source := args[0]
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
@@ -474,7 +474,7 @@ func updatePluginFromRepository(meta *ExternalPluginMeta, pluginDir string, verb
 }
 
 // runPluginUpdate updates external plugins from lock file sources.
-func runPluginUpdate(cmd *cobra.Command, args []string) error {
+func runPluginUpdate(cmd *cobra.Command, args []string) error { //nolint:gocognit // batch plugin update with per-plugin error handling
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)

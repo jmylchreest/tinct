@@ -82,7 +82,7 @@ var (
 	cachedConfig *Config
 	cfgPath      string
 	configOnce   sync.Once
-	configErr    error
+	errConfig    error
 
 	cachedID string
 	idOnce   sync.Once
@@ -93,7 +93,7 @@ var (
 // return the cached value. Never returns a nil Config.
 func Load() (*Config, error) {
 	configOnce.Do(func() {
-		cachedConfig, cfgPath, configErr = loadFromDisk()
+		cachedConfig, cfgPath, errConfig = loadFromDisk()
 		if cachedConfig != nil {
 			applyEnvOverrides(cachedConfig)
 		}
@@ -102,10 +102,10 @@ func Load() (*Config, error) {
 	if cachedConfig == nil {
 		cfg := defaults()
 		applyEnvOverrides(cfg)
-		return cfg, configErr
+		return cfg, errConfig
 	}
 
-	return cachedConfig, configErr
+	return cachedConfig, errConfig
 }
 
 // InstallationID returns the persistent anonymous installation identifier.
@@ -126,7 +126,7 @@ func InstallationID() string {
 
 // Path returns the path to the tinct.toml config file.
 func Path() string {
-	_, _ = Load()
+	_, _ = Load() //nolint:errcheck // populate cfgPath, error not needed here
 	return cfgPath
 }
 
@@ -342,7 +342,7 @@ func ResetForTesting() {
 	cachedConfig = nil
 	cfgPath = ""
 	configOnce = sync.Once{}
-	configErr = nil
+	errConfig = nil
 	cachedID = ""
 	idOnce = sync.Once{}
 }

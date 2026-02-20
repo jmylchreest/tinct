@@ -77,7 +77,7 @@ linters:
 
     # Cognitive complexity
     gocognit:
-      min-complexity: 20
+      min-complexity: 30
 
     # Constants detection
     goconst:

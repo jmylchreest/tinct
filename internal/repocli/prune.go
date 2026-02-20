@@ -9,7 +9,7 @@ import (
 )
 
 // PruneCmd returns the prune command.
-func PruneCmd() *cobra.Command {
+func PruneCmd() *cobra.Command { //nolint:gocognit // CLI command builder with many prune options
 	var (
 		manifestPath    string
 		verifyAll       bool

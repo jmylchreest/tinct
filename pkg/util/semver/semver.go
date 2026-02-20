@@ -42,16 +42,16 @@ func Parse(version string) *Version {
 	}
 
 	// Major is always present if we matched
-	v.Major, _ = strconv.Atoi(matches[1])
+	v.Major, _ = strconv.Atoi(matches[1]) //nolint:errcheck // regex guarantees numeric
 
 	// Minor is optional
 	if matches[2] != "" {
-		v.Minor, _ = strconv.Atoi(matches[2])
+		v.Minor, _ = strconv.Atoi(matches[2]) //nolint:errcheck // regex guarantees numeric
 	}
 
 	// Patch is optional
 	if matches[3] != "" {
-		v.Patch, _ = strconv.Atoi(matches[3])
+		v.Patch, _ = strconv.Atoi(matches[3]) //nolint:errcheck // regex guarantees numeric
 	}
 
 	// Prerelease is optional

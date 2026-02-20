@@ -47,7 +47,7 @@ func (c *MetadataHydrationCache) GetMetadata(pluginName, version string) (*repom
 }
 
 // SetMetadata stores metadata and hydrates any pending plugins.
-func (c *MetadataHydrationCache) SetMetadata(
+func (c *MetadataHydrationCache) SetMetadata( //nolint:gocognit // metadata storage with pending plugin hydration
 	pluginName string,
 	version string,
 	metadata *repomanager.PluginMetadata,
@@ -184,7 +184,7 @@ func (t *ProtocolVersionTracker) RecordFailure(pluginName, version string) {
 }
 
 // ProcessGitHubSourceWithProtocol processes a GitHub sync source with protocol filtering.
-func ProcessGitHubSourceWithProtocol(
+func ProcessGitHubSourceWithProtocol( //nolint:gocognit // GitHub API processing with release filtering and protocol validation
 	source *repomanager.SyncSource,
 	client *repomanager.GitHubClient,
 	mgr *repomanager.ManifestManager,
@@ -389,7 +389,7 @@ func ProcessGitHubSourceWithProtocol(
 }
 
 // ProcessURLSourceWithProtocol processes a URL sync source with protocol filtering.
-func ProcessURLSourceWithProtocol(
+func ProcessURLSourceWithProtocol( //nolint:gocognit // URL fetching with JSON parsing and protocol validation
 	source *repomanager.SyncSource,
 	mgr *repomanager.ManifestManager,
 	minProtocolVersion string,

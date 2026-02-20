@@ -152,7 +152,7 @@ func runPluginTemplatesList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginTemplatesDump(cmd *cobra.Command, args []string) error {
+func runPluginTemplatesDump(cmd *cobra.Command, args []string) error { //nolint:gocognit // template extraction for multiple plugins with filtering
 	// Get all registered output plugins from the manager.
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {

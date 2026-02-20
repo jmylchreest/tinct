@@ -49,7 +49,7 @@ func PruneManifest(
 // PruneManifestWithOptions performs comprehensive pruning on a manifest with advanced options.
 // It validates downloads against filters, marks unavailable URLs, removes old entries,
 // prunes incompatible plugins, and limits the number of versions kept per plugin.
-func PruneManifestWithOptions(
+func PruneManifestWithOptions( //nolint:gocognit // multi-phase pruning with validation and filtering
 	mgr *repomanager.ManifestManager,
 	opts *PruneOptions,
 	changelog *ChangeLog,

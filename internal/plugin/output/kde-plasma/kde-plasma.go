@@ -273,7 +273,7 @@ func (p *Plugin) generateColorSchemeVariant(themeData *colour.ThemeData, variant
 // Both plasma-apply-colorscheme (with variant toggling) and D-Bus reload are used together:
 // - plasma-apply-colorscheme applies the .colors file system-wide
 // - D-Bus reload ensures KWin and Plasma Shell reload their configurations immediately.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error { //nolint:gocognit // KDE theme application with variant toggling and D-Bus reload
 	if execCtx.DryRun {
 		return nil
 	}

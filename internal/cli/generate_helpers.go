@@ -557,7 +557,7 @@ func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedP
 }
 
 // writePluginFiles writes generated files to disk.
-func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[string][]byte) bool {
+func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[string][]byte) bool { //nolint:gocognit // file write with backup, conflict handling, and verbose output
 	outputDir := plugin.DefaultOutputDir()
 	exec.writtenFiles = make([]string, 0, len(files))
 

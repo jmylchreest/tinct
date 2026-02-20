@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestParse(t *testing.T) {
+func TestParse(t *testing.T) { //nolint:gocognit // comprehensive parsing test
 	tests := []struct {
 		name    string
 		input   string

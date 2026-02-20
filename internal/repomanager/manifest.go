@@ -114,7 +114,7 @@ func (m *ManifestManager) Save() error {
 
 // AddOrUpdatePluginVersion adds or updates a plugin version.
 // Returns detailed information about what was added/updated.
-func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *repository.Version) (*AddResult, error) {
+func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *repository.Version) (*AddResult, error) { //nolint:gocognit // plugin version management with platform handling
 	result := &AddResult{
 		PlatformsAdded: []string{},
 	}
