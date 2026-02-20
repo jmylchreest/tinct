@@ -17,19 +17,19 @@ var (
 	// AspectRatio is the image aspect ratio.
 	AspectRatio string
 
-	// Cache flags
+	// Cache flags.
 	CacheEnabled   bool
 	CacheDir       string
 	CacheFilename  string
 	CacheOverwrite bool
 
-	// Region extraction flags
+	// Region extraction flags.
 	ExtractAmbience bool
 	Regions         int
 	SamplePercent   int
 	SampleMethod    string
 
-	// Seed flags
+	// Seed flags.
 	SeedMode  string
 	SeedValue int64
 

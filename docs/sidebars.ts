@@ -8,6 +8,7 @@ const sidebars: SidebarsConfig = {
   docs: [
     'intro',
     'installation',
+    'telemetry',
     {
       type: 'category',
       label: 'Getting Started',

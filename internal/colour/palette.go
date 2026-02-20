@@ -141,10 +141,10 @@ func (p *Palette) String() string {
 	}
 
 	var result strings.Builder
-	result.WriteString(fmt.Sprintf("Palette with %d colors:\n", len(p.Colors)))
+	fmt.Fprintf(&result, "Palette with %d colors:\n", len(p.Colors))
 	for i, c := range p.Colors {
 		rgb := ToRGB(c)
-		result.WriteString(fmt.Sprintf("  %2d: %s (%s)\n", i+1, rgb.Hex(), rgb.String()))
+		fmt.Fprintf(&result, "  %2d: %s (%s)\n", i+1, rgb.Hex(), rgb.String())
 	}
 	return result.String()
 }

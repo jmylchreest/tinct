@@ -1,8 +1,9 @@
 module github.com/jmylchreest/tinct
 
-go 1.25.1
+go 1.26
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/godbus/dbus/v5 v5.2.0
 	github.com/google/go-github/v57 v57.0.0
 	github.com/hashicorp/go-hclog v1.6.3

@@ -28,7 +28,7 @@ import (
 var templates embed.FS
 
 // versionRegex matches the Hyprland version from "hyprland --version" or "hyprctl version" output.
-// Example: "Hyprland 0.53.0 built from branch..."
+// Example: "Hyprland 0.53.0 built from branch...".
 var versionRegex = regexp.MustCompile(`Hyprland\s+(\d+\.\d+(?:\.\d+)?)`)
 
 // Cached version to avoid repeated exec calls.

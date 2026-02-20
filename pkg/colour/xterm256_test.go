@@ -73,9 +73,9 @@ func TestNearestXterm256String(t *testing.T) {
 
 func TestXterm256ToRGB_CubeRoundtrip(t *testing.T) {
 	// All cube exact values should round-trip through NearestXterm256.
-	for ri := 0; ri < 6; ri++ {
-		for gi := 0; gi < 6; gi++ {
-			for bi := 0; bi < 6; bi++ {
+	for ri := range 6 {
+		for gi := range 6 {
+			for bi := range 6 {
 				idx := 16 + 36*ri + 6*gi + bi
 				r, g, b := Xterm256ToRGB(idx)
 				// These exact cube RGB values should map back to the same index.
@@ -103,7 +103,7 @@ func TestXterm256ToRGB_Grayscale(t *testing.T) {
 
 func TestXterm256ToRGB_SystemColors(t *testing.T) {
 	// System colors should return (0,0,0) as fallback.
-	for idx := 0; idx < 16; idx++ {
+	for idx := range 16 {
 		r, g, b := Xterm256ToRGB(idx)
 		if r != 0 || g != 0 || b != 0 {
 			t.Errorf("Xterm256ToRGB(%d) = (%d,%d,%d), want (0,0,0) for system color",

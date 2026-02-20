@@ -44,6 +44,7 @@ func TestParse(t *testing.T) {
 				result.Patch != tt.expected.Patch ||
 				result.Prerelease != tt.expected.Prerelease ||
 				result.Build != tt.expected.Build {
+
 				t.Errorf("Parse(%q) = {%d.%d.%d-%s+%s}, want {%d.%d.%d-%s+%s}",
 					tt.input,
 					result.Major, result.Minor, result.Patch, result.Prerelease, result.Build,

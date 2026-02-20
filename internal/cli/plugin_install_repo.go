@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -168,11 +167,6 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get plugin directory: %w", err)
 	}
 
-	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
-		return fmt.Errorf("failed to create plugin directory: %w", err)
-	}
-
 	// Download and install from URL.
 	pluginPath, err := installPluginFromSource(download.URL, "", pluginDir, sourceTypeHTTP, verbose, false)
 	if err != nil {
@@ -216,7 +210,6 @@ func runPluginInstall(cmd *cobra.Command, args []string) error {
 			Version:    pinnedVersion, // Empty if not pinned, allows updates to latest
 			Checksum:   download.Checksum,
 		},
-		InstalledAt: time.Now().Format(time.RFC3339),
 	}
 
 	if err := savePluginLock(lockPath, lock); err != nil {

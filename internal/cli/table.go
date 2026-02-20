@@ -22,15 +22,15 @@ type Table struct {
 	terminalWidthOverride int         // Override terminal width for testing
 
 	// Live mode support
-	live       bool           // If true, updates in-place; if false, static output
-	isTTY      bool           // Whether the output is a TTY (supports ANSI codes)
-	batching   bool           // If true, defer rendering until EndBatch() is called
-	rowIDs     map[string]int // Maps row ID to row index (for live mode)
-	rowOrder   []string       // Preserves insertion order of row IDs
-	writer     io.Writer      // Output writer (defaults to os.Stderr for live mode)
-	rendered   bool           // Whether table has been rendered
-	lineCount  int            // Number of lines in last render
-	mu         sync.Mutex     // Protects concurrent access in live mode
+	live      bool           // If true, updates in-place; if false, static output
+	isTTY     bool           // Whether the output is a TTY (supports ANSI codes)
+	batching  bool           // If true, defer rendering until EndBatch() is called
+	rowIDs    map[string]int // Maps row ID to row index (for live mode)
+	rowOrder  []string       // Preserves insertion order of row IDs
+	writer    io.Writer      // Output writer (defaults to os.Stderr for live mode)
+	rendered  bool           // Whether table has been rendered
+	lineCount int            // Number of lines in last render
+	mu        sync.Mutex     // Protects concurrent access in live mode
 }
 
 // NewTable creates a new table with the given headers.

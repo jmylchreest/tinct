@@ -57,17 +57,17 @@ func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData str
 	var buf bytes.Buffer
 
 	// Title
-	buf.WriteString(fmt.Sprintf("# %s\n\n", theme.Name))
+	fmt.Fprintf(&buf, "# %s\n\n", theme.Name)
 
 	// Description/source
 	if theme.Source != nil && theme.Source.Prompt != "" {
-		buf.WriteString(fmt.Sprintf("> Generated with tinct from \"%s\"\n\n", theme.Source.Prompt))
+		fmt.Fprintf(&buf, "> Generated with tinct from \"%s\"\n\n", theme.Source.Prompt)
 	}
 
 	// Thumbnail preview
 	if includeThumbnail && thumbnailData != "" {
 		buf.WriteString("## Preview\n\n")
-		buf.WriteString(fmt.Sprintf("![Wallpaper Preview](data:image/jpeg;base64,%s)\n\n", thumbnailData))
+		fmt.Fprintf(&buf, "![Wallpaper Preview](data:image/jpeg;base64,%s)\n\n", thumbnailData)
 	}
 
 	// Color palette table
@@ -82,7 +82,7 @@ func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData str
 			role = "-"
 		}
 		weight := fmt.Sprintf("%.1f%%", c.Weight*100)
-		buf.WriteString(fmt.Sprintf("| %s | `%s` | %s | %s |\n", swatch, c.Hex, role, weight))
+		fmt.Fprintf(&buf, "| %s | `%s` | %s | %s |\n", swatch, c.Hex, role, weight)
 	}
 	buf.WriteString("\n")
 
@@ -95,7 +95,7 @@ func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData str
 		for _, a := range theme.Ambience {
 			swatch := fmt.Sprintf("<span style=\"background:%s;color:%s\">████</span>", a.Hex, a.Hex)
 			weight := fmt.Sprintf("%.1f%%", a.Weight*100)
-			buf.WriteString(fmt.Sprintf("| %s | `%s` | %s | %s |\n", swatch, a.Hex, a.Region, weight))
+			fmt.Fprintf(&buf, "| %s | `%s` | %s | %s |\n", swatch, a.Hex, a.Region, weight)
 		}
 		buf.WriteString("\n")
 	}
@@ -107,13 +107,13 @@ func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData str
 			size := len(theme.Wallpaper.Data)
 			// Estimate actual size (base64 is ~1.33x original)
 			actualSize := float64(size) * 0.75 / 1024 / 1024
-			buf.WriteString(fmt.Sprintf("Embedded as base64 in front matter (%dx%d %s, %.1f MB)\n\n",
+			fmt.Fprintf(&buf, "Embedded as base64 in front matter (%dx%d %s, %.1f MB)\n\n",
 				theme.Wallpaper.Width, theme.Wallpaper.Height,
-				strings.ToUpper(theme.Wallpaper.Format), actualSize))
+				strings.ToUpper(theme.Wallpaper.Format), actualSize)
 		} else if theme.Wallpaper.Path != "" {
-			buf.WriteString(fmt.Sprintf("External file: `%s`\n\n", theme.Wallpaper.Path))
+			fmt.Fprintf(&buf, "External file: `%s`\n\n", theme.Wallpaper.Path)
 		} else if theme.Wallpaper.URL != "" {
-			buf.WriteString(fmt.Sprintf("External URL: %s\n\n", theme.Wallpaper.URL))
+			fmt.Fprintf(&buf, "External URL: %s\n\n", theme.Wallpaper.URL)
 		}
 	} else {
 		buf.WriteString("No wallpaper embedded.\n\n")
@@ -122,14 +122,14 @@ func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData str
 	// Source info
 	if theme.Source != nil {
 		buf.WriteString("## Source\n\n")
-		buf.WriteString(fmt.Sprintf("- **Plugin**: %s\n", theme.Source.Plugin))
+		fmt.Fprintf(&buf, "- **Plugin**: %s\n", theme.Source.Plugin)
 		if theme.Source.Model != "" {
-			buf.WriteString(fmt.Sprintf("- **Model**: %s\n", theme.Source.Model))
+			fmt.Fprintf(&buf, "- **Model**: %s\n", theme.Source.Model)
 		}
 		if theme.Source.Prompt != "" {
-			buf.WriteString(fmt.Sprintf("- **Prompt**: \"%s\"\n", theme.Source.Prompt))
+			fmt.Fprintf(&buf, "- **Prompt**: \"%s\"\n", theme.Source.Prompt)
 		}
-		buf.WriteString(fmt.Sprintf("- **Generated**: %s\n", theme.Generated.Format("2006-01-02T15:04:05Z07:00")))
+		fmt.Fprintf(&buf, "- **Generated**: %s\n", theme.Generated.Format("2006-01-02T15:04:05Z07:00"))
 	}
 
 	return buf.String()

@@ -19,7 +19,7 @@ type Version struct {
 }
 
 // versionRegex matches semantic versions like "0.53.0", "1.2.3-beta", "v1.0.0", "1.2.3+build"
-// Format: [v]MAJOR[.MINOR][.PATCH][-PRERELEASE][+BUILD]
+// Format: [v]MAJOR[.MINOR][.PATCH][-PRERELEASE][+BUILD].
 var versionRegex = regexp.MustCompile(`^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z\-\.]+))?(?:\+([0-9A-Za-z\-\.]+))?$`)
 
 // Parse parses a version string into a Version struct.

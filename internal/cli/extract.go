@@ -220,14 +220,14 @@ func formatPaletteFile(categorised *colour.CategorisedPalette) string {
 	// First pass: output all colors with role/position hints.
 	for _, color := range categorised.AllColours {
 		if color.Role != "" {
-			output.WriteString(fmt.Sprintf("%s=%s\n", color.Role, color.Hex))
+			fmt.Fprintf(&output, "%s=%s\n", color.Role, color.Hex)
 		}
 	}
 
 	// Second pass: output indexed colors without role hints.
 	for _, color := range categorised.AllColours {
 		if color.Role == "" {
-			output.WriteString(fmt.Sprintf("colour%d=%s\n", color.Index, color.Hex))
+			fmt.Fprintf(&output, "colour%d=%s\n", color.Index, color.Hex)
 		}
 	}
 

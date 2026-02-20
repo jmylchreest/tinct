@@ -65,7 +65,7 @@ func ExampleStatus() {
 	// Output: Repository sync complete ✓
 }
 
-// Example showing combined usage in a realistic scenario
+// Example showing combined usage in a realistic scenario.
 func Example_combined() {
 	fmt.Println("Installing plugins...")
 

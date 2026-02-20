@@ -63,26 +63,25 @@ Generate an image and extract colours:
 export GOOGLE_API_KEY="your-api-key"
 
 tinct generate -i google-genai \
-  --prompt "sunset over rolling hills of tuscany" \
+  --ai.prompt "sunset over rolling hills of tuscany" \
   -o all
 ```
 
-Get an API key from [Google AI Studio](https://aistudio.google.com/apikey).
+Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). See the [google-genai plugin docs](/docs/plugins/input/google-genai) for storing your key in a secret manager.
 
 ### OpenRouter
 
-Use various AI models:
+Use various AI models (auto-selects cheapest image-capable model):
 
 ```bash
 export OPENROUTER_API_KEY="your-api-key"
 
 tinct generate -i openrouter \
-  --prompt "cyberpunk city at night with neon lights" \
-  --openrouter.model "flux-pro" \
+  --ai.prompt "cyberpunk city at night with neon lights" \
   -o all
 ```
 
-Get an API key from [OpenRouter](https://openrouter.ai/).
+Get an API key from [OpenRouter](https://openrouter.ai/keys).
 
 ## Ambient lighting
 
@@ -90,8 +89,8 @@ Extract edge colours for LED strip synchronisation:
 
 ```bash
 tinct generate -i image -p ~/Pictures/wallpaper.jpg \
-  --image.extractAmbience \
-  --image.ambienceRegions 8 \
+  --extract-ambience \
+  --regions 8 \
   -o all
 ```
 

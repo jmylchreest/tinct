@@ -115,11 +115,11 @@ tinct generate -i image -p ~/wallpaper.jpg -o all --save-palette palette.json
 ```bash
 # Google Gemini
 export GOOGLE_API_KEY="your-key"
-tinct generate -i google-genai --prompt "sunset over mountains" -o all
+tinct generate -i google-genai --ai.prompt "sunset over mountains" -o all
 
 # OpenRouter
 export OPENROUTER_API_KEY="your-key"
-tinct generate -i openrouter --prompt "cyberpunk city" -o all
+tinct generate -i openrouter --ai.prompt "cyberpunk city" -o all
 ```
 
 ## Output

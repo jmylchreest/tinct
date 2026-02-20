@@ -168,7 +168,7 @@ func (c *ChangeLog) String() string {
 		})
 		for _, p := range c.PluginsAdded {
 			platforms := strings.Join(p.Platforms, ", ")
-			sb.WriteString(fmt.Sprintf("  - %s v%s (%s)\n", p.Name, p.Version, platforms))
+			fmt.Fprintf(&sb, "  - %s v%s (%s)\n", p.Name, p.Version, platforms)
 		}
 	}
 
@@ -194,7 +194,7 @@ func (c *ChangeLog) String() string {
 
 		for _, plugin := range updatedPlugins {
 			changes := pluginChanges[plugin]
-			sb.WriteString(fmt.Sprintf("\n  - %s:\n", plugin))
+			fmt.Fprintf(&sb, "\n  - %s:\n", plugin)
 
 			// Show added versions with their platforms
 			if len(changes.VersionsAdded) > 0 {
@@ -204,7 +204,7 @@ func (c *ChangeLog) String() string {
 				for _, v := range changes.VersionsAdded {
 					if len(v.PlatformsAdded) > 0 {
 						platforms := strings.Join(v.PlatformsAdded, ", ")
-						sb.WriteString(fmt.Sprintf("    - Added: v%s (%s)\n", v.Version, platforms))
+						fmt.Fprintf(&sb, "    - Added: v%s (%s)\n", v.Version, platforms)
 					}
 				}
 			}
@@ -215,7 +215,7 @@ func (c *ChangeLog) String() string {
 					return changes.VersionsRemoved[i].Version > changes.VersionsRemoved[j].Version
 				})
 				for _, v := range changes.VersionsRemoved {
-					sb.WriteString(fmt.Sprintf("    - Pruned: v%s (%s)\n", v.Version, v.Reason))
+					fmt.Fprintf(&sb, "    - Pruned: v%s (%s)\n", v.Version, v.Reason)
 				}
 			}
 		}
@@ -229,7 +229,7 @@ func (c *ChangeLog) String() string {
 		})
 		for _, m := range c.MetadataUpdated {
 			fields := strings.Join(m.Fields, ", ")
-			sb.WriteString(fmt.Sprintf("  - %s: updated %s\n", m.Plugin, fields))
+			fmt.Fprintf(&sb, "  - %s: updated %s\n", m.Plugin, fields)
 		}
 	}
 
@@ -240,16 +240,16 @@ func (c *ChangeLog) String() string {
 
 	sb.WriteString("\nSummary:")
 	if totalAdded > 0 {
-		sb.WriteString(fmt.Sprintf(" +%d versions", totalAdded))
+		fmt.Fprintf(&sb, " +%d versions", totalAdded)
 	}
 	if totalPlatforms > 0 {
-		sb.WriteString(fmt.Sprintf(" +%d platforms", totalPlatforms))
+		fmt.Fprintf(&sb, " +%d platforms", totalPlatforms)
 	}
 	if totalRemoved > 0 {
-		sb.WriteString(fmt.Sprintf(" -%d removed", totalRemoved))
+		fmt.Fprintf(&sb, " -%d removed", totalRemoved)
 	}
 	if len(c.MetadataUpdated) > 0 {
-		sb.WriteString(fmt.Sprintf(" ~%d metadata", len(c.MetadataUpdated)))
+		fmt.Fprintf(&sb, " ~%d metadata", len(c.MetadataUpdated))
 	}
 	sb.WriteString("\n")
 
@@ -446,11 +446,11 @@ func (c *ChangeLog) formatJSON() string {
 	// This is a simple string-based version for now
 	var sb strings.Builder
 	sb.WriteString("{\n")
-	sb.WriteString(fmt.Sprintf("  \"plugins_added\": %d,\n", len(c.PluginsAdded)))
-	sb.WriteString(fmt.Sprintf("  \"versions_added\": %d,\n", len(c.VersionsAdded)))
-	sb.WriteString(fmt.Sprintf("  \"platforms_added\": %d,\n", len(c.PlatformsAdded)))
-	sb.WriteString(fmt.Sprintf("  \"entries_removed\": %d,\n", len(c.EntriesRemoved)))
-	sb.WriteString(fmt.Sprintf("  \"metadata_updated\": %d\n", len(c.MetadataUpdated)))
+	fmt.Fprintf(&sb, "  \"plugins_added\": %d,\n", len(c.PluginsAdded))
+	fmt.Fprintf(&sb, "  \"versions_added\": %d,\n", len(c.VersionsAdded))
+	fmt.Fprintf(&sb, "  \"platforms_added\": %d,\n", len(c.PlatformsAdded))
+	fmt.Fprintf(&sb, "  \"entries_removed\": %d,\n", len(c.EntriesRemoved))
+	fmt.Fprintf(&sb, "  \"metadata_updated\": %d\n", len(c.MetadataUpdated))
 	sb.WriteString("}\n")
 	return sb.String()
 }

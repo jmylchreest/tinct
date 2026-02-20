@@ -426,7 +426,7 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 		Messages: []Message{
 			{
 				Role:    "user",
-				Content: fmt.Sprintf("%s", fullPrompt),
+				Content: fullPrompt,
 			},
 		},
 		Modalities: []string{"image", "text"},
@@ -872,7 +872,7 @@ type TopProvider struct {
 
 // fetchModels retrieves the list of models from OpenRouter API.
 func (p *Plugin) fetchModels(ctx context.Context) ([]Model, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", apiBaseURL+"/models", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiBaseURL+"/models", http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -949,7 +949,7 @@ type PricingInfo struct {
 }
 
 // Minimum cost threshold - values below this are considered essentially free/zero
-// This helps filter out negligible per-image costs when token pricing is the real cost
+// This helps filter out negligible per-image costs when token pricing is the real cost.
 const minSignificantCost = 0.0001 // $0.0001
 
 // getTypicalTokenUsage returns estimated input/output tokens based on provider.

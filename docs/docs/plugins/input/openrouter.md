@@ -10,29 +10,63 @@ Generate images and extract colours using OpenRouter's multi-model API.
 
 The `openrouter` plugin accesses various image generation models through [OpenRouter](https://openrouter.ai/), providing:
 
-- Access to multiple AI models (DALL-E, Stable Diffusion, Flux, etc.)
-- Unified API for different providers
+- Access to multiple AI image generation models through a single API
+- Automatic model selection (cheapest or free model with image output support)
 - Image generation with colour extraction
 
 ## Requirements
 
-- OpenRouter API key from [openrouter.ai](https://openrouter.ai/)
+- OpenRouter API key from [openrouter.ai/keys](https://openrouter.ai/keys)
 - Set `OPENROUTER_API_KEY` environment variable
 
 ## Usage
 
 ```bash
 export OPENROUTER_API_KEY="your-api-key"
-tinct generate -i openrouter --prompt "<description>" [flags]
+tinct generate -i openrouter --ai.prompt "<description>" [flags]
+```
+
+### Storing your API key
+
+Rather than pasting your key into every shell session, retrieve it from a secret manager:
+
+```bash
+# GNOME Keyring / libsecret
+export OPENROUTER_API_KEY=$(secret-tool lookup service openrouter)
+
+# Bitwarden CLI
+export OPENROUTER_API_KEY=$(bw get password openrouter)
+
+# pass (password-store)
+export OPENROUTER_API_KEY=$(pass show openrouter)
 ```
 
 ## Flags
 
+### AI flags (shared with google-genai)
+
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--prompt` | | Image description (required) |
-| `--openrouter.model` | `flux-pro` | Model to use |
-| `--openrouter.negative` | | Negative prompt (exclude elements) |
+| `--ai.prompt` | | Image description prompt (required) |
+| `--ai.model` | `auto` | AI model to use (auto-selects cheapest image-capable model) |
+| `--ai.list-models` | `false` | List available models with live pricing and exit |
+| `--ai.no-extended-prompt` | `false` | Disable automatic wallpaper prompt enhancement |
+| `--ai.no-negative-prompt` | `false` | Disable default negative prompt |
+| `--ai.negative-prompt` | | Custom negative prompt to discourage certain elements |
+
+### Plugin-specific flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--openrouter.prefer-free` | `true` | Prefer free models when using auto selection |
+
+### Common flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--aspect-ratio` | `16:9` | Image aspect ratio (`1:1`, `3:4`, `4:3`, `9:16`, `16:9`, `21:9`) |
+| `--count` | `32` | Number of colours to extract |
+| `--seed-mode` | `content` | Seed mode: `content`, `manual`, `random` |
 
 ## Examples
 
@@ -41,8 +75,9 @@ tinct generate -i openrouter --prompt "<description>" [flags]
 ```bash
 export OPENROUTER_API_KEY="your-api-key"
 
+# Auto-selects cheapest image-capable model
 tinct generate -i openrouter \
-  --prompt "cyberpunk city at night with neon lights" \
+  --ai.prompt "cyberpunk city at night with neon lights" \
   -o all
 ```
 
@@ -50,8 +85,9 @@ tinct generate -i openrouter \
 
 ```bash
 tinct generate -i openrouter \
-  --prompt "watercolor painting of a mountain lake" \
-  --openrouter.model "stable-diffusion-xl" \
+  --ai.prompt "watercolor painting of a mountain lake" \
+  --ai.model "google/gemini-2.5-flash-image-preview" \
+  --aspect-ratio "16:9" \
   -o all
 ```
 
@@ -59,22 +95,35 @@ tinct generate -i openrouter \
 
 ```bash
 tinct generate -i openrouter \
-  --prompt "serene japanese garden" \
-  --openrouter.negative "people, text, watermark" \
+  --ai.prompt "serene japanese garden" \
+  --ai.negative-prompt "people, text, watermark" \
   -o all
 ```
 
-## Available models
+### List available models
 
-OpenRouter provides access to various models. Popular options:
+```bash
+tinct generate -i openrouter --ai.list-models
+```
 
-| Model | Description |
-|-------|-------------|
-| `flux-pro` | High-quality image generation |
-| `stable-diffusion-xl` | Stable Diffusion XL |
-| `dall-e-3` | OpenAI's DALL-E 3 |
+### Dry run
 
-Check [OpenRouter models](https://openrouter.ai/models) for the current list.
+```bash
+tinct generate -i openrouter \
+  --ai.prompt "autumn forest" \
+  --dry-run -o kitty
+```
+
+## Model selection
+
+When `--ai.model` is `auto` (the default), tinct:
+
+1. Fetches the full model list from the OpenRouter API
+2. Filters to models with image output capability
+3. Sorts by cost (cheapest first)
+4. If `--openrouter.prefer-free` is true (default), selects a free model if available
+
+To see what models are available with current pricing, use `--ai.list-models`.
 
 ## How it works
 
@@ -91,7 +140,7 @@ Check [OpenRouter models](https://openrouter.ai/models) for the current list.
 Images are cached in:
 
 ```
-~/.cache/tinct/openrouter/
+~/.cache/tinct/generated/openrouter/
 ```
 
 ## Negative prompts
@@ -100,22 +149,14 @@ Use negative prompts to exclude unwanted elements:
 
 ```bash
 # Avoid certain styles
---openrouter.negative "cartoon, anime, illustration"
+--ai.negative-prompt "cartoon, anime, illustration"
 
 # Avoid artifacts
---openrouter.negative "blurry, low quality, distorted"
+--ai.negative-prompt "blurry, low quality, distorted"
 
 # Avoid elements
---openrouter.negative "text, watermark, people"
+--ai.negative-prompt "text, watermark, people"
 ```
-
-## Model selection tips
-
-| Style | Recommended model |
-|-------|-------------------|
-| Photorealistic | flux-pro, dall-e-3 |
-| Artistic | stable-diffusion-xl |
-| Abstract | flux-schnell |
 
 ## API credits
 
@@ -131,9 +172,9 @@ OpenRouter uses a credit system. Different models have different costs. Monitor 
 
 ### Model not available
 
-- Check model name spelling
-- Verify model is available on OpenRouter
-- Try a different model
+- Use `--ai.list-models` to see currently available models
+- Check model name spelling (use full model ID, e.g. `google/gemini-2.5-flash-image-preview`)
+- Try a different model or use `auto`
 
 ### Poor results
 
