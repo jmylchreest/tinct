@@ -91,30 +91,6 @@ tinct generate -i image -p wallpaper.jpg \
   --kitty.reload
 ```
 
-## Plugin configuration
-
-### Environment variables
-
-```bash
-# Enable only specific plugins
-export TINCT_ENABLED_PLUGINS="image,hyprland,kitty"
-
-# Disable plugins
-export TINCT_DISABLED_PLUGINS="waybar"
-```
-
-### Configuration file
-
-`.tinct-plugins.json`:
-
-```json
-{
-  "enabled_plugins": ["image", "hyprland", "kitty"],
-  "disabled_plugins": ["waybar"],
-  "external_plugins": {}
-}
-```
-
 ## Listing plugins
 
 See all available plugins:

@@ -17,17 +17,22 @@ tinct plugins <subcommand> [flags]
 | Command | Description |
 |---------|-------------|
 | `list` | List all available plugins |
+| `search` | Search repositories for plugins |
+| `install` | Install a plugin from a repository |
+| `add` | Add an external plugin from a local file, HTTP URL, or Git repo |
+| `delete` | Remove an external plugin |
+| `update` | Update all external plugins from their sources |
+| `sync` | Install missing plugins from the lock file |
+| `clean` | Remove plugins not in the lock file |
 | `repo add` | Add a plugin repository |
 | `repo list` | List configured repositories |
-| `repo remove` | Remove a repository |
-| `install` | Install an external plugin |
-| `sync` | Sync plugins from repositories |
-| `enable` | Enable a plugin |
-| `disable` | Disable a plugin |
+| `repo delete` | Remove a repository |
+| `repo update` | Refresh repository manifests |
+| `repo info` | Show repository details |
 
 ## tinct plugins list
 
-Show all available plugins with their status:
+Show all available plugins:
 
 ```bash
 tinct plugins list
@@ -36,20 +41,8 @@ tinct plugins list
 Output shows:
 
 - Plugin name and type (input/output)
-- Status indicators: Enabled (E), Disabled (D), On-demand (O)
 - External plugins marked with asterisk (*)
-- Version compatibility
-
-### Status indicators
-
-| Indicator | Meaning |
-|-----------|---------|
-| O | On-demand (loaded when used) |
-| E | Enabled (always available) |
-| D | Disabled (not loaded) |
-| * | External plugin |
-| Y | Compatible with current tinct |
-| N | Incompatible version |
+- Version and description
 
 ## tinct plugins repo
 
@@ -73,86 +66,108 @@ tinct plugins repo list
 tinct plugins repo remove official
 ```
 
-## tinct plugins install
+## tinct plugins search
 
-Install an external plugin from GitHub:
+Search configured repositories for plugins:
 
 ```bash
-tinct plugins install <github-user>/<repo>
+tinct plugins search [query]
 ```
 
-Example:
+| Flag | Description |
+|------|-------------|
+| `--type` | Filter by plugin type (`input` or `output`) |
+| `--tag` | Filter by tag (can be repeated) |
+| `--author` | Filter by author |
+| `--repo` | Search only in a specific repository |
+
+Examples:
 
 ```bash
-tinct plugins install jmylchreest/tinct-plugin-wled
+tinct plugins search random           # Search for "random"
+tinct plugins search --type input     # List all input plugins
+tinct plugins search --tag terminal   # Find terminal-related plugins
+```
+
+## tinct plugins install
+
+Install a plugin from a configured repository:
+
+```bash
+tinct plugins install <plugin-name> [flags]
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--repository` | | Install from a specific repository |
+| `--version` | `latest` | Plugin version to install |
+| `-f, --force` | `false` | Force reinstall if already installed |
+
+Examples:
+
+```bash
+tinct plugins install random                         # Install latest from any repo
+tinct plugins install random --repository official   # From specific repo
+tinct plugins install random --version 0.0.2         # Specific version
 ```
 
 The plugin is:
 
 1. Downloaded from the repository
-2. Verified (checksum if available)
+2. Verified (checksum)
 3. Installed to `~/.local/share/tinct/plugins/`
-4. Registered in `.tinct-plugins.json`
+4. Registered in `~/.config/tinct/plugins.lock.json`
+
+## tinct plugins update
+
+Update all external plugins from their original sources:
+
+```bash
+tinct plugins update
+```
+
+This checks each external plugin for newer versions and downloads updates. Plugins installed from repositories respect version pinning (use `--version latest` during install to always get the latest).
 
 ## tinct plugins sync
 
-Synchronise plugins from all configured repositories:
+Install missing plugins from the lock file:
 
 ```bash
-tinct plugins sync
+tinct plugins sync [flags]
 ```
 
-This:
+| Flag | Description |
+|------|-------------|
+| `-f, --force` | Force reinstall all plugins |
+| `--verify` | Verify checksums of existing plugins |
+| `--skip-missing` | Continue on errors instead of stopping |
 
-- Fetches repository manifests
-- Updates plugin metadata
-- Reports available updates
+Useful for restoring plugins on a new machine from a shared `plugins.lock.json`.
 
-## tinct plugins enable/disable
+## Lock file
 
-Control which plugins are active:
-
-```bash
-# Enable a plugin
-tinct plugins enable neovim
-
-# Disable a plugin
-tinct plugins disable waybar
-```
-
-Configuration is saved to `.tinct-plugins.json`.
-
-## Environment variables
-
-Override plugin configuration with environment variables:
-
-```bash
-# Only enable specific plugins
-export TINCT_ENABLED_PLUGINS="image,hyprland,kitty"
-
-# Disable specific plugins
-export TINCT_DISABLED_PLUGINS="waybar,dunst"
-```
-
-## Configuration file
-
-Plugin settings are stored in `.tinct-plugins.json`:
+Plugin installation data is stored in `~/.config/tinct/plugins.lock.json`:
 
 ```json
 {
-  "version": "1",
-  "enabled_plugins": ["image", "hyprland", "kitty"],
-  "disabled_plugins": ["waybar"],
   "external_plugins": {
     "wled": {
       "name": "wled",
       "path": "/home/user/.local/share/tinct/plugins/wled",
       "type": "output",
-      "version": "0.1.0"
+      "version": "0.1.0",
+      "source": {
+        "type": "repository",
+        "repository": "official",
+        "plugin": "wled",
+        "version": "0.1.0"
+      }
     }
   }
 }
 ```
+
+Use the `--lock-file` flag to specify an alternative lock file path.
 
 ## Plugin paths
 
@@ -178,17 +193,6 @@ tinct plugins sync
 
 # List available
 tinct plugins list
-```
-
-### Focus on specific plugins
-
-```bash
-# Disable plugins you don't use
-tinct plugins disable gnome-shell
-tinct plugins disable kde-plasma
-
-# Or use environment variable for session
-export TINCT_ENABLED_PLUGINS="image,hyprland,kitty,waybar"
 ```
 
 ## See also

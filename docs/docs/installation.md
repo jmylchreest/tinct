@@ -84,11 +84,20 @@ Some features require additional tools:
 
 ## Configuration directory
 
-Tinct creates configuration files in `~/.config/tinct/`:
+Tinct stores its files across two directories:
 
-- `.tinct-manifest.json` - Tracks generated files
-- `.tinct-plugins.json` - Plugin configuration
-- `themes/` - Saved theme files (when using markdown output)
+**`~/.config/tinct/`** — configuration and state:
+
+| File | Description |
+|------|-------------|
+| `tinct.toml` | Main config file (telemetry, image cache settings) |
+| `telemetry.id` | Anonymous installation identifier (auto-generated, do not edit) |
+| `plugins.lock.json` | Installed external plugin registry |
+| `.tinct-manifest.json` | Tracks generated files for the `files` command |
+| `themes/` | Saved theme files (when using the markdown output plugin) |
+| `templates/` | Custom plugin templates |
+
+**`~/.local/share/tinct/plugins/`** — installed external plugin binaries.
 
 ## Next steps
 

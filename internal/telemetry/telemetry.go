@@ -2,7 +2,7 @@
 //
 // Telemetry is opt-out (enabled by default) and can be disabled by:
 //   - Setting the environment variable TINCT_TELEMETRY=off
-//   - Setting "enabled": false in ~/.local/share/tinct/telemetry.json
+//   - Setting enabled = false in ~/.config/tinct/tinct.toml under [telemetry]
 //
 // Data collected is fully anonymous: a random UUID is generated on first run,
 // SHA256-hashed before transmission, and never correlated with any personal information.
@@ -12,19 +12,17 @@ package telemetry
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/jmylchreest/tinct/internal/config"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
@@ -35,77 +33,98 @@ const (
 	// apiPath is the Aptabase events API path.
 	apiPath = "/api/v0/events"
 
-	// httpTimeout is the maximum time to wait for the HTTP request.
+	// httpTimeout is the maximum time to wait for a single HTTP request.
 	httpTimeout = 5 * time.Second
-
-	// configFileName is the telemetry config file name.
-	configFileName = "telemetry.json"
-
-	// configDirName is the directory under ~/.local/share/ for tinct data.
-	configDirName = "tinct"
-
-	// envKey is the environment variable to control telemetry.
-	envKey = "TINCT_TELEMETRY"
 
 	// sdkPrefix is the prefix for the SDK version in Aptabase system props.
 	// The full sdkVersion is built dynamically as sdkPrefix + version.Version.
 	sdkPrefix = "tinct-telemetry@"
+
+	// maxBatchSize is the maximum number of events per Aptabase API request.
+	maxBatchSize = 25
+
+	// queueSize is the capacity of the in-memory event queue. Sized generously
+	// so that Send() never blocks under normal usage.
+	queueSize = 128
+
+	// debounceDelay is how long the worker waits after receiving the first event
+	// before sending, to allow subsequent events to accumulate into one batch.
+	debounceDelay = 5 * time.Millisecond
 )
 
-// Config is the persistent telemetry configuration stored on disk.
-type Config struct {
-	// Enabled controls whether telemetry is active. Default: true (opt-out).
-	Enabled bool `json:"enabled"`
-
-	// ID is the SHA256-hashed anonymous identifier for this installation.
-	// Generated from a random UUID on first run, then hashed before storage.
-	ID string `json:"id"`
+// telemetryConfig holds the resolved telemetry settings for the Client.
+type telemetryConfig struct {
+	Enabled bool
 }
 
 // Client sends telemetry events to Aptabase.
+//
+// Events are queued in memory and dispatched by a background worker goroutine.
+// The worker uses a short debounce window so that a burst of Send() calls
+// (e.g. one summary + N plugin events) is batched into as few HTTP requests
+// as possible (Aptabase accepts up to 25 events per request).
+//
+// Call Flush(ctx) before the process exits to drain the queue.
 // All methods are safe for concurrent use.
 type Client struct {
-	config     *Config
+	config     *telemetryConfig
 	httpClient *http.Client
 	baseURL    string
 	appKey     string
+	sessionID  string
 	disabled   bool
-	mu         sync.RWMutex
+
+	// queue receives events from Send(). Closed by Flush() to signal the worker to stop.
+	queue chan Event
+	// done is closed by the worker when it has finished draining the queue.
+	done chan struct{}
+
+	mu sync.RWMutex
 }
 
-// New creates a new telemetry client.
-// It loads or initialises the config file and checks the environment variable.
-// If telemetry is disabled (by env var or config), the client becomes a no-op.
+// New creates a new telemetry client with a single session ID that is shared
+// across all events sent by this client. For CLI tools, one Client per command
+// invocation means one Aptabase session — all events (e.g. a "generate" summary
+// plus individual "plugin_used" events) are grouped together.
+//
+// It loads the config from tinct.toml (with env var overrides already applied).
+// If telemetry is disabled, the client becomes a no-op.
 // This function never returns an error; failures are handled silently.
 func New() *Client {
 	c := &Client{
 		httpClient: &http.Client{Timeout: httpTimeout},
 		appKey:     AppKey,
+		sessionID:  generateSessionID(),
+		queue:      make(chan Event, queueSize),
+		done:       make(chan struct{}),
 	}
 
 	// Derive base URL from app key region.
 	c.baseURL = resolveBaseURL(c.appKey)
 
-	// Check environment variable override first (takes priority).
-	if envVal := os.Getenv(envKey); envVal != "" {
-		lower := strings.ToLower(envVal)
-		if lower == "off" || lower == "false" || lower == "0" || lower == "no" {
-			c.disabled = true
-			return c
-		}
-	}
-
-	// Load or initialise config.
-	config, err := loadOrInitConfig()
-	if err != nil {
+	// Load config (env overrides are already applied by config.Load).
+	cfg, err := config.Load()
+	if err != nil || cfg == nil {
 		// Can't load config — disable silently.
 		c.disabled = true
+		close(c.done) // nothing to drain
 		return c
 	}
-	c.config = config
 
-	if !config.Enabled {
+	c.config = &telemetryConfig{
+		Enabled: cfg.Telemetry.Enabled,
+	}
+
+	if !c.config.Enabled {
 		c.disabled = true
+		close(c.done) // nothing to drain
+	} else {
+		// Eagerly initialise the installation ID so the telemetry.id file is
+		// created on first run even if the caller never calls ID() or Send().
+		_ = config.InstallationID()
+
+		// Start the background worker that drains the queue.
+		go c.worker()
 	}
 
 	return c
@@ -121,55 +140,176 @@ func (c *Client) IsEnabled() bool {
 // ID returns the anonymous installation identifier (SHA256 hash).
 // Returns empty string if telemetry is disabled.
 func (c *Client) ID() string {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.config == nil {
+	if !c.IsEnabled() {
 		return ""
 	}
-	return c.config.ID
+	return config.InstallationID()
 }
 
-// Send sends a telemetry event synchronously with the configured HTTP timeout.
-// For CLI tools, this is preferred over async sending because the process may
-// exit before an async goroutine completes. The HTTP timeout (5s) ensures this
-// never blocks for long. Errors are silently discarded.
+// Send enqueues a telemetry event for asynchronous dispatch.
+// It returns immediately; the event is sent by the background worker.
+// If the client is disabled, the queue is full, or Flush has already been
+// called, the event is silently dropped.
 func (c *Client) Send(event Event) {
 	if !c.IsEnabled() {
 		return
 	}
 
-	_ = c.sendSync(event) //nolint:errcheck // Fire-and-forget, errors silently discarded
+	// If the worker has already exited (Flush was called), done is closed.
+	// Attempting to send on a closed queue channel would panic, so we check
+	// done first. Both channels are only ever closed, never re-opened, so
+	// this select is race-free.
+	select {
+	case <-c.done:
+		// Worker already stopped — drop silently.
+		return
+	default:
+	}
+
+	select {
+	case c.queue <- event:
+	default:
+		// Queue full — drop silently rather than block the caller.
+	}
 }
 
-// SendAsync sends a telemetry event in a background goroutine.
-// Only use this if the process will remain alive long enough for the request
-// to complete. For CLI tools, prefer Send() instead.
-func (c *Client) SendAsync(event Event) {
+// Flush closes the event queue and waits for the background worker to finish
+// sending all queued events. ctx controls the maximum wait time.
+//
+// After Flush returns, the client is no longer usable; further Send() calls
+// will panic on a closed channel (callers must not Send after Flush).
+func (c *Client) Flush(ctx context.Context) {
 	if !c.IsEnabled() {
 		return
 	}
 
-	go c.sendSync(event) //nolint:errcheck // Fire-and-forget
+	// Signal the worker that no more events are coming.
+	close(c.queue)
+
+	// Wait for it to finish or for the context to expire.
+	select {
+	case <-c.done:
+	case <-ctx.Done():
+	}
 }
 
-// sendSync sends an event synchronously. Used internally by Send.
+// worker is the background goroutine that drains the event queue.
+//
+// It waits for the first event, then starts a short debounce timer.
+// While the timer runs it collects additional events. When the timer fires
+// (or the batch reaches maxBatchSize), it sends the batch and loops back
+// to wait for the next event. When the queue is closed (by Flush), it
+// sends any remaining events and exits.
+func (c *Client) worker() {
+	defer close(c.done)
+
+	for {
+		// Block until the first event arrives or the queue is closed.
+		event, ok := <-c.queue
+		if !ok {
+			// Queue closed with nothing pending — we're done.
+			return
+		}
+
+		// Seed the current batch with this first event.
+		batch := make([]Event, 0, maxBatchSize)
+		batch = append(batch, event)
+
+		// Start the debounce timer to let more events accumulate.
+		timer := time.NewTimer(debounceDelay)
+
+	collect:
+		for len(batch) < maxBatchSize {
+			select {
+			case e, ok := <-c.queue:
+				if !ok {
+					// Queue closed mid-debounce — send what we have and exit.
+					timer.Stop()
+					c.sendBatch(batch)
+					return
+				}
+				batch = append(batch, e)
+			case <-timer.C:
+				// Debounce window expired — send what we have.
+				break collect
+			}
+		}
+		timer.Stop()
+
+		c.sendBatch(batch)
+
+		// If the batch hit maxBatchSize the queue may still have events.
+		// The outer for loop will pick them up immediately.
+	}
+}
+
+// sendBatch sends a slice of events in a single Aptabase API request.
+// Errors are silently discarded (fire-and-forget).
+func (c *Client) sendBatch(events []Event) {
+	if len(events) == 0 {
+		return
+	}
+
+	payloads := make([]aptabaseEvent, 0, len(events))
+	for _, event := range events {
+		payloads = append(payloads, aptabaseEvent{
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			SessionID: c.sessionID,
+			EventName: event.Name,
+			SystemProps: aptabaseSystemProps{
+				OSName:     runtime.GOOS,
+				OSVersion:  "", // Not collecting OS version for privacy.
+				Locale:     "",
+				IsDebug:    version.Version == "0.0.0",
+				AppVersion: version.Version,
+				SDKVersion: sdkPrefix + version.Version,
+			},
+			Props: event.Props,
+		})
+	}
+
+	body, err := json.Marshal(payloads)
+	if err != nil {
+		return
+	}
+
+	req, err := http.NewRequest(http.MethodPost, c.baseURL+apiPath, bytes.NewReader(body))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("App-Key", c.appKey)
+
+	// Include the anonymous installation ID as a custom header.
+	// This allows Aptabase to count unique installations.
+	if id := config.InstallationID(); id != "" {
+		req.Header.Set("X-Installation-ID", id)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+}
+
+// sendSync sends a single event synchronously. Used by tests that need to
+// verify the HTTP payload without going through the async worker.
 func (c *Client) sendSync(event Event) error {
 	c.mu.RLock()
 	if c.disabled || c.config == nil {
 		c.mu.RUnlock()
 		return nil
 	}
-	config := c.config
 	c.mu.RUnlock()
 
-	// Build the Aptabase event payload.
 	payload := aptabaseEvent{
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
-		SessionID: generateSessionID(),
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		SessionID: c.sessionID,
 		EventName: event.Name,
 		SystemProps: aptabaseSystemProps{
 			OSName:     runtime.GOOS,
-			OSVersion:  "", // Not collecting OS version for privacy.
+			OSVersion:  "",
 			Locale:     "",
 			IsDebug:    version.Version == "0.0.0",
 			AppVersion: version.Version,
@@ -178,7 +318,6 @@ func (c *Client) sendSync(event Event) error {
 		Props: event.Props,
 	}
 
-	// Marshal as a single-element array (Aptabase batch format).
 	body, err := json.Marshal([]aptabaseEvent{payload})
 	if err != nil {
 		return fmt.Errorf("marshal event: %w", err)
@@ -191,10 +330,8 @@ func (c *Client) sendSync(event Event) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("App-Key", c.appKey)
 
-	// Include the anonymous installation ID as a custom header.
-	// This allows Aptabase to count unique installations.
-	if config.ID != "" {
-		req.Header.Set("X-Installation-ID", config.ID)
+	if id := config.InstallationID(); id != "" {
+		req.Header.Set("X-Installation-ID", id)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -247,87 +384,4 @@ func resolveBaseURL(appKey string) string {
 // Format: epoch seconds + 8 random digits.
 func generateSessionID() string {
 	return fmt.Sprintf("%d%08d", time.Now().Unix(), rand.Intn(100000000)) //nolint:gosec // Non-cryptographic randomness is fine for session IDs
-}
-
-// --- Config file management ---
-
-// configPath returns the full path to the telemetry config file.
-func configPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("get home directory: %w", err)
-	}
-	return filepath.Join(home, ".local", "share", configDirName, configFileName), nil
-}
-
-// loadOrInitConfig loads the telemetry config from disk, or creates it if missing.
-func loadOrInitConfig() (*Config, error) {
-	path, err := configPath()
-	if err != nil {
-		return nil, err
-	}
-
-	// Try to load existing config.
-	data, err := os.ReadFile(path)
-	if err == nil {
-		var config Config
-		if jsonErr := json.Unmarshal(data, &config); jsonErr == nil {
-			// Validate the loaded config.
-			if config.ID != "" {
-				return &config, nil
-			}
-			// ID is empty — regenerate.
-		}
-		// Corrupt config — regenerate.
-	}
-
-	// No config or corrupt — create new one.
-	config := &Config{
-		Enabled: true,
-		ID:      generateInstallationID(),
-	}
-
-	// Save to disk.
-	if saveErr := saveConfig(path, config); saveErr != nil {
-		// If we can't save, still return the config for this session.
-		return config, nil
-	}
-
-	return config, nil
-}
-
-// saveConfig writes the telemetry config to disk.
-func saveConfig(path string, config *Config) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return fmt.Errorf("create config directory: %w", err)
-	}
-
-	data, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal config: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return fmt.Errorf("write config: %w", err)
-	}
-
-	return nil
-}
-
-// generateInstallationID creates a new anonymous installation identifier.
-// A random UUID-like string is generated, then SHA256-hashed so the raw ID
-// is never stored or transmitted.
-func generateInstallationID() string {
-	// Generate a random UUID-like value using crypto-quality randomness
-	// from the OS, combined with current time for additional entropy.
-	raw := fmt.Sprintf("%d-%d-%d-%d",
-		time.Now().UnixNano(),
-		rand.Int63(), //nolint:gosec // Combined with time for sufficient entropy
-		rand.Int63(), //nolint:gosec // Combined with time for sufficient entropy
-		os.Getpid(),
-	)
-
-	hash := sha256.Sum256([]byte(raw))
-	return hex.EncodeToString(hash[:])
 }

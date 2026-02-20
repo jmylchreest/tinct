@@ -9,8 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -61,53 +59,18 @@ const (
 	versionUnknown = "unknown"
 )
 
-// Config holds plugin configuration.
-type Config struct {
-	// DisabledPlugins is a list of plugin names to disable.
-	// Format: "plugin_type:plugin_name" (e.g., "output:tailwind", "input:image").
-	DisabledPlugins []string
-
-	// EnabledPlugins is a list of plugin names to explicitly enable.
-	// If set, only these plugins are enabled (whitelist mode).
-	EnabledPlugins []string
-}
-
-// Builder provides a fluent interface for constructing a Manager with configuration.
+// Builder provides a fluent interface for constructing a Manager.
 type Builder struct {
-	config         Config
 	inputRegistry  *input.Registry
 	outputRegistry *output.Registry
-	lockFilePath   string
-	useEnv         bool
 }
 
 // NewBuilder creates a new Manager builder with default settings.
 func NewBuilder() *Builder {
 	return &Builder{
-		config:         Config{},
 		inputRegistry:  input.NewRegistry(),
 		outputRegistry: output.NewRegistry(),
-		useEnv:         false,
 	}
-}
-
-// WithConfig sets the configuration for the manager.
-func (b *Builder) WithConfig(config Config) *Builder {
-	b.config = config
-	return b
-}
-
-// WithEnvConfig loads configuration from environment variables.
-// Reads TINCT_DISABLED_PLUGINS and TINCT_ENABLED_PLUGINS.
-func (b *Builder) WithEnvConfig() *Builder {
-	b.useEnv = true
-	return b
-}
-
-// WithLockFile sets the path to a plugin lock file to load configuration from.
-func (b *Builder) WithLockFile(path string) *Builder {
-	b.lockFilePath = path
-	return b
 }
 
 // WithCustomRegistries allows providing custom plugin registries (useful for testing).
@@ -118,27 +81,8 @@ func (b *Builder) WithCustomRegistries(inputReg *input.Registry, outputReg *outp
 }
 
 // Build constructs the Manager with the configured settings.
-// If both env and lock file are specified, lock file takes precedence.
 func (b *Builder) Build() *Manager {
-	// Start with base config.
-	config := b.config
-
-	// Apply env config if requested.
-	if b.useEnv {
-		if disabled := os.Getenv("TINCT_DISABLED_PLUGINS"); disabled != "" {
-			config.DisabledPlugins = parsePluginList(disabled)
-		}
-		if enabled := os.Getenv("TINCT_ENABLED_PLUGINS"); enabled != "" {
-			config.EnabledPlugins = parsePluginList(enabled)
-		}
-	}
-
-	// Apply lock file config if specified (overrides env).
-	// Note: Lock file loading is handled externally and updated via UpdateConfig.
-	// The lockFilePath in the builder just signals that a lock file path was provided.
-
 	m := &Manager{
-		config:         config,
 		inputRegistry:  b.inputRegistry,
 		outputRegistry: b.outputRegistry,
 	}
@@ -149,9 +93,8 @@ func (b *Builder) Build() *Manager {
 	return m
 }
 
-// Manager manages plugin enable/disable state and owns plugin registries.
+// Manager owns plugin registries and provides plugin lookup.
 type Manager struct {
-	config         Config
 	inputRegistry  *input.Registry
 	outputRegistry *output.Registry
 }
@@ -220,137 +163,14 @@ func (m *Manager) GetOutputPlugin(name string) (output.Plugin, bool) {
 	return plugin, ok
 }
 
-// IsInputEnabled checks if an input plugin is enabled.
-// All plugins are disabled by default and must be explicitly enabled.
-func (m *Manager) IsInputEnabled(plugin input.Plugin) bool {
-	return m.isEnabled("input", plugin.Name())
-}
-
-// IsOutputEnabled checks if an output plugin is enabled.
-// All plugins are disabled by default and must be explicitly enabled.
-func (m *Manager) IsOutputEnabled(plugin output.Plugin) bool {
-	return m.isEnabled("output", plugin.Name())
-}
-
-// IsOutputDisabled checks if an output plugin is explicitly disabled.
-func (m *Manager) IsOutputDisabled(plugin output.Plugin) bool {
-	return m.isDisabled("output", plugin.Name())
-}
-
-// isDisabled checks if a plugin is explicitly disabled.
-func (m *Manager) isDisabled(pluginType, name string) bool {
-	fullName := fmt.Sprintf("%s:%s", pluginType, name)
-
-	// Check if "all" is explicitly disabled.
-	if slices.Contains(m.config.DisabledPlugins, "all") {
-		return true
-	}
-
-	// Check if explicitly disabled.
-	for _, disabled := range m.config.DisabledPlugins {
-		if disabled == fullName || disabled == name {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isEnabled determines if a plugin is enabled based on configuration.
-func (m *Manager) isEnabled(pluginType, name string) bool {
-	fullName := fmt.Sprintf("%s:%s", pluginType, name)
-
-	// Check if "all" is explicitly disabled (takes precedence over everything).
-	if slices.Contains(m.config.DisabledPlugins, "all") {
-		return false
-	}
-
-	// Check if explicitly disabled.
-	for _, disabled := range m.config.DisabledPlugins {
-		if disabled == fullName || disabled == name {
-			return false
-		}
-	}
-
-	// Check if "all" is enabled (enables all plugins).
-	if slices.Contains(m.config.EnabledPlugins, "all") {
-		return true
-	}
-
-	// If whitelist mode (EnabledPlugins set), only listed plugins are enabled.
-	if len(m.config.EnabledPlugins) > 0 {
-		for _, enabled := range m.config.EnabledPlugins {
-			if enabled == fullName || enabled == name {
-				return true
-			}
-		}
-		return false
-	}
-
-	// When no config is present (no enabled/disabled lists), all plugins are disabled by default.
-	// This makes the plugin's Enabled() method irrelevant for both internal and external plugins.
-	// Plugins must be explicitly enabled via config, CLI flags, or environment variables.
-	return false
-}
-
-// FilterInputPlugins returns only enabled input plugins.
-func (m *Manager) FilterInputPlugins() map[string]input.Plugin {
-	enabled := make(map[string]input.Plugin)
-	for name, plugin := range m.inputRegistry.All() {
-		if m.IsInputEnabled(plugin) {
-			enabled[name] = plugin
-		}
-	}
-	return enabled
-}
-
-// FilterOutputPlugins returns only enabled output plugins.
-func (m *Manager) FilterOutputPlugins() map[string]output.Plugin {
-	enabled := make(map[string]output.Plugin)
-	for name, plugin := range m.outputRegistry.All() {
-		if m.IsOutputEnabled(plugin) {
-			enabled[name] = plugin
-		}
-	}
-	return enabled
-}
-
-// ListInputPlugins returns names of enabled input plugins.
-func (m *Manager) ListInputPlugins() []string {
-	names := []string{}
-	for name, plugin := range m.inputRegistry.All() {
-		if m.IsInputEnabled(plugin) {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-// ListOutputPlugins returns names of enabled output plugins.
-func (m *Manager) ListOutputPlugins() []string {
-	names := []string{}
-	for name, plugin := range m.outputRegistry.All() {
-		if m.IsOutputEnabled(plugin) {
-			names = append(names, name)
-		}
-	}
-	return names
-}
-
-// AllInputPlugins returns all registered input plugins (including disabled).
+// AllInputPlugins returns all registered input plugins.
 func (m *Manager) AllInputPlugins() map[string]input.Plugin {
 	return m.inputRegistry.All()
 }
 
-// AllOutputPlugins returns all registered output plugins (including disabled).
+// AllOutputPlugins returns all registered output plugins.
 func (m *Manager) AllOutputPlugins() map[string]output.Plugin {
 	return m.outputRegistry.All()
-}
-
-// UpdateConfig updates the manager's configuration without recreating plugin instances.
-// This preserves flag bindings and other plugin state.
-func (m *Manager) UpdateConfig(config Config) {
-	m.config = config
 }
 
 // RegisterExternalPlugin registers an external plugin with the manager.
@@ -432,63 +252,6 @@ func queryPluginInfo(pluginPath string) (PluginInfo, error) {
 	}
 
 	return info, nil
-}
-
-// parsePluginList parses a comma-separated list of plugin names.
-// Handles formats like "tailwind", "output:tailwind", "input:image,output:tailwind".
-func parsePluginList(s string) []string {
-	parts := strings.Split(s, ",")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
-}
-
-// GetConfig returns the current configuration.
-func (m *Manager) GetConfig() Config {
-	return m.config
-}
-
-// SetDisabled adds a plugin to the disabled list.
-func (m *Manager) SetDisabled(pluginType, name string) {
-	fullName := fmt.Sprintf("%s:%s", pluginType, name)
-
-	// Remove from enabled list if present.
-	for i, enabled := range m.config.EnabledPlugins {
-		if enabled == fullName || enabled == name {
-			m.config.EnabledPlugins = append(m.config.EnabledPlugins[:i], m.config.EnabledPlugins[i+1:]...)
-			break
-		}
-	}
-
-	// Add to disabled list if not already there.
-	if slices.Contains(m.config.DisabledPlugins, fullName) {
-		return
-	}
-	m.config.DisabledPlugins = append(m.config.DisabledPlugins, fullName)
-}
-
-// SetEnabled adds a plugin to the enabled list (whitelist mode).
-func (m *Manager) SetEnabled(pluginType, name string) {
-	fullName := fmt.Sprintf("%s:%s", pluginType, name)
-
-	// Remove from disabled list if present.
-	for i, disabled := range m.config.DisabledPlugins {
-		if disabled == fullName || disabled == name {
-			m.config.DisabledPlugins = append(m.config.DisabledPlugins[:i], m.config.DisabledPlugins[i+1:]...)
-			break
-		}
-	}
-
-	// Add to enabled list if not already there.
-	if slices.Contains(m.config.EnabledPlugins, fullName) {
-		return
-	}
-	m.config.EnabledPlugins = append(m.config.EnabledPlugins, fullName)
 }
 
 // ExternalInputPlugin wraps an external executable as an input plugin.

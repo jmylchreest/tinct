@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
+	"github.com/jmylchreest/tinct/internal/plugin/repository"
 )
 
 // pluginAction represents the type of action being performed on a plugin.
@@ -245,4 +246,44 @@ func printPluginAddSuccess(pluginInfo *pluginMetadata, action pluginAction, exis
 	}
 	fmt.Printf("Protocol: %s\n", pluginInfo.ProtocolVersion)
 	fmt.Printf("Path: %s\n", finalPath)
+}
+
+// buildPluginSource creates a structured PluginSource from the raw source string.
+// This populates the Source field so that sync/update operations know how to
+// reinstall the plugin.
+func buildPluginSource(source, forcedSourceType, finalPath string) *repository.PluginSource {
+	sourceType, sourceInfo := parsePluginSource(source)
+
+	// Override with forced source type if provided.
+	if forcedSourceType != "" {
+		sourceType = forcedSourceType
+	}
+
+	switch sourceType {
+	case sourceTypeHTTP:
+		return &repository.PluginSource{
+			Type: sourceTypeHTTP,
+			URL:  sourceInfo.URL,
+		}
+	case sourceTypeLocal:
+		absPath := sourceInfo.FilePath
+		if !filepath.IsAbs(absPath) {
+			if abs, err := filepath.Abs(absPath); err == nil {
+				absPath = abs
+			}
+		}
+		return &repository.PluginSource{
+			Type:         sourceTypeLocal,
+			OriginalPath: absPath,
+		}
+	case sourceTypeGit:
+		return &repository.PluginSource{
+			Type: sourceTypeHTTP, // Git sources are treated as HTTP for reinstall
+			URL:  sourceInfo.URL,
+		}
+	default:
+		return &repository.PluginSource{
+			Type: sourceType,
+		}
+	}
 }

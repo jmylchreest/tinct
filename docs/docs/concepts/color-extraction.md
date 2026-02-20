@@ -89,7 +89,17 @@ Tinct can fetch and cache images from URLs:
 tinct generate -i image -p "https://example.com/wallpaper.jpg" -o all
 ```
 
-Images are cached locally for subsequent runs. Configure caching with environment variables:
+Images are cached locally for subsequent runs. Configure caching in `~/.config/tinct/tinct.toml`:
+
+```toml
+[cache]
+images = true
+overwrite = false
+# dir = ""      # default: ~/.cache/tinct/images
+# filename = "" # default: content-hash based filename
+```
+
+Environment variables take priority over the config file:
 
 ```bash
 export TINCT_IMAGE_CACHE=true

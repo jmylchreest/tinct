@@ -45,16 +45,14 @@ func TestEventSet(t *testing.T) {
 // TestNewGenerateEvent verifies the generate event builder with all fields.
 func TestNewGenerateEvent(t *testing.T) {
 	params := GenerateEventParams{
-		InputPlugin:         "image",
-		OutputPlugins:       []string{"hyprland", "kitty", "waybar"},
-		SuccessCount:        3,
-		ThemeType:           "dark",
-		SeedMode:            "content",
-		Backend:             "kmeans",
-		ExtractAmbience:     true,
-		DryRun:              false,
-		DualTheme:           true,
-		ExternalPluginCount: 1,
+		InputPlugin:     "image",
+		OutputPlugins:   []string{"hyprland", "kitty", "waybar"},
+		ThemeType:       "dark",
+		SeedMode:        "content",
+		Backend:         "kmeans",
+		ExtractAmbience: true,
+		DryRun:          false,
+		DualTheme:       true,
 	}
 
 	e := NewGenerateEvent(params)
@@ -66,14 +64,21 @@ func TestNewGenerateEvent(t *testing.T) {
 	// Check required props exist.
 	requiredProps := []string{
 		"arch", "version", "input_plugin", "output_plugins",
-		"output_plugin_count", "success_count", "theme_type",
-		"seed_mode", "backend", "extract_ambience", "dry_run",
-		"dual_theme", "external_plugin_count", "ai_input",
+		"theme_type", "seed_mode", "backend",
+		"extract_ambience", "dry_run", "dual_theme", "ai_input",
 	}
 
 	for _, key := range requiredProps {
 		if _, ok := e.Props[key]; !ok {
 			t.Errorf("missing required prop: %s", key)
+		}
+	}
+
+	// Counts should NOT be present (Aptabase infers from plugin_used events).
+	removedProps := []string{"output_plugin_count", "success_count", "external_plugin_count"}
+	for _, key := range removedProps {
+		if _, ok := e.Props[key]; ok {
+			t.Errorf("prop %q should not be present (inferred by Aptabase)", key)
 		}
 	}
 
@@ -90,12 +95,6 @@ func TestNewGenerateEvent(t *testing.T) {
 		t.Errorf("output_plugins = %q, want %q", outputPlugins, "hyprland,kitty,waybar")
 	}
 
-	if e.Props["output_plugin_count"] != 3 {
-		t.Errorf("output_plugin_count = %v, want 3", e.Props["output_plugin_count"])
-	}
-	if e.Props["success_count"] != 3 {
-		t.Errorf("success_count = %v, want 3", e.Props["success_count"])
-	}
 	if e.Props["theme_type"] != "dark" {
 		t.Errorf("theme_type = %v, want dark", e.Props["theme_type"])
 	}
@@ -113,9 +112,6 @@ func TestNewGenerateEvent(t *testing.T) {
 	}
 	if e.Props["dual_theme"] != true {
 		t.Errorf("dual_theme = %v, want true", e.Props["dual_theme"])
-	}
-	if e.Props["external_plugin_count"] != 1 {
-		t.Errorf("external_plugin_count = %v, want 1", e.Props["external_plugin_count"])
 	}
 	if e.Props["ai_input"] != false {
 		t.Errorf("ai_input = %v, want false (image is not AI)", e.Props["ai_input"])
@@ -171,12 +167,9 @@ func TestNewGenerateEventMinimalParams(t *testing.T) {
 		t.Error("theme_type should not be set when empty")
 	}
 
-	// Boolean/int fields should still be present.
+	// Boolean fields should still be present.
 	if _, ok := e.Props["dry_run"]; !ok {
 		t.Error("dry_run should be set even when false")
-	}
-	if _, ok := e.Props["success_count"]; !ok {
-		t.Error("success_count should be set even when 0")
 	}
 }
 
@@ -195,7 +188,7 @@ func TestNewGenerateEventOutputPluginsJoined(t *testing.T) {
 
 // TestNewPluginUsedEvent verifies the plugin_used event builder.
 func TestNewPluginUsedEvent(t *testing.T) {
-	e := NewPluginUsedEvent("kitty", false, true)
+	e := NewPluginUsedEvent("kitty", "1.2.3", false, "ok")
 
 	if e.Name != "plugin_used" {
 		t.Errorf("Name = %q, want %q", e.Name, "plugin_used")
@@ -203,26 +196,50 @@ func TestNewPluginUsedEvent(t *testing.T) {
 	if e.Props["plugin_name"] != "kitty" {
 		t.Errorf("plugin_name = %v, want kitty", e.Props["plugin_name"])
 	}
+	if e.Props["plugin_version"] != "1.2.3" {
+		t.Errorf("plugin_version = %v, want 1.2.3", e.Props["plugin_version"])
+	}
 	if e.Props["is_external"] != false {
 		t.Errorf("is_external = %v, want false", e.Props["is_external"])
 	}
-	if e.Props["succeeded"] != true {
-		t.Errorf("succeeded = %v, want true", e.Props["succeeded"])
+	if e.Props["status"] != "ok" {
+		t.Errorf("status = %v, want ok", e.Props["status"])
 	}
 }
 
-// TestNewPluginUsedEventExternal verifies external plugin detection.
+// TestNewPluginUsedEventExternal verifies external plugin with failed status.
 func TestNewPluginUsedEventExternal(t *testing.T) {
-	e := NewPluginUsedEvent("my-custom-plugin", true, false)
+	e := NewPluginUsedEvent("my-custom-plugin", "0.5.0", true, "failed")
 
 	if e.Props["plugin_name"] != "my-custom-plugin" {
 		t.Errorf("plugin_name = %v, want my-custom-plugin", e.Props["plugin_name"])
 	}
+	if e.Props["plugin_version"] != "0.5.0" {
+		t.Errorf("plugin_version = %v, want 0.5.0", e.Props["plugin_version"])
+	}
 	if e.Props["is_external"] != true {
 		t.Errorf("is_external = %v, want true", e.Props["is_external"])
 	}
-	if e.Props["succeeded"] != false {
-		t.Errorf("succeeded = %v, want false", e.Props["succeeded"])
+	if e.Props["status"] != "failed" {
+		t.Errorf("status = %v, want failed", e.Props["status"])
+	}
+}
+
+// TestNewPluginUsedEventSkipped verifies skipped status.
+func TestNewPluginUsedEventSkipped(t *testing.T) {
+	e := NewPluginUsedEvent("waybar", "0.1.0", false, "skipped")
+
+	if e.Props["status"] != "skipped" {
+		t.Errorf("status = %v, want skipped", e.Props["status"])
+	}
+}
+
+// TestNewPluginUsedEventEmptyVersion verifies version is omitted when empty.
+func TestNewPluginUsedEventEmptyVersion(t *testing.T) {
+	e := NewPluginUsedEvent("kitty", "", false, "ok")
+
+	if _, ok := e.Props["plugin_version"]; ok {
+		t.Error("plugin_version should not be set when version is empty")
 	}
 }
 

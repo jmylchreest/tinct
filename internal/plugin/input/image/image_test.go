@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jmylchreest/tinct/internal/config"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 )
 
@@ -54,17 +55,19 @@ func TestNew(t *testing.T) {
 
 // TestNewWithEnv tests creating plugin with environment variables.
 func TestNewWithEnv(t *testing.T) {
+	// Reset config singleton so env vars take effect.
+	config.ResetForTesting()
+
 	// Set environment variables.
-	os.Setenv("TINCT_IMAGE_CACHE", "true")
-	os.Setenv("TINCT_IMAGE_CACHE_DIR", "/tmp/test-cache")
-	os.Setenv("TINCT_IMAGE_CACHE_FILENAME", "test.jpg")
-	os.Setenv("TINCT_IMAGE_CACHE_OVERWRITE", "true")
-	defer func() {
-		os.Unsetenv("TINCT_IMAGE_CACHE")
-		os.Unsetenv("TINCT_IMAGE_CACHE_DIR")
-		os.Unsetenv("TINCT_IMAGE_CACHE_FILENAME")
-		os.Unsetenv("TINCT_IMAGE_CACHE_OVERWRITE")
-	}()
+	t.Setenv("TINCT_IMAGE_CACHE", "true")
+	t.Setenv("TINCT_IMAGE_CACHE_DIR", "/tmp/test-cache")
+	t.Setenv("TINCT_IMAGE_CACHE_FILENAME", "test.jpg")
+	t.Setenv("TINCT_IMAGE_CACHE_OVERWRITE", "true")
+
+	// Also set HOME so config package creates its file in a temp dir.
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
 
 	plugin := New()
 

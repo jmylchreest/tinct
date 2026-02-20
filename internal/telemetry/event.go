@@ -40,9 +40,6 @@ type GenerateEventParams struct {
 	// OutputPlugins is the list of output plugin names that were executed.
 	OutputPlugins []string
 
-	// SuccessCount is the number of output plugins that succeeded.
-	SuccessCount int
-
 	// ThemeType is the detected/selected theme (e.g. "dark", "light", "auto").
 	ThemeType string
 
@@ -60,9 +57,6 @@ type GenerateEventParams struct {
 
 	// DualTheme indicates whether both primary and alternate themes were generated.
 	DualTheme bool
-
-	// ExternalPluginCount is the number of external (non-builtin) plugins used.
-	ExternalPluginCount int
 }
 
 // NewGenerateEvent creates a comprehensive telemetry event for a generate invocation.
@@ -81,9 +75,7 @@ func NewGenerateEvent(params GenerateEventParams) Event {
 	// Output configuration.
 	if len(params.OutputPlugins) > 0 {
 		e.Props["output_plugins"] = strings.Join(params.OutputPlugins, ",")
-		e.Props["output_plugin_count"] = len(params.OutputPlugins)
 	}
-	e.Props["success_count"] = params.SuccessCount
 
 	// Theme and colour settings.
 	if params.ThemeType != "" {
@@ -101,9 +93,6 @@ func NewGenerateEvent(params GenerateEventParams) Event {
 	e.Props["dry_run"] = params.DryRun
 	e.Props["dual_theme"] = params.DualTheme
 
-	// Plugin ecosystem.
-	e.Props["external_plugin_count"] = params.ExternalPluginCount
-
 	// Detect AI input usage.
 	e.Props["ai_input"] = isAIInput(params.InputPlugin)
 
@@ -113,11 +102,19 @@ func NewGenerateEvent(params GenerateEventParams) Event {
 // NewPluginUsedEvent creates a telemetry event for an individual output plugin usage.
 // Sending one event per plugin allows Aptabase to count and rank plugin popularity
 // directly, rather than requiring string splitting on a comma-joined list.
-func NewPluginUsedEvent(pluginName string, isExternal bool, succeeded bool) Event {
+//
+// Status should be one of:
+//   - "ok"      — plugin generated and wrote files successfully
+//   - "failed"  — plugin was attempted but generation or write failed
+//   - "skipped" — plugin was not attempted (validation failed, pre-hook skip, etc.)
+func NewPluginUsedEvent(pluginName string, pluginVersion string, isExternal bool, status string) Event {
 	e := NewEvent("plugin_used")
 	e.Props["plugin_name"] = pluginName
 	e.Props["is_external"] = isExternal
-	e.Props["succeeded"] = succeeded
+	e.Props["status"] = status
+	if pluginVersion != "" {
+		e.Props["plugin_version"] = pluginVersion
+	}
 	return e
 }
 

@@ -17,21 +17,16 @@ import (
 )
 
 const (
-	// PluginLockFile is the name of the plugin lock file.
-	PluginLockFile = ".tinct-plugins.json"
+	// PluginLockFile is the name of the plugin lock file in the config directory.
+	PluginLockFile = "plugins.lock.json"
+
+	// legacyLockFileName is the old lock file name used before migration.
+	legacyLockFileName = ".tinct-plugins.json"
 )
 
 // PluginLock represents the plugin lock file structure.
+// This file tracks installed external plugins and their sources.
 type PluginLock struct {
-	// Version of the lock file format.
-	Version string `json:"version,omitempty"`
-
-	// EnabledPlugins is a list of explicitly enabled plugins.
-	EnabledPlugins []string `json:"enabled_plugins,omitempty"`
-
-	// DisabledPlugins is a list of explicitly disabled plugins.
-	DisabledPlugins []string `json:"disabled_plugins,omitempty"`
-
 	// ExternalPlugins maps plugin names to their metadata.
 	ExternalPlugins map[string]*ExternalPluginMeta `json:"external_plugins,omitempty"`
 }
@@ -58,12 +53,6 @@ type ExternalPluginMeta struct {
 
 	// SourceLegacy is the old string-based source field for backward compatibility.
 	SourceLegacy string `json:"source_legacy,omitempty"`
-
-	// InstalledAt is the timestamp when the plugin was installed.
-	InstalledAt string `json:"installed_at,omitempty"`
-
-	// Config holds plugin-specific configuration (optional).
-	Config map[string]any `json:"config,omitempty"`
 }
 
 var (
@@ -71,7 +60,6 @@ var (
 	pluginLockPath   string
 	pluginType       string
 	pluginForce      bool
-	pluginClear      bool
 	pluginYes        bool
 	pluginSourceType string
 	pluginNoCopy     bool
@@ -82,83 +70,26 @@ var (
 var pluginsCmd = &cobra.Command{
 	Use:   "plugins",
 	Short: "Manage plugins",
-	Long: `Manage Tinct plugins including listing, enabling, disabling, and managing external plugins.
+	Long: `Manage Tinct plugins including listing and managing external plugins.
 
-Plugins can be controlled via:
-  1. Plugin lock file (.tinct-plugins.json)
-  2. Environment variables (TINCT_ENABLED_PLUGINS, TINCT_DISABLED_PLUGINS)
-  3. Default plugin settings
-
-Priority order: lock file > environment variables > plugin defaults
-
-When TINCT_ENABLED_PLUGINS is set, only those plugins are enabled (whitelist mode).
-When TINCT_DISABLED_PLUGINS is set, those plugins are disabled (blacklist mode).
+The plugin lock file (~/.config/tinct/plugins.lock.json) tracks installed
+external plugins and their sources. Use 'tinct plugins sync' to reproduce
+your plugin setup on another machine.
 
 Commands that modify the lock file:
   - add: Adds external plugin and updates lock file
   - delete: Removes external plugin and updates lock file
-  - enable: Updates lock file to enable plugin
-  - disable: Updates lock file to disable plugin
-  - clear: Updates lock file to clear plugin configuration`,
+  - update: Updates external plugins from their sources`,
 }
 
 // pluginListCmd lists all available plugins.
 var pluginListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all available plugins",
-	Long: `List all available plugins including their enabled/disabled state.
+	Long: `List all available plugins.
 
 Shows both built-in and external plugins with their type and description.`,
 	RunE: runPluginList,
-}
-
-// pluginEnableCmd enables a plugin.
-var pluginEnableCmd = &cobra.Command{
-	Use:   "enable <plugin-name>",
-	Short: "Enable a plugin",
-	Long: `Enable a plugin by adding it to the plugin lock file.
-
-Examples:
-  tinct plugins enable hyprland
-  tinct plugins enable waybar
-  tinct plugins enable image
-  tinct plugins enable all
-  tinct plugins enable hyprland --clear  # Remove from disabled list only`,
-	Args: cobra.ExactArgs(1),
-	RunE: runPluginEnable,
-}
-
-// pluginDisableCmd disables a plugin.
-var pluginDisableCmd = &cobra.Command{
-	Use:   "disable <plugin-name>",
-	Short: "Disable a plugin",
-	Long: `Disable a plugin by adding it to the disabled list in the plugin lock file.
-
-Examples:
-  tinct plugins disable hyprland
-  tinct plugins disable waybar
-  tinct plugins disable image
-  tinct plugins disable all
-  tinct plugins disable hyprland --clear  # Remove from enabled list only`,
-	Args: cobra.ExactArgs(1),
-	RunE: runPluginDisable,
-}
-
-// pluginClearCmd clears plugin configuration.
-var pluginClearCmd = &cobra.Command{
-	Use:   "clear [plugin-name]",
-	Short: "Clear plugin configuration",
-	Long: `Clear plugin enabled/disabled status, returning it to default behavior.
-
-If a plugin name is provided, clears that plugin's configuration.
-If no plugin name is provided, clears all plugin configuration.
-
-Examples:
-  tinct plugins clear hyprland  # Clear hyprland config
-  tinct plugins clear waybar    # Clear waybar config
-  tinct plugins clear           # Clear all plugin config`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: runPluginClear,
 }
 
 // pluginAddCmd adds an external plugin.
@@ -226,36 +157,31 @@ changes to the lock file.
 
 Examples:
   tinct plugins update
-  tinct plugins update --lock-file /path/to/.tinct-plugins.json`,
+  tinct plugins update --lock-file /path/to/plugins.lock.json`,
 	RunE: runPluginUpdate,
 }
 
 func init() {
 	// Add plugins command flags.
-	pluginsCmd.PersistentFlags().StringVar(&pluginLockPath, "lock-file", "", "path to plugin lock file (default: .tinct-plugins.json in current or home directory)")
+	pluginsCmd.PersistentFlags().StringVar(&pluginLockPath, "lock-file", "", "path to plugin lock file (default: ~/.config/tinct/plugins.lock.json)")
 
-	// Add type flag to relevant commands (no shorthand to avoid conflict with global -t theme flag).
-	pluginEnableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
-	pluginDisableCmd.Flags().StringVar(&pluginType, "type", "", "plugin type (input or output)")
+	// Plugin list flags.
 	pluginListCmd.Flags().BoolVar(&pluginShowPath, "show-path", false, "show the actual file path used when loading each plugin")
+
+	// Plugin add flags.
 	pluginAddCmd.Flags().StringVar(&pluginType, "type", "output", "plugin type (input or output)")
 	pluginAddCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force overwrite if plugin already exists")
 	pluginAddCmd.Flags().StringVar(&pluginSourceType, "source-type", "", "force source type (local, http, git) - auto-detected if not specified")
 	pluginAddCmd.Flags().BoolVar(&pluginNoCopy, "no-copy", false, "register plugin at its current location without copying (useful for system packages)")
+
+	// Plugin delete flags.
 	pluginDeleteCmd.Flags().BoolVarP(&pluginForce, "force", "f", false, "force deletion without confirmation")
 
 	// Add subcommands.
 	pluginsCmd.AddCommand(pluginListCmd)
-	pluginsCmd.AddCommand(pluginEnableCmd)
-	pluginsCmd.AddCommand(pluginDisableCmd)
-	pluginsCmd.AddCommand(pluginClearCmd)
 	pluginsCmd.AddCommand(pluginAddCmd)
 	pluginsCmd.AddCommand(pluginDeleteCmd)
 	pluginsCmd.AddCommand(pluginUpdateCmd)
-
-	// Add flags.
-	pluginEnableCmd.Flags().BoolVarP(&pluginClear, "clear", "c", false, "Only remove from disabled list (don't add to enabled)")
-	pluginDisableCmd.Flags().BoolVarP(&pluginClear, "clear", "c", false, "Only remove from enabled list (don't add to disabled)")
 }
 
 // runPluginList lists all available plugins.
@@ -314,11 +240,6 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Plugin directory: %s\n", pluginDir)
-	}
-
-	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
-		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
 	// Stage 1: Resolve source path and check if it's already in the plugin directory
@@ -390,10 +311,14 @@ func runPluginAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Stage 6: Update lock file
+	// Build structured source metadata.
+	pluginSource := buildPluginSource(source, pluginSourceType, finalPath)
+
 	lock.ExternalPlugins[pluginInfo.Name] = &ExternalPluginMeta{
 		Name:         pluginInfo.Name,
 		Path:         finalPath,
 		Type:         pluginInfo.Type,
+		Source:       pluginSource,
 		SourceLegacy: source,
 		Version:      pluginInfo.Version,
 		Description:  pluginInfo.Description,
@@ -472,10 +397,6 @@ func runPluginDelete(cmd *cobra.Command, args []string) error {
 
 	// Remove from lock file.
 	delete(lock.ExternalPlugins, pluginName)
-
-	// Remove from enabled/disabled lists.
-	lock.EnabledPlugins = removeFromList(lock.EnabledPlugins, pluginName)
-	lock.DisabledPlugins = removeFromList(lock.DisabledPlugins, pluginName)
 
 	// Save lock file.
 	if err := savePluginLock(lockPath, lock); err != nil {
@@ -582,11 +503,6 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Plugin directory: %s\n", pluginDir)
-	}
-
-	// Ensure plugin directory exists.
-	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
-		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
 	// Create live table for updates
@@ -714,25 +630,76 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// getDefaultLockFilePath returns the default lock file path at ~/.config/tinct/plugins.lock.json.
+func getDefaultLockFilePath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get config directory: %w", err)
+	}
+	return filepath.Join(configDir, "tinct", PluginLockFile), nil
+}
+
+// migrateLegacyLockFile checks for lock files at legacy locations and migrates
+// them to the new default path. Returns the path if found and migrated, or empty string.
+func migrateLegacyLockFile(newPath string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	// Check legacy locations in order of priority.
+	legacyPaths := []string{
+		filepath.Join(home, legacyLockFileName), // ~/.tinct-plugins.json
+		legacyLockFileName,                      // ./.tinct-plugins.json (CWD)
+	}
+
+	for _, legacyPath := range legacyPaths {
+		data, err := os.ReadFile(legacyPath) // #nosec G304 - Legacy lock file path
+		if err != nil {
+			continue
+		}
+
+		// Ensure the new directory exists.
+		if err := os.MkdirAll(filepath.Dir(newPath), 0o750); err != nil {
+			return ""
+		}
+
+		// Write to new location.
+		if err := os.WriteFile(newPath, data, 0o600); err != nil {
+			return ""
+		}
+
+		// Remove the old file (best effort).
+		_ = os.Remove(legacyPath)
+
+		fmt.Fprintf(os.Stderr, "Migrated plugin lock file: %s → %s\n", legacyPath, newPath)
+		return newPath
+	}
+
+	return ""
+}
+
 // loadPluginLock loads the plugin lock file.
 func loadPluginLock() (*PluginLock, string, error) {
 	lockPath := pluginLockPath
 
 	if lockPath == "" {
-		// Try current directory first.
-		lockPath = PluginLockFile
-		if _, err := os.Stat(lockPath); os.IsNotExist(err) {
-			// Try home directory.
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return nil, "", fmt.Errorf("no plugin lock file found")
-			}
+		// Use the new default path.
+		defaultPath, err := getDefaultLockFilePath()
+		if err != nil {
+			return nil, "", fmt.Errorf("no plugin lock file found")
+		}
 
-			homeLockPath := filepath.Join(home, PluginLockFile)
-			if _, err := os.Stat(homeLockPath); err != nil {
+		if _, err := os.Stat(defaultPath); err == nil {
+			lockPath = defaultPath
+		} else {
+			// Try migrating from legacy locations.
+			migratedPath := migrateLegacyLockFile(defaultPath)
+			if migratedPath != "" {
+				lockPath = migratedPath
+			} else {
 				return nil, "", fmt.Errorf("no plugin lock file found")
 			}
-			lockPath = homeLockPath
 		}
 	}
 
@@ -757,15 +724,17 @@ func loadOrCreatePluginLock() (lock *PluginLock, lockPath string) {
 		return lock, lockPath
 	}
 
-	// Create new lock file.
+	// Create new lock file at the default path.
 	lockPath = pluginLockPath
 	if lockPath == "" {
-		lockPath = PluginLockFile
+		if defaultPath, err := getDefaultLockFilePath(); err == nil {
+			lockPath = defaultPath
+		} else {
+			lockPath = PluginLockFile
+		}
 	}
 
 	lock = &PluginLock{
-		EnabledPlugins:  []string{},
-		DisabledPlugins: []string{},
 		ExternalPlugins: make(map[string]*ExternalPluginMeta),
 	}
 
@@ -788,16 +757,11 @@ func savePluginLock(path string, lock *PluginLock) error {
 
 // createManagerFromLock creates a plugin manager from a lock file.
 func createManagerFromLock(lock *PluginLock) *manager.Manager {
+	mgr := manager.NewBuilder().Build()
+
 	if lock == nil {
-		return manager.NewBuilder().WithEnvConfig().Build()
+		return mgr
 	}
-
-	config := manager.Config{
-		EnabledPlugins:  lock.EnabledPlugins,
-		DisabledPlugins: lock.DisabledPlugins,
-	}
-
-	mgr := manager.NewBuilder().WithConfig(config).Build()
 
 	// Register external plugins using their actual names.
 	if lock.ExternalPlugins != nil {
@@ -825,9 +789,8 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 	return mgr
 }
 
-// loadAndApplyPluginLock loads the plugin lock file and applies configuration
-// to the shared plugin manager. This is used by commands that need to respect
-// plugin enable/disable settings without creating a new manager.
+// loadAndApplyPluginLock loads the plugin lock file and registers any external
+// plugins into the shared plugin manager.
 func loadAndApplyPluginLock() error {
 	lock, _, err := loadPluginLock()
 	if err != nil {
@@ -835,11 +798,7 @@ func loadAndApplyPluginLock() error {
 	}
 
 	if lock != nil {
-		config := manager.Config{
-			EnabledPlugins:  lock.EnabledPlugins,
-			DisabledPlugins: lock.DisabledPlugins,
-		}
-		sharedPluginManager.UpdateConfig(config)
+		registerExternalPluginsFromLock(lock, true, false)
 	}
 
 	return nil

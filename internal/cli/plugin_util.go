@@ -11,13 +11,21 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 )
 
-// getPluginDir returns the plugin directory path.
+// getPluginDir returns the plugin directory path, creating it if it doesn't exist.
 func getPluginDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-	return filepath.Join(home, ".local", "share", "tinct", "plugins"), nil
+
+	pluginDir := filepath.Join(home, ".local", "share", "tinct", "plugins")
+
+	// Ensure directory exists.
+	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
+		return "", fmt.Errorf("failed to create plugin directory: %w", err)
+	}
+
+	return pluginDir, nil
 }
 
 // queryPluginMetadata queries a plugin for its name, description, type, and version.
@@ -43,8 +51,8 @@ func queryPluginMetadata(pluginPath string) (name, description, pluginType, vers
 	return info.Name, info.Description, info.Type, info.Version, info.ProtocolVersion
 }
 
-// formatPluginSourceString converts a PluginSource struct to a display string.
-func formatPluginSourceString(source *repository.PluginSource) string {
+// formatPluginSourceDisplay converts a PluginSource struct to a display string.
+func formatPluginSourceDisplay(source *repository.PluginSource) string {
 	if source == nil {
 		return ""
 	}

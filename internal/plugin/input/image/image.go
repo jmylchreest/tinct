@@ -7,12 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
+	"github.com/jmylchreest/tinct/internal/config"
 	"github.com/jmylchreest/tinct/internal/image"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/regions"
@@ -64,24 +64,21 @@ type Plugin struct {
 }
 
 // New creates a new image input plugin with default settings.
+// Cache settings are read from tinct.toml (with env var overrides already applied).
 func New() *Plugin {
-	// Check environment variables for cache settings.
-	// Default to true so remote images are cached for wallpaper support.
+	// Load config — env var overrides are applied by config.Load().
+	cfg, _ := config.Load()
+
 	cacheEnabled := true
-	if val := os.Getenv("TINCT_IMAGE_CACHE"); val != "" {
-		if parsed, err := strconv.ParseBool(val); err == nil {
-			cacheEnabled = parsed
-		}
-	}
-
-	cacheDir := os.Getenv("TINCT_IMAGE_CACHE_DIR")
-	cacheFilename := os.Getenv("TINCT_IMAGE_CACHE_FILENAME")
-
+	cacheDir := ""
+	cacheFilename := ""
 	cacheOverwrite := false
-	if val := os.Getenv("TINCT_IMAGE_CACHE_OVERWRITE"); val != "" {
-		if parsed, err := strconv.ParseBool(val); err == nil {
-			cacheOverwrite = parsed
-		}
+
+	if cfg != nil {
+		cacheEnabled = cfg.Cache.Images
+		cacheDir = cfg.Cache.Dir
+		cacheFilename = cfg.Cache.Filename
+		cacheOverwrite = cfg.Cache.Overwrite
 	}
 
 	return &Plugin{
@@ -219,7 +216,7 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 // - URLs are returned as-is
 // - If userProvidedTilde is true and path is under $HOME, re-substitute ~ for portability
 // - Relative paths are converted to absolute paths
-// - Absolute paths are returned as-is
+// - Absolute paths are returned as-is.
 func canonicalizePath(path string, userProvidedTilde bool) string {
 	// URLs are returned as-is
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ This is useful for:
   - Syncing team configurations
   - CI/CD pipelines
 
-The lock file is typically located at ~/.config/tinct/.tinct-plugins.json
+The lock file is located at ~/.config/tinct/plugins.lock.json
 
 Plugins are reinstalled from their original source:
   - Repository plugins: Downloaded from configured repository
@@ -87,14 +88,15 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 	// Read lock file.
 	lock, lockPath, err := loadPluginLock()
 	if err != nil {
-		if os.IsNotExist(err) {
-			defaultPath := pluginLockPath
-			if defaultPath == "" {
+		defaultPath := pluginLockPath
+		if defaultPath == "" {
+			if dp, dpErr := getDefaultLockFilePath(); dpErr == nil {
+				defaultPath = dp
+			} else {
 				defaultPath = PluginLockFile
 			}
-			return fmt.Errorf("lock file not found at %s\n\nCreate one by installing plugins with 'tinct plugins add'", defaultPath)
 		}
-		return fmt.Errorf("failed to read lock file: %w", err)
+		return fmt.Errorf("lock file not found at %s\n\nCreate one by installing plugins with 'tinct plugins add'", defaultPath)
 	}
 
 	if len(lock.ExternalPlugins) == 0 {
@@ -175,7 +177,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error {
 		var sourceDisplay string
 		switch {
 		case meta.Source != nil:
-			sourceDisplay = formatPluginSource(meta.Source)
+			sourceDisplay = formatPluginSourceDisplay(meta.Source)
 		case meta.SourceLegacy != "":
 			sourceDisplay = meta.SourceLegacy
 		default:
@@ -234,7 +236,7 @@ func runPluginClean(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get plugin directory.
-	pluginDir, err := getPluginDirectory()
+	pluginDir, err := getPluginDir()
 	if err != nil {
 		return err
 	}
@@ -379,7 +381,7 @@ func reinstallFromLocal(meta *ExternalPluginMeta) error {
 	}
 
 	// Get plugin directory.
-	pluginDir, err := getPluginDirectory()
+	pluginDir, err := getPluginDir()
 	if err != nil {
 		return err
 	}
@@ -455,7 +457,7 @@ func downloadAndInstallPlugin(url, name, expectedChecksum string) error {
 	}
 
 	// Get plugin directory.
-	pluginDir, err := getPluginDirectory()
+	pluginDir, err := getPluginDir()
 	if err != nil {
 		return err
 	}
@@ -508,40 +510,9 @@ func calculateChecksum(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// getPluginDirectory returns the plugin installation directory.
-func getPluginDirectory() (string, error) {
-	dataDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	pluginDir := filepath.Join(dataDir, ".local", "share", "tinct", "plugins")
-
-	// Ensure directory exists.
-	if err := os.MkdirAll(pluginDir, 0o750); err != nil {
-		return "", fmt.Errorf("failed to create plugin directory: %w", err)
-	}
-
-	return pluginDir, nil
-}
-
 // isHTTPURL checks if a string is an HTTP(S) URL.
 func isHTTPURL(s string) bool {
 	return len(s) > 7 && (s[:7] == "http://" || s[:8] == "https://")
-}
-
-// formatPluginSource formats a plugin source for display.
-func formatPluginSource(source *repository.PluginSource) string {
-	switch source.Type {
-	case "repository":
-		return fmt.Sprintf("repository:%s/%s@%s", source.Repository, source.Plugin, source.Version)
-	case "http":
-		return source.URL
-	case "local":
-		return source.OriginalPath
-	default:
-		return source.Type
-	}
 }
 
 // getDownloadForPlatform returns the appropriate download for the current platform.
@@ -567,14 +538,12 @@ func getDownloadForPlatform(downloads map[string]*repository.Download) *reposito
 
 // getOS returns the current OS.
 func getOS() string {
-	// Use runtime.GOOS equivalent.
-	return "linux" // Simplified for now
+	return runtime.GOOS
 }
 
 // getArch returns the current architecture.
 func getArch() string {
-	// Use runtime.GOARCH equivalent.
-	return "amd64" // Simplified for now
+	return runtime.GOARCH
 }
 
 // printSyncSummary prints a summary of sync operations.

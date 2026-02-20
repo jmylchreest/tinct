@@ -19,13 +19,9 @@ import (
 
 // loadAndConfigurePlugins loads the plugin lock file and configures plugins.
 func loadAndConfigurePlugins() error {
-	if err := loadAndApplyPluginLock(); err != nil {
-		return nil // No lock file is OK
-	}
-
 	lock, _, err := loadPluginLock()
 	if err != nil || lock == nil {
-		return nil
+		return nil // No lock file is OK
 	}
 
 	// Register external plugins with absolute path resolution.
@@ -372,26 +368,19 @@ func handlePaletteOutput(palette *colour.CategorisedPalette) error {
 // selectOutputPlugins determines which output plugins to run.
 func selectOutputPlugins() ([]output.Plugin, error) {
 	if len(generateOutputs) == 1 && generateOutputs[0] == pluginTypeAll {
-		// Run all non-disabled plugins (on-demand plugins are included).
+		// Run all registered plugins.
 		allPlugins := sharedPluginManager.AllOutputPlugins()
 		plugins := make([]output.Plugin, 0, len(allPlugins))
 		for _, plugin := range allPlugins {
-			// Skip explicitly disabled plugins.
-			if sharedPluginManager.IsOutputDisabled(plugin) {
-				if generateVerbose {
-					fmt.Fprintf(os.Stderr, "⊘ Skipping %s: plugin is disabled\n", plugin.Name())
-				}
-				continue
-			}
 			plugins = append(plugins, plugin)
 		}
 		if len(plugins) == 0 {
-			return nil, fmt.Errorf("no output plugins available (all plugins are disabled)")
+			return nil, fmt.Errorf("no output plugins available")
 		}
 		return plugins, nil
 	}
 
-	// Run specific plugins - check that they're not disabled.
+	// Run specific plugins by name.
 	plugins := make([]output.Plugin, 0, len(generateOutputs))
 	for _, name := range generateOutputs {
 		plugin, ok := sharedPluginManager.GetOutputPlugin(name)
@@ -401,10 +390,6 @@ func selectOutputPlugins() ([]output.Plugin, error) {
 				availablePlugins = append(availablePlugins, pluginName)
 			}
 			return nil, fmt.Errorf("unknown output plugin: %s (available: %s)", name, strings.Join(availablePlugins, ", "))
-		}
-		// Check if plugin is explicitly disabled.
-		if sharedPluginManager.IsOutputDisabled(plugin) {
-			return nil, fmt.Errorf("plugin %s is disabled (check TINCT_DISABLED_PLUGINS)", name)
 		}
 		plugins = append(plugins, plugin)
 	}

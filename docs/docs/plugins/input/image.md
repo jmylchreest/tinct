@@ -111,14 +111,24 @@ Use these in LED control plugins for monitor bias lighting.
 
 ## Caching
 
-Remote images are cached locally:
+Remote images are cached locally. Configure caching in `~/.config/tinct/tinct.toml`:
 
-```bash
-# Configure caching
-export TINCT_IMAGE_CACHE=true
-export TINCT_IMAGE_CACHE_DIR=~/.cache/tinct/images
-export TINCT_IMAGE_CACHE_OVERWRITE=false
+```toml
+[cache]
+images = true
+overwrite = false
+# dir = ""      # default: ~/.cache/tinct/images
+# filename = "" # default: content-hash based filename
 ```
+
+Environment variables override the config file:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TINCT_IMAGE_CACHE` | `true` | Enable or disable caching |
+| `TINCT_IMAGE_CACHE_DIR` | `~/.cache/tinct/images` | Cache directory |
+| `TINCT_IMAGE_CACHE_FILENAME` | _(hash-based)_ | Override cached filename |
+| `TINCT_IMAGE_CACHE_OVERWRITE` | `false` | Re-download even if cached |
 
 ## Seed modes
 

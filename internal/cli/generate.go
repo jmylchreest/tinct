@@ -148,7 +148,7 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 	}
 
 	summaryErr := printGenerationSummary(successCount, executions)
-	sendGenerateTelemetry(executions, successCount, palette)
+	sendGenerateTelemetry(ctx, executions, palette)
 
 	return summaryErr
 }
@@ -360,8 +360,8 @@ func buildPluginSpecificHelp(inputPlugin string, outputPlugins []string) string 
 	// Show input plugin description if specified
 	if inputPlugin != "" {
 		if plugin, ok := sharedPluginManager.GetInputPlugin(inputPlugin); ok {
-			help.WriteString(fmt.Sprintf("Input Plugin: %s\n", plugin.Name()))
-			help.WriteString(fmt.Sprintf("%s\n\n", plugin.Description()))
+			fmt.Fprintf(&help, "Input Plugin: %s\n", plugin.Name())
+			fmt.Fprintf(&help, "%s\n\n", plugin.Description())
 		}
 	}
 
@@ -372,7 +372,7 @@ func buildPluginSpecificHelp(inputPlugin string, outputPlugins []string) string 
 		if len(allPlugins) > 0 {
 			help.WriteString("Output Plugins (all enabled):\n")
 			for _, plugin := range allPlugins {
-				help.WriteString(fmt.Sprintf("  %s - %s\n", plugin.Name(), plugin.Description()))
+				fmt.Fprintf(&help, "  %s - %s\n", plugin.Name(), plugin.Description())
 			}
 			help.WriteString("\n")
 		}
@@ -381,7 +381,7 @@ func buildPluginSpecificHelp(inputPlugin string, outputPlugins []string) string 
 		help.WriteString("Output Plugins:\n")
 		for _, outputName := range outputPlugins {
 			if plugin, ok := sharedPluginManager.GetOutputPlugin(outputName); ok {
-				help.WriteString(fmt.Sprintf("  %s - %s\n", plugin.Name(), plugin.Description()))
+				fmt.Fprintf(&help, "  %s - %s\n", plugin.Name(), plugin.Description())
 			}
 		}
 		help.WriteString("\n")
@@ -403,22 +403,15 @@ Input Plugins:
 `)
 
 	// List available input plugins
-	for _, pluginName := range sharedPluginManager.ListInputPlugins() {
-		if plugin, ok := sharedPluginManager.GetInputPlugin(pluginName); ok {
-			fmt.Fprintf(&help, "  %-12s - %s\n", plugin.Name(), plugin.Description())
-		}
+	for _, plugin := range sharedPluginManager.AllInputPlugins() {
+		fmt.Fprintf(&help, "  %-12s - %s\n", plugin.Name(), plugin.Description())
 	}
 
 	help.WriteString("\nOutput Plugins:\n")
 
-	// List enabled output plugins
-	enabledPlugins := sharedPluginManager.FilterOutputPlugins()
-	if len(enabledPlugins) > 0 {
-		for _, plugin := range enabledPlugins {
-			fmt.Fprintf(&help, "  %-12s - %s\n", plugin.Name(), plugin.Description())
-		}
-	} else {
-		help.WriteString("  (no enabled plugins)\n")
+	// List output plugins
+	for _, plugin := range sharedPluginManager.AllOutputPlugins() {
+		fmt.Fprintf(&help, "  %-12s - %s\n", plugin.Name(), plugin.Description())
 	}
 
 	help.WriteString(`  all          - Run all available output plugins (default)
@@ -548,24 +541,22 @@ func writeFile(path string, content []byte, verbose bool) error {
 }
 
 // sendGenerateTelemetry sends anonymous telemetry events for the generate command.
-// This is synchronous, fire-and-forget, and fails silently. It never affects the CLI's behaviour.
+// Events are dispatched asynchronously and batched into as few HTTP requests as
+// possible. The function blocks until all events have been sent or ctx expires.
+// It never affects the CLI's behaviour; failures are silently discarded.
 // It sends:
 //   - One "generate" summary event with overall stats
 //   - One "plugin_used" event per output plugin (for per-plugin popularity analytics)
-func sendGenerateTelemetry(executions []pluginExecution, successCount int, palette *colour.CategorisedPalette) {
+func sendGenerateTelemetry(ctx context.Context, executions []pluginExecution, palette *colour.CategorisedPalette) {
 	client := telemetry.New()
 	if !client.IsEnabled() {
 		return
 	}
 
-	// Collect output plugin names and count external plugins.
+	// Collect output plugin names.
 	pluginNames := make([]string, 0, len(executions))
-	externalCount := 0
 	for _, exec := range executions {
 		pluginNames = append(pluginNames, exec.plugin.Name())
-		if _, ok := exec.plugin.(*manager.ExternalOutputPlugin); ok {
-			externalCount++
-		}
 	}
 
 	// Determine theme type string.
@@ -576,26 +567,48 @@ func sendGenerateTelemetry(executions []pluginExecution, successCount int, palet
 
 	// Send the summary event.
 	summaryEvent := telemetry.NewGenerateEvent(telemetry.GenerateEventParams{
-		InputPlugin:         generateInputPlugin,
-		OutputPlugins:       pluginNames,
-		SuccessCount:        successCount,
-		ThemeType:           themeType,
-		SeedMode:            commonflags.SeedMode,
-		Backend:             generateBackend,
-		ExtractAmbience:     commonflags.ExtractAmbience,
-		DryRun:              generateDryRun,
-		DualTheme:           !globalNoDesaturation,
-		ExternalPluginCount: externalCount,
+		InputPlugin:     generateInputPlugin,
+		OutputPlugins:   pluginNames,
+		ThemeType:       themeType,
+		SeedMode:        commonflags.SeedMode,
+		Backend:         generateBackend,
+		ExtractAmbience: commonflags.ExtractAmbience,
+		DryRun:          generateDryRun,
+		DualTheme:       !globalNoDesaturation,
 	})
 	client.Send(summaryEvent)
 
-	// Send one event per output plugin for per-plugin popularity and failure analytics.
+	// Send one event per output plugin for per-plugin analytics.
+	// Aptabase can count/filter these by status, is_external, plugin_name natively.
 	for _, exec := range executions {
-		isExternal := false
-		if _, ok := exec.plugin.(*manager.ExternalOutputPlugin); ok {
-			isExternal = true
+		_, isExternal := exec.plugin.(*manager.ExternalOutputPlugin)
+
+		var status string
+		switch {
+		case !exec.skip && len(exec.writtenFiles) > 0:
+			status = "ok"
+		case exec.skip && len(exec.writtenFiles) == 0 && exec.skipReason != "":
+			// Distinguish skipped (never attempted) from failed (attempted but errored).
+			// Pre-hook skips and validation failures never reach generation,
+			// while generation/write failures set skip=true after an attempt.
+			if strings.HasPrefix(exec.skipReason, "validation failed:") ||
+				exec.skipReason == "" ||
+				(!strings.HasPrefix(exec.skipReason, "generation failed:") &&
+					!strings.HasPrefix(exec.skipReason, "dual-theme generation failed:") &&
+					!strings.HasPrefix(exec.skipReason, "write failed:")) {
+
+				status = "skipped"
+			} else {
+				status = "failed"
+			}
+		default:
+			status = "failed"
 		}
-		succeeded := !exec.skip && len(exec.writtenFiles) > 0
-		client.Send(telemetry.NewPluginUsedEvent(exec.plugin.Name(), isExternal, succeeded))
+
+		client.Send(telemetry.NewPluginUsedEvent(exec.plugin.Name(), exec.plugin.Version(), isExternal, status))
 	}
+
+	// Flush waits for the background worker to send all queued events.
+	// The context bounds the maximum wait time so telemetry never stalls the CLI.
+	client.Flush(ctx)
 }

@@ -37,11 +37,8 @@ terminal emulators, window managers, application launchers, and more.`,
 // NewRootCmd adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func NewRootCmd() *cobra.Command {
-	// Initialise shared plugin manager using builder pattern.
-	// Start with environment config, will be updated from lock file at runtime if present.
-	sharedPluginManager = manager.NewBuilder().
-		WithEnvConfig().
-		Build()
+	// Initialise shared plugin manager.
+	sharedPluginManager = manager.NewBuilder().Build()
 
 	// Register plugin flags with all commands that need them.
 	registerPluginFlags()
