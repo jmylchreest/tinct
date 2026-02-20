@@ -9,13 +9,8 @@
 /out/
 /output/
 
-# Contrib plugin binaries
-/contrib/plugins/input/random/tinct-plugin-random
-/contrib/plugins/output/wob/tinct-plugin-wob
-/contrib/plugins/output/templater/tinct-plugin-templater
-/contrib/plugins/output/dunstify/tinct-plugin-dunstify
-/contrib/plugins/output/zed/tinct-plugin-zed
-/contrib/plugins/output/keylightd-tray/tinct-plugin-keylightd-tray
+# Contrib plugin binaries (any tinct-plugin-* binary anywhere under contrib/)
+contrib/**/tinct-plugin-*
 
 # Test binary, built with `go test -c`
 *.test
@@ -99,7 +94,6 @@ cosign.key
 docs/.docusaurus/
 docs/build/
 docs/node_modules/
-contrib/plugins/input/random/random
 
 # Claude Code local settings
 .claude/*.local.*
