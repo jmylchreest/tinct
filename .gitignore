@@ -99,3 +99,11 @@ docs/node_modules/
 
 # Claude Code local settings
 .claude/*.local.*
+
+# AI tooling directories (user-local state)
+.aide/
+.claude/
+
+# Root package files (docs site has its own)
+/package.json
+/package-lock.json
