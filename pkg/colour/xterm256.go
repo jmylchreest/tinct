@@ -37,10 +37,7 @@ func NearestXterm256(r, g, b uint8) int {
 	// Grayscale values: 8, 18, 28, ..., 238 (24 shades, step of 10).
 	// Use luminance-weighted average to find the best grayscale match.
 	gray := int(math.Round(float64(r)*0.2126 + float64(g)*0.7152 + float64(b)*0.0722))
-	grayIdx := max(232+int(math.Round(float64(gray-8)/10.0)), 232)
-	if grayIdx > 255 {
-		grayIdx = 255
-	}
+	grayIdx := min(max(232+int(math.Round(float64(gray-8)/10.0)), 232), 255)
 	grayVal := uint8(8 + (grayIdx-232)*10)
 	grayDist := xterm256SqDist(r, g, b, grayVal, grayVal, grayVal)
 
