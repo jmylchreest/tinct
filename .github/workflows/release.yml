@@ -153,13 +153,18 @@ jobs:
           govulncheck -json -format json ./... > govulncheck-results.json || true
         continue-on-error: true
 
-      - name: Upload govulncheck results
-        uses: actions/upload-artifact@v4
+      - name: Display govulncheck results
         if: always() && hashFiles('govulncheck-results.json') != ''
-        with:
-          name: govulncheck-results
-          path: govulncheck-results.json
-          retention-days: 30
+        run: |
+          echo "=== govulncheck results ==="
+          cat govulncheck-results.json
+          echo ""
+          echo "=== Summary ==="
+          # Show a concise summary of any vulnerabilities found
+          if command -v jq &> /dev/null; then
+            VULN_COUNT=$(jq '[.vulns // [] | .[] | select(.modules != null)] | length' govulncheck-results.json 2>/dev/null || echo "N/A")
+            echo "Vulnerabilities found: $VULN_COUNT"
+          fi
         continue-on-error: true
 
   # Preview release job - runs on main branch pushes (excluding tags)
