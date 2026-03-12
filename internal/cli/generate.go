@@ -532,6 +532,13 @@ func writeFile(path string, content []byte, verbose bool) error {
 		}
 	}
 
+	// Refuse to write through symlinks to prevent symlink-following attacks.
+	if info, err := os.Lstat(path); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("refusing to write to symlink: %s", path)
+		}
+	}
+
 	// Write new content to the original file.
 	if err := os.WriteFile(path, content, 0o600); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)

@@ -15,6 +15,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	"github.com/jmylchreest/tinct/internal/security"
 )
 
 // loadAndConfigurePlugins loads the plugin lock file and configures plugins.
@@ -572,6 +573,11 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 		}
 
 		// Regular plugin - write to file.
+		// Validate filename against path traversal (defense-in-depth for external plugins).
+		if err := security.ValidateFilePath(filename, outputDir); err != nil {
+			fmt.Fprintf(os.Stderr, "   Skipping unsafe output filename %q: %v\n", filename, err)
+			continue
+		}
 		fullPath := filepath.Join(outputDir, filename)
 
 		if generateDryRun {

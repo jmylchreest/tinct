@@ -13,6 +13,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/palettebuilder"
+	"github.com/jmylchreest/tinct/internal/security"
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
 	"github.com/jmylchreest/tinct/internal/version"
 )
@@ -62,9 +63,10 @@ func (p *Plugin) Validate() error {
 		return fmt.Errorf("--remote-json.url is required")
 	}
 
-	// Basic URL validation.
-	if !strings.HasPrefix(p.url, "http://") && !strings.HasPrefix(p.url, "https://") {
-		return fmt.Errorf("URL must start with http:// or https://")
+	// Validate URL: HTTPS-only by default, blocks localhost/private IPs.
+	// Set TINCT_ALLOW_INSECURE_HTTP=1 to permit plain HTTP.
+	if err := security.ValidateRuntimeHTTPURL(p.url); err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
 	}
 
 	return nil

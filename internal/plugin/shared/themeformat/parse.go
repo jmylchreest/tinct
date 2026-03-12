@@ -3,15 +3,18 @@ package themeformat
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/jmylchreest/tinct/internal/security"
+	httputil "github.com/jmylchreest/tinct/internal/util/http"
 )
 
 // ParseFile reads and parses a markdown theme file.
@@ -108,27 +111,19 @@ func DecodeWallpaper(theme *Theme, basePath string) ([]byte, string, error) {
 	}
 
 	if wp.URL != "" {
-		// Fetch from URL
-		resp, err := http.Get(wp.URL)
+		// Validate URL against SSRF (theme files are shareable content).
+		if err := security.ValidateRuntimeHTTPURL(wp.URL); err != nil {
+			return nil, "", fmt.Errorf("unsafe wallpaper URL: %w", err)
+		}
+
+		// Fetch with timeout and size limit.
+		data, err := httputil.Fetch(context.Background(), wp.URL, httputil.FetchOptions{})
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to fetch wallpaper URL: %w", err)
 		}
-		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			return nil, "", fmt.Errorf("wallpaper URL returned status %d", resp.StatusCode)
-		}
-
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to read wallpaper data: %w", err)
-		}
-
-		// Try to detect format from content-type or URL
-		format := detectFormatFromContentType(resp.Header.Get("Content-Type"))
-		if format == "" {
-			format = strings.TrimPrefix(filepath.Ext(wp.URL), ".")
-		}
+		// Detect format from URL extension.
+		format := strings.TrimPrefix(filepath.Ext(wp.URL), ".")
 		return data, format, nil
 	}
 

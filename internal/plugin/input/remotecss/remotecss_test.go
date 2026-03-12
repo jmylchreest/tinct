@@ -32,14 +32,27 @@ func TestValidateRequiresHTTPScheme(t *testing.T) {
 	}
 }
 
-// TestValidateAcceptsHTTPScheme tests that Validate accepts http://.
-func TestValidateAcceptsHTTPScheme(t *testing.T) {
+// TestValidateRejectsHTTPByDefault tests that Validate rejects http:// by default.
+func TestValidateRejectsHTTPByDefault(t *testing.T) {
+	plugin := New()
+	plugin.url = "http://example.com/palette.css"
+
+	err := plugin.Validate()
+	if err == nil {
+		t.Error("Expected error for http:// URL without TINCT_ALLOW_INSECURE_HTTP")
+	}
+}
+
+// TestValidateAcceptsHTTPWithEnvVar tests that Validate accepts http:// when TINCT_ALLOW_INSECURE_HTTP=1.
+func TestValidateAcceptsHTTPWithEnvVar(t *testing.T) {
+	t.Setenv("TINCT_ALLOW_INSECURE_HTTP", "1")
+
 	plugin := New()
 	plugin.url = "http://example.com/palette.css"
 
 	err := plugin.Validate()
 	if err != nil {
-		t.Errorf("Unexpected error for http:// URL: %v", err)
+		t.Errorf("Unexpected error for http:// URL with TINCT_ALLOW_INSECURE_HTTP=1: %v", err)
 	}
 }
 

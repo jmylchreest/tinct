@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -72,6 +73,55 @@ func ValidateHTTPURL(urlStr string) error {
 	}
 
 	return nil
+}
+
+// ValidateRuntimeHTTPURL validates a URL used for runtime data fetching
+// (e.g. remote-css, remote-json, wallpaper URLs in theme files).
+//
+// By default it enforces the same rules as ValidateHTTPURL: HTTPS-only,
+// no localhost/private IPs. If the TINCT_ALLOW_INSECURE_HTTP environment
+// variable is set to "1" or "true", plain HTTP is also allowed but private
+// IP / localhost blocking still applies.
+func ValidateRuntimeHTTPURL(urlStr string) error {
+	if urlStr == "" {
+		return fmt.Errorf("empty URL")
+	}
+
+	parsed, err := url.Parse(urlStr)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+
+	scheme := strings.ToLower(parsed.Scheme)
+	allowInsecure := isInsecureHTTPAllowed()
+
+	if scheme == "https" {
+		// Always OK — fall through to host checks.
+	} else if scheme == "http" && allowInsecure {
+		// Allowed when env var is set — fall through to host checks.
+	} else if scheme == "http" {
+		return fmt.Errorf("only HTTPS URLs are allowed (got http); set TINCT_ALLOW_INSECURE_HTTP=1 to permit plain HTTP")
+	} else {
+		return fmt.Errorf("unsupported URL scheme: %s", scheme)
+	}
+
+	if parsed.Host == "" {
+		return fmt.Errorf("URL must have a hostname")
+	}
+
+	host := strings.ToLower(parsed.Hostname())
+	if isLocalOrPrivateHost(host) {
+		return fmt.Errorf("URL cannot point to local or private hosts: %s", host)
+	}
+
+	return nil
+}
+
+// isInsecureHTTPAllowed checks whether the TINCT_ALLOW_INSECURE_HTTP
+// environment variable permits plain HTTP URLs.
+func isInsecureHTTPAllowed() bool {
+	v := strings.ToLower(os.Getenv("TINCT_ALLOW_INSECURE_HTTP"))
+	return v == "1" || v == "true"
 }
 
 // ValidatePluginPath validates a plugin path to prevent directory traversal.
