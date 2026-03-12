@@ -16,14 +16,15 @@ import (
 
 // extractFromTarXz extracts a plugin from a tar.xz archive.
 func extractFromTarXz(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) { //nolint:gocognit // archive extraction with error handling
-	// Create xz reader
+	// Create xz reader wrapped in a size-limited reader to bound
+	// CPU/memory during the first-pass enumeration of tar headers.
 	xzr, err := xz.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create xz reader: %w", err)
 	}
 
-	// Create tar reader
-	tr := tar.NewReader(xzr)
+	limitedEnum := security.NewLimitedReader(xzr, 100*1024*1024)
+	tr := tar.NewReader(limitedEnum)
 
 	// Define file selection strategy (same as tar.gz)
 	type candidate struct {
@@ -56,7 +57,14 @@ func extractFromTarXz(data []byte, targetFile, archiveName, destDir string, verb
 			return nil, fmt.Errorf("failed to read tar archive: %w", err)
 		}
 
-		if header.Typeflag == tar.TypeDir {
+		// Only consider regular files — skip directories, symlinks,
+		// hardlinks, and device nodes to prevent symlink attacks.
+		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeRegA {
+			continue
+		}
+
+		// Validate entry path against directory traversal.
+		if security.ValidateFilePath(header.Name, destDir) != nil {
 			continue
 		}
 

@@ -48,6 +48,11 @@ func extractFromZip(data []byte, targetFile, archiveName, destDir string, verbos
 			continue
 		}
 
+		// Validate entry path against directory traversal.
+		if security.ValidateFilePath(f.Name, destDir) != nil {
+			continue
+		}
+
 		foundFiles = append(foundFiles, f.Name)
 		priority := selectFile(f.Name, f.FileInfo().Mode())
 

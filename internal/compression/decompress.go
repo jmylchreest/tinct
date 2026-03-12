@@ -21,7 +21,8 @@ func decompressGz(data []byte, filename, destDir string, verbose bool) (*Extract
 	}
 	defer gzr.Close()
 
-	destPath := filepath.Join(destDir, filename)
+	// Sanitize filename to prevent path traversal.
+	destPath := filepath.Join(destDir, filepath.Base(filename))
 	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin file: %w", err)
@@ -59,7 +60,8 @@ func decompressXz(data []byte, filename, destDir string, verbose bool) (*Extract
 		return nil, fmt.Errorf("failed to create xz reader: %w", err)
 	}
 
-	destPath := filepath.Join(destDir, filename)
+	// Sanitize filename to prevent path traversal.
+	destPath := filepath.Join(destDir, filepath.Base(filename))
 	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin file: %w", err)
@@ -94,7 +96,8 @@ func decompressXz(data []byte, filename, destDir string, verbose bool) (*Extract
 func decompressBz2(data []byte, filename, destDir string, verbose bool) (*ExtractResult, error) {
 	bzr := bzip2.NewReader(bytes.NewReader(data))
 
-	destPath := filepath.Join(destDir, filename)
+	// Sanitize filename to prevent path traversal.
+	destPath := filepath.Join(destDir, filepath.Base(filename))
 	out, err := os.Create(destPath) // #nosec G304 - Plugin destination path controlled by application
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin file: %w", err)

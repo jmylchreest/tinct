@@ -47,8 +47,9 @@ func ExtractPlugin(data []byte, url, filename, targetFile, archiveName, destDir,
 		return result, err
 	}
 
-	// Not an archive - treat as direct plugin file
-	destPath := filepath.Join(destDir, filename)
+	// Not an archive - treat as direct plugin file.
+	// Sanitize filename to prevent path traversal.
+	destPath := filepath.Join(destDir, filepath.Base(filename))
 
 	// Write file
 	// #nosec G306 -- Plugin executable needs exec permissions

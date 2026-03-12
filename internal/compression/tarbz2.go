@@ -16,11 +16,12 @@ import (
 
 // extractFromTarBz2 extracts a plugin from a tar.bz2 archive.
 func extractFromTarBz2(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) { //nolint:gocognit // archive extraction with error handling
-	// Create bzip2 reader
+	// Create bzip2 reader wrapped in a size-limited reader to bound
+	// CPU/memory during the first-pass enumeration of tar headers.
 	bzr := bzip2.NewReader(bytes.NewReader(data))
 
-	// Create tar reader
-	tr := tar.NewReader(bzr)
+	limitedEnum := security.NewLimitedReader(bzr, 100*1024*1024)
+	tr := tar.NewReader(limitedEnum)
 
 	// Define file selection strategy (same as tar.gz)
 	type candidate struct {
@@ -53,7 +54,14 @@ func extractFromTarBz2(data []byte, targetFile, archiveName, destDir string, ver
 			return nil, fmt.Errorf("failed to read tar archive: %w", err)
 		}
 
-		if header.Typeflag == tar.TypeDir {
+		// Only consider regular files — skip directories, symlinks,
+		// hardlinks, and device nodes to prevent symlink attacks.
+		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeRegA {
+			continue
+		}
+
+		// Validate entry path against directory traversal.
+		if security.ValidateFilePath(header.Name, destDir) != nil {
 			continue
 		}
 

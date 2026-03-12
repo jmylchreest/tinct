@@ -181,6 +181,9 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 }
 
 // copyFile copies a file from src to dst.
+// maxPluginFileSize is the maximum size for a plugin file (100 MB).
+const maxPluginFileSize int64 = 100 * 1024 * 1024
+
 func copyFile(src, dst string) error {
 	sourceFile, err := os.Open(src) // #nosec G304 - Plugin source path controlled by application
 	if err != nil {
@@ -194,8 +197,14 @@ func copyFile(src, dst string) error {
 	}
 	defer destFile.Close()
 
-	if _, err := io.Copy(destFile, sourceFile); err != nil {
+	// Limit copy size to prevent unbounded disk/memory usage.
+	limitedReader := &io.LimitedReader{R: sourceFile, N: maxPluginFileSize + 1}
+	n, err := io.Copy(destFile, limitedReader)
+	if err != nil {
 		return err
+	}
+	if n > maxPluginFileSize {
+		return fmt.Errorf("plugin file exceeds maximum size (%d bytes)", maxPluginFileSize)
 	}
 
 	return destFile.Sync()
@@ -234,6 +243,11 @@ func installFromLocal(info PluginSourceInfo, pluginDir string, verbose bool) (st
 // installFromHTTP downloads a plugin from an HTTP/HTTPS URL.
 // If quiet is true, progress bar messages are suppressed.
 func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbose, quiet bool) (string, error) {
+	// Validate URL before fetching (HTTPS-only, no localhost/private IPs).
+	if err := security.ValidateHTTPURL(info.URL); err != nil {
+		return "", fmt.Errorf("unsafe download URL: %w", err)
+	}
+
 	// Download the file using our HTTP utility with progress tracking
 	ctx := context.Background()
 
@@ -344,7 +358,10 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 	// Determine which file to copy.
 	var sourceFile string
 	if info.FilePath != "" {
-		// Specific file path provided.
+		// Specific file path provided — validate against directory traversal.
+		if err := security.ValidateFilePath(info.FilePath, tmpDir); err != nil {
+			return "", fmt.Errorf("unsafe plugin file path: %w", err)
+		}
 		sourceFile = filepath.Join(tmpDir, info.FilePath)
 		if _, err := os.Stat(sourceFile); err != nil {
 			return "", fmt.Errorf("plugin file not found in repository: %s", info.FilePath)
