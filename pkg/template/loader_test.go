@@ -1,4 +1,4 @@
-// Package template provides utilities for loading plugin templates with custom override support.
+// Package template provides template utilities and functions for tinct plugins.
 package template
 
 import (
@@ -14,7 +14,6 @@ import (
 var testEmbedFS embed.FS
 
 func TestLoader_Load(t *testing.T) {
-	// Create a temporary directory for custom templates.
 	tmpDir := t.TempDir()
 
 	loader := &Loader{
@@ -37,7 +36,6 @@ func TestLoader_Load(t *testing.T) {
 	})
 
 	t.Run("loads custom template when it exists", func(t *testing.T) {
-		// Create a custom template.
 		customDir := filepath.Join(tmpDir, "testplugin")
 		if err := os.MkdirAll(customDir, 0o755); err != nil {
 			t.Fatalf("failed to create custom dir: %v", err)
@@ -142,7 +140,6 @@ func TestLoader_ListEmbeddedTemplates(t *testing.T) {
 		t.Error("expected at least one template")
 	}
 
-	// Check that all returned files have .tmpl extension.
 	for _, tmpl := range templates {
 		if filepath.Ext(tmpl) != ".tmpl" {
 			t.Errorf("expected .tmpl extension, got %q", tmpl)
@@ -165,7 +162,6 @@ func TestLoader_DumpTemplate(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		// Check that file was created.
 		customPath := loader.CustomPath("testdata/test.tmpl")
 		if _, err := os.Stat(customPath); err != nil {
 			t.Errorf("custom template not created: %v", err)
@@ -173,7 +169,6 @@ func TestLoader_DumpTemplate(t *testing.T) {
 	})
 
 	t.Run("fails without force when template exists", func(t *testing.T) {
-		// Try to dump again without force.
 		err := loader.DumpTemplate("testdata/test.tmpl", false)
 		if err == nil {
 			t.Error("expected error when dumping existing template without force")
@@ -213,7 +208,6 @@ func TestLoader_DumpAllTemplates(t *testing.T) {
 		t.Error("expected at least one dumped template")
 	}
 
-	// Verify all files were created.
 	for _, path := range dumped {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("dumped file not found: %s (%v)", path, err)
@@ -243,17 +237,14 @@ func TestLoader_DumpAllTemplates_WithExisting(t *testing.T) {
 	t.Run("second dump without force returns error but lists all files", func(t *testing.T) {
 		dumped, err := loader.DumpAllTemplates(false)
 
-		// Should return error about existing files.
 		if err == nil {
 			t.Error("expected error when files already exist")
 		}
 
-		// Should contain "already exists" in error.
 		if err != nil && !strings.Contains(err.Error(), "already exists") {
 			t.Errorf("expected 'already exists' in error, got: %v", err)
 		}
 
-		// Should have empty dumped list (nothing was dumped).
 		if len(dumped) != 0 {
 			t.Errorf("expected empty dumped list, got %d items", len(dumped))
 		}
@@ -279,7 +270,6 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 		customBase: tmpDir,
 	}
 
-	// Get list of templates.
 	templates, err := loader.ListEmbeddedTemplates()
 	if err != nil {
 		t.Fatalf("failed to list templates: %v", err)
@@ -288,18 +278,13 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 		t.Skip("no templates to test with")
 	}
 
-	// Dump only the first template manually.
 	if err := loader.DumpTemplate(templates[0], false); err != nil {
 		t.Fatalf("failed to dump first template: %v", err)
 	}
 
-	// Now try to dump all - should skip existing and dump others.
 	dumped, err := loader.DumpAllTemplates(false)
 
-	// If we have more than one template, should get an error about existing file.
-	// but should have dumped the others
 	if len(templates) <= 1 {
-		// Only one template, should just get the error.
 		if err == nil {
 			t.Error("expected error about existing file")
 		}
@@ -315,7 +300,6 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		t.Errorf("expected 'already exists' in error, got: %v", err)
 	}
-	// Should have dumped the remaining templates.
 	if len(dumped) != len(templates)-1 {
 		t.Errorf("expected %d dumped templates, got %d", len(templates)-1, len(dumped))
 	}
@@ -344,7 +328,6 @@ func TestLoader_GetInfo(t *testing.T) {
 	})
 
 	t.Run("info for custom template", func(t *testing.T) {
-		// Create a custom template.
 		customPath := loader.CustomPath("testdata/test.tmpl")
 		if err := os.MkdirAll(filepath.Dir(customPath), 0o755); err != nil {
 			t.Fatalf("failed to create dir: %v", err)
@@ -383,7 +366,6 @@ func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehe
 		if fromCustom {
 			t.Error("expected embedded template")
 		}
-		// Should load the default template, not versioned
 		if !strings.Contains(string(content), "Test Template") {
 			t.Errorf("expected default template content, got: %s", string(content))
 		}
@@ -395,7 +377,6 @@ func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehe
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		// Should load the 0.53 template
 		if !strings.Contains(string(content), "Version 0.53") {
 			t.Errorf("expected 0.53 template content, got: %s", string(content))
 		}
@@ -410,7 +391,6 @@ func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehe
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		// Should load the 0.52 template (highest that doesn't exceed target)
 		if !strings.Contains(string(content), "Version 0.52") {
 			t.Errorf("expected 0.52 template content, got: %s", string(content))
 		}
@@ -422,7 +402,6 @@ func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehe
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		// Should load the 0.53 template (highest available)
 		if !strings.Contains(string(content), "Version 0.53") {
 			t.Errorf("expected 0.53 template content, got: %s", string(content))
 		}
@@ -434,14 +413,12 @@ func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehe
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		// Should load the default template
 		if !strings.Contains(string(content), "Test Template") {
 			t.Errorf("expected default template content, got: %s", string(content))
 		}
 	})
 
 	t.Run("custom template takes priority over versioned", func(t *testing.T) {
-		// Create a custom template
 		customPath := filepath.Join(tmpDir, "testplugin", "test.tmpl")
 		if err := os.MkdirAll(filepath.Dir(customPath), 0o755); err != nil {
 			t.Fatalf("failed to create dir: %v", err)
@@ -477,12 +454,10 @@ func TestLoader_FindVersionDirectories(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Should find 0.52 and 0.53
 	if len(versions) != 2 {
 		t.Errorf("expected 2 versions, got %d: %v", len(versions), versions)
 	}
 
-	// Should be sorted
 	if len(versions) >= 2 {
 		if versions[0] != "0.52" {
 			t.Errorf("expected first version to be 0.52, got %s", versions[0])

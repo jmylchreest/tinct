@@ -7,18 +7,26 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	"github.com/jmylchreest/tinct/pkg/util/semver"
 )
 
-// Loader handles loading templates with support for custom overrides.
+// Loader handles loading templates with support for custom overrides and versioned templates.
 // It checks for custom templates in ~/.config/tinct/templates/{pluginName}/
 // and falls back to embedded templates if custom ones don't exist.
+//
+// Versioned templates allow plugins to support multiple versions of target applications.
+// Templates can be organized in version subdirectories (e.g., templates/0.53/).
+// The loader selects the highest version that doesn't exceed the target version.
 type Loader struct {
-	pluginName string
-	embedFS    embed.FS
-	customBase string // Base directory for custom templates
-	verbose    bool   // Enable verbose logging
-	logger     Logger // Logger for verbose output
+	pluginName    string
+	embedFS       embed.FS
+	customBase    string // Base directory for custom templates
+	verbose       bool   // Enable verbose logging
+	logger        Logger // Logger for verbose output
+	targetVersion string // Target application version for versioned templates
 }
 
 // Logger is a simple interface for logging messages.
@@ -59,11 +67,24 @@ func (l *Loader) WithVerbose(verbose bool, logger Logger) *Loader {
 	return l
 }
 
-// Load reads a template file, checking for custom overrides first.
+// WithTargetVersion sets the target application version for versioned template selection.
+// When set, the loader will search for version-specific templates in subdirectories
+// like templates/0.53/ and select the highest version that doesn't exceed targetVersion.
+func (l *Loader) WithTargetVersion(version string) *Loader {
+	l.targetVersion = version
+	return l
+}
+
+// Load reads a template file, checking for custom overrides and versioned templates.
 // filename should be the template filename (e.g., "theme.conf.tmpl").
 // Returns the template content and whether it was loaded from a custom override.
+//
+// Template resolution order:
+//  1. Custom template in ~/.config/tinct/templates/{pluginName}/{filename}
+//  2. Versioned template in templates/{version}/{filename} (if targetVersion is set)
+//  3. Default embedded template at {filename}
 func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err error) {
-	// Try custom template first.
+	// Try custom template first (highest priority).
 	customPath := filepath.Join(l.customBase, l.pluginName, filename)
 
 	if content, err := os.ReadFile(customPath); err == nil { // #nosec G304 - User-specified template directory, validated by caller
@@ -73,9 +94,24 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 		return content, true, nil
 	}
 
+	// Try versioned template if targetVersion is set.
+	if l.targetVersion != "" {
+		versionedContent, versionUsed, vErr := l.loadVersionedTemplate(filename)
+		if vErr == nil && versionedContent != nil {
+			if l.verbose && l.logger != nil {
+				l.logger.Printf("   Using versioned template: templates/%s/%s (target: %s)",
+					versionUsed, filename, l.targetVersion)
+			}
+			return versionedContent, false, nil
+		}
+		if l.verbose && l.logger != nil && vErr != nil {
+			l.logger.Printf("   Versioned template not available for %s: %v", filename, vErr)
+		}
+	}
+
 	// Fall back to embedded template.
 	if l.verbose && l.logger != nil {
-		l.logger.Printf("   Using embedded template: %s", filename)
+		l.logger.Printf("   Using default embedded template: %s", filename)
 	}
 
 	content, err = l.embedFS.ReadFile(filename)
@@ -84,6 +120,56 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 	}
 
 	return content, false, nil
+}
+
+// loadVersionedTemplate attempts to load a template from a version subdirectory.
+// It finds all version directories (e.g., templates/0.53/), selects the highest
+// version that doesn't exceed targetVersion, and loads the template from there.
+// Returns the content, the version used, and any error.
+func (l *Loader) loadVersionedTemplate(filename string) ([]byte, string, error) {
+	versions, err := l.findVersionDirectories()
+	if err != nil || len(versions) == 0 {
+		return nil, "", err
+	}
+
+	bestVersion := semver.FindBestMatch(l.targetVersion, versions)
+	if bestVersion == "" {
+		return nil, "", nil // No suitable version found
+	}
+
+	versionedPath := filepath.Join("templates", bestVersion, filename)
+	content, err := l.embedFS.ReadFile(versionedPath)
+	if err != nil {
+		return nil, "", nil // Template doesn't exist in this version directory
+	}
+
+	return content, bestVersion, nil
+}
+
+// findVersionDirectories scans the embedded filesystem for version directories
+// under templates/. Returns a list of version strings (e.g., ["0.52", "0.53"]).
+func (l *Loader) findVersionDirectories() ([]string, error) {
+	var versions []string
+
+	entries, err := fs.ReadDir(l.embedFS, "templates")
+	if err != nil {
+		return nil, nil // templates directory doesn't exist — that's fine
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			v := semver.Parse(entry.Name())
+			if v != nil {
+				versions = append(versions, entry.Name())
+			}
+		}
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return semver.CompareStrings(versions[i], versions[j]) < 0
+	})
+
+	return versions, nil
 }
 
 // CustomPath returns the path where a custom template would be located.

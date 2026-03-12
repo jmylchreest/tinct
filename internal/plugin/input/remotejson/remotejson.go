@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"image/color"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +12,7 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/palettebuilder"
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
 	"github.com/jmylchreest/tinct/internal/version"
 )
@@ -264,151 +263,15 @@ func isColor(s string) bool {
 
 // buildPalette converts extracted colors to a Palette.
 func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.Palette, error) {
-	if len(colors) == 0 {
-		return nil, fmt.Errorf("no colors extracted")
-	}
-
-	paletteColors := make([]colour.RGB, 0, len(colors))
-	var roleHints map[colour.Role]int
-
-	// First, add ALL colors to the palette.
-	colorNameToIndex := make(map[string]int)
-	for name, hex := range colors {
-		rgb, err := parseHex(hex)
-		if err != nil {
-			if verbose {
-				fmt.Printf("   Skipping invalid color '%s': %v\n", name, err)
-			}
-			continue
-		}
-		colorNameToIndex[name] = len(paletteColors)
-		paletteColors = append(paletteColors, rgb)
-	}
-
-	// Then, if mapping is provided, create role hints for the mapped colors.
-	if len(p.mapping) == 0 {
-		// Convert RGB to color.Color early if no mapping
-		colorColors := make([]color.Color, len(paletteColors))
-		for i, rgb := range paletteColors {
-			colorColors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
-		}
-		return colour.NewPalette(colorColors), nil
-	}
-
-	if verbose {
-		fmt.Printf("→ Applying color mappings:\n")
-	}
-
-	roleHints = make(map[colour.Role]int)
-
-	for sourceKey, targetRole := range p.mapping {
-		index, ok := colorNameToIndex[sourceKey]
-		if !ok {
-			if verbose {
-				fmt.Printf("   Warning: color '%s' not found in source\n", sourceKey)
-			}
-			continue
-		}
-
-		// Parse the target role.
-		role, err := parseColourRole(targetRole)
-		if err != nil {
-			return nil, fmt.Errorf("invalid role '%s': %w", targetRole, err)
-		}
-
-		roleHints[role] = index
-
-		if verbose {
-			hex := colors[sourceKey]
-			fmt.Printf("   %s (%s) → %s\n", sourceKey, hex, targetRole)
-		}
-	}
-
-	if len(paletteColors) == 0 {
-		return nil, fmt.Errorf("no valid colors extracted")
-	}
-
-	// Convert RGB to color.Color.
-	colorColors := make([]color.Color, len(paletteColors))
-	for i, rgb := range paletteColors {
-		colorColors[i] = color.RGBA{R: rgb.R, G: rgb.G, B: rgb.B, A: 255}
-	}
-
-	// Create palette with role hints if mapping was used.
-	if len(roleHints) > 0 {
-		return colour.NewPaletteWithRoleHints(colorColors, roleHints), nil
-	}
-
-	return colour.NewPalette(colorColors), nil
+	return palettebuilder.BuildPalette(colors, p.mapping, verbose)
 }
 
 // parseHex parses a hex color string into an RGB struct.
-// Supports formats: #RRGGBB, RRGGBB, #RGB, RGB.
 func parseHex(hex string) (colour.RGB, error) {
-	hex = strings.TrimSpace(hex)
-	hex = strings.TrimPrefix(hex, "#")
-
-	// Expand shorthand format (RGB -> RRGGBB).
-	if len(hex) == 3 {
-		hex = string([]byte{hex[0], hex[0], hex[1], hex[1], hex[2], hex[2]})
-	}
-
-	if len(hex) != 6 {
-		return colour.RGB{}, fmt.Errorf("invalid hex color length: expected 6 characters, got %d", len(hex))
-	}
-
-	r, err := strconv.ParseUint(hex[0:2], 16, 8)
-	if err != nil {
-		return colour.RGB{}, fmt.Errorf("invalid red component: %w", err)
-	}
-
-	g, err := strconv.ParseUint(hex[2:4], 16, 8)
-	if err != nil {
-		return colour.RGB{}, fmt.Errorf("invalid green component: %w", err)
-	}
-
-	b, err := strconv.ParseUint(hex[4:6], 16, 8)
-	if err != nil {
-		return colour.RGB{}, fmt.Errorf("invalid blue component: %w", err)
-	}
-
-	return colour.RGB{
-		R: uint8(r),
-		G: uint8(g),
-		B: uint8(b),
-	}, nil
+	return palettebuilder.ParseHex(hex)
 }
 
 // parseColourRole parses a role name string into a Role constant.
 func parseColourRole(name string) (colour.Role, error) {
-	name = strings.ToLower(name)
-	name = strings.ReplaceAll(name, "_", "")
-	name = strings.ReplaceAll(name, "-", "")
-
-	roleMap := map[string]colour.Role{
-		"background":      colour.RoleBackground,
-		"backgroundmuted": colour.RoleBackgroundMuted,
-		"foreground":      colour.RoleForeground,
-		"foregroundmuted": colour.RoleForegroundMuted,
-		"accent1":         colour.RoleAccent1,
-		"accent1muted":    colour.RoleAccent1Muted,
-		"accent2":         colour.RoleAccent2,
-		"accent2muted":    colour.RoleAccent2Muted,
-		"accent3":         colour.RoleAccent3,
-		"accent3muted":    colour.RoleAccent3Muted,
-		"accent4":         colour.RoleAccent4,
-		"accent4muted":    colour.RoleAccent4Muted,
-		"danger":          colour.RoleDanger,
-		"warning":         colour.RoleWarning,
-		"success":         colour.RoleSuccess,
-		"info":            colour.RoleInfo,
-		"notification":    colour.RoleNotification,
-	}
-
-	role, ok := roleMap[name]
-	if !ok {
-		return "", fmt.Errorf("unknown colour role '%s'", name)
-	}
-
-	return role, nil
+	return palettebuilder.ParseColourRole(name)
 }

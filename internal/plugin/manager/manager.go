@@ -254,39 +254,24 @@ func queryPluginInfo(pluginPath string) (PluginInfo, error) {
 	return info, nil
 }
 
-// ExternalInputPlugin wraps an external executable as an input plugin.
-type ExternalInputPlugin struct {
-	name         string
-	description  string
-	path         string
-	args         map[string]any
-	dryRun       bool
-	lastExecutor *executor.PluginExecutor // Store last executor to query wallpaper path
-}
-
-// NewExternalInputPlugin creates a new external input plugin wrapper.
-func NewExternalInputPlugin(name, description, path string) *ExternalInputPlugin {
-	return &ExternalInputPlugin{
-		name:        name,
-		description: description,
-		path:        path,
-	}
+// externalPluginBase holds fields and methods shared by all external plugin wrappers.
+type externalPluginBase struct {
+	name        string
+	description string
+	path        string
+	args        map[string]any
+	dryRun      bool
 }
 
 // Name returns the plugin's name.
-func (p *ExternalInputPlugin) Name() string {
-	return p.name
-}
+func (b *externalPluginBase) Name() string { return b.name }
 
 // Description returns the plugin's description.
-func (p *ExternalInputPlugin) Description() string {
-	return p.description
-}
+func (b *externalPluginBase) Description() string { return b.description }
 
-// Version returns the plugin's version.
-// For external plugins, this queries the plugin executable.
-func (p *ExternalInputPlugin) Version() string {
-	info, err := queryPluginInfo(p.path)
+// Version returns the plugin's version by querying the plugin executable.
+func (b *externalPluginBase) Version() string {
+	info, err := queryPluginInfo(b.path)
 	if err != nil {
 		return versionUnknown
 	}
@@ -297,23 +282,48 @@ func (p *ExternalInputPlugin) Version() string {
 }
 
 // SetArgs sets custom arguments for this plugin.
-func (p *ExternalInputPlugin) SetArgs(args map[string]any) {
-	p.args = args
-}
+func (b *externalPluginBase) SetArgs(args map[string]any) { b.args = args }
 
 // GetArgs returns custom arguments for this plugin.
-func (p *ExternalInputPlugin) GetArgs() map[string]any {
-	return p.args
-}
+func (b *externalPluginBase) GetArgs() map[string]any { return b.args }
 
 // SetDryRun sets the dry-run mode for this plugin.
-func (p *ExternalInputPlugin) SetDryRun(dryRun bool) {
-	p.dryRun = dryRun
-}
+func (b *externalPluginBase) SetDryRun(dryRun bool) { b.dryRun = dryRun }
 
 // GetDryRun returns the dry-run mode for this plugin.
-func (p *ExternalInputPlugin) GetDryRun() bool {
-	return p.dryRun
+func (b *externalPluginBase) GetDryRun() bool { return b.dryRun }
+
+// getFlagHelp queries the plugin executable for flag help via RPC.
+func (b *externalPluginBase) getFlagHelp() []input.FlagHelp {
+	exec, err := executor.NewWithVerbose(b.path, false)
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+	defer exec.Close()
+
+	flagHelp, err := exec.GetFlagHelp(context.Background())
+	if err != nil {
+		return []input.FlagHelp{}
+	}
+
+	return flagHelp
+}
+
+// ExternalInputPlugin wraps an external executable as an input plugin.
+type ExternalInputPlugin struct {
+	externalPluginBase
+	lastExecutor *executor.PluginExecutor // Store last executor to query wallpaper path
+}
+
+// NewExternalInputPlugin creates a new external input plugin wrapper.
+func NewExternalInputPlugin(name, description, path string) *ExternalInputPlugin {
+	return &ExternalInputPlugin{
+		externalPluginBase: externalPluginBase{
+			name:        name,
+			description: description,
+			path:        path,
+		},
+	}
 }
 
 // Generate executes the external plugin and returns a palette.
@@ -379,19 +389,7 @@ func (p *ExternalInputPlugin) Validate() error {
 // GetFlagHelp returns help information for plugin flags.
 // For external plugins, this queries the plugin executable via RPC.
 func (p *ExternalInputPlugin) GetFlagHelp() []input.FlagHelp {
-	// Query the external plugin for its flag help
-	exec, err := executor.NewWithVerbose(p.path, false)
-	if err != nil {
-		return []input.FlagHelp{}
-	}
-	defer exec.Close()
-
-	flagHelp, err := exec.GetFlagHelp(context.Background())
-	if err != nil {
-		return []input.FlagHelp{}
-	}
-
-	return flagHelp
+	return p.getFlagHelp()
 }
 
 // WallpaperPath returns the canonical wallpaper path from the last plugin execution.
@@ -415,11 +413,7 @@ func (p *ExternalInputPlugin) WallpaperRawPath() string {
 
 // ExternalOutputPlugin wraps an external executable as an output plugin.
 type ExternalOutputPlugin struct {
-	name             string
-	description      string
-	path             string
-	args             map[string]any
-	dryRun           bool
+	externalPluginBase
 	verbose          bool
 	alternatePalette *colour.CategorisedPalette
 }
@@ -427,53 +421,12 @@ type ExternalOutputPlugin struct {
 // NewExternalOutputPlugin creates a new external output plugin wrapper.
 func NewExternalOutputPlugin(name, description, path string) *ExternalOutputPlugin {
 	return &ExternalOutputPlugin{
-		name:        name,
-		description: description,
-		path:        path,
+		externalPluginBase: externalPluginBase{
+			name:        name,
+			description: description,
+			path:        path,
+		},
 	}
-}
-
-// Name returns the plugin's name.
-func (p *ExternalOutputPlugin) Name() string {
-	return p.name
-}
-
-// Description returns the plugin's description.
-func (p *ExternalOutputPlugin) Description() string {
-	return p.description
-}
-
-// Version returns the plugin's version.
-// For external plugins, this queries the plugin executable.
-func (p *ExternalOutputPlugin) Version() string {
-	info, err := queryPluginInfo(p.path)
-	if err != nil {
-		return versionUnknown
-	}
-	if info.Version == "" {
-		return versionUnknown
-	}
-	return info.Version
-}
-
-// SetArgs sets custom arguments for this plugin.
-func (p *ExternalOutputPlugin) SetArgs(args map[string]any) {
-	p.args = args
-}
-
-// GetArgs returns custom arguments for this plugin.
-func (p *ExternalOutputPlugin) GetArgs() map[string]any {
-	return p.args
-}
-
-// SetDryRun sets the dry-run mode for this plugin.
-func (p *ExternalOutputPlugin) SetDryRun(dryRun bool) {
-	p.dryRun = dryRun
-}
-
-// GetDryRun returns the dry-run mode for this plugin.
-func (p *ExternalOutputPlugin) GetDryRun() bool {
-	return p.dryRun
 }
 
 // SetVerbose sets the verbose flag for this plugin.
@@ -555,19 +508,7 @@ func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reaso
 // GetFlagHelp returns help information for plugin flags.
 // For external plugins, this queries the plugin executable via RPC.
 func (p *ExternalOutputPlugin) GetFlagHelp() []input.FlagHelp {
-	// Query the external plugin for its flag help
-	exec, err := executor.NewWithVerbose(p.path, false)
-	if err != nil {
-		return []input.FlagHelp{}
-	}
-	defer exec.Close()
-
-	flagHelp, err := exec.GetFlagHelp(context.Background())
-	if err != nil {
-		return []input.FlagHelp{}
-	}
-
-	return flagHelp
+	return p.getFlagHelp()
 }
 
 // PostExecute calls the external plugin's post-execute hook.
@@ -584,6 +525,45 @@ func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []s
 	return exec.PostExecute(ctx, writtenFiles)
 }
 
+// toCategorisedColour converts a single colour.CategorisedColour to the protocol representation.
+func toCategorisedColour(c colour.CategorisedColour) plugin.CategorisedColour {
+	return plugin.CategorisedColour{
+		RGB: plugin.RGBColour{
+			R: c.RGB.R,
+			G: c.RGB.G,
+			B: c.RGB.B,
+		},
+		Hex:        c.Hex,
+		Role:       string(c.Role),
+		Luminance:  c.Luminance,
+		IsLight:    c.IsLight,
+		Hue:        c.Hue,
+		Saturation: c.Saturation,
+		Index:      c.Index,
+	}
+}
+
+// convertCategorisedPaletteToMaps converts the colour maps and slices of a CategorisedPalette
+// to the protocol format, returning (coloursMap, allColoursSlice, themeType).
+func convertCategorisedPaletteToMaps(p *colour.CategorisedPalette) (map[string]plugin.CategorisedColour, []plugin.CategorisedColour, string) {
+	colours := make(map[string]plugin.CategorisedColour, len(p.Colours))
+	for role, c := range p.Colours {
+		colours[string(role)] = toCategorisedColour(c)
+	}
+
+	allColours := make([]plugin.CategorisedColour, len(p.AllColours))
+	for i, c := range p.AllColours {
+		allColours[i] = toCategorisedColour(c)
+	}
+
+	themeType := "dark"
+	if p.ThemeType == colour.ThemeLight {
+		themeType = "light"
+	}
+
+	return colours, allColours, themeType
+}
+
 // convertCategorisedPaletteToProtocol converts a CategorisedPalette to plugin.PaletteData.
 func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool, verbose bool) plugin.PaletteData {
 	return convertCategorisedPaletteToProtocolWithAlternate(palette, nil, pluginArgs, dryRun, verbose)
@@ -591,46 +571,7 @@ func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, plu
 
 // convertCategorisedPaletteToProtocolWithAlternate converts a CategorisedPalette to plugin.PaletteData with optional alternate theme.
 func convertCategorisedPaletteToProtocolWithAlternate(palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool, verbose bool) plugin.PaletteData {
-	colours := make(map[string]plugin.CategorisedColour)
-	for role, colour := range palette.Colours {
-		colours[string(role)] = plugin.CategorisedColour{
-			RGB: plugin.RGBColour{
-				R: colour.RGB.R,
-				G: colour.RGB.G,
-				B: colour.RGB.B,
-			},
-			Hex:        colour.Hex,
-			Role:       string(colour.Role),
-			Luminance:  colour.Luminance,
-			IsLight:    colour.IsLight,
-			Hue:        colour.Hue,
-			Saturation: colour.Saturation,
-			Index:      colour.Index,
-		}
-	}
-
-	allColours := make([]plugin.CategorisedColour, len(palette.AllColours))
-	for i, colour := range palette.AllColours {
-		allColours[i] = plugin.CategorisedColour{
-			RGB: plugin.RGBColour{
-				R: colour.RGB.R,
-				G: colour.RGB.G,
-				B: colour.RGB.B,
-			},
-			Hex:        colour.Hex,
-			Role:       string(colour.Role),
-			Luminance:  colour.Luminance,
-			IsLight:    colour.IsLight,
-			Hue:        colour.Hue,
-			Saturation: colour.Saturation,
-			Index:      colour.Index,
-		}
-	}
-
-	themeType := "dark"
-	if palette.ThemeType == colour.ThemeLight {
-		themeType = "light"
-	}
+	colours, allColours, themeType := convertCategorisedPaletteToMaps(palette)
 
 	paletteData := plugin.PaletteData{
 		Colours:    colours,
@@ -641,53 +582,12 @@ func convertCategorisedPaletteToProtocolWithAlternate(palette *colour.Categorise
 		Verbose:    verbose,
 	}
 
-	// Convert alternate palette if provided
 	if alternatePalette != nil {
-		alternateColours := make(map[string]plugin.CategorisedColour)
-		for role, colour := range alternatePalette.Colours {
-			alternateColours[string(role)] = plugin.CategorisedColour{
-				RGB: plugin.RGBColour{
-					R: colour.RGB.R,
-					G: colour.RGB.G,
-					B: colour.RGB.B,
-				},
-				Hex:        colour.Hex,
-				Role:       string(colour.Role),
-				Luminance:  colour.Luminance,
-				IsLight:    colour.IsLight,
-				Hue:        colour.Hue,
-				Saturation: colour.Saturation,
-				Index:      colour.Index,
-			}
-		}
-
-		alternateAllColours := make([]plugin.CategorisedColour, len(alternatePalette.AllColours))
-		for i, colour := range alternatePalette.AllColours {
-			alternateAllColours[i] = plugin.CategorisedColour{
-				RGB: plugin.RGBColour{
-					R: colour.RGB.R,
-					G: colour.RGB.G,
-					B: colour.RGB.B,
-				},
-				Hex:        colour.Hex,
-				Role:       string(colour.Role),
-				Luminance:  colour.Luminance,
-				IsLight:    colour.IsLight,
-				Hue:        colour.Hue,
-				Saturation: colour.Saturation,
-				Index:      colour.Index,
-			}
-		}
-
-		alternateThemeType := "dark"
-		if alternatePalette.ThemeType == colour.ThemeLight {
-			alternateThemeType = "light"
-		}
-
+		altColours, altAllColours, altThemeType := convertCategorisedPaletteToMaps(alternatePalette)
 		paletteData.AlternateTheme = &plugin.AlternateThemeData{
-			Colours:    alternateColours,
-			AllColours: alternateAllColours,
-			ThemeType:  alternateThemeType,
+			Colours:    altColours,
+			AllColours: altAllColours,
+			ThemeType:  altThemeType,
 		}
 	}
 

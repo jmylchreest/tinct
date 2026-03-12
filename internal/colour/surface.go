@@ -3,6 +3,24 @@ package colour
 
 import "image/color"
 
+// newGeneratedColour constructs a CategorisedColour from computed HSL values.
+// It is used by the generate* helpers to avoid repeating the same struct literal.
+// For colours that also need Hue/Saturation fields, the caller sets them after.
+func newGeneratedColour(role Role, newRGB RGB, newL float64) CategorisedColour {
+	newColor := RGBToColor(newRGB)
+	return CategorisedColour{
+		Colour:      newColor,
+		Role:        role,
+		Hex:         newRGB.Hex(),
+		RGB:         newRGB,
+		RGBA:        RGBToRGBA(newRGB),
+		Luminance:   Luminance(newColor),
+		IsLight:     newL > 0.5,
+		IsGenerated: true,
+		Weight:      0,
+	}
+}
+
 // generateSurfaceColors generates all surface, border, on-color, and container variants.
 // These colors are essential for UI design following Material Design 3 principles.
 func generateSurfaceColors(palette *CategorisedPalette, bg, fg CategorisedColour, theme ThemeType, hintsApplied map[Role]bool) {
@@ -93,21 +111,10 @@ func generateSurface(bg CategorisedColour, theme ThemeType) CategorisedColour {
 	}
 
 	newRGB := HSLToRGB(h, newS, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleSurface,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		Hue:         h,
-		Saturation:  newS,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	c := newGeneratedColour(RoleSurface, newRGB, newL)
+	c.Hue = h
+	c.Saturation = newS
+	return c
 }
 
 // generateOnSurface creates a high-contrast text color for surface.
@@ -144,22 +151,10 @@ func generateOnSurface(surface, fg CategorisedColour, theme ThemeType) Categoris
 	var newRGB RGB
 	_, newRGB = adjustLuminanceForContrast(h, s, l, surfaceColor, minContrast, theme, 20)
 
-	newColor := RGBToColor(newRGB)
-	newL := Luminance(newColor)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleOnSurface,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   newL,
-		IsLight:     newL > 0.5,
-		Hue:         h,
-		Saturation:  s,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	c := newGeneratedColour(RoleOnSurface, newRGB, Luminance(RGBToColor(newRGB)))
+	c.Hue = h
+	c.Saturation = s
+	return c
 }
 
 // generateOutline creates a desaturated border color with moderate contrast.
@@ -189,21 +184,10 @@ func generateOutline(surface CategorisedColour, theme ThemeType) CategorisedColo
 	}
 
 	newRGB := HSLToRGB(h, newS, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleOutline,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		Hue:         h,
-		Saturation:  newS,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	c := newGeneratedColour(RoleOutline, newRGB, newL)
+	c.Hue = h
+	c.Saturation = newS
+	return c
 }
 
 // generateBorder creates a border color similar to outline but slightly more prominent.
@@ -233,21 +217,10 @@ func generateBorder(surface CategorisedColour, theme ThemeType) CategorisedColou
 	}
 
 	newRGB := HSLToRGB(h, newS, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleBorder,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		Hue:         h,
-		Saturation:  newS,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	c := newGeneratedColour(RoleBorder, newRGB, newL)
+	c.Hue = h
+	c.Saturation = newS
+	return c
 }
 
 // generatePriority2Colors generates surface/border variants and on-colors.
@@ -378,19 +351,7 @@ func generateBorderMuted(surface CategorisedColour, theme ThemeType) Categorised
 	newS := s * 0.25
 
 	newRGB := HSLToRGB(h, newS, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleBorderMuted,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	return newGeneratedColour(RoleBorderMuted, newRGB, newL)
 }
 
 // generateOutlineVariant creates a secondary outline color.
@@ -408,19 +369,7 @@ func generateOutlineVariant(surface CategorisedColour, theme ThemeType) Categori
 
 	newS := s * 0.2
 	newRGB := HSLToRGB(h, newS, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleOutlineVariant,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	return newGeneratedColour(RoleOutlineVariant, newRGB, newL)
 }
 
 // generateOnColors generates high-contrast text colors for all accent and semantic colors.
@@ -495,19 +444,7 @@ func generateInverseSurface(bg CategorisedColour, theme ThemeType) CategorisedCo
 	}
 
 	newRGB := HSLToRGB(h, s, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleInverseSurface,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	return newGeneratedColour(RoleInverseSurface, newRGB, newL)
 }
 
 // generateInverseOnSurface creates text color for inverse surface.
@@ -526,19 +463,7 @@ func generateInverseOnSurface(inverseSurface CategorisedColour, theme ThemeType)
 	h, s, _ := rgbToHSL(rgb)
 
 	newRGB := HSLToRGB(h, s*0.1, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleInverseOnSurface,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	return newGeneratedColour(RoleInverseOnSurface, newRGB, newL)
 }
 
 // generateInversePrimary creates an inverse accent color.
@@ -557,19 +482,7 @@ func generateInversePrimary(primary, _ CategorisedColour, theme ThemeType) Categ
 	}
 
 	newRGB := HSLToRGB(h, s, newL)
-	newColor := RGBToColor(newRGB)
-
-	return CategorisedColour{
-		Colour:      newColor,
-		Role:        RoleInversePrimary,
-		Hex:         newRGB.Hex(),
-		RGB:         newRGB,
-		RGBA:        RGBToRGBA(newRGB),
-		Luminance:   Luminance(newColor),
-		IsLight:     newL > 0.5,
-		IsGenerated: true,
-		Weight:      0,
-	}
+	return newGeneratedColour(RoleInversePrimary, newRGB, newL)
 }
 
 // generateScrim creates a dark overlay color with alpha for modals.
