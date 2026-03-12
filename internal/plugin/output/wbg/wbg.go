@@ -190,7 +190,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	// Make the generated shell script executable.
 	for _, f := range writtenFiles {
 		if filepath.Base(f) == "tinct-wbg.sh" {
-			if err := os.Chmod(f, 0o750); err != nil && p.verbose {
+			if err := os.Chmod(f, 0o750); err != nil && p.verbose { // #nosec G302 -- 0o750 is intentional: the generated shell script must be executable by the owner
 				fmt.Fprintf(os.Stderr, "   Warning: failed to make %s executable: %v\n", f, err)
 			}
 			break

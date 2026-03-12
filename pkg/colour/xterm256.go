@@ -41,7 +41,7 @@ func NearestXterm256(r, g, b uint8) int {
 	if grayIdx > 255 {
 		grayIdx = 255
 	}
-	grayVal := uint8(8 + (grayIdx-232)*10)
+	grayVal := uint8(8 + (grayIdx-232)*10) // #nosec G115 -- grayIdx is clamped to [232,255] above, so result is [8,238], always fits in uint8
 	grayDist := xterm256SqDist(r, g, b, grayVal, grayVal, grayVal)
 
 	if grayDist < cubeDist {
@@ -73,7 +73,7 @@ func Xterm256ToRGB(index int) (r, g, b uint8) {
 		return r, g, b
 	default:
 		// Grayscale ramp (232-255).
-		v := uint8(8 + (index-232)*10)
+		v := uint8(8 + (index-232)*10) // #nosec G115 -- index is in [232,255] in this branch, so result is [8,238], always fits in uint8
 		return v, v, v
 	}
 }

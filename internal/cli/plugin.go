@@ -665,7 +665,7 @@ func migrateLegacyLockFile(newPath string) string {
 		}
 
 		// Write to new location.
-		if err := os.WriteFile(newPath, data, 0o600); err != nil {
+		if err := os.WriteFile(newPath, data, 0o600); err != nil { // #nosec G703 -- newPath is derived from os.UserConfigDir(), not user-controlled input
 			return ""
 		}
 

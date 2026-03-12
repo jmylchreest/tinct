@@ -570,7 +570,7 @@ func (t *Table) getTerminalWidth() int {
 		return t.terminalWidthOverride
 	}
 
-	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	width, _, err := term.GetSize(int(os.Stdout.Fd())) // #nosec G115 -- file descriptors are small positive integers, safe to convert uintptr→int
 	if err != nil {
 		return 0
 	}
@@ -614,7 +614,7 @@ func (t *Table) applyTerminalAwareWidth(colWidths []int) {
 func isWriterTTY(w io.Writer) bool {
 	// Check if the writer is a file with a valid file descriptor
 	if f, ok := w.(*os.File); ok {
-		return term.IsTerminal(int(f.Fd()))
+		return term.IsTerminal(int(f.Fd())) // #nosec G115 -- file descriptors are small positive integers, safe to convert uintptr→int
 	}
 	return false
 }

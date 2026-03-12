@@ -24,7 +24,7 @@ var (
 // isTerminal checks if the writer is connected to a terminal.
 func isTerminal(w io.Writer) bool {
 	if f, ok := w.(*os.File); ok {
-		return term.IsTerminal(int(f.Fd()))
+		return term.IsTerminal(int(f.Fd())) // #nosec G115 -- file descriptors are small positive integers, safe to convert uintptr→int
 	}
 	return false
 }

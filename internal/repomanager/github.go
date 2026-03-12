@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v57/github"
+	"github.com/google/go-github/v70/github"
 	"golang.org/x/oauth2"
 )
 

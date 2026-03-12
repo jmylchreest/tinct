@@ -9,17 +9,16 @@
 package config
 
 import (
+	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -175,7 +174,7 @@ func loadFromDisk() (*Config, string, error) {
 		return defaults(), "", fmt.Errorf("determine config path: %w", err)
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) // #nosec G304 -- path is derived from os.UserConfigDir(), not user-controlled input
 	if err == nil {
 		cfg := defaults()
 		if _, decErr := toml.Decode(string(data), cfg); decErr == nil {
@@ -273,7 +272,7 @@ func save(path string, cfg *Config) error {
 		return fmt.Errorf("create config directory: %w", err)
 	}
 
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- path is derived from os.UserConfigDir(), not user-controlled input
 	if err != nil {
 		return fmt.Errorf("open config file: %w", err)
 	}
@@ -325,15 +324,18 @@ func applyEnvOverrides(cfg *Config) {
 }
 
 // generateInstallationID creates a new anonymous installation identifier.
-// A random value is SHA256-hashed so the raw entropy is never stored.
+// 32 bytes of cryptographically-random data are SHA256-hashed, producing a
+// 64-character lowercase hex string. Falls back to a time/pid-based seed if
+// crypto/rand is unavailable (e.g. restricted sandbox).
 func generateInstallationID() string {
-	raw := fmt.Sprintf("%d-%d-%d-%d",
-		time.Now().UnixNano(),
-		rand.Int63(), //nolint:gosec // Combined with time for sufficient entropy
-		rand.Int63(), //nolint:gosec // Combined with time for sufficient entropy
-		os.Getpid(),
-	)
-	hash := sha256.Sum256([]byte(raw))
+	b := make([]byte, 32)
+	if _, err := cryptorand.Read(b); err != nil {
+		// Fallback: hash time + pid so we always produce a valid ID.
+		raw := fmt.Sprintf("%d-%d", os.Getpid(), os.Getppid())
+		hash := sha256.Sum256([]byte(raw))
+		return hex.EncodeToString(hash[:])
+	}
+	hash := sha256.Sum256(b)
 	return hex.EncodeToString(hash[:])
 }
 

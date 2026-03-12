@@ -386,7 +386,7 @@ func (p *Plugin) applyWallpaper(ctx context.Context, wallpaperPath string) error
 	}
 
 	// Apply the wallpaper
-	cmd := exec.CommandContext(ctx, "plasma-apply-wallpaperimage", wallpaperPath)
+	cmd := exec.CommandContext(ctx, "plasma-apply-wallpaperimage", wallpaperPath) // #nosec G204 -- binary name is hardcoded; exec.CommandContext does not invoke a shell so wallpaperPath cannot cause injection
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to execute plasma-apply-wallpaperimage: %w", err)
 	}

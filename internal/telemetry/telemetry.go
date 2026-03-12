@@ -383,5 +383,5 @@ func resolveBaseURL(appKey string) string {
 // generateSessionID creates an Aptabase session ID.
 // Format: epoch seconds + 8 random digits.
 func generateSessionID() string {
-	return fmt.Sprintf("%d%08d", time.Now().Unix(), rand.Intn(100000000)) //nolint:gosec // Non-cryptographic randomness is fine for session IDs
+	return fmt.Sprintf("%d%08d", time.Now().Unix(), rand.Intn(100000000)) //nolint:gosec // #nosec G404 -- non-cryptographic randomness is fine for ephemeral telemetry session IDs
 }

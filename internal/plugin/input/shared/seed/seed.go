@@ -87,11 +87,12 @@ func CalculateContentSeed(img image.Image) (int64, error) {
 	for y := bounds.Min.Y; y < bounds.Max.Y; y += step {
 		for x := bounds.Min.X; x < bounds.Max.X; x += step {
 			r, g, b, a := img.At(x, y).RGBA()
-			// Convert to 8-bit values
-			pixelBytes[0] = byte(r >> 8)
-			pixelBytes[1] = byte(g >> 8)
-			pixelBytes[2] = byte(b >> 8)
-			pixelBytes[3] = byte(a >> 8)
+			// Convert to 8-bit values. RGBA() returns [0,65535] per channel; shifting
+			// right by 8 gives [0,255] which always fits in a byte. #nosec G115
+			pixelBytes[0] = byte(r >> 8) // #nosec G115
+			pixelBytes[1] = byte(g >> 8) // #nosec G115
+			pixelBytes[2] = byte(b >> 8) // #nosec G115
+			pixelBytes[3] = byte(a >> 8) // #nosec G115
 			hasher.Write(pixelBytes)
 		}
 	}

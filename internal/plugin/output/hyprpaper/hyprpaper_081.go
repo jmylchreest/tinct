@@ -45,7 +45,7 @@ func (p *Plugin) restoreSourceConfig(writtenFiles []string) error {
 		return fmt.Errorf("failed to read backup: %w", err)
 	}
 
-	if err := os.WriteFile(paths.hyprpaperConf, backupContent, 0o600); err != nil {
+	if err := os.WriteFile(paths.hyprpaperConf, backupContent, 0o600); err != nil { // #nosec G703 -- paths.hyprpaperConf is constructed from the application config directory, not user-controlled input
 		return fmt.Errorf("failed to restore config: %w", err)
 	}
 
