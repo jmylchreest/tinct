@@ -348,25 +348,27 @@ func TestDecodeWallpaper_NoData(t *testing.T) {
 	}
 }
 
-func TestDetectFormatFromContentType(t *testing.T) {
+func TestDetectFormatFromBytes(t *testing.T) {
 	tests := []struct {
-		contentType string
-		want        string
+		name string
+		data []byte
+		want string
 	}{
-		{"image/png", "png"},
-		{"image/jpeg", "jpg"},
-		{"image/webp", "webp"},
-		{"image/gif", "gif"},
-		{"text/html", ""},
-		{"", ""},
-		{"image/png; charset=utf-8", "png"},
+		{"PNG", []byte("\x89PNG\r\n\x1a\n" + "rest of data"), "png"},
+		{"JPEG", []byte("\xff\xd8\xff\xe0" + "rest of data"), "jpg"},
+		{"GIF87a", []byte("GIF87a" + "rest of data"), "gif"},
+		{"GIF89a", []byte("GIF89a" + "rest of data"), "gif"},
+		{"WebP", []byte("RIFF\x24\x00\x00\x00WEBPVP8 rest of data here!!"), "webp"},
+		{"HTML", []byte("<html><body>hello</body></html>"), ""},
+		{"empty", []byte{}, ""},
+		{"plain text", []byte("just some plain text"), ""},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.contentType, func(t *testing.T) {
-			got := detectFormatFromContentType(tt.contentType)
+		t.Run(tt.name, func(t *testing.T) {
+			got := detectFormatFromBytes(tt.data)
 			if got != tt.want {
-				t.Errorf("detectFormatFromContentType(%q) = %v, want %v", tt.contentType, got, tt.want)
+				t.Errorf("detectFormatFromBytes(%q) = %v, want %v", tt.name, got, tt.want)
 			}
 		})
 	}

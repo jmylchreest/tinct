@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,24 +123,29 @@ func DecodeWallpaper(theme *Theme, basePath string) ([]byte, string, error) {
 			return nil, "", fmt.Errorf("failed to fetch wallpaper URL: %w", err)
 		}
 
-		// Detect format from URL extension.
+		// Detect format from URL extension, falling back to content sniffing.
 		format := strings.TrimPrefix(filepath.Ext(wp.URL), ".")
+		if format == "" {
+			format = detectFormatFromBytes(data)
+		}
 		return data, format, nil
 	}
 
 	return nil, "", fmt.Errorf("wallpaper has no data, path, or URL")
 }
 
-// detectFormatFromContentType extracts image format from Content-Type header.
-func detectFormatFromContentType(contentType string) string {
+// detectFormatFromBytes sniffs the image format from the raw data using
+// Go's http.DetectContentType (magic-byte detection).
+func detectFormatFromBytes(data []byte) string {
+	ct := http.DetectContentType(data)
 	switch {
-	case strings.Contains(contentType, "image/png"):
+	case strings.Contains(ct, "image/png"):
 		return "png"
-	case strings.Contains(contentType, "image/jpeg"):
+	case strings.Contains(ct, "image/jpeg"):
 		return "jpg"
-	case strings.Contains(contentType, "image/webp"):
+	case strings.Contains(ct, "image/webp"):
 		return "webp"
-	case strings.Contains(contentType, "image/gif"):
+	case strings.Contains(ct, "image/gif"):
 		return "gif"
 	default:
 		return ""
