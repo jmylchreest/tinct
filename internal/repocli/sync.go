@@ -131,71 +131,13 @@ Examples:
 			}
 
 			// Prune if requested
-			var pruneStats *PruneStats
-
-			if prune {
-				fmt.Printf("\n=== Pruning ===\n")
-
-				var removeAfterDuration time.Duration
-				if pruneRemoveAfter != "" {
-					removeAfterDuration, err = time.ParseDuration(pruneRemoveAfter)
-					if err != nil {
-						return fmt.Errorf("invalid prune-remove-after duration: %w", err)
-					}
-				}
-
-				pruneStats = PruneManifestWithOptions(mgr, &PruneOptions{
-					RemoveAfterDuration: removeAfterDuration,
-					PruneIncompatible:   pruneIncompatible,
-					KeepRecent:          keepRecent,
-					DryRun:              dryRun,
-					Verbose:             verbose,
-				}, changelog)
-
-				fmt.Printf("\n=== Prune Summary ===\n")
-				fmt.Printf("Checked: %d\n", pruneStats.Checked)
-				fmt.Printf("Unavailable: %d\n", pruneStats.Unavailable)
-				if pruneStats.FilterFailed > 0 {
-					fmt.Printf("Filter failed: %d\n", pruneStats.FilterFailed)
-				}
-				if pruneStats.Incompatible > 0 {
-					fmt.Printf("Incompatible: %d\n", pruneStats.Incompatible)
-				}
-				if pruneStats.OldVersions > 0 {
-					fmt.Printf("Old versions: %d\n", pruneStats.OldVersions)
-				}
-				if pruneStats.Removed > 0 {
-					fmt.Printf("Removed: %d\n", pruneStats.Removed)
-				}
+			pruneStats, err := runPruneIfRequested(mgr, prune, pruneRemoveAfter, pruneIncompatible, keepRecent, dryRun, verbose, changelog)
+			if err != nil {
+				return err
 			}
 
-			// Save manifest only if material changes were made
-			saveNeeded := changelog.HasMaterialChanges()
+			return finalizeSyncResults(mgr, changelog, pruneStats, prune, dryRun, manifestPath, changelogOutput, changelogFormat)
 
-			if !dryRun && saveNeeded {
-				// Only update LastPruned if we actually removed entries
-				if prune && pruneStats != nil && pruneStats.Removed > 0 {
-					now := time.Now()
-					mgr.GetManifest().LastPruned = &now
-					mgr.MarkDirty()
-				}
-
-				if err := mgr.Save(); err != nil {
-					return fmt.Errorf("failed to save manifest: %w", err)
-				}
-				fmt.Printf("\n✓ Manifest saved: %s\n", manifestPath)
-			} else if dryRun {
-				fmt.Println("\n(Dry run - no changes saved)")
-			} else {
-				fmt.Println("\n(No changes to save)")
-			}
-
-			// Output changelog if requested
-			if err := writeChangelog(changelog, changelogOutput, changelogFormat); err != nil {
-				return fmt.Errorf("failed to write changelog: %w", err)
-			}
-
-			return nil
 		},
 	}
 
@@ -326,55 +268,88 @@ func syncFromConfig( //nolint:gocognit // config parsing and multi-source sync
 	}
 
 	// Prune if requested
-	var pruneStats *PruneStats
+	pruneStats, err := runPruneIfRequested(mgr, prune, pruneRemoveAfter, pruneIncompatible, keepRecent, dryRun, verbose, changelog)
+	if err != nil {
+		return err
+	}
 
-	if prune {
-		fmt.Printf("\n=== Pruning ===\n")
+	// Compute the actual diff between snapshot and current state to get
+	// the authoritative changelog (syncFromConfig uses snapshots).
+	realChangelog := BuildFromManifestDiff(mgr.ComputeDiff())
 
-		var removeAfterDuration time.Duration
-		if pruneRemoveAfter != "" {
-			removeAfterDuration, err = time.ParseDuration(pruneRemoveAfter)
-			if err != nil {
-				return fmt.Errorf("invalid prune-remove-after duration: %w", err)
-			}
-		}
+	return finalizeSyncResults(mgr, realChangelog, pruneStats, prune, dryRun, manifestPath, changelogOutput, changelogFormat)
+}
 
-		pruneStats = PruneManifestWithOptions(mgr, &PruneOptions{
-			RemoveAfterDuration: removeAfterDuration,
-			PruneIncompatible:   pruneIncompatible,
-			KeepRecent:          keepRecent,
-			DryRun:              dryRun,
-			Verbose:             verbose,
-		}, changelog)
+// runPruneIfRequested executes pruning when enabled and prints the prune summary.
+// It returns the prune stats (nil if pruning was not requested) and any error.
+func runPruneIfRequested(
+	mgr *repomanager.ManifestManager,
+	prune bool,
+	pruneRemoveAfter string,
+	pruneIncompatible bool,
+	keepRecent int,
+	dryRun bool,
+	verbose bool,
+	changelog *ChangeLog,
+) (*PruneStats, error) {
+	if !prune {
+		return nil, nil
+	}
 
-		fmt.Printf("\n=== Prune Summary ===\n")
-		fmt.Printf("Checked: %d\n", pruneStats.Checked)
-		fmt.Printf("Unavailable: %d\n", pruneStats.Unavailable)
-		if pruneStats.FilterFailed > 0 {
-			fmt.Printf("Filter failed: %d\n", pruneStats.FilterFailed)
-		}
-		if pruneStats.Incompatible > 0 {
-			fmt.Printf("Incompatible: %d\n", pruneStats.Incompatible)
-		}
-		if pruneStats.OldVersions > 0 {
-			fmt.Printf("Old versions: %d\n", pruneStats.OldVersions)
-		}
-		if pruneStats.Removed > 0 {
-			fmt.Printf("Removed: %d\n", pruneStats.Removed)
+	fmt.Printf("\n=== Pruning ===\n")
+
+	var removeAfterDuration time.Duration
+	if pruneRemoveAfter != "" {
+		var err error
+		removeAfterDuration, err = time.ParseDuration(pruneRemoveAfter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid prune-remove-after duration: %w", err)
 		}
 	}
 
-	// Compute the actual diff between snapshot and current state
-	manifestDiff := mgr.ComputeDiff()
+	stats := PruneManifestWithOptions(mgr, &PruneOptions{
+		RemoveAfterDuration: removeAfterDuration,
+		PruneIncompatible:   pruneIncompatible,
+		KeepRecent:          keepRecent,
+		DryRun:              dryRun,
+		Verbose:             verbose,
+	}, changelog)
 
-	// Build the real changelog from the manifest diff
-	realChangelog := BuildFromManifestDiff(manifestDiff)
+	fmt.Printf("\n=== Prune Summary ===\n")
+	fmt.Printf("Checked: %d\n", stats.Checked)
+	fmt.Printf("Unavailable: %d\n", stats.Unavailable)
+	if stats.FilterFailed > 0 {
+		fmt.Printf("Filter failed: %d\n", stats.FilterFailed)
+	}
+	if stats.Incompatible > 0 {
+		fmt.Printf("Incompatible: %d\n", stats.Incompatible)
+	}
+	if stats.OldVersions > 0 {
+		fmt.Printf("Old versions: %d\n", stats.OldVersions)
+	}
+	if stats.Removed > 0 {
+		fmt.Printf("Removed: %d\n", stats.Removed)
+	}
 
-	// Save manifest only if there are actual changes
-	saveNeeded := realChangelog.HasMaterialChanges()
+	return stats, nil
+}
+
+// finalizeSyncResults saves the manifest (if there are material changes) and
+// writes the changelog to the configured output. Both the RunE and
+// syncFromConfig paths call this after sync + optional prune.
+func finalizeSyncResults(
+	mgr *repomanager.ManifestManager,
+	changelog *ChangeLog,
+	pruneStats *PruneStats,
+	prune bool,
+	dryRun bool,
+	manifestPath string,
+	changelogOutput string,
+	changelogFormat string,
+) error {
+	saveNeeded := changelog.HasMaterialChanges()
 
 	if !dryRun && saveNeeded {
-		// Only update LastPruned if we actually removed entries
 		if prune && pruneStats != nil && pruneStats.Removed > 0 {
 			now := time.Now()
 			mgr.GetManifest().LastPruned = &now
@@ -391,8 +366,7 @@ func syncFromConfig( //nolint:gocognit // config parsing and multi-source sync
 		fmt.Println("\n(No changes to save)")
 	}
 
-	// Output changelog if requested (use the real changelog based on diff)
-	if err := writeChangelog(realChangelog, changelogOutput, changelogFormat); err != nil {
+	if err := writeChangelog(changelog, changelogOutput, changelogFormat); err != nil {
 		return fmt.Errorf("failed to write changelog: %w", err)
 	}
 

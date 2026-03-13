@@ -187,13 +187,10 @@ func (e *PluginExecutor) GetWallpaperRawPath() string {
 
 // --- Go-Plugin RPC implementations ---
 
-func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPluginRPCClient, error) {
-	if e.rpcClient != nil {
-		if client, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
-			return client, nil
-		}
-	}
-
+// dispenseRPCPlugin creates a go-plugin client, connects via RPC, and
+// dispenses the named plugin.  It is the shared core of getInputRPCClient
+// and getOutputRPCClient.
+func (e *PluginExecutor) dispenseRPCPlugin(name string, pluginMap map[string]goplug.Plugin) (any, error) {
 	// Configure logger based on verbose flag.
 	var logger hclog.Logger
 	if e.verbose {
@@ -212,10 +209,8 @@ func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPlug
 
 	// Initialize go-plugin client.
 	e.client = goplug.NewClient(&goplug.ClientConfig{
-		HandshakeConfig: protocol.Handshake,
-		Plugins: map[string]goplug.Plugin{
-			"input": &plugin.InputPluginRPC{},
-		},
+		HandshakeConfig:  protocol.Handshake,
+		Plugins:          pluginMap,
 		Cmd:              exec.Command(e.path), //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
 		AllowedProtocols: []goplug.Protocol{goplug.ProtocolNetRPC},
 		Logger:           logger,
@@ -230,10 +225,27 @@ func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPlug
 	}
 
 	// Request the plugin.
-	raw, err := rpcClient.Dispense("input")
+	raw, err := rpcClient.Dispense(name)
 	if err != nil {
 		e.client.Kill()
 		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
+	}
+
+	return raw, nil
+}
+
+func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPluginRPCClient, error) {
+	if e.rpcClient != nil {
+		if client, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
+			return client, nil
+		}
+	}
+
+	raw, err := e.dispenseRPCPlugin("input", map[string]goplug.Plugin{
+		"input": &plugin.InputPluginRPC{},
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	client, ok := raw.(*plugin.InputPluginRPCClient)
@@ -252,46 +264,11 @@ func (e *PluginExecutor) getOutputRPCClient(_ context.Context) (*plugin.OutputPl
 		}
 	}
 
-	// Configure logger based on verbose flag.
-	var logger hclog.Logger
-	if e.verbose {
-		logger = hclog.New(&hclog.LoggerOptions{
-			Name:   "plugin",
-			Output: log.Writer(),
-			Level:  hclog.Debug,
-		})
-	} else {
-		logger = hclog.New(&hclog.LoggerOptions{
-			Name:   "plugin",
-			Output: io.Discard,
-			Level:  hclog.Off,
-		})
-	}
-
-	// Initialize go-plugin client.
-	e.client = goplug.NewClient(&goplug.ClientConfig{
-		HandshakeConfig: protocol.Handshake,
-		Plugins: map[string]goplug.Plugin{
-			"output": &plugin.OutputPluginRPC{},
-		},
-		Cmd:              exec.Command(e.path), //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
-		AllowedProtocols: []goplug.Protocol{goplug.ProtocolNetRPC},
-		Logger:           logger,
-		SyncStderr:       os.Stderr, // Forward plugin stderr to parent
+	raw, err := e.dispenseRPCPlugin("output", map[string]goplug.Plugin{
+		"output": &plugin.OutputPluginRPC{},
 	})
-
-	// Connect via RPC.
-	rpcClient, err := e.client.Client()
 	if err != nil {
-		e.client.Kill()
-		return nil, fmt.Errorf("failed to get RPC client: %w", err)
-	}
-
-	// Request the plugin.
-	raw, err := rpcClient.Dispense("output")
-	if err != nil {
-		e.client.Kill()
-		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
+		return nil, err
 	}
 
 	client, ok := raw.(*plugin.OutputPluginRPCClient)

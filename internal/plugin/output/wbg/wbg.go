@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -20,17 +19,6 @@ import (
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
 )
-
-// isValidPath checks if a path is safe to use in commands.
-func isValidPath(path string) bool {
-	// Reject paths with suspicious characters.
-	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
-		return false
-	}
-	// Clean the path and ensure it matches.
-	cleaned := filepath.Clean(path)
-	return cleaned == path
-}
 
 //go:embed *.tmpl
 var templates embed.FS
@@ -188,14 +176,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 // This kills any existing wbg process and starts a new one.
 func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
 	// Make the generated shell script executable.
-	for _, f := range writtenFiles {
-		if filepath.Base(f) == "tinct-wbg.sh" {
-			if err := os.Chmod(f, 0o750); err != nil && p.verbose { // #nosec G302 -- 0o750 is intentional: the generated shell script must be executable by the owner
-				fmt.Fprintf(os.Stderr, "   Warning: failed to make %s executable: %v\n", f, err)
-			}
-			break
-		}
-	}
+	utils.MakeScriptExecutable(writtenFiles, "tinct-wbg.sh", p.verbose)
 
 	if execCtx.WallpaperPath == "" {
 		return nil
@@ -215,7 +196,7 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 	}
 
 	// Validate path to prevent command injection.
-	if !isValidPath(absPath) {
+	if !utils.IsValidPath(absPath) {
 		return fmt.Errorf("invalid wallpaper path: contains suspicious characters")
 	}
 

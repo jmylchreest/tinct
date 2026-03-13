@@ -24,17 +24,6 @@ import (
 	"github.com/jmylchreest/tinct/pkg/util/semver"
 )
 
-// isValidPath checks if a path is safe to use in commands.
-func isValidPath(path string) bool {
-	// Reject paths with suspicious characters
-	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
-		return false
-	}
-	// Clean the path and ensure it matches
-	cleaned := filepath.Clean(path)
-	return cleaned == path
-}
-
 //go:embed *.tmpl templates
 var templates embed.FS
 
@@ -358,7 +347,7 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 	}
 
 	// Validate path to prevent command injection.
-	if !isValidPath(absPath) {
+	if !utils.IsValidPath(absPath) {
 		return fmt.Errorf("invalid wallpaper path: contains suspicious characters")
 	}
 
