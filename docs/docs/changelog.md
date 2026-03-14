@@ -13,6 +13,9 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.1.28]
+*2026-03-14*
+
 ## [0.1.27]
 *2026-03-12*
 
