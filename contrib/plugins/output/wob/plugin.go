@@ -14,7 +14,7 @@ import (
 //go:embed templates/*.tmpl
 var templatesFS embed.FS
 
-// runPlugin runs in Tinct plugin mode (legacy JSON-stdio, deprecated)
+// runPlugin runs in Tinct plugin mode (JSON-stdio protocol 0.2.0)
 func runPlugin() error {
 	// Read palette from stdin (JSON)
 	var palette map[string]any
@@ -46,13 +46,24 @@ func runPlugin() error {
 		return fmt.Errorf("failed to write theme file: %w", err)
 	}
 
-	// Output success message
+	// Output status to stderr for user visibility
 	fmt.Fprintf(os.Stderr, "\nGenerated wob theme: %s\n\n", themeFile)
 	fmt.Fprintf(os.Stderr, "To use the wrapper, ensure tinct-plugin-wob is in your PATH, then add to hyprland.conf:\n\n")
 	fmt.Fprintf(os.Stderr, "  exec-once = tinct-plugin-wob start --base-config ~/.config/wob/base.ini \\\n")
 	fmt.Fprintf(os.Stderr, "                       --append-config ~/.config/wob/themes/tinct.ini\n\n")
 	fmt.Fprintf(os.Stderr, "  bind = , XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_SINK@ 5%%+ && \\\n")
 	fmt.Fprintf(os.Stderr, "         tinct-plugin-wob send $(wpctl get-volume @DEFAULT_SINK@ | awk '{print $2 * 100}')\n\n")
+
+	// Protocol 0.2.0: write structured JSON response to stdout
+	response := map[string]any{
+		"success":       true,
+		"files_written": []string{themeFile},
+		"message":       fmt.Sprintf("Generated wob theme: %s", themeFile),
+	}
+	encoder := json.NewEncoder(os.Stdout)
+	if err := encoder.Encode(response); err != nil {
+		return fmt.Errorf("failed to encode response: %w", err)
+	}
 
 	return nil
 }

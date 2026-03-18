@@ -1,7 +1,7 @@
 #!/bin/sh
 # Input plugin that returns color data
-if [ "$1" = "--detect-protocol" ]; then
-  echo "json-stdio"
+if [ "$1" = "--plugin-info" ]; then
+  echo '{"name":"test","type":"input","version":"1.0.0","protocol_version":"0.1.0","plugin_protocol":"json-stdio"}'
   exit 0
 fi
 

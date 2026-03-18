@@ -11,7 +11,7 @@ const (
 	// - Increment MAJOR for breaking changes (incompatible API changes).
 	// - Increment MINOR for backward-compatible additions.
 	// - Increment PATCH for backward-compatible bug fixes.
-	ProtocolVersion = "0.1.0"
+	ProtocolVersion = "0.2.0"
 
 	// MinCompatibleVersion is the oldest protocol version this tinct version can work with.
 	MinCompatibleVersion = "0.0.1"

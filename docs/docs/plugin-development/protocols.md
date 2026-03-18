@@ -58,7 +58,7 @@ Returns:
   "name": "my-plugin",
   "type": "output",
   "version": "1.0.0",
-  "protocol_version": "0.0.1",
+  "protocol_version": "0.2.0",
   "description": "My plugin",
   "plugin_protocol": "json-stdio"
 }
@@ -74,6 +74,7 @@ tinct                          plugin
   │──── JSON via stdin ─────────▶│
   │                              │
   │◀─── JSON via stdout ─────────│
+  │     (status to stderr) ──────│
   │                              │
   │◀─── process exits ───────────│
   │                              │
@@ -109,7 +110,7 @@ Input plugins receive configuration and must return palette data:
 
 ### Output plugin data format
 
-Output plugins receive the full palette:
+Output plugins receive the full palette via stdin and must write a structured JSON response to stdout.
 
 **Stdin (palette):**
 ```json
@@ -138,7 +139,7 @@ Output plugins receive the full palette:
 }
 ```
 
-**Stdout (status):**
+**Stdout (structured response — protocol 0.2.0):**
 ```json
 {
   "success": true,
@@ -149,11 +150,33 @@ Output plugins receive the full palette:
 }
 ```
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `success` | boolean | Yes | Whether the plugin completed successfully |
+| `files_written` | string[] | Yes | Absolute paths of files written by the plugin (empty array if none) |
+| `message` | string | No | Human-readable status message |
+
+**Important:** Plugins must write all informational/status output to **stderr**. Only the JSON response goes to **stdout**. Tinct displays stderr output to the user.
+
+For plugins that report failure, set `success` to `false` with an explanatory `message`. The plugin should still exit with code 0 — Tinct treats non-zero exit codes as a process-level crash, distinct from a plugin-reported failure.
+
 ### Error handling
 
-Write errors to stderr:
+Write errors and status messages to stderr:
 
 ```bash
+echo "Generating theme configuration..." >&2
+echo "Error: config directory not found" >&2
+```
+
+For fatal errors, either write a failure response to stdout or exit non-zero:
+
+```bash
+# Option 1: Structured failure (preferred)
+echo '{"success":false,"files_written":[],"message":"Config directory not found"}' 
+exit 0
+
+# Option 2: Process-level error (last resort)
 echo "Error: config directory not found" >&2
 exit 1
 ```
@@ -185,7 +208,7 @@ Returns:
   "name": "my-plugin",
   "type": "output",
   "version": "1.0.0",
-  "protocol_version": "0.0.1",
+  "protocol_version": "0.2.0",
   "description": "My Go plugin",
   "plugin_protocol": "go-plugin"
 }
@@ -291,15 +314,22 @@ Output plugins receive the wallpaper path in the palette data and can use it for
 
 ## Protocol version
 
-The current protocol version is `0.0.1`. Plugins should declare this in their metadata:
+The current protocol version is `0.2.0`. Plugins should declare this in their metadata:
 
 ```json
 {
-  "protocol_version": "0.0.1"
+  "protocol_version": "0.2.0"
 }
 ```
 
-Tinct checks version compatibility and warns if a plugin uses an incompatible version.
+### Version history
+
+| Version | Changes |
+|---------|---------|
+| `0.2.0` | Structured JSON response for output plugins (`success`, `files_written`, `message`). Plugins write files themselves and report paths. Informational output goes to stderr only. |
+| `0.0.1` | Initial version. Output plugin stdout treated as freeform text, displayed to user. No file tracking for json-stdio plugins. |
+
+Tinct checks version compatibility and warns if a plugin uses an incompatible version. Plugins using protocol versions older than `0.2.0` continue to work with legacy behavior (freeform stdout displayed to user, no file tracking).
 
 ## See also
 

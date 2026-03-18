@@ -18,7 +18,8 @@ if [ "$1" = "--plugin-info" ]; then
   "name": "example-minimal",
   "type": "output",
   "version": "0.0.1",
-  "protocol_version": "0.0.1",
+  "protocol_version": "0.2.0",
+  "plugin_protocol": "json-stdio",
   "description": "Minimal example plugin that prints colour info",
   "enabled": false,
   "author": "Tinct Contributors"
@@ -30,8 +31,8 @@ fi
 # Read JSON palette from stdin
 PALETTE=$(cat)
 
-# Show the input payload received from Tinct
-cat <<EOF
+# Show the input payload received from Tinct (all informational output goes to stderr)
+cat >&2 <<EOF
 =================================
 Tinct Minimal Example Plugin
 =================================
@@ -61,12 +62,12 @@ EOF
 
 # Pretty print the JSON if jq is available
 if command -v jq &> /dev/null; then
-    echo "$PALETTE" | jq '.'
+    echo "$PALETTE" | jq '.' >&2
 else
-    echo "$PALETTE"
+    echo "$PALETTE" >&2
 fi
 
-cat <<EOF
+cat >&2 <<EOF
 
 =================================
 
@@ -95,8 +96,8 @@ fi
 # Extract dry-run flag
 DRY_RUN=$(echo "$PALETTE" | jq -r '.dry_run // false')
 
-# Output results
-cat <<EOF
+# Output results to stderr
+cat >&2 <<EOF
 
 Extracted Information:
   Theme Type:    $THEME
@@ -114,7 +115,7 @@ CUSTOM PLUGIN ARGUMENTS:
 EOF
 
 if [ -n "$PLUGIN_ARGS" ]; then
-  cat <<EOF
+  cat >&2 <<EOF
 Plugins can receive custom arguments via
 the --plugin-args flag. For example:
 
@@ -124,9 +125,9 @@ the --plugin-args flag. For example:
 
 The plugin_args field in the JSON payload:
 EOF
-  echo "$PLUGIN_ARGS" | jq '.'
+  echo "$PLUGIN_ARGS" | jq '.' >&2
 else
-  cat <<EOF
+  cat >&2 <<EOF
 No custom arguments were provided.
 To pass custom arguments to this plugin:
 
@@ -139,7 +140,7 @@ specific to their functionality.
 EOF
 fi
 
-cat <<EOF
+cat >&2 <<EOF
 
 =================================
 
@@ -148,7 +149,7 @@ DRY-RUN MODE:
 EOF
 
 if [ "$DRY_RUN" = "true" ]; then
-  cat <<EOF
+  cat >&2 <<EOF
 Dry-run mode is ENABLED. The plugin should:
   - NOT write any files to disk
   - NOT modify system settings
@@ -163,7 +164,7 @@ Example dry-run output:
 To run in normal mode, omit the --dry-run flag.
 EOF
 else
-  cat <<EOF
+  cat >&2 <<EOF
 Dry-run mode is DISABLED. The plugin can:
   - Write files to disk
   - Modify system settings
@@ -175,28 +176,9 @@ but a real plugin would do so now.
 EOF
 fi
 
-cat <<EOF
+cat >&2 <<EOF
 
 =================================
-
-PLUGIN RESPONSE (to stdout):
----------------------------------
-Everything written to stdout is the
-plugin's response to Tinct. You can:
-  - Report status and progress
-  - Show generated file paths
-  - Display success/error messages
-  - Return structured data
-
-Note: Use stderr for debug messages
-that shouldn't be part of the response
-
-This plugin successfully processed
-the colour palette and could now:
-  - Generate configuration files
-  - Update system settings
-  - Send notifications
-  - Execute other commands
 
 Status: SUCCESS
 Processed: $COLOR_COUNT colours
@@ -204,6 +186,11 @@ Theme: $THEME
 Mode: $([ "$DRY_RUN" = "true" ] && echo "DRY-RUN" || echo "NORMAL")
 
 =================================
+EOF
+
+# Protocol 0.2.0: write structured JSON response to stdout
+cat <<EOF
+{"success":true,"files_written":[],"message":"Processed $COLOR_COUNT colours from $THEME theme"}
 EOF
 
 exit 0

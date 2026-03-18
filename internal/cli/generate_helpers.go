@@ -562,15 +562,6 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 	exec.writtenFiles = make([]string, 0, len(files))
 
 	for filename, content := range files {
-		// Check if this is external plugin output (virtual file).
-		if strings.HasSuffix(filename, "-output.txt") && outputDir == "" {
-			// External plugin - display output directly.
-			if len(content) > 0 {
-				fmt.Println(string(content))
-			}
-			continue
-		}
-
 		// Resolve the output path.
 		// Internal plugins return relative paths (joined with outputDir).
 		// External plugins (outputDir=="") return absolute paths they manage themselves.
@@ -579,6 +570,34 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 			fullPath = filepath.Clean(filename)
 		} else {
 			fullPath = filepath.Clean(filepath.Join(outputDir, filename))
+		}
+
+		// nil content means the plugin already wrote the file (protocol >= 0.2.0).
+		// Track it in the manifest but don't re-write it.
+		if content == nil {
+			if generateDryRun {
+				fmt.Printf("   Plugin wrote: %s\n", fullPath)
+			} else {
+				fmt.Printf("   %s (plugin-managed)\n", fullPath)
+				exec.writtenFiles = append(exec.writtenFiles, fullPath)
+
+				// Record file in manifest for tracking (read content from disk for hashing).
+				if generateManifestManager != nil {
+					diskContent, err := os.ReadFile(fullPath)
+					if err != nil {
+						if generateVerbose {
+							fmt.Fprintf(os.Stderr, "   Warning: failed to read %s for manifest: %v\n", fullPath, err)
+						}
+					} else {
+						if err := generateManifestManager.RecordFile(plugin.Name(), fullPath, diskContent); err != nil {
+							if generateVerbose {
+								fmt.Fprintf(os.Stderr, "   Warning: failed to record %s in manifest: %v\n", fullPath, err)
+							}
+						}
+					}
+				}
+			}
+			continue
 		}
 
 		if generateDryRun {

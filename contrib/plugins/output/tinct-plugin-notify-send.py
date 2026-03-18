@@ -39,7 +39,8 @@ PLUGIN_INFO = {
     "name": "notify-send",
     "type": "output",
     "version": "0.0.1",
-    "protocol_version": "0.0.1",
+    "protocol_version": "0.2.0",
+    "plugin_protocol": "json-stdio",
     "description": "Send desktop notifications with colour palette information",
     "enabled": False,
     "author": "Tinct Contributors",
@@ -54,7 +55,7 @@ def show_plugin_info() -> None:
 
 def send_notification(
     palette: Dict[str, Any], plugin_args: Dict[str, Any], dry_run: bool = False
-) -> None:
+) -> Dict[str, Any]:
     """
     Send a desktop notification with palette information.
 
@@ -62,6 +63,9 @@ def send_notification(
         palette: The categorised colour palette data
         plugin_args: Custom plugin arguments
         dry_run: If True, show what would be done without actually sending
+
+    Returns:
+        Protocol 0.2.0 response dict
     """
     theme_type = palette.get("theme_type", 0)
     colors = palette.get("colours") or {}
@@ -147,18 +151,22 @@ def send_notification(
 
     # Handle dry-run mode
     if dry_run:
-        print("=== DRY-RUN MODE ===")
-        print("Would send notification with command:")
-        print(f"  {' '.join(cmd)}")
-        print(f"\nTitle: {title}")
-        print(f"Body:\n{body}")
-        print("\nSettings:")
-        print(f"  Urgency: {urgency}")
-        print(f"  Timeout: {timeout}ms")
-        print(f"  App Name: {app_name}")
-        print(f"  Icon: {icon}")
-        print("===================")
-        return
+        print("=== DRY-RUN MODE ===", file=sys.stderr)
+        print("Would send notification with command:", file=sys.stderr)
+        print(f"  {' '.join(cmd)}", file=sys.stderr)
+        print(f"\nTitle: {title}", file=sys.stderr)
+        print(f"Body:\n{body}", file=sys.stderr)
+        print("\nSettings:", file=sys.stderr)
+        print(f"  Urgency: {urgency}", file=sys.stderr)
+        print(f"  Timeout: {timeout}ms", file=sys.stderr)
+        print(f"  App Name: {app_name}", file=sys.stderr)
+        print(f"  Icon: {icon}", file=sys.stderr)
+        print("===================", file=sys.stderr)
+        return {
+            "success": True,
+            "files_written": [],
+            "message": "Dry-run: notification would be sent",
+        }
 
     # Send notification using notify-send
     try:
@@ -168,28 +176,33 @@ def send_notification(
             capture_output=True,
             text=True,
         )
-        print(f"✓ Notification sent successfully")
+        print(f"✓ Notification sent successfully", file=sys.stderr)
         if plugin_args.get("verbose", False):
-            print(f"  Command: {' '.join(cmd)}")
-            print(f"  Title: {title}")
-            print(f"  Icon: {icon}")
+            print(f"  Command: {' '.join(cmd)}", file=sys.stderr)
+            print(f"  Title: {title}", file=sys.stderr)
+            print(f"  Icon: {icon}", file=sys.stderr)
             print(
-                f"  Colours shown: {len([line for line in body_lines if ':' in line])}"
+                f"  Colours shown: {len([line for line in body_lines if ':' in line])}",
+                file=sys.stderr,
             )
+        return {
+            "success": True,
+            "files_written": [],
+            "message": "Notification sent successfully",
+        }
     except subprocess.CalledProcessError as e:
-        print(f"✗ Error: Failed to send notification: {e}", file=sys.stderr)
+        msg = f"Failed to send notification: {e}"
+        print(f"✗ Error: {msg}", file=sys.stderr)
         if e.stderr:
             print(f"  stderr: {e.stderr}", file=sys.stderr)
-        sys.exit(1)
+        return {"success": False, "files_written": [], "message": msg}
     except FileNotFoundError:
-        print(
-            "✗ Error: notify-send command not found. Please install libnotify.",
-            file=sys.stderr,
-        )
+        msg = "notify-send command not found. Please install libnotify."
+        print(f"✗ Error: {msg}", file=sys.stderr)
         print("  Ubuntu/Debian: sudo apt-get install libnotify-bin", file=sys.stderr)
         print("  Arch: sudo pacman -S libnotify", file=sys.stderr)
         print("  Fedora: sudo dnf install libnotify", file=sys.stderr)
-        sys.exit(1)
+        return {"success": False, "files_written": [], "message": msg}
 
 
 def validate_palette(palette: Dict[str, Any]) -> bool:
@@ -227,15 +240,31 @@ def main() -> None:
     try:
         palette_data = json.load(sys.stdin)
     except json.JSONDecodeError as e:
-        print(f"Error: Failed to parse JSON input: {e}", file=sys.stderr)
-        sys.exit(1)
+        response = {
+            "success": False,
+            "files_written": [],
+            "message": f"Failed to parse JSON input: {e}",
+        }
+        print(json.dumps(response))
+        sys.exit(0)
     except Exception as e:
-        print(f"Error: Failed to read input: {e}", file=sys.stderr)
-        sys.exit(1)
+        response = {
+            "success": False,
+            "files_written": [],
+            "message": f"Failed to read input: {e}",
+        }
+        print(json.dumps(response))
+        sys.exit(0)
 
     # Validate palette
     if not validate_palette(palette_data):
-        sys.exit(1)
+        response = {
+            "success": False,
+            "files_written": [],
+            "message": "Invalid palette: missing 'colours' or 'all_colours' field",
+        }
+        print(json.dumps(response))
+        sys.exit(0)
 
     # Extract plugin args and dry-run flag
     plugin_args = palette_data.get("plugin_args", {})
@@ -243,17 +272,21 @@ def main() -> None:
 
     # Show info about plugin execution
     if plugin_args.get("verbose", False) or dry_run:
-        print(f"\n{'=' * 50}")
-        print(f"Tinct Notify-Send Plugin v{PLUGIN_INFO['version']}")
-        print(f"{'=' * 50}")
-        print(f"Dry-run mode: {dry_run}")
+        print(f"\n{'=' * 50}", file=sys.stderr)
+        print(f"Tinct Notify-Send Plugin v{PLUGIN_INFO['version']}", file=sys.stderr)
+        print(f"{'=' * 50}", file=sys.stderr)
+        print(f"Dry-run mode: {dry_run}", file=sys.stderr)
         print(
-            f"Plugin args: {json.dumps(plugin_args, indent=2) if plugin_args else 'none'}"
+            f"Plugin args: {json.dumps(plugin_args, indent=2) if plugin_args else 'none'}",
+            file=sys.stderr,
         )
-        print(f"{'=' * 50}\n")
+        print(f"{'=' * 50}\n", file=sys.stderr)
 
-    # Send notification
-    send_notification(palette_data, plugin_args, dry_run)
+    # Send notification and get protocol 0.2.0 response
+    response = send_notification(palette_data, plugin_args, dry_run)
+
+    # Protocol 0.2.0: write structured JSON response to stdout
+    print(json.dumps(response))
 
 
 if __name__ == "__main__":

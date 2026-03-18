@@ -114,7 +114,8 @@ func TestExecuteInputJSONError(t *testing.T) {
 	}
 }
 
-// TestExecuteOutputJSONSuccess tests executing a JSON stdio output plugin.
+// TestExecuteOutputJSONSuccess tests executing a legacy JSON stdio output plugin (< 0.2.0).
+// Legacy plugins return freeform text on stdout; executor returns empty map.
 func TestExecuteOutputJSONSuccess(t *testing.T) {
 	pluginPath := copyTestScript(t, "basic-output.sh")
 
@@ -139,16 +140,197 @@ func TestExecuteOutputJSONSuccess(t *testing.T) {
 		t.Fatalf("ExecuteOutput failed: %v", err)
 	}
 
+	// Legacy plugins (protocol < 0.2.0) now return empty map.
+	// Freeform text is printed to stderr, not stored as output.txt.
+	if len(files) != 0 {
+		t.Errorf("Expected 0 files from legacy plugin, got %d", len(files))
+	}
+}
+
+// TestExecuteOutputJSONV2Success tests executing a protocol 0.2.0 output plugin.
+func TestExecuteOutputJSONV2Success(t *testing.T) {
+	pluginPath := copyTestScript(t, "output-v2.sh")
+
+	executor, err := NewWithVerbose(pluginPath, false)
+	if err != nil {
+		t.Fatalf("Failed to create executor: %v", err)
+	}
+	defer executor.Close()
+
+	paletteData := plugin.PaletteData{
+		Colours:    make(map[string]plugin.CategorisedColour),
+		AllColours: []plugin.CategorisedColour{},
+		ThemeType:  "dark",
+		DryRun:     false,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	files, err := executor.ExecuteOutput(ctx, paletteData)
+	if err != nil {
+		t.Fatalf("ExecuteOutput failed: %v", err)
+	}
+
+	// Protocol 0.2.0 plugin returns files_written paths as keys with nil content.
 	if len(files) != 1 {
 		t.Errorf("Expected 1 file, got %d", len(files))
 	}
 
-	if _, ok := files["output.txt"]; !ok {
-		t.Error("Expected 'output.txt' in output")
+	// Check that one file path was returned (we don't know exact temp path).
+	for path, content := range files {
+		if !strings.HasPrefix(path, "/tmp/tinct-test-") {
+			t.Errorf("Expected file path starting with '/tmp/tinct-test-', got '%s'", path)
+		}
+		if content != nil {
+			t.Errorf("Expected nil content for plugin-managed file, got %d bytes", len(content))
+		}
+	}
+}
+
+// TestExecuteOutputJSONV2Failure tests protocol 0.2.0 plugin reporting failure.
+func TestExecuteOutputJSONV2Failure(t *testing.T) {
+	pluginPath := copyTestScript(t, "output-v2-fail.sh")
+
+	executor, err := NewWithVerbose(pluginPath, false)
+	if err != nil {
+		t.Fatalf("Failed to create executor: %v", err)
+	}
+	defer executor.Close()
+
+	paletteData := plugin.PaletteData{
+		Colours:    make(map[string]plugin.CategorisedColour),
+		AllColours: []plugin.CategorisedColour{},
+		ThemeType:  "dark",
+		DryRun:     false,
 	}
 
-	if content := string(files["output.txt"]); !strings.Contains(content, "theme configuration") {
-		t.Errorf("Expected content to contain 'theme configuration', got '%s'", content)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err = executor.ExecuteOutput(ctx, paletteData)
+	if err == nil {
+		t.Error("Expected error from plugin reporting failure")
+	}
+	if !strings.Contains(err.Error(), "configuration validation failed") {
+		t.Errorf("Expected error to contain 'configuration validation failed', got: %v", err)
+	}
+}
+
+// TestSupportsStructuredResponse tests version-gating logic.
+func TestSupportsStructuredResponse(t *testing.T) {
+	tests := []struct {
+		version  string
+		expected bool
+	}{
+		{"", false},
+		{"0.0.1", false},
+		{"0.1.0", false},
+		{"0.1.9", false},
+		{"0.2.0", true},
+		{"0.2.1", true},
+		{"0.3.0", true},
+		{"1.0.0", true},
+		{"invalid", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			e := &PluginExecutor{pluginProtocolVersion: tt.version}
+			if got := e.supportsStructuredResponse(); got != tt.expected {
+				t.Errorf("supportsStructuredResponse(%q) = %v, want %v", tt.version, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestParseStructuredResponse tests parsing of protocol 0.2.0 JSON responses.
+func TestParseStructuredResponse(t *testing.T) {
+	e := &PluginExecutor{}
+
+	t.Run("success with files", func(t *testing.T) {
+		resp := `{"success": true, "files_written": ["/tmp/a.conf", "/tmp/b.css"], "message": "Generated 2 files"}`
+		files, err := e.parseStructuredResponse([]byte(resp))
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if len(files) != 2 {
+			t.Errorf("Expected 2 files, got %d", len(files))
+		}
+		if _, ok := files["/tmp/a.conf"]; !ok {
+			t.Error("Missing /tmp/a.conf in result")
+		}
+		if _, ok := files["/tmp/b.css"]; !ok {
+			t.Error("Missing /tmp/b.css in result")
+		}
+		// Content should be nil (plugin already wrote the files)
+		for path, content := range files {
+			if content != nil {
+				t.Errorf("Expected nil content for %s, got %d bytes", path, len(content))
+			}
+		}
+	})
+
+	t.Run("success with empty files", func(t *testing.T) {
+		resp := `{"success": true, "files_written": [], "message": "No files needed"}`
+		files, err := e.parseStructuredResponse([]byte(resp))
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if len(files) != 0 {
+			t.Errorf("Expected 0 files, got %d", len(files))
+		}
+	})
+
+	t.Run("failure response", func(t *testing.T) {
+		resp := `{"success": false, "files_written": [], "message": "disk full"}`
+		_, err := e.parseStructuredResponse([]byte(resp))
+		if err == nil {
+			t.Error("Expected error for failure response")
+		}
+		if !strings.Contains(err.Error(), "disk full") {
+			t.Errorf("Expected error to contain 'disk full', got: %v", err)
+		}
+	})
+
+	t.Run("failure with no message", func(t *testing.T) {
+		resp := `{"success": false}`
+		_, err := e.parseStructuredResponse([]byte(resp))
+		if err == nil {
+			t.Error("Expected error for failure response")
+		}
+		if !strings.Contains(err.Error(), "plugin reported failure") {
+			t.Errorf("Expected error to contain 'plugin reported failure', got: %v", err)
+		}
+	})
+
+	t.Run("empty stdout", func(t *testing.T) {
+		_, err := e.parseStructuredResponse([]byte{})
+		if err == nil {
+			t.Error("Expected error for empty response")
+		}
+	})
+
+	t.Run("invalid JSON", func(t *testing.T) {
+		_, err := e.parseStructuredResponse([]byte("not json"))
+		if err == nil {
+			t.Error("Expected error for invalid JSON")
+		}
+	})
+}
+
+// TestProtocolVersionStored tests that protocol version is stored from detection.
+func TestProtocolVersionStored(t *testing.T) {
+	pluginPath := copyTestScript(t, "basic-input.sh")
+
+	executor, err := NewWithVerbose(pluginPath, false)
+	if err != nil {
+		t.Fatalf("Failed to create executor: %v", err)
+	}
+	defer executor.Close()
+
+	if executor.pluginProtocolVersion != "0.1.0" {
+		t.Errorf("Expected pluginProtocolVersion '0.1.0', got '%s'", executor.pluginProtocolVersion)
 	}
 }
 

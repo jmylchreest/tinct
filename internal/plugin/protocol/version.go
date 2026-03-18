@@ -52,6 +52,17 @@ func (v Version) String() string {
 	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
+// AtLeast returns true if v is greater than or equal to other.
+func (v Version) AtLeast(other Version) bool {
+	if v.Major != other.Major {
+		return v.Major > other.Major
+	}
+	if v.Minor != other.Minor {
+		return v.Minor > other.Minor
+	}
+	return v.Patch >= other.Patch
+}
+
 // IsCompatible checks if a plugin protocol version is compatible with the current tinct version.
 // Rules:
 // - Major version must match exactly (breaking changes).

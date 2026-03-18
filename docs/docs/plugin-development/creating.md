@@ -22,7 +22,7 @@ if [[ "$1" == "--plugin-info" ]]; then
   "name": "my-plugin",
   "type": "output",
   "version": "1.0.0",
-  "protocol_version": "0.0.1",
+  "protocol_version": "0.2.0",
   "description": "Example shell plugin",
   "plugin_protocol": "json-stdio"
 }
@@ -38,15 +38,20 @@ bg=$(echo "$palette" | jq -r '.colours.background.hex')
 fg=$(echo "$palette" | jq -r '.colours.foreground.hex')
 accent=$(echo "$palette" | jq -r '.colours.accent1.hex')
 
-# Generate output
-mkdir -p ~/.config/myapp
-cat > ~/.config/myapp/colours.conf <<EOF
+# Generate output (plugin writes files itself)
+config_path="$HOME/.config/myapp/colours.conf"
+mkdir -p "$(dirname "$config_path")"
+cat > "$config_path" <<EOF
 background=$bg
 foreground=$fg
 accent=$accent
 EOF
 
-echo "Generated ~/.config/myapp/colours.conf"
+# Status messages go to stderr
+echo "Generated $config_path" >&2
+
+# Structured JSON response goes to stdout (protocol 0.2.0)
+echo "{\"success\":true,\"files_written\":[\"$config_path\"],\"message\":\"Generated $config_path\"}"
 ```
 
 Make it executable and install:
@@ -71,7 +76,7 @@ def get_plugin_info():
         "name": "my-plugin",
         "type": "output",
         "version": "1.0.0",
-        "protocol_version": "0.0.1",
+        "protocol_version": "0.2.0",
         "description": "Example Python plugin",
         "plugin_protocol": "json-stdio"
     }
@@ -94,7 +99,10 @@ success = {colours['success']['hex']}
     with open(config_path, 'w') as f:
         f.write(config)
 
-    # Return success response
+    # Status messages go to stderr
+    print(f"Generated {config_path}", file=sys.stderr)
+
+    # Structured JSON response goes to stdout (protocol 0.2.0)
     response = {
         "success": True,
         "files_written": [config_path],
@@ -123,63 +131,84 @@ For simple Go plugins using the JSON-stdio protocol:
 package main
 
 import (
-    "encoding/json"
-    "fmt"
-    "os"
-    "path/filepath"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 )
 
 type PluginInfo struct {
-    Name            string `json:"name"`
-    Type            string `json:"type"`
-    Version         string `json:"version"`
-    ProtocolVersion string `json:"protocol_version"`
-    Description     string `json:"description"`
-    PluginProtocol  string `json:"plugin_protocol"`
+	Name            string `json:"name"`
+	Type            string `json:"type"`
+	Version         string `json:"version"`
+	ProtocolVersion string `json:"protocol_version"`
+	Description     string `json:"description"`
+	PluginProtocol  string `json:"plugin_protocol"`
+}
+
+type Response struct {
+	Success      bool     `json:"success"`
+	FilesWritten []string `json:"files_written"`
+	Message      string   `json:"message,omitempty"`
 }
 
 type Colour struct {
-    Hex string `json:"hex"`
-    RGB struct {
-        R, G, B int `json:"r,g,b"`
-    } `json:"rgb"`
+	Hex string `json:"hex"`
+	RGB struct {
+		R, G, B int `json:"r,g,b"`
+	} `json:"rgb"`
 }
 
 type Palette struct {
-    Colours map[string]Colour `json:"colours"`
+	Colours map[string]Colour `json:"colours"`
 }
 
 func main() {
-    if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
-        info := PluginInfo{
-            Name:            "my-plugin",
-            Type:            "output",
-            Version:         "1.0.0",
-            ProtocolVersion: "0.0.1",
-            Description:     "Example Go plugin",
-            PluginProtocol:  "json-stdio",
-        }
-        json.NewEncoder(os.Stdout).Encode(info)
-        return
-    }
+	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
+		info := PluginInfo{
+			Name:            "my-plugin",
+			Type:            "output",
+			Version:         "1.0.0",
+			ProtocolVersion: "0.2.0",
+			Description:     "Example Go plugin",
+			PluginProtocol:  "json-stdio",
+		}
+		json.NewEncoder(os.Stdout).Encode(info)
+		return
+	}
 
-    var palette Palette
-    if err := json.NewDecoder(os.Stdin).Decode(&palette); err != nil {
-        fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-        os.Exit(1)
-    }
+	var palette Palette
+	if err := json.NewDecoder(os.Stdin).Decode(&palette); err != nil {
+		resp := Response{Success: false, Message: fmt.Sprintf("failed to decode palette: %v", err)}
+		json.NewEncoder(os.Stdout).Encode(resp)
+		return
+	}
 
-    bg := palette.Colours["background"].Hex
-    fg := palette.Colours["foreground"].Hex
+	bg := palette.Colours["background"].Hex
+	fg := palette.Colours["foreground"].Hex
 
-    configDir := filepath.Join(os.Getenv("HOME"), ".config", "myapp")
-    os.MkdirAll(configDir, 0755)
+	configDir := filepath.Join(os.Getenv("HOME"), ".config", "myapp")
+	os.MkdirAll(configDir, 0755)
 
-    configPath := filepath.Join(configDir, "colours.conf")
-    content := fmt.Sprintf("background=%s\nforeground=%s\n", bg, fg)
+	configPath := filepath.Join(configDir, "colours.conf")
+	content := fmt.Sprintf("background=%s\nforeground=%s\n", bg, fg)
 
-    os.WriteFile(configPath, []byte(content), 0644)
-    fmt.Printf("Generated %s\n", configPath)
+	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		resp := Response{Success: false, Message: fmt.Sprintf("failed to write config: %v", err)}
+		json.NewEncoder(os.Stdout).Encode(resp)
+		return
+	}
+
+	// Status to stderr
+	fmt.Fprintf(os.Stderr, "Generated %s\n", configPath)
+
+	// Structured response to stdout (protocol 0.2.0)
+	resp := Response{
+		Success:      true,
+		FilesWritten: []string{configPath},
+		Message:      fmt.Sprintf("Generated %s", configPath),
+	}
+	json.NewEncoder(os.Stdout).Encode(resp)
 }
 ```
 
@@ -372,9 +401,9 @@ tinct generate -i image -p wallpaper.jpg -o my-plugin --dry-run
 
 1. **Always handle `--plugin-info`** - Required for plugin discovery
 2. **Read from stdin** - Palette data comes via stdin as JSON
-3. **Write status to stdout** - Success messages and responses
-4. **Write errors to stderr** - Error messages go to stderr
-5. **Use proper exit codes** - Return non-zero on failure
+3. **Write status to stderr** - Progress and informational messages go to stderr
+4. **Write JSON response to stdout** - Protocol 0.2.0 structured response (`success`, `files_written`, `message`)
+5. **Use proper exit codes** - Return 0 on both success and plugin-level failures; non-zero only for process-level crashes
 6. **Validate input** - Check palette data before using
 7. **Create directories** - Use `mkdir -p` or equivalent
 8. **Handle missing colours** - Not all roles may be present

@@ -49,7 +49,7 @@ func main() {
 			"name":             pluginName,
 			"type":             "output",
 			"version":          Version,
-			"protocol_version": "0.0.1",
+			"protocol_version": "0.2.0",
 			"description":      pluginDescription,
 			"plugin_protocol":  "json-stdio",
 		}

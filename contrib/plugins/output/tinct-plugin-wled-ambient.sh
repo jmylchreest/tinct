@@ -23,7 +23,8 @@ if [ "$1" = "--plugin-info" ]; then
   "name": "wled-ambient",
   "type": "output",
   "version": "0.0.1",
-  "protocol_version": "0.0.1",
+  "protocol_version": "0.2.0",
+  "plugin_protocol": "json-stdio",
   "description": "WLED ambient monitor lighting using positional colours",
   "enabled": false,
   "author": "Tinct Contributors"
@@ -44,16 +45,16 @@ WLED_HOST=$(echo "$PLUGIN_ARGS" | jq -r '.host // "192.168.1.100"')
 WLED_SEGMENTS=$(echo "$PLUGIN_ARGS" | jq -r '.segments // [0] | @json')
 BRIGHTNESS=$(echo "$PLUGIN_ARGS" | jq -r '.brightness // 128')
 
-echo "==============================================="
-echo "WLED Ambient Monitor Lighting"
-echo "==============================================="
-echo ""
-echo "Configuration:"
-echo "  WLED Host:    $WLED_HOST"
-echo "  Segments:     $WLED_SEGMENTS"
-echo "  Brightness:   $BRIGHTNESS"
-echo "  Dry Run:      $DRY_RUN"
-echo ""
+echo "===============================================" >&2
+echo "WLED Ambient Monitor Lighting" >&2
+echo "===============================================" >&2
+echo "" >&2
+echo "Configuration:" >&2
+echo "  WLED Host:    $WLED_HOST" >&2
+echo "  Segments:     $WLED_SEGMENTS" >&2
+echo "  Brightness:   $BRIGHTNESS" >&2
+echo "  Dry Run:      $DRY_RUN" >&2
+echo "" >&2
 
 # Extract positional colours for monitor edges
 # Typical monitor layout (8 positions):
@@ -72,27 +73,20 @@ LEFT=$(echo "$PALETTE" | jq -r '.colours.left.hex // ""')
 
 # Check if positional colours are available
 if [ -z "$TOP_LEFT" ] || [ -z "$TOP" ] || [ -z "$TOP_RIGHT" ]; then
-  echo "ERROR: Positional colours not found in palette"
-  echo ""
-  echo "Please enable ambient extraction:"
-  echo "  tinct generate -i image -p wallpaper.jpg \\"
-  echo "    --image.extractAmbience \\"
-  echo "    --image.ambienceRegions 8 \\"
-  echo "    -o wled-ambient"
-  echo ""
-  exit 1
+  echo '{"success":false,"files_written":[],"message":"Positional colours not found in palette. Enable ambient extraction with --image.extractAmbience"}' 
+  exit 0
 fi
 
-echo "Extracted Positional Colours:"
-echo "  Top Left:     $TOP_LEFT"
-echo "  Top:          $TOP"
-echo "  Top Right:    $TOP_RIGHT"
-echo "  Right:        $RIGHT"
-echo "  Bottom Right: $BOTTOM_RIGHT"
-echo "  Bottom:       $BOTTOM"
-echo "  Bottom Left:  $BOTTOM_LEFT"
-echo "  Left:         $LEFT"
-echo ""
+echo "Extracted Positional Colours:" >&2
+echo "  Top Left:     $TOP_LEFT" >&2
+echo "  Top:          $TOP" >&2
+echo "  Top Right:    $TOP_RIGHT" >&2
+echo "  Right:        $RIGHT" >&2
+echo "  Bottom Right: $BOTTOM_RIGHT" >&2
+echo "  Bottom:       $BOTTOM" >&2
+echo "  Bottom Left:  $BOTTOM_LEFT" >&2
+echo "  Left:         $LEFT" >&2
+echo "" >&2
 
 # Convert hex to RGB for WLED API
 hex_to_rgb() {
@@ -147,39 +141,43 @@ send_to_wled() {
   local payload=$(build_wled_payload $segment)
 
   if [ "$DRY_RUN" = "true" ]; then
-    echo "Would POST to: http://$WLED_HOST/json/state"
-    echo "Payload:"
-    echo "$payload" | jq '.'
+    echo "Would POST to: http://$WLED_HOST/json/state" >&2
+    echo "Payload:" >&2
+    echo "$payload" | jq '.' >&2
   else
-    echo "Sending to segment $segment..."
+    echo "Sending to segment $segment..." >&2
     response=$(curl -s -X POST \
       -H "Content-Type: application/json" \
       -d "$payload" \
       "http://$WLED_HOST/json/state")
 
     if [ $? -eq 0 ]; then
-      echo "  ✓ Success (segment $segment)"
+      echo "  ✓ Success (segment $segment)" >&2
     else
-      echo "  ✗ Failed (segment $segment)"
+      echo "  ✗ Failed (segment $segment)" >&2
       return 1
     fi
   fi
 }
 
 # Process each segment
-echo "Updating WLED segments..."
-echo ""
+echo "Updating WLED segments..." >&2
+echo "" >&2
 
 SEGMENT_IDS=$(echo "$WLED_SEGMENTS" | jq -r '.[]')
 for seg_id in $SEGMENT_IDS; do
   send_to_wled $seg_id
 done
 
-echo ""
-echo "==============================================="
-echo "Status: SUCCESS"
-echo "Updated: $(echo "$WLED_SEGMENTS" | jq 'length') segment(s)"
-echo "Mode: $([ "$DRY_RUN" = "true" ] && echo "DRY-RUN" || echo "APPLIED")"
-echo "==============================================="
+echo "" >&2
+echo "===============================================" >&2
+echo "Status: SUCCESS" >&2
+echo "Updated: $(echo "$WLED_SEGMENTS" | jq 'length') segment(s)" >&2
+echo "Mode: $([ "$DRY_RUN" = "true" ] && echo "DRY-RUN" || echo "APPLIED")" >&2
+echo "===============================================" >&2
+
+# Protocol 0.2.0: write structured JSON response to stdout
+SEGMENT_COUNT=$(echo "$WLED_SEGMENTS" | jq 'length')
+echo "{\"success\":true,\"files_written\":[],\"message\":\"Updated $SEGMENT_COUNT WLED segment(s) on $WLED_HOST\"}"
 
 exit 0

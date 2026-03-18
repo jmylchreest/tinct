@@ -27,14 +27,15 @@ import (
 
 // PluginExecutor provides a unified interface for executing plugins.
 type PluginExecutor struct {
-	path                 string
-	protocolType         protocol.PluginType
-	client               *goplug.Client
-	rpcClient            any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
-	verbose              bool
-	lastWallpaperPath    string        // Stores canonical wallpaper path from JSON stdio plugins
-	lastWallpaperRawPath string        // Stores raw wallpaper path from JSON stdio plugins
-	processRunner        ProcessRunner // Abstraction for running external processes
+	path                  string
+	protocolType          protocol.PluginType
+	pluginProtocolVersion string // Protocol version reported by the plugin (e.g. "0.2.0")
+	client                *goplug.Client
+	rpcClient             any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
+	verbose               bool
+	lastWallpaperPath     string        // Stores canonical wallpaper path from JSON stdio plugins
+	lastWallpaperRawPath  string        // Stores raw wallpaper path from JSON stdio plugins
+	processRunner         ProcessRunner // Abstraction for running external processes
 }
 
 // NewWithVerbose creates a new PluginExecutor with verbose logging control.
@@ -52,10 +53,11 @@ func NewWithVerboseAndRunner(pluginPath string, verbose bool, runner ProcessRunn
 	}
 
 	executor := &PluginExecutor{
-		path:          pluginPath,
-		protocolType:  result.Type,
-		verbose:       verbose,
-		processRunner: runner,
+		path:                  pluginPath,
+		protocolType:          result.Type,
+		pluginProtocolVersion: result.PluginInfo.ProtocolVersion,
+		verbose:               verbose,
+		processRunner:         runner,
 	}
 
 	// For go-plugins, we initialize the RPC client lazily on first use
@@ -417,6 +419,14 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 	return nil, fmt.Errorf("failed to parse plugin output\nOutput: %s", string(stdoutBytes))
 }
 
+// jsonStdioResponse is the structured response for protocol >= 0.2.0.
+// Plugins write their own files and report results via this JSON envelope on stdout.
+type jsonStdioResponse struct {
+	Success      bool     `json:"success"`
+	FilesWritten []string `json:"files_written"`
+	Message      string   `json:"message"`
+}
+
 func (e *PluginExecutor) executeOutputJSON(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
 	// Convert to JSON.
 	paletteJSON, err := json.Marshal(palette)
@@ -430,10 +440,57 @@ func (e *PluginExecutor) executeOutputJSON(ctx context.Context, palette plugin.P
 		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, string(stderrBytes))
 	}
 
-	// Return stdout as virtual file.
-	result := make(map[string][]byte)
+	// Version-gated response parsing.
+	if e.supportsStructuredResponse() {
+		return e.parseStructuredResponse(stdoutBytes)
+	}
+
+	// Legacy behavior (< 0.2.0): stdout is freeform text, display to stderr.
+	// Return empty map — legacy plugins either write nothing or manage their own files.
 	if len(stdoutBytes) > 0 {
-		result["output.txt"] = stdoutBytes
+		fmt.Fprint(os.Stderr, string(stdoutBytes))
+	}
+	return make(map[string][]byte), nil
+}
+
+// supportsStructuredResponse returns true if the plugin protocol version >= 0.2.0.
+func (e *PluginExecutor) supportsStructuredResponse() bool {
+	if e.pluginProtocolVersion == "" {
+		return false
+	}
+	v, err := protocol.Parse(e.pluginProtocolVersion)
+	if err != nil {
+		return false
+	}
+	return v.AtLeast(protocol.Version{Major: 0, Minor: 2, Patch: 0})
+}
+
+// parseStructuredResponse parses the 0.2.0+ JSON response from a plugin.
+// Plugins write their own files; the returned map contains the reported paths
+// as keys with nil content (signalling tinct to track but NOT re-write them).
+func (e *PluginExecutor) parseStructuredResponse(stdout []byte) (map[string][]byte, error) {
+	if len(stdout) == 0 {
+		return nil, fmt.Errorf("plugin returned empty response (protocol >= 0.2.0 requires JSON on stdout)")
+	}
+
+	var resp jsonStdioResponse
+	if err := json.Unmarshal(stdout, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse plugin JSON response: %w\nRaw output: %s", err, string(stdout))
+	}
+
+	if !resp.Success {
+		msg := resp.Message
+		if msg == "" {
+			msg = "plugin reported failure"
+		}
+		return nil, fmt.Errorf("plugin error: %s", msg)
+	}
+
+	result := make(map[string][]byte, len(resp.FilesWritten))
+	for _, path := range resp.FilesWritten {
+		// nil content signals that the plugin already wrote the file;
+		// tinct should track it in the manifest but not re-write it.
+		result[path] = nil
 	}
 
 	return result, nil
