@@ -555,7 +555,7 @@ func writeFile(path string, content []byte, verbose bool) error {
 //   - One "generate" summary event with overall stats
 //   - One "plugin_used" event per output plugin (for per-plugin popularity analytics)
 func sendGenerateTelemetry(ctx context.Context, executions []pluginExecution, palette *colour.CategorisedPalette) {
-	client := telemetry.New()
+	client := telemetry.New(telemetry.WithVerbose(generateVerbose))
 	if !client.IsEnabled() {
 		return
 	}
@@ -586,13 +586,18 @@ func sendGenerateTelemetry(ctx context.Context, executions []pluginExecution, pa
 	client.Send(summaryEvent)
 
 	// Send one event per output plugin for per-plugin analytics.
-	// Aptabase can count/filter these by status, is_external, plugin_name natively.
+	// statsfactory can count/filter these by plugin.status, plugin.external, plugin.name natively.
 	for _, exec := range executions {
 		_, isExternal := exec.plugin.(*manager.ExternalOutputPlugin)
 
 		var status string
 		switch {
 		case !exec.skip && len(exec.writtenFiles) > 0:
+			status = "ok"
+		case !exec.skip && len(exec.writtenFiles) == 0:
+			// Plugin ran to completion without being skipped but wrote no
+			// tracked files. Side-effect-only plugins (e.g. notify-send)
+			// legitimately produce no files. Treat as "ok".
 			status = "ok"
 		case exec.skip && len(exec.writtenFiles) == 0 && exec.skipReason != "":
 			// Distinguish skipped (never attempted) from failed (attempted but errored).

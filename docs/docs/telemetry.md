@@ -12,36 +12,40 @@ When you run `tinct generate`, two types of events are sent:
 
 ### Generate event (one per invocation)
 
-| Property | Example | Purpose |
-|----------|---------|---------|
-| `arch` | `amd64` | CPU architecture |
-| `version` | `0.1.25` | Tinct version |
-| `input_plugin` | `image` | Which input source was used |
-| `output_plugins` | `kitty,waybar` | Which output plugins were requested |
-| `theme_type` | `dark` | Detected theme type |
-| `seed_mode` | `content` | Seed mode used |
-| `backend` | `kmeans` | Colour extraction backend |
-| `extract_ambience` | `false` | Whether ambient extraction was enabled |
-| `dry_run` | `false` | Whether this was a dry run |
-| `dual_theme` | `true` | Whether both themes were generated |
-| `ai_input` | `false` | Whether an AI input plugin was used |
+| Dimension | Example | Purpose |
+|-----------|---------|---------|
+| `app.version` | `0.1.28` | Tinct version |
+| `input.plugin` | `image` | Which input source was used |
+| `input.ai` | `false` | Whether an AI input plugin was used |
+| `output.plugins` | `["kitty","waybar"]` | Which output plugins were requested (array) |
+| `generate.theme_type` | `dark` | Detected theme type |
+| `generate.seed_mode` | `content` | Seed mode used |
+| `generate.backend` | `kmeans` | Colour extraction backend |
+| `generate.ambience` | `false` | Whether ambient extraction was enabled |
+| `generate.dry_run` | `false` | Whether this was a dry run |
+| `generate.dual_theme` | `true` | Whether both themes were generated |
 
 ### Plugin used event (one per output plugin)
 
+| Dimension | Example | Purpose |
+|-----------|---------|---------|
+| `plugin.name` | `kitty` | Plugin name |
+| `plugin.version` | `0.1.28` | Plugin version |
+| `plugin.external` | `false` | Whether it is an external plugin |
+| `plugin.status` | `ok` | Outcome: `ok`, `failed`, or `skipped` |
+
+### Automatic metadata
+
+The statsfactory SDK automatically includes the following in every request via the `User-Agent` header:
+
 | Property | Example | Purpose |
 |----------|---------|---------|
-| `plugin_name` | `kitty` | Plugin name |
-| `plugin_version` | `0.1.25` | Plugin version |
-| `is_external` | `false` | Whether it is an external plugin |
-| `status` | `ok` | Outcome: `ok`, `failed`, or `skipped` |
+| Client name | `tinct` | Application identifier |
+| Client version | `0.1.28` | Tinct version |
+| OS | `linux` | Operating system |
+| Architecture | `amd64` | CPU architecture |
 
-### System properties (automatic)
-
-| Property | Example | Purpose |
-|----------|---------|---------|
-| `osName` | `linux` | Operating system |
-| `appVersion` | `0.1.25` | Tinct version |
-| `sdkVersion` | `tinct-telemetry@0.1.25` | SDK identifier |
+Each event also includes a `distinct_id` set to the SHA256-hashed installation identifier, used for unique installation counting.
 
 ### What is NOT collected
 
@@ -49,13 +53,13 @@ When you run `tinct generate`, two types of events are sent:
 - No image data or colour values
 - No AI prompts or API keys
 - No personal information, usernames, or hostnames
-- No IP-based geolocation beyond country (handled by Aptabase)
+- No IP-based geolocation
 
 ## How it works
 
-Telemetry is sent via HTTPS to [Aptabase](https://aptabase.com), an open-source, privacy-first analytics platform hosted in the EU. Each installation generates a random identifier that is SHA256-hashed before storage — the raw value is never transmitted.
+Telemetry is sent via HTTPS to a self-hosted [statsfactory](https://github.com/jmylchreest/statsfactory) instance, a privacy-first analytics platform. Each installation generates a random identifier that is SHA256-hashed before transmission -- the raw value is never correlated with any personal information.
 
-Events are queued in memory and dispatched asynchronously as a single batched HTTP request at the end of each command. The request has a 5-second timeout and failures are silently ignored, so telemetry never blocks or affects CLI behaviour.
+Events are queued in memory and dispatched asynchronously by the statsfactory SDK's background worker, which batches events (up to 25 per request) and flushes before the process exits. The HTTP request has a 5-second timeout and failures are silently ignored, so telemetry never blocks or affects CLI behaviour.
 
 ### Installation ID
 

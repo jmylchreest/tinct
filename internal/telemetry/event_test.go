@@ -28,233 +28,231 @@ func TestEventSet(t *testing.T) {
 		Set("bool", true).
 		Set("float", 3.14)
 
+	if len(e.Props) != 4 {
+		t.Errorf("Props has %d items, want 4", len(e.Props))
+	}
 	if e.Props["string"] != "hello" {
-		t.Errorf("Props[string] = %v, want hello", e.Props["string"])
+		t.Errorf("string = %v, want hello", e.Props["string"])
 	}
 	if e.Props["int"] != 42 {
-		t.Errorf("Props[int] = %v, want 42", e.Props["int"])
+		t.Errorf("int = %v, want 42", e.Props["int"])
 	}
 	if e.Props["bool"] != true {
-		t.Errorf("Props[bool] = %v, want true", e.Props["bool"])
+		t.Errorf("bool = %v, want true", e.Props["bool"])
 	}
 	if e.Props["float"] != 3.14 {
-		t.Errorf("Props[float] = %v, want 3.14", e.Props["float"])
+		t.Errorf("float = %v, want 3.14", e.Props["float"])
 	}
 }
 
-// TestNewGenerateEvent verifies the generate event builder with all fields.
+// TestEventSetChaining verifies that Set returns the same event for chaining.
+func TestEventSetChaining(t *testing.T) {
+	e := NewEvent("test").Set("a", 1).Set("b", 2)
+	if e.Name != "test" {
+		t.Errorf("Name = %q after chaining, want test", e.Name)
+	}
+	if len(e.Props) != 2 {
+		t.Errorf("Props has %d items after chaining, want 2", len(e.Props))
+	}
+}
+
+// TestNewGenerateEvent verifies the generate event builder with dot-notation dims.
 func TestNewGenerateEvent(t *testing.T) {
-	params := GenerateEventParams{
+	e := NewGenerateEvent(GenerateEventParams{
 		InputPlugin:     "image",
-		OutputPlugins:   []string{"hyprland", "kitty", "waybar"},
+		OutputPlugins:   []string{"kitty", "waybar", "gtk4"},
 		ThemeType:       "dark",
-		SeedMode:        "content",
-		Backend:         "kmeans",
+		SeedMode:        "random",
+		Backend:         "chroma",
 		ExtractAmbience: true,
 		DryRun:          false,
 		DualTheme:       true,
-	}
-
-	e := NewGenerateEvent(params)
+	})
 
 	if e.Name != "generate" {
-		t.Errorf("Name = %q, want %q", e.Name, "generate")
+		t.Errorf("Name = %q, want generate", e.Name)
 	}
 
-	// Check required props exist.
-	requiredProps := []string{
-		"arch", "version", "input_plugin", "output_plugins",
-		"theme_type", "seed_mode", "backend",
-		"extract_ambience", "dry_run", "dual_theme", "ai_input",
+	// App dimensions.
+	if _, ok := e.Props["app.version"]; !ok {
+		t.Error("missing app.version dimension")
 	}
 
-	for _, key := range requiredProps {
-		if _, ok := e.Props[key]; !ok {
-			t.Errorf("missing required prop: %s", key)
-		}
+	// Input dimensions.
+	if e.Props["input.plugin"] != "image" {
+		t.Errorf("input.plugin = %v, want image", e.Props["input.plugin"])
+	}
+	if e.Props["input.ai"] != false {
+		t.Errorf("input.ai = %v, want false for 'image'", e.Props["input.ai"])
 	}
 
-	// Counts should NOT be present (Aptabase infers from plugin_used events).
-	removedProps := []string{"output_plugin_count", "success_count", "external_plugin_count"}
-	for _, key := range removedProps {
-		if _, ok := e.Props[key]; ok {
-			t.Errorf("prop %q should not be present (inferred by Aptabase)", key)
-		}
-	}
-
-	// Check specific values.
-	if e.Props["input_plugin"] != "image" {
-		t.Errorf("input_plugin = %v, want image", e.Props["input_plugin"])
-	}
-
-	outputPlugins, ok := e.Props["output_plugins"].(string)
+	// Output dimensions.
+	outputPlugins, ok := e.Props["output.plugins"].([]string)
 	if !ok {
-		t.Fatalf("output_plugins should be string, got %T", e.Props["output_plugins"])
+		t.Fatalf("output.plugins is %T, want []string", e.Props["output.plugins"])
 	}
-	if outputPlugins != "hyprland,kitty,waybar" {
-		t.Errorf("output_plugins = %q, want %q", outputPlugins, "hyprland,kitty,waybar")
+	if len(outputPlugins) != 3 || outputPlugins[0] != "kitty" || outputPlugins[1] != "waybar" || outputPlugins[2] != "gtk4" {
+		t.Errorf("output.plugins = %v, want [kitty waybar gtk4]", outputPlugins)
 	}
 
-	if e.Props["theme_type"] != "dark" {
-		t.Errorf("theme_type = %v, want dark", e.Props["theme_type"])
+	// Generate dimensions.
+	if e.Props["generate.theme_type"] != "dark" {
+		t.Errorf("generate.theme_type = %v, want dark", e.Props["generate.theme_type"])
 	}
-	if e.Props["seed_mode"] != "content" {
-		t.Errorf("seed_mode = %v, want content", e.Props["seed_mode"])
+	if e.Props["generate.seed_mode"] != "random" {
+		t.Errorf("generate.seed_mode = %v, want random", e.Props["generate.seed_mode"])
 	}
-	if e.Props["backend"] != "kmeans" {
-		t.Errorf("backend = %v, want kmeans", e.Props["backend"])
+	if e.Props["generate.backend"] != "chroma" {
+		t.Errorf("generate.backend = %v, want chroma", e.Props["generate.backend"])
 	}
-	if e.Props["extract_ambience"] != true {
-		t.Errorf("extract_ambience = %v, want true", e.Props["extract_ambience"])
+	if e.Props["generate.ambience"] != true {
+		t.Errorf("generate.ambience = %v, want true", e.Props["generate.ambience"])
 	}
-	if e.Props["dry_run"] != false {
-		t.Errorf("dry_run = %v, want false", e.Props["dry_run"])
+	if e.Props["generate.dry_run"] != false {
+		t.Errorf("generate.dry_run = %v, want false", e.Props["generate.dry_run"])
 	}
-	if e.Props["dual_theme"] != true {
-		t.Errorf("dual_theme = %v, want true", e.Props["dual_theme"])
+	if e.Props["generate.dual_theme"] != true {
+		t.Errorf("generate.dual_theme = %v, want true", e.Props["generate.dual_theme"])
 	}
-	if e.Props["ai_input"] != false {
-		t.Errorf("ai_input = %v, want false (image is not AI)", e.Props["ai_input"])
+
+	// Verify no arch dimension (handled by SDK User-Agent).
+	if _, ok := e.Props["arch"]; ok {
+		t.Error("unexpected 'arch' dimension; arch is provided by the SDK User-Agent")
+	}
+	if _, ok := e.Props["app.arch"]; ok {
+		t.Error("unexpected 'app.arch' dimension; arch is provided by the SDK User-Agent")
 	}
 }
 
 // TestNewGenerateEventAIInput verifies AI input detection.
 func TestNewGenerateEventAIInput(t *testing.T) {
 	tests := []struct {
-		input    string
-		expected bool
+		input  string
+		wantAI bool
 	}{
-		{"image", false},
-		{"file", false},
-		{"markdown", false},
-		{"remote-json", false},
 		{"google-genai", true},
 		{"openrouter", true},
+		{"image", false},
 		{"", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			e := NewGenerateEvent(GenerateEventParams{InputPlugin: tt.input})
-			if e.Props["ai_input"] != tt.expected {
-				t.Errorf("ai_input for %q = %v, want %v", tt.input, e.Props["ai_input"], tt.expected)
+			if e.Props["input.ai"] != tt.wantAI {
+				t.Errorf("input.ai = %v for %q, want %v", e.Props["input.ai"], tt.input, tt.wantAI)
 			}
 		})
 	}
 }
 
-// TestNewGenerateEventMinimalParams verifies the event works with zero-value params.
-func TestNewGenerateEventMinimalParams(t *testing.T) {
+// TestNewGenerateEventOptionalFields verifies that empty optional fields are omitted.
+func TestNewGenerateEventOptionalFields(t *testing.T) {
 	e := NewGenerateEvent(GenerateEventParams{})
 
-	if e.Name != "generate" {
-		t.Errorf("Name = %q, want %q", e.Name, "generate")
+	// Optional string fields should not be present.
+	for _, key := range []string{"input.plugin", "output.plugins", "generate.theme_type", "generate.seed_mode", "generate.backend"} {
+		if _, ok := e.Props[key]; ok {
+			t.Errorf("unexpected dimension %q when param is empty", key)
+		}
 	}
 
-	// Should still have system props.
-	if e.Props["arch"] == nil || e.Props["arch"] == "" {
-		t.Error("arch should be set even with minimal params")
-	}
-	if e.Props["version"] == nil {
-		t.Error("version should be set even with minimal params")
-	}
-
-	// Optional string fields should be absent when empty.
-	if _, ok := e.Props["input_plugin"]; ok {
-		t.Error("input_plugin should not be set when empty")
-	}
-	if _, ok := e.Props["theme_type"]; ok {
-		t.Error("theme_type should not be set when empty")
-	}
-
-	// Boolean fields should still be present.
-	if _, ok := e.Props["dry_run"]; !ok {
-		t.Error("dry_run should be set even when false")
+	// Boolean fields should always be present.
+	for _, key := range []string{"generate.ambience", "generate.dry_run", "generate.dual_theme", "input.ai"} {
+		if _, ok := e.Props[key]; !ok {
+			t.Errorf("missing expected dimension %q", key)
+		}
 	}
 }
 
-// TestNewGenerateEventOutputPluginsJoined verifies plugin names are comma-joined.
-func TestNewGenerateEventOutputPluginsJoined(t *testing.T) {
-	e := NewGenerateEvent(GenerateEventParams{
-		OutputPlugins: []string{"a", "b", "c"},
-	})
-
-	plugins := e.Props["output_plugins"].(string)
-	parts := strings.Split(plugins, ",")
-	if len(parts) != 3 {
-		t.Errorf("expected 3 plugins in joined string, got %d: %q", len(parts), plugins)
-	}
-}
-
-// TestNewPluginUsedEvent verifies the plugin_used event builder.
+// TestNewPluginUsedEvent verifies the plugin_used event builder with dot-notation.
 func TestNewPluginUsedEvent(t *testing.T) {
-	e := NewPluginUsedEvent("kitty", "1.2.3", false, "ok")
+	e := NewPluginUsedEvent("kitty", "0.1.27", false, "ok")
 
 	if e.Name != "plugin_used" {
-		t.Errorf("Name = %q, want %q", e.Name, "plugin_used")
+		t.Errorf("Name = %q, want plugin_used", e.Name)
 	}
-	if e.Props["plugin_name"] != "kitty" {
-		t.Errorf("plugin_name = %v, want kitty", e.Props["plugin_name"])
+	if e.Props["plugin.name"] != "kitty" {
+		t.Errorf("plugin.name = %v, want kitty", e.Props["plugin.name"])
 	}
-	if e.Props["plugin_version"] != "1.2.3" {
-		t.Errorf("plugin_version = %v, want 1.2.3", e.Props["plugin_version"])
+	if e.Props["plugin.version"] != "0.1.27" {
+		t.Errorf("plugin.version = %v, want 0.1.27", e.Props["plugin.version"])
 	}
-	if e.Props["is_external"] != false {
-		t.Errorf("is_external = %v, want false", e.Props["is_external"])
+	if e.Props["plugin.external"] != false {
+		t.Errorf("plugin.external = %v, want false", e.Props["plugin.external"])
 	}
-	if e.Props["status"] != "ok" {
-		t.Errorf("status = %v, want ok", e.Props["status"])
+	if e.Props["plugin.status"] != "ok" {
+		t.Errorf("plugin.status = %v, want ok", e.Props["plugin.status"])
 	}
 }
 
-// TestNewPluginUsedEventExternal verifies external plugin with failed status.
+// TestNewPluginUsedEventExternal verifies external plugin detection.
 func TestNewPluginUsedEventExternal(t *testing.T) {
-	e := NewPluginUsedEvent("my-custom-plugin", "0.5.0", true, "failed")
-
-	if e.Props["plugin_name"] != "my-custom-plugin" {
-		t.Errorf("plugin_name = %v, want my-custom-plugin", e.Props["plugin_name"])
-	}
-	if e.Props["plugin_version"] != "0.5.0" {
-		t.Errorf("plugin_version = %v, want 0.5.0", e.Props["plugin_version"])
-	}
-	if e.Props["is_external"] != true {
-		t.Errorf("is_external = %v, want true", e.Props["is_external"])
-	}
-	if e.Props["status"] != "failed" {
-		t.Errorf("status = %v, want failed", e.Props["status"])
+	e := NewPluginUsedEvent("templater", "1.0.0", true, "ok")
+	if e.Props["plugin.external"] != true {
+		t.Errorf("plugin.external = %v, want true", e.Props["plugin.external"])
 	}
 }
 
-// TestNewPluginUsedEventSkipped verifies skipped status.
-func TestNewPluginUsedEventSkipped(t *testing.T) {
-	e := NewPluginUsedEvent("waybar", "0.1.0", false, "skipped")
-
-	if e.Props["status"] != "skipped" {
-		t.Errorf("status = %v, want skipped", e.Props["status"])
-	}
-}
-
-// TestNewPluginUsedEventEmptyVersion verifies version is omitted when empty.
-func TestNewPluginUsedEventEmptyVersion(t *testing.T) {
+// TestNewPluginUsedEventNoVersion verifies version omission.
+func TestNewPluginUsedEventNoVersion(t *testing.T) {
 	e := NewPluginUsedEvent("kitty", "", false, "ok")
-
-	if _, ok := e.Props["plugin_version"]; ok {
-		t.Error("plugin_version should not be set when version is empty")
+	if _, ok := e.Props["plugin.version"]; ok {
+		t.Error("unexpected plugin.version when version is empty")
 	}
 }
 
-// TestIsAIInput verifies the AI input detection helper.
+// TestNewPluginUsedEventStatuses verifies all status values.
+func TestNewPluginUsedEventStatuses(t *testing.T) {
+	for _, status := range []string{"ok", "failed", "skipped"} {
+		t.Run(status, func(t *testing.T) {
+			e := NewPluginUsedEvent("test", "", false, status)
+			if e.Props["plugin.status"] != status {
+				t.Errorf("plugin.status = %v, want %s", e.Props["plugin.status"], status)
+			}
+		})
+	}
+}
+
+// TestDimensionsDotNotation verifies all dimensions use dot-notation grouping.
+func TestDimensionsDotNotation(t *testing.T) {
+	events := []Event{
+		NewGenerateEvent(GenerateEventParams{
+			InputPlugin:   "image",
+			OutputPlugins: []string{"kitty"},
+			ThemeType:     "dark",
+			SeedMode:      "random",
+			Backend:       "chroma",
+		}),
+		NewPluginUsedEvent("kitty", "0.1.27", false, "ok"),
+	}
+
+	for _, e := range events {
+		for key := range e.Props {
+			// All keys should either be dot-notated or be a known simple key.
+			if !strings.Contains(key, ".") {
+				t.Errorf("event %q: dimension %q does not use dot-notation", e.Name, key)
+			}
+		}
+	}
+}
+
+// TestIsAIInput verifies the AI input helper.
 func TestIsAIInput(t *testing.T) {
-	if !isAIInput("google-genai") {
-		t.Error("google-genai should be AI input")
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"google-genai", true},
+		{"openrouter", true},
+		{"image", false},
+		{"random", false},
+		{"", false},
 	}
-	if !isAIInput("openrouter") {
-		t.Error("openrouter should be AI input")
-	}
-	if isAIInput("image") {
-		t.Error("image should not be AI input")
-	}
-	if isAIInput("") {
-		t.Error("empty string should not be AI input")
+
+	for _, tt := range tests {
+		if got := isAIInput(tt.input); got != tt.want {
+			t.Errorf("isAIInput(%q) = %v, want %v", tt.input, got, tt.want)
+		}
 	}
 }

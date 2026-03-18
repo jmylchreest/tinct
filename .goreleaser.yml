@@ -3,6 +3,11 @@
 
 version: 2
 
+# Environment variables with defaults (overridden by CI secrets).
+env:
+  - TINCT_TELEMETRY_APP_KEY={{ if index .Env "TINCT_TELEMETRY_APP_KEY" }}{{ .Env.TINCT_TELEMETRY_APP_KEY }}{{ end }}
+  - TINCT_TELEMETRY_SERVER_URL={{ if index .Env "TINCT_TELEMETRY_SERVER_URL" }}{{ .Env.TINCT_TELEMETRY_SERVER_URL }}{{ end }}
+
 # Project metadata
 project_name: tinct
 
@@ -57,6 +62,8 @@ builds:
       - -X github.com/jmylchreest/tinct/internal/version.Version={{.Version}}
       - -X github.com/jmylchreest/tinct/internal/version.Commit={{.Commit}}
       - -X github.com/jmylchreest/tinct/internal/version.Date={{.Date}}
+      - -X github.com/jmylchreest/tinct/internal/version.TelemetryAppKey={{ .Env.TINCT_TELEMETRY_APP_KEY }}
+      - -X github.com/jmylchreest/tinct/internal/version.TelemetryServerURL={{ .Env.TINCT_TELEMETRY_SERVER_URL }}
 
     # Ensure we use Go 1.25+
     mod_timestamp: "{{ .CommitTimestamp }}"

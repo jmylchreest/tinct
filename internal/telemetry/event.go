@@ -1,18 +1,15 @@
 package telemetry
 
 import (
-	"runtime"
-	"strings"
-
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
-// Event represents a telemetry event to be sent to Aptabase.
+// Event represents a telemetry event to be sent to statsfactory.
 type Event struct {
-	// Name is the event name (e.g. "generate", "extract").
+	// Name is the event name (e.g. "generate", "plugin_used").
 	Name string
 
-	// Props contains arbitrary key-value properties for this event.
+	// Props contains dimensions for this event using dot-notation grouping.
 	// Values should be strings, numbers, or booleans.
 	Props map[string]any
 }
@@ -31,94 +28,99 @@ func (e Event) Set(key string, value any) Event {
 	return e
 }
 
-// GenerateEvent builds a telemetry event for the generate command.
-// All parameters are optional — pass zero values for fields you don't have.
+// GenerateEventParams contains the parameters for a generate telemetry event.
 type GenerateEventParams struct {
 	// InputPlugin is the name of the input plugin used (e.g. "image", "google-genai").
 	InputPlugin string
 
-	// OutputPlugins is the list of output plugin names that were executed.
+	// OutputPlugins is the list of output plugin names used.
 	OutputPlugins []string
 
-	// ThemeType is the detected/selected theme (e.g. "dark", "light", "auto").
+	// ThemeType is the detected theme type (e.g. "dark", "light").
 	ThemeType string
 
-	// SeedMode is the seed mode used (e.g. "content", "random", "manual").
+	// SeedMode is the seed mode used for colour generation.
 	SeedMode string
 
-	// Backend is the colour extraction backend (e.g. "kmeans").
+	// Backend is the colour backend used for generation.
 	Backend string
 
-	// ExtractAmbience indicates whether ambient edge extraction was enabled.
+	// ExtractAmbience indicates whether ambience extraction was enabled.
 	ExtractAmbience bool
 
 	// DryRun indicates whether this was a dry-run invocation.
 	DryRun bool
 
-	// DualTheme indicates whether both primary and alternate themes were generated.
+	// DualTheme indicates whether dual-theme (light+dark) generation was enabled.
 	DualTheme bool
 }
 
-// NewGenerateEvent creates a comprehensive telemetry event for a generate invocation.
+// NewGenerateEvent creates a telemetry event for the "generate" command.
+//
+// Dimensions use dot-notation grouping for statsfactory:
+//   - app.version         — application version
+//   - input.plugin        — input plugin name
+//   - input.ai            — whether the input is AI-powered
+//   - output.plugins      — list of output plugin names ([]string)
+//   - generate.theme_type — detected theme type
+//   - generate.seed_mode  — seed mode
+//   - generate.backend    — colour backend
+//   - generate.ambience   — ambience extraction enabled
+//   - generate.dry_run    — dry-run mode
+//   - generate.dual_theme — dual-theme generation enabled
 func NewGenerateEvent(params GenerateEventParams) Event {
 	e := NewEvent("generate")
 
-	// System info (supplementary to Aptabase's systemProps).
-	e.Props["arch"] = runtime.GOARCH
-	e.Props["version"] = version.Version
+	// App-level dimensions.
+	e.Props["app.version"] = version.Version
 
-	// Input configuration.
+	// Input dimensions.
 	if params.InputPlugin != "" {
-		e.Props["input_plugin"] = params.InputPlugin
+		e.Props["input.plugin"] = params.InputPlugin
 	}
+	e.Props["input.ai"] = isAIInput(params.InputPlugin)
 
-	// Output configuration.
+	// Output dimensions.
 	if len(params.OutputPlugins) > 0 {
-		e.Props["output_plugins"] = strings.Join(params.OutputPlugins, ",")
+		e.Props["output.plugins"] = params.OutputPlugins
 	}
 
-	// Theme and colour settings.
+	// Generate dimensions.
 	if params.ThemeType != "" {
-		e.Props["theme_type"] = params.ThemeType
+		e.Props["generate.theme_type"] = params.ThemeType
 	}
 	if params.SeedMode != "" {
-		e.Props["seed_mode"] = params.SeedMode
+		e.Props["generate.seed_mode"] = params.SeedMode
 	}
 	if params.Backend != "" {
-		e.Props["backend"] = params.Backend
+		e.Props["generate.backend"] = params.Backend
 	}
-
-	// Feature flags.
-	e.Props["extract_ambience"] = params.ExtractAmbience
-	e.Props["dry_run"] = params.DryRun
-	e.Props["dual_theme"] = params.DualTheme
-
-	// Detect AI input usage.
-	e.Props["ai_input"] = isAIInput(params.InputPlugin)
+	e.Props["generate.ambience"] = params.ExtractAmbience
+	e.Props["generate.dry_run"] = params.DryRun
+	e.Props["generate.dual_theme"] = params.DualTheme
 
 	return e
 }
 
-// NewPluginUsedEvent creates a telemetry event for an individual output plugin usage.
-// Sending one event per plugin allows Aptabase to count and rank plugin popularity
-// directly, rather than requiring string splitting on a comma-joined list.
+// NewPluginUsedEvent creates a telemetry event for a single output plugin execution.
 //
-// Status should be one of:
-//   - "ok"      — plugin generated and wrote files successfully
-//   - "failed"  — plugin was attempted but generation or write failed
-//   - "skipped" — plugin was not attempted (validation failed, pre-hook skip, etc.)
+// Dimensions use dot-notation grouping for statsfactory:
+//   - plugin.name     — plugin name
+//   - plugin.version  — plugin version (omitted if empty)
+//   - plugin.external — whether the plugin is external (contrib)
+//   - plugin.status   — execution status: "ok", "failed", or "skipped"
 func NewPluginUsedEvent(pluginName string, pluginVersion string, isExternal bool, status string) Event {
 	e := NewEvent("plugin_used")
-	e.Props["plugin_name"] = pluginName
-	e.Props["is_external"] = isExternal
-	e.Props["status"] = status
+	e.Props["plugin.name"] = pluginName
+	e.Props["plugin.external"] = isExternal
+	e.Props["plugin.status"] = status
 	if pluginVersion != "" {
-		e.Props["plugin_version"] = pluginVersion
+		e.Props["plugin.version"] = pluginVersion
 	}
 	return e
 }
 
-// isAIInput returns true if the input plugin is an AI image generation plugin.
+// isAIInput returns true if the input plugin is AI-powered.
 func isAIInput(inputPlugin string) bool {
 	switch inputPlugin {
 	case "google-genai", "openrouter":

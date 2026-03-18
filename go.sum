@@ -55,6 +55,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jhump/protoreflect v1.17.0 h1:qOEr613fac2lOuTgWN4tPAtLL7fUSbuJL5X5XumQh94=
 github.com/jhump/protoreflect v1.17.0/go.mod h1:h9+vUUL38jiBzck8ck+6G/aeMX8Z4QUY/NiJPwPNi+8=
+github.com/jmylchreest/statsfactory/packages/sdk-go v0.0.0-20260318134647-f1bd612b83ee h1:Z/DLQJaA0FREpgeSjI7wT/C0DeGxpaow+ZxXeyuPvK0=
+github.com/jmylchreest/statsfactory/packages/sdk-go v0.0.0-20260318134647-f1bd612b83ee/go.mod h1:Un37JlF2TLQNcwcM5aqSizTbYdvhlP6LkzSEI3pwj1Y=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=

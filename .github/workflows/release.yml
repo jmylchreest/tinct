@@ -198,6 +198,8 @@ jobs:
           args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TINCT_TELEMETRY_APP_KEY: ${{ secrets.TINCT_TELEMETRY_APP_KEY }}
+          TINCT_TELEMETRY_SERVER_URL: ${{ secrets.TINCT_TELEMETRY_SERVER_URL }}
 
       - name: Get version from dist metadata
         id: version
@@ -323,6 +325,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
+          TINCT_TELEMETRY_APP_KEY: ${{ secrets.TINCT_TELEMETRY_APP_KEY }}
+          TINCT_TELEMETRY_SERVER_URL: ${{ secrets.TINCT_TELEMETRY_SERVER_URL }}
 
       - name: Attest build artifacts
         uses: actions/attest-build-provenance@v2

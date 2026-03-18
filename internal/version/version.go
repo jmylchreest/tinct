@@ -4,6 +4,7 @@ package version
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 )
 
@@ -20,9 +21,37 @@ var (
 	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)".
 	Date = "unknown"
 
+	// TelemetryAppKey is the statsfactory API key for telemetry.
+	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.TelemetryAppKey=sf_live_...".
+	// Can be overridden at runtime by the TINCT_TELEMETRY_APP_KEY environment variable.
+	TelemetryAppKey = ""
+
+	// TelemetryServerURL is the statsfactory server URL for telemetry.
+	// Injected at build time via: -ldflags "-X github.com/jmylchreest/tinct/internal/version.TelemetryServerURL=https://...".
+	// Can be overridden at runtime by the TINCT_TELEMETRY_SERVER_URL environment variable.
+	TelemetryServerURL = ""
+
 	// GoVersion is the Go version used to build the binary.
 	GoVersion = runtime.Version()
 )
+
+// GetTelemetryAppKey returns the telemetry app key, preferring the environment
+// variable TINCT_TELEMETRY_APP_KEY over the build-time injected value.
+func GetTelemetryAppKey() string {
+	if v := os.Getenv("TINCT_TELEMETRY_APP_KEY"); v != "" {
+		return v
+	}
+	return TelemetryAppKey
+}
+
+// GetTelemetryServerURL returns the telemetry server URL, preferring the environment
+// variable TINCT_TELEMETRY_SERVER_URL over the build-time injected value.
+func GetTelemetryServerURL() string {
+	if v := os.Getenv("TINCT_TELEMETRY_SERVER_URL"); v != "" {
+		return v
+	}
+	return TelemetryServerURL
+}
 
 // Info holds all version information for the application.
 type Info struct {

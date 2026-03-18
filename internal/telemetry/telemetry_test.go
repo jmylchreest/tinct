@@ -3,19 +3,16 @@ package telemetry
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	statsfactory "github.com/jmylchreest/statsfactory/packages/sdk-go"
 	"github.com/jmylchreest/tinct/internal/config"
-	"github.com/jmylchreest/tinct/internal/version"
 )
 
 // setupTestHome creates a temp dir and sets HOME + XDG_CONFIG_HOME so that
@@ -30,666 +27,551 @@ func setupTestHome(t *testing.T) string {
 	return dir
 }
 
-// writeTestConfig writes a tinct.toml file into the test home's config dir.
-func writeTestConfig(t *testing.T, homeDir string, content string) {
+// setTelemetryCredentials sets env vars so New() has valid credentials.
+func setTelemetryCredentials(t *testing.T, serverURL string) {
 	t.Helper()
-	configDir := filepath.Join(homeDir, ".config", "tinct")
-	if err := os.MkdirAll(configDir, 0o750); err != nil {
-		t.Fatalf("MkdirAll() error = %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(configDir, "tinct.toml"), []byte(content), 0o600); err != nil {
-		t.Fatalf("WriteFile() error = %v", err)
-	}
+	t.Setenv("TINCT_TELEMETRY_APP_KEY", "sf_test_key")
+	t.Setenv("TINCT_TELEMETRY_SERVER_URL", serverURL)
 }
 
-// TestGenerateSessionID verifies session ID format.
-func TestGenerateSessionID(t *testing.T) {
-	sid := generateSessionID()
+// --- statsfactory wire format types for test assertions ---
 
-	// Should be a numeric string (epoch + 8 digits).
-	if len(sid) < 10 {
-		t.Errorf("session ID too short: %s", sid)
-	}
+// sfIngestRequest is the JSON body sent to POST /v1/events.
+type sfIngestRequest struct {
+	Events []sfEvent `json:"events"`
+}
 
-	for _, c := range sid {
-		if c < '0' || c > '9' {
-			t.Errorf("session ID should be numeric, got char: %c", c)
+// sfEvent is a single event in the statsfactory wire format.
+type sfEvent struct {
+	Event      string         `json:"event"`
+	EventKey   string         `json:"event_key,omitempty"`
+	Timestamp  string         `json:"timestamp,omitempty"`
+	SessionID  string         `json:"session_id,omitempty"`
+	DistinctID string         `json:"distinct_id,omitempty"`
+	Dimensions map[string]any `json:"dimensions,omitempty"`
+}
+
+// capturedRequest holds the data from a single request to the mock server.
+type capturedRequest struct {
+	Method    string
+	Path      string
+	UserAgent string
+	AuthToken string
+	Body      sfIngestRequest
+}
+
+// mockServer creates an httptest server that captures requests and returns 200.
+func mockServer(t *testing.T) (*httptest.Server, *[]capturedRequest) {
+	t.Helper()
+	var mu sync.Mutex
+	var captured []capturedRequest
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body sfIngestRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("mock server: decode error: %v", err)
+			w.WriteHeader(400)
+			return
 		}
-	}
-}
 
-// TestResolveBaseURL verifies URL resolution from app keys.
-func TestResolveBaseURL(t *testing.T) {
-	tests := []struct {
-		appKey   string
-		expected string
-	}{
-		{"A-EU-1234567890", "https://eu.aptabase.com"},
-		{"A-US-1234567890", "https://us.aptabase.com"},
-		{"A-SH-1234567890", "https://eu.aptabase.com"}, // Self-hosted falls through to default.
-		{"invalid", "https://eu.aptabase.com"},         // Invalid key falls through.
-		{"", "https://eu.aptabase.com"},                // Empty key falls through.
-		{"A-eu-1234567890", "https://eu.aptabase.com"}, // Case-insensitive.
-		{"A-us-1234567890", "https://us.aptabase.com"}, // Case-insensitive.
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.appKey, func(t *testing.T) {
-			got := resolveBaseURL(tt.appKey)
-			if got != tt.expected {
-				t.Errorf("resolveBaseURL(%q) = %q, want %q", tt.appKey, got, tt.expected)
-			}
+		mu.Lock()
+		captured = append(captured, capturedRequest{
+			Method:    r.Method,
+			Path:      r.URL.Path,
+			UserAgent: r.Header.Get("User-Agent"),
+			AuthToken: r.Header.Get("Authorization"),
+			Body:      body,
 		})
-	}
+		mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		json.NewEncoder(w).Encode(map[string]any{
+			"accepted": len(body.Events),
+		})
+	}))
+
+	t.Cleanup(srv.Close)
+	return srv, &captured
 }
 
-// TestClientDisabledByEnvVar verifies TINCT_TELEMETRY env var disables the client.
+func getCaptured(captured *[]capturedRequest) []capturedRequest {
+	return *captured
+}
+
+// --- Tests for New() enable/disable logic ---
+
 func TestClientDisabledByEnvVar(t *testing.T) {
-	disableValues := []string{"off", "false", "0", "no", "OFF", "False", "No"}
-
-	for _, val := range disableValues {
-		t.Run(val, func(t *testing.T) {
-			_ = setupTestHome(t)
-			t.Setenv("TINCT_TELEMETRY", val)
-			client := New()
-			if client.IsEnabled() {
-				t.Errorf("client should be disabled with TINCT_TELEMETRY=%s", val)
-			}
-		})
-	}
-}
-
-// TestClientEnabledByDefault verifies that the client is enabled when
-// no env var is set and config allows it.
-func TestClientEnabledByDefault(t *testing.T) {
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+	setupTestHome(t)
+	srv, _ := mockServer(t)
+	setTelemetryCredentials(t, srv.URL)
+	t.Setenv("TINCT_TELEMETRY", "off")
 
 	client := New()
-	if !client.IsEnabled() {
-		t.Error("client should be enabled by default")
-	}
-
-	// Should have generated an ID.
-	if client.ID() == "" {
-		t.Error("client should have a non-empty ID")
+	if client.IsEnabled() {
+		t.Error("expected client to be disabled when TINCT_TELEMETRY=off")
 	}
 }
 
-// TestClientDisabledByConfig verifies that setting enabled=false in config disables telemetry.
+func TestClientEnabledByDefault(t *testing.T) {
+	setupTestHome(t)
+	srv, _ := mockServer(t)
+	setTelemetryCredentials(t, srv.URL)
+	t.Setenv("TINCT_TELEMETRY", "") // clear any override
+
+	client := New()
+	defer client.Close()
+
+	if !client.IsEnabled() {
+		t.Error("expected client to be enabled by default")
+	}
+}
+
 func TestClientDisabledByConfig(t *testing.T) {
 	dir := setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+	srv, _ := mockServer(t)
+	setTelemetryCredentials(t, srv.URL)
 
 	// Write config with telemetry disabled.
-	writeTestConfig(t, dir, `
-[telemetry]
-enabled = false
-id = "test-id-123"
-`)
+	configDir := filepath.Join(dir, ".config", "tinct")
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "tinct.toml"), []byte("[telemetry]\nenabled = false\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	client := New()
 	if client.IsEnabled() {
-		t.Error("client should be disabled when config has enabled=false")
+		t.Error("expected client to be disabled when config says enabled=false")
 	}
 }
 
-// TestClientFirstRunCreatesConfig verifies that a config file is created on first run.
-func TestClientFirstRunCreatesConfig(t *testing.T) {
-	dir := setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
-
-	_ = New()
-
-	// Config file should now exist at the new location.
-	path := filepath.Join(dir, ".config", "tinct", "tinct.toml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Error("config file should have been created on first run")
-	}
-
-	// Read and verify it contains a telemetry ID.
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile() error = %v", err)
-	}
-
-	content := string(data)
-	if !strings.Contains(content, "[telemetry]") {
-		t.Error("config should contain [telemetry] section")
-	}
-	if !strings.Contains(content, "enabled = true") {
-		t.Error("config should have enabled = true by default")
-	}
-	// Installation ID lives in telemetry.id, not tinct.toml.
-	if strings.Contains(content, "id = ") {
-		t.Error("tinct.toml should NOT contain an id field")
-	}
-
-	// telemetry.id file should exist alongside tinct.toml.
-	idPath := filepath.Join(dir, ".config", "tinct", "telemetry.id")
-	if _, err := os.Stat(idPath); os.IsNotExist(err) {
-		t.Error("telemetry.id should have been created on first run")
-	}
-}
-
-// TestClientPersistentID verifies that the installation ID persists across client instances.
-func TestClientPersistentID(t *testing.T) {
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
-
-	client1 := New()
-	id1 := client1.ID()
-
-	// The config package uses sync.Once, so creating a new Client will
-	// reuse the same config (same process). This is the correct behaviour.
-	client2 := New()
-	id2 := client2.ID()
-
-	if id1 != id2 {
-		t.Errorf("installation ID should persist: got %q then %q", id1, id2)
-	}
-}
-
-// TestSendSync verifies the HTTP request format sent to Aptabase.
-func TestSendSync(t *testing.T) {
-	var receivedBody []byte
-	var receivedHeaders http.Header
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedHeaders = r.Header
-		receivedBody, _ = io.ReadAll(r.Body)
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	dir := setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
-
-	// Pre-create config with a known ID.
-	writeTestConfig(t, dir, `
-[telemetry]
-enabled = true
-id = "test-id-for-send-sync"
-`)
+func TestClientDisabledWithoutCredentials(t *testing.T) {
+	setupTestHome(t)
+	// Don't set credentials — should be disabled.
+	t.Setenv("TINCT_TELEMETRY_APP_KEY", "")
+	t.Setenv("TINCT_TELEMETRY_SERVER_URL", "")
 
 	client := New()
-	client.baseURL = server.URL
-
-	event := NewEvent("test_event").
-		Set("key1", "value1").
-		Set("key2", 42)
-
-	err := client.sendSync(event)
-	if err != nil {
-		t.Fatalf("sendSync() error = %v", err)
-	}
-
-	// Verify headers.
-	if receivedHeaders.Get("Content-Type") != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", receivedHeaders.Get("Content-Type"))
-	}
-	if receivedHeaders.Get("App-Key") != AppKey {
-		t.Errorf("App-Key = %q, want %q", receivedHeaders.Get("App-Key"), AppKey)
-	}
-	if receivedHeaders.Get("X-Installation-ID") == "" {
-		t.Error("X-Installation-ID header should be set")
-	}
-
-	// Verify body is a JSON array with one event.
-	var events []aptabaseEvent
-	if err := json.Unmarshal(receivedBody, &events); err != nil {
-		t.Fatalf("failed to unmarshal body: %v", err)
-	}
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
-	}
-
-	evt := events[0]
-	if evt.EventName != "test_event" {
-		t.Errorf("EventName = %q, want %q", evt.EventName, "test_event")
-	}
-	if evt.SystemProps.OSName == "" {
-		t.Error("SystemProps.OSName should not be empty")
-	}
-	expectedSDK := sdkPrefix + version.Version
-	if evt.SystemProps.SDKVersion != expectedSDK {
-		t.Errorf("SystemProps.SDKVersion = %q, want %q", evt.SystemProps.SDKVersion, expectedSDK)
-	}
-	if evt.SessionID == "" {
-		t.Error("SessionID should not be empty")
-	}
-
-	// Verify custom props.
-	if evt.Props["key1"] != "value1" {
-		t.Errorf("Props[key1] = %v, want value1", evt.Props["key1"])
-	}
-	// JSON numbers deserialise as float64.
-	if evt.Props["key2"] != float64(42) {
-		t.Errorf("Props[key2] = %v, want 42", evt.Props["key2"])
+	if client.IsEnabled() {
+		t.Error("expected client to be disabled when credentials are missing")
 	}
 }
 
-// TestSendDisabledClient verifies that Send is a no-op when disabled.
-func TestSendDisabledClient(t *testing.T) {
-	requestCount := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		requestCount++
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "off")
-	client := New()
-	client.baseURL = server.URL
-
-	event := NewEvent("should_not_send")
-	client.Send(event)
-
-	if requestCount != 0 {
-		t.Errorf("disabled client should not send requests, got %d", requestCount)
-	}
-}
-
-// TestSendHTTPFailureSilent verifies that HTTP errors don't propagate.
-func TestSendHTTPFailureSilent(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer server.Close()
-
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+func TestClientDisabledWithPartialCredentials(t *testing.T) {
+	setupTestHome(t)
+	t.Setenv("TINCT_TELEMETRY_APP_KEY", "sf_test_key")
+	t.Setenv("TINCT_TELEMETRY_SERVER_URL", "") // missing server URL
 
 	client := New()
-	client.baseURL = server.URL
-
-	// sendSync returns nil for HTTP errors (fire-and-forget).
-	err := client.sendSync(NewEvent("test"))
-	if err != nil {
-		t.Error("sendSync should not return error for HTTP 500 (fire-and-forget)")
+	if client.IsEnabled() {
+		t.Error("expected client to be disabled when server URL is missing")
 	}
 }
 
-// TestEnvVarOverridesConfig verifies that the env var takes priority over config file.
 func TestEnvVarOverridesConfig(t *testing.T) {
 	dir := setupTestHome(t)
+	srv, _ := mockServer(t)
+	setTelemetryCredentials(t, srv.URL)
 
-	// Write config with telemetry enabled.
-	writeTestConfig(t, dir, `
-[telemetry]
-enabled = true
-id = "test-id-123"
-`)
-
-	// But env var says off.
+	// Config says enabled, env says off.
+	configDir := filepath.Join(dir, ".config", "tinct")
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "tinct.toml"), []byte("[telemetry]\nenabled = true\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("TINCT_TELEMETRY", "off")
 
 	client := New()
 	if client.IsEnabled() {
-		t.Error("env var should override config file")
+		t.Error("expected TINCT_TELEMETRY=off to override config")
 	}
 }
 
-// TestSendRequestToCorrectPath verifies the API path is correct.
-func TestSendRequestToCorrectPath(t *testing.T) {
-	var receivedPath string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedPath = r.URL.Path
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
+// --- Tests for Send/Flush via mock server ---
 
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+func TestSendAndFlushDispatchesEvents(t *testing.T) {
+	srv, captured := mockServer(t)
 
-	client := New()
-	client.baseURL = server.URL
+	sfClient := statsfactory.New(statsfactory.Config{
+		ServerURL:     srv.URL,
+		AppKey:        "sf_test_key",
+		ClientName:    "tinct",
+		ClientVersion: "0.0.0-test",
+		FlushInterval: time.Hour, // don't auto-flush
+	})
 
-	_ = client.sendSync(NewEvent("test"))
+	client := NewWithClient(sfClient)
 
-	if receivedPath != "/api/v0/events" {
-		t.Errorf("request path = %q, want /api/v0/events", receivedPath)
+	client.Send(NewEvent("test_event").Set("key", "value"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client.Flush(ctx)
+	client.Close()
+
+	reqs := getCaptured(captured)
+	if len(reqs) == 0 {
+		t.Fatal("expected at least one request to the mock server")
+	}
+
+	// Find the event across all requests.
+	var found bool
+	for _, req := range reqs {
+		if req.Method != "POST" {
+			t.Errorf("Method = %q, want POST", req.Method)
+		}
+		if req.Path != "/v1/events" {
+			t.Errorf("Path = %q, want /v1/events", req.Path)
+		}
+		if req.AuthToken != "Bearer sf_test_key" {
+			t.Errorf("Auth = %q, want Bearer sf_test_key", req.AuthToken)
+		}
+		for _, ev := range req.Body.Events {
+			if ev.Event == "test_event" {
+				found = true
+				if ev.Dimensions["key"] != "value" {
+					t.Errorf("dimension key = %v, want value", ev.Dimensions["key"])
+				}
+			}
+		}
+	}
+	if !found {
+		t.Error("test_event not found in captured requests")
 	}
 }
 
-// TestEventTimestampFormat verifies the timestamp is RFC3339 format.
-func TestEventTimestampFormat(t *testing.T) {
-	var receivedBody []byte
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedBody, _ = io.ReadAll(r.Body)
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
+func TestSendDisabledClientIsNoop(t *testing.T) {
+	srv, captured := mockServer(t)
 
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+	sfClient := statsfactory.New(statsfactory.Config{
+		ServerURL:     srv.URL,
+		AppKey:        "key",
+		FlushInterval: time.Hour,
+	})
 
-	client := New()
-	client.baseURL = server.URL
+	client := &Client{sf: sfClient, disabled: true}
+	client.Send(NewEvent("should_not_send"))
 
-	_ = client.sendSync(NewEvent("test"))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	client.Flush(ctx)
 
-	var events []aptabaseEvent
-	if err := json.Unmarshal(receivedBody, &events); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
+	// Close the underlying sf client to avoid goroutine leaks.
+	sfClient.Close()
 
-	// Verify timestamp is parseable as RFC3339 (without nanoseconds).
-	_, err := time.Parse(time.RFC3339, events[0].Timestamp)
-	if err != nil {
-		t.Errorf("timestamp %q is not valid RFC3339: %v", events[0].Timestamp, err)
-	}
-
-	// Verify timestamp ends with Z (UTC).
-	if !strings.HasSuffix(events[0].Timestamp, "Z") {
-		t.Errorf("timestamp should be UTC (end with Z), got %q", events[0].Timestamp)
-	}
-
-	// Verify no fractional seconds (prevents regression to RFC3339Nano).
-	if strings.Contains(events[0].Timestamp, ".") {
-		t.Errorf("timestamp should not contain fractional seconds, got %q", events[0].Timestamp)
+	reqs := getCaptured(captured)
+	if len(reqs) != 0 {
+		t.Errorf("expected no requests for disabled client, got %d", len(reqs))
 	}
 }
 
-// TestSessionIDConsistentAcrossEvents verifies that all events sent by the
-// same Client share a single session ID, so Aptabase groups them together.
-func TestSessionIDConsistentAcrossEvents(t *testing.T) {
-	var allBodies [][]byte
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		allBodies = append(allBodies, body)
-		w.WriteHeader(http.StatusOK)
+func TestSendMultipleEventsBatched(t *testing.T) {
+	srv, captured := mockServer(t)
+
+	sfClient := statsfactory.New(statsfactory.Config{
+		ServerURL:     srv.URL,
+		AppKey:        "key",
+		FlushInterval: time.Hour,
+	})
+
+	client := NewWithClient(sfClient)
+
+	// Send a generate + 3 plugin_used events (typical usage).
+	client.Send(NewGenerateEvent(GenerateEventParams{
+		InputPlugin:   "image",
+		OutputPlugins: []string{"kitty", "waybar", "gtk4"},
+		ThemeType:     "dark",
 	}))
-	defer server.Close()
+	client.Send(NewPluginUsedEvent("kitty", "0.1.27", false, "ok"))
+	client.Send(NewPluginUsedEvent("waybar", "0.1.27", false, "ok"))
+	client.Send(NewPluginUsedEvent("gtk4", "0.1.27", false, "failed"))
 
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client.Flush(ctx)
+	client.Close()
 
-	client := New()
-	client.baseURL = server.URL
+	reqs := getCaptured(captured)
+	totalEvents := 0
+	for _, req := range reqs {
+		totalEvents += len(req.Body.Events)
+	}
+	if totalEvents != 4 {
+		t.Errorf("total events = %d, want 4", totalEvents)
+	}
+}
 
-	// Send three events through the same client.
-	_ = client.sendSync(NewEvent("event_one"))
-	_ = client.sendSync(NewEvent("event_two"))
-	_ = client.sendSync(NewEvent("event_three"))
+func TestWireFormatDotNotation(t *testing.T) {
+	srv, captured := mockServer(t)
 
-	if len(allBodies) != 3 {
-		t.Fatalf("expected 3 requests, got %d", len(allBodies))
+	sfClient := statsfactory.New(statsfactory.Config{
+		ServerURL:     srv.URL,
+		AppKey:        "key",
+		FlushInterval: time.Hour,
+	})
+
+	client := NewWithClient(sfClient)
+
+	client.Send(NewPluginUsedEvent("kitty", "0.1.27", false, "ok"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client.Flush(ctx)
+	client.Close()
+
+	reqs := getCaptured(captured)
+	if len(reqs) == 0 {
+		t.Fatal("expected at least one request")
 	}
 
-	// Extract session IDs from each request.
-	sessionIDs := make([]string, 0, 3)
-	for i, body := range allBodies {
-		var events []aptabaseEvent
-		if err := json.Unmarshal(body, &events); err != nil {
-			t.Fatalf("request %d: failed to unmarshal: %v", i, err)
-		}
-		if len(events) != 1 {
-			t.Fatalf("request %d: expected 1 event, got %d", i, len(events))
-		}
-		sessionIDs = append(sessionIDs, events[0].SessionID)
+	ev := reqs[0].Body.Events[0]
+	if ev.Event != "plugin_used" {
+		t.Errorf("event = %q, want plugin_used", ev.Event)
 	}
 
-	// All session IDs must be identical.
-	for i := 1; i < len(sessionIDs); i++ {
-		if sessionIDs[i] != sessionIDs[0] {
-			t.Errorf("session ID mismatch: event 0 = %q, event %d = %q", sessionIDs[0], i, sessionIDs[i])
+	// Verify dot-notation dimension keys.
+	assertDim := func(key string, want any) {
+		t.Helper()
+		got, ok := ev.Dimensions[key]
+		if !ok {
+			t.Errorf("missing dimension %q", key)
+			return
+		}
+		// JSON numbers decode as float64, bools stay bool.
+		switch w := want.(type) {
+		case bool:
+			if g, ok := got.(bool); !ok || g != w {
+				t.Errorf("dim %q = %v (%T), want %v", key, got, got, want)
+			}
+		case string:
+			if g, ok := got.(string); !ok || g != w {
+				t.Errorf("dim %q = %v (%T), want %v", key, got, got, want)
+			}
 		}
 	}
+
+	assertDim("plugin.name", "kitty")
+	assertDim("plugin.version", "0.1.27")
+	assertDim("plugin.external", false)
+	assertDim("plugin.status", "ok")
+}
+
+func TestWireFormatArrayDimension(t *testing.T) {
+	srv, captured := mockServer(t)
+
+	sfClient := statsfactory.New(statsfactory.Config{
+		ServerURL:     srv.URL,
+		AppKey:        "key",
+		FlushInterval: time.Hour,
+	})
+
+	client := NewWithClient(sfClient)
+
+	client.Send(NewGenerateEvent(GenerateEventParams{
+		InputPlugin:   "image",
+		OutputPlugins: []string{"kitty", "waybar", "gtk4"},
+		ThemeType:     "dark",
+	}))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client.Flush(ctx)
+	client.Close()
+
+	reqs := getCaptured(captured)
+	if len(reqs) == 0 {
+		t.Fatal("expected at least one request")
+	}
+
+	ev := reqs[0].Body.Events[0]
+	if ev.Event != "generate" {
+		t.Errorf("event = %q, want generate", ev.Event)
+	}
+
+	// output.plugins should arrive as a JSON array ([]interface{} after decode).
+	raw, ok := ev.Dimensions["output.plugins"]
+	if !ok {
+		t.Fatal("missing dimension output.plugins")
+	}
+	arr, ok := raw.([]interface{})
+	if !ok {
+		t.Fatalf("output.plugins is %T, want []interface{} (JSON array)", raw)
+	}
+	want := []string{"kitty", "waybar", "gtk4"}
+	if len(arr) != len(want) {
+		t.Fatalf("output.plugins has %d elements, want %d", len(arr), len(want))
+	}
+	for i, w := range want {
+		if s, ok := arr[i].(string); !ok || s != w {
+			t.Errorf("output.plugins[%d] = %v (%T), want %q", i, arr[i], arr[i], w)
+		}
+	}
+}
+
+func TestWireFormatSessionIDIsPerClient(t *testing.T) {
+	srv, captured := mockServer(t)
+
+	// Create two separate clients — each should get a distinct session_id.
+	var sessionIDs [2]string
+	for i := 0; i < 2; i++ {
+		sfClient := statsfactory.New(statsfactory.Config{
+			ServerURL:     srv.URL,
+			AppKey:        "key",
+			FlushInterval: time.Hour,
+		})
+		client := NewWithClient(sfClient)
+		client.Send(NewEvent("test"))
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		client.Flush(ctx)
+		cancel()
+		client.Close()
+	}
+
+	reqs := getCaptured(captured)
+	if len(reqs) < 2 {
+		t.Fatalf("expected at least 2 requests, got %d", len(reqs))
+	}
+	sessionIDs[0] = reqs[0].Body.Events[0].SessionID
+	sessionIDs[1] = reqs[1].Body.Events[0].SessionID
 
 	if sessionIDs[0] == "" {
-		t.Error("session ID should not be empty")
+		t.Error("session_id should not be empty")
+	}
+	if sessionIDs[0] == sessionIDs[1] {
+		t.Errorf("expected different session_ids for different clients, both got %q", sessionIDs[0])
 	}
 }
 
-// TestDifferentClientsGetDifferentSessions verifies that separate Client
-// instances produce different session IDs (each CLI invocation = new session).
-func TestDifferentClientsGetDifferentSessions(t *testing.T) {
-	var allBodies [][]byte
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		allBodies = append(allBodies, body)
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
+func TestSendSetsDistinctID(t *testing.T) {
+	dir := setupTestHome(t)
+	srv, captured := mockServer(t)
 
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
-
-	client1 := New()
-	client1.baseURL = server.URL
-
-	client2 := New()
-	client2.baseURL = server.URL
-
-	_ = client1.sendSync(NewEvent("from_client1"))
-	_ = client2.sendSync(NewEvent("from_client2"))
-
-	if len(allBodies) != 2 {
-		t.Fatalf("expected 2 requests, got %d", len(allBodies))
+	// Write an installation ID file.
+	configDir := filepath.Join(dir, ".config", "tinct")
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		t.Fatal(err)
 	}
-
-	var sid1, sid2 string
-	for i, body := range allBodies {
-		var events []aptabaseEvent
-		if err := json.Unmarshal(body, &events); err != nil {
-			t.Fatalf("request %d: failed to unmarshal: %v", i, err)
-		}
-		if i == 0 {
-			sid1 = events[0].SessionID
-		} else {
-			sid2 = events[0].SessionID
-		}
+	installID := "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+	if err := os.WriteFile(filepath.Join(configDir, "telemetry.id"), []byte(installID), 0o600); err != nil {
+		t.Fatal(err)
 	}
+	// Reset config singleton so it reads our ID file.
+	config.ResetForTesting()
 
-	if sid1 == sid2 {
-		t.Errorf("different clients should have different session IDs, both got %q", sid1)
-	}
-}
+	sfClient := statsfactory.New(statsfactory.Config{
+		ServerURL:     srv.URL,
+		AppKey:        "key",
+		FlushInterval: time.Hour,
+	})
 
-// TestSendAndFlushBatchesEvents verifies that multiple Send() calls are
-// coalesced into a single HTTP request by the debounce worker.
-func TestSendAndFlushBatchesEvents(t *testing.T) {
-	var mu sync.Mutex
-	var receivedBodies [][]byte
+	client := NewWithClient(sfClient)
+	client.Send(NewEvent("test"))
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		mu.Lock()
-		receivedBodies = append(receivedBodies, body)
-		mu.Unlock()
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
-
-	client := New()
-	client.baseURL = server.URL
-
-	// Send several events in quick succession — they should all fit in one batch.
-	const numEvents = 5
-	for i := range numEvents {
-		client.Send(NewEvent(fmt.Sprintf("event_%d", i)))
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	client.Flush(ctx)
+	client.Close()
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	// All events should have been coalesced into a single request.
-	if len(receivedBodies) != 1 {
-		t.Fatalf("expected 1 batched request, got %d", len(receivedBodies))
+	reqs := getCaptured(captured)
+	if len(reqs) == 0 {
+		t.Fatal("expected at least one request")
 	}
 
-	var events []aptabaseEvent
-	if err := json.Unmarshal(receivedBodies[0], &events); err != nil {
-		t.Fatalf("unmarshal batch: %v", err)
-	}
-	if len(events) != numEvents {
-		t.Errorf("expected %d events in batch, got %d", numEvents, len(events))
+	ev := reqs[0].Body.Events[0]
+	if ev.DistinctID != installID {
+		t.Errorf("distinct_id = %q, want %q", ev.DistinctID, installID)
 	}
 }
 
-// TestSendAndFlushSplitsOversizeBatch verifies that more than maxBatchSize events
-// are split into multiple requests of at most maxBatchSize each.
-func TestSendAndFlushSplitsOversizeBatch(t *testing.T) {
-	var mu sync.Mutex
-	var receivedBodies [][]byte
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		mu.Lock()
-		receivedBodies = append(receivedBodies, body)
-		mu.Unlock()
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
-
-	client := New()
-	client.baseURL = server.URL
-
-	// Send more events than maxBatchSize (25).
-	const numEvents = 30
-	for i := range numEvents {
-		client.Send(NewEvent(fmt.Sprintf("event_%d", i)))
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	client.Flush(ctx)
-
-	mu.Lock()
-	defer mu.Unlock()
-
-	// Count total events received across all requests.
-	total := 0
-	for _, body := range receivedBodies {
-		var events []aptabaseEvent
-		if err := json.Unmarshal(body, &events); err != nil {
-			t.Fatalf("unmarshal batch: %v", err)
-		}
-		if len(events) > maxBatchSize {
-			t.Errorf("batch size %d exceeds maxBatchSize %d", len(events), maxBatchSize)
-		}
-		total += len(events)
-	}
-
-	if total != numEvents {
-		t.Errorf("expected %d total events across all batches, got %d", numEvents, total)
-	}
-}
-
-// TestFlushWithCancelledContext verifies that Flush returns promptly when the
-// context is already cancelled, even if the worker hasn't finished.
 func TestFlushWithCancelledContext(t *testing.T) {
-	// Use a server that hangs so the worker's HTTP request never completes.
-	hang := make(chan struct{})
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		<-hang
+	// Server that blocks forever.
+	unblock := make(chan struct{})
+	slowSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-unblock
+		w.WriteHeader(200)
 	}))
+	defer slowSrv.Close()
+	defer close(unblock)
 
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+	sfClient := statsfactory.New(statsfactory.Config{
+		ServerURL:     slowSrv.URL,
+		AppKey:        "key",
+		FlushInterval: time.Hour,
+	})
 
-	client := New()
-	client.baseURL = server.URL
+	client := NewWithClient(sfClient)
+	client.Send(NewEvent("test"))
 
-	client.Send(NewEvent("will_not_complete"))
-
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // already cancelled
-
-	start := time.Now()
-	client.Flush(ctx)
-	elapsed := time.Since(start)
-
-	// Flush should return nearly immediately because the context is already done.
-	if elapsed > 500*time.Millisecond {
-		t.Errorf("Flush took too long with cancelled context: %v", elapsed)
-	}
-
-	// Unblock the hanging server and wait for the worker goroutine to fully exit
-	// before returning. This prevents the worker from racing with config.ResetForTesting()
-	// in subsequent tests.
-	close(hang)
-	server.Close()
-	<-client.done
-}
-
-// TestSendAfterFlushDropsSilently verifies that Send() after Flush() does not panic.
-// (The queue is closed; the select default branch drops the event.)
-func TestSendAfterFlushDropsSilently(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	_ = setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
-
-	client := New()
-	client.baseURL = server.URL
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	// Flush with an already-expired context.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	client.Flush(ctx)
 
-	// This must not panic.
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("Send after Flush panicked: %v", r)
-		}
-	}()
-	client.Send(NewEvent("post_flush"))
+	// Should not panic or hang. Close the underlying client to avoid leaks.
+	sfClient.Close()
 }
 
-// TestLegacyMigration verifies that telemetry ID is migrated from the old
-// ~/.local/share/tinct/telemetry.json to the new telemetry.id file.
+func TestClientFirstRunCreatesConfig(t *testing.T) {
+	dir := setupTestHome(t)
+	srv, _ := mockServer(t)
+	setTelemetryCredentials(t, srv.URL)
+
+	client := New()
+	defer client.Close()
+
+	if !client.IsEnabled() {
+		t.Fatal("expected client to be enabled")
+	}
+
+	// Config file should have been created.
+	configPath := filepath.Join(dir, ".config", "tinct", "tinct.toml")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Error("expected tinct.toml to be created on first run")
+	}
+
+	// Installation ID file should have been created.
+	idPath := filepath.Join(dir, ".config", "tinct", "telemetry.id")
+	if _, err := os.Stat(idPath); os.IsNotExist(err) {
+		t.Error("expected telemetry.id to be created on first run")
+	}
+}
+
 func TestLegacyMigration(t *testing.T) {
 	dir := setupTestHome(t)
-	t.Setenv("TINCT_TELEMETRY", "")
+	srv, _ := mockServer(t)
+	setTelemetryCredentials(t, srv.URL)
 
-	// A valid 64-char lowercase hex ID (as produced by generateInstallationID).
-	legacyID := "dead1234beef5678cafe9012dead1234beef5678cafe9012dead1234beef5678"
-
-	// Write legacy telemetry.json.
+	// Write a legacy telemetry.json file.
 	legacyDir := filepath.Join(dir, ".local", "share", "tinct")
-	if err := os.MkdirAll(legacyDir, 0o750); err != nil {
-		t.Fatalf("MkdirAll() error = %v", err)
+	if err := os.MkdirAll(legacyDir, 0o700); err != nil {
+		t.Fatal(err)
 	}
-	legacyData, _ := json.Marshal(struct {
-		Enabled bool   `json:"enabled"`
-		ID      string `json:"id"`
-	}{
-		Enabled: true,
-		ID:      legacyID,
-	})
-	if err := os.WriteFile(filepath.Join(legacyDir, "telemetry.json"), legacyData, 0o600); err != nil {
-		t.Fatalf("WriteFile() error = %v", err)
+	legacyID := "deadbeef" + "deadbeef" + "deadbeef" + "deadbeef" + "deadbeef" + "deadbeef" + "deadbeef" + "deadbeef"
+	legacyJSON := `{"id":"` + legacyID + `"}`
+	if err := os.WriteFile(filepath.Join(legacyDir, "telemetry.json"), []byte(legacyJSON), 0o600); err != nil {
+		t.Fatal(err)
 	}
 
 	client := New()
-	if client.ID() != legacyID {
-		t.Errorf("expected migrated ID %q, got %q", legacyID, client.ID())
+	defer client.Close()
+
+	if !client.IsEnabled() {
+		t.Fatal("expected client to be enabled")
 	}
 
-	// Legacy file should be removed.
-	if _, err := os.Stat(filepath.Join(legacyDir, "telemetry.json")); !os.IsNotExist(err) {
-		t.Error("legacy telemetry.json should be removed after migration")
+	// The installation ID should be the migrated legacy ID.
+	got := config.InstallationID()
+	if got != legacyID {
+		t.Errorf("InstallationID = %q, want %q (legacy migration)", got, legacyID)
 	}
 
-	// New config file should exist.
-	newPath := filepath.Join(dir, ".config", "tinct", "tinct.toml")
-	if _, err := os.Stat(newPath); os.IsNotExist(err) {
-		t.Error("new tinct.toml should be created after migration")
+	// Legacy file should be removed after migration.
+	legacyPath := filepath.Join(legacyDir, "telemetry.json")
+	if _, err := os.Stat(legacyPath); !os.IsNotExist(err) {
+		t.Error("expected legacy telemetry.json to be removed after migration")
 	}
 }
