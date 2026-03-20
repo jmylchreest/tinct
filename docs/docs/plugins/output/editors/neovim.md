@@ -10,10 +10,11 @@ Generate colour schemes for [Neovim](https://neovim.io/).
 
 Neovim is a hyperextensible Vim-based text editor. The plugin generates a Lua colour scheme file that can be used directly with Neovim's built-in colour scheme system.
 
-## Output path
+## Output paths
 
 ```
 ~/.config/nvim/colors/tinct.lua
+~/.config/nvim/lua/lualine/themes/tinct.lua
 ```
 
 ## Usage
@@ -70,6 +71,38 @@ The colour scheme affects:
 - Search highlighting
 - Visual selection
 - Error and warning messages
+
+## Lualine
+
+Tinct generates a standalone [lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) theme file alongside the main colourscheme.
+
+### Automatic theming (no configuration needed)
+
+If you use lualine with its default `theme = 'auto'` setting, lualine will automatically extract colours from tinct's highlight groups (`Normal`, `String`, `Number`, `Special`, `Identifier`, `PmenuSel`, `StatusLine`). No extra configuration is required.
+
+### Explicit theme
+
+To use the dedicated tinct lualine theme, set it in your lualine configuration:
+
+```lua
+require('lualine').setup({
+  options = {
+    theme = 'tinct',
+  },
+})
+```
+
+The generated theme file at `~/.config/nvim/lua/lualine/themes/tinct.lua` provides colour definitions for all lualine modes (normal, insert, visual, replace, command, inactive) using the same palette as the main colourscheme.
+
+If you use a custom `--neovim.theme-name`, use that name instead:
+
+```lua
+require('lualine').setup({
+  options = {
+    theme = 'my-theme',
+  },
+})
+```
 
 ## Generated format
 

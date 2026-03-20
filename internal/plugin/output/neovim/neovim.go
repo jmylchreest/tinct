@@ -107,8 +107,17 @@ func (p *Plugin) DefaultOutputDir() string {
 	return filepath.Join(home, ".config", "nvim", "colors")
 }
 
-// Generate creates the theme file.
-// Returns map of filename -> content.
+// lualineThemePath returns the relative path (from DefaultOutputDir) for the
+// standalone lualine theme file. Since DefaultOutputDir is ~/.config/nvim/colors
+// and lualine expects themes at ~/.config/nvim/lua/lualine/themes/, we traverse
+// up one level from colors/ into the nvim config root.
+// This follows the same pattern used by the waybar plugin for stub files.
+func (p *Plugin) lualineThemePath() string {
+	return filepath.Join("..", "lua", "lualine", "themes", fmt.Sprintf("%s.lua", p.themeName))
+}
+
+// Generate creates the theme files.
+// Returns map of filename -> content, where filenames are relative to DefaultOutputDir().
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
@@ -121,13 +130,22 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	files := make(map[string][]byte)
 
-	// Generate theme file.
+	// Generate main colorscheme file (written to ~/.config/nvim/colors/<theme>.lua).
 	themeContent, err := p.generateTheme(themeData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate theme: %w", err)
 	}
-
 	files[filename] = themeContent
+
+	// Generate standalone lualine theme file (written to ~/.config/nvim/lua/lualine/themes/<theme>.lua).
+	// Lualine discovers themes via nvim_get_runtime_file("lua/lualine/themes/<name>.lua"),
+	// which searches &runtimepath. Since ~/.config/nvim is on runtimepath, placing the
+	// file there ensures lualine finds it regardless of plugin load order.
+	lualineContent, err := p.generateLualineTheme(themeData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate lualine theme: %w", err)
+	}
+	files[p.lualineThemePath()] = lualineContent
 
 	return files, nil
 }
@@ -160,6 +178,39 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute theme template: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// generateLualineTheme creates a standalone lualine theme file.
+func (p *Plugin) generateLualineTheme(themeData *colour.ThemeData) ([]byte, error) {
+	// Load template with custom override support.
+	loader := tmplloader.New("neovim", templates)
+	if p.verbose {
+		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
+	}
+	tmplContent, fromCustom, err := loader.Load("lualine_theme.lua.tmpl")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read lualine theme template: %w", err)
+	}
+
+	// Log if using custom template.
+	if p.verbose && fromCustom {
+		fmt.Fprintf(os.Stderr, "   Using custom template for lualine_theme.lua.tmpl\n")
+	}
+
+	tmpl, err := template.New("lualine_theme").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse lualine theme template: %w", err)
+	}
+
+	// Set plugin-specific themeName for template.
+	themeData.ThemeName = p.themeName
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, themeData); err != nil {
+		return nil, fmt.Errorf("failed to execute lualine theme template: %w", err)
 	}
 
 	return buf.Bytes(), nil
@@ -201,6 +252,9 @@ func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writt
 		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "   Or in init.vim:\n")
 		fmt.Fprintf(os.Stderr, "   colorscheme %s\n", p.themeName)
+		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stderr, "   Lualine: theme = 'auto' works out of the box.\n")
+		fmt.Fprintf(os.Stderr, "   For the dedicated theme: theme = '%s'\n", p.themeName)
 		fmt.Fprintf(os.Stderr, "\n")
 		fmt.Fprintf(os.Stderr, "   Note: The colorscheme will auto-reload when tinct updates it.\n")
 		fmt.Fprintf(os.Stderr, "   This works via a file system watcher built into the theme.\n")

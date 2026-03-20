@@ -14,7 +14,7 @@ func TestNeovimPlugin(t *testing.T) {
 
 	config := plugintesting.TestConfig{
 		ExpectedName:         "neovim",
-		ExpectedFiles:        []string{"tinct.lua"},
+		ExpectedFiles:        []string{"tinct.lua", "../lua/lualine/themes/tinct.lua"},
 		ExpectedBinaryName:   "nvim",
 		ExpectedDirSubstring: "nvim", // Plugin uses .config/nvim/colors, not .config/neovim
 	}
@@ -46,6 +46,23 @@ func TestNeovimPlugin_ContentValidation(t *testing.T) {
 	for _, required := range requiredStrings {
 		if !strings.Contains(content, required) {
 			t.Errorf("Generated content missing required string: %s", required)
+		}
+	}
+
+	// Check standalone lualine theme file.
+	lualineContent := string(files["../lua/lualine/themes/tinct.lua"])
+	lualineRequired := []string{
+		"-- Tinct lualine theme: tinct",
+		"normal",
+		"insert",
+		"visual",
+		"replace",
+		"command",
+		"inactive",
+	}
+	for _, required := range lualineRequired {
+		if !strings.Contains(lualineContent, required) {
+			t.Errorf("Lualine theme missing required string: %s", required)
 		}
 	}
 }
