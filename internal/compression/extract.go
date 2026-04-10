@@ -68,7 +68,7 @@ func ExtractPlugin(data []byte, url, filename, targetFile, archiveName, destDir,
 }
 
 // extractByContentType attempts to extract based on HTTP Content-Type header.
-func extractByContentType(data []byte, url, filename, targetFile, archiveName, destDir, contentType string, verbose bool) (*ExtractResult, error) {
+func extractByContentType(data []byte, url, filename, targetFile, archiveName, destDir, contentType string, verbose bool) (*ExtractResult, error) { //nolint:gocyclo
 	switch {
 	// Tar+gzip archives
 	case strings.Contains(contentType, "application/gzip") || strings.Contains(contentType, "application/x-gzip"):
@@ -104,11 +104,12 @@ func extractByContentType(data []byte, url, filename, targetFile, archiveName, d
 	// Tar archives (uncompressed)
 	case strings.Contains(contentType, "application/x-tar"):
 		// Assume it's compressed based on filename
-		if strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz") {
+		switch {
+		case strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz"):
 			return extractFromTarGz(data, targetFile, archiveName, destDir, verbose)
-		} else if strings.HasSuffix(url, ".tar.xz") || strings.HasSuffix(url, ".txz") {
+		case strings.HasSuffix(url, ".tar.xz") || strings.HasSuffix(url, ".txz"):
 			return extractFromTarXz(data, targetFile, archiveName, destDir, verbose)
-		} else if strings.HasSuffix(url, ".tar.bz2") || strings.HasSuffix(url, ".tbz") || strings.HasSuffix(url, ".tbz2") {
+		case strings.HasSuffix(url, ".tar.bz2") || strings.HasSuffix(url, ".tbz") || strings.HasSuffix(url, ".tbz2"):
 			return extractFromTarBz2(data, targetFile, archiveName, destDir, verbose)
 		}
 		return nil, fmt.Errorf("uncompressed tar archives are not supported")

@@ -319,7 +319,7 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, ve
 }
 
 // generateImageWithImagen generates an image using the Imagen API (GenerateImages).
-func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath string, verbose bool) error {
+func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath string, verbose bool) error { //nolint:gocyclo
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
 		return err
@@ -435,7 +435,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath 
 }
 
 // generateImageWithGemini generates an image using the Gemini API (GenerateContent).
-func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputPath string, verbose bool) error {
+func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputPath string, verbose bool) error { //nolint:gocyclo
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
 		return err

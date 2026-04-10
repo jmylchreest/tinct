@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"sync"
@@ -154,9 +155,7 @@ func (c *Client) Send(event Event) {
 	}
 
 	dims := make(statsfactory.Dims, len(event.Props))
-	for k, v := range event.Props {
-		dims[k] = v
-	}
+	maps.Copy(dims, event.Props)
 
 	distinctID := config.InstallationID()
 

@@ -106,7 +106,7 @@ linters:
 
     # Nested if depth
     nestif:
-      min-complexity: 5
+      min-complexity: 10
 
     # Revive configuration
     revive:
@@ -228,6 +228,36 @@ linters:
       - path: internal/
         linters:
           - wrapcheck
+
+      # Package names that intentionally shadow stdlib (established naming)
+      - text: "var-naming: avoid package names that conflict with Go standard library"
+        linters:
+          - revive
+
+      # Package names with underscores (established naming)
+      - text: "var-naming: don't use an underscore in package name"
+        linters:
+          - revive
+
+      # Package names that are intentionally generic
+      - text: "var-naming: avoid meaningless package names"
+        linters:
+          - revive
+
+      # Exported names that stutter with package name (public API, can't rename)
+      - text: "exported: (type|func) name will be used as"
+        linters:
+          - revive
+
+      # Struct fields with underscores needed for JSON serialization
+      - text: "var-naming: don't use underscores in Go names; struct field"
+        linters:
+          - revive
+
+      # Package names with underscores (established naming, staticcheck variant)
+      - text: "ST1003: should not use underscores in package names"
+        linters:
+          - staticcheck
 
 # Formatters configuration
 formatters:

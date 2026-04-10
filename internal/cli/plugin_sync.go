@@ -79,7 +79,7 @@ func init() {
 	pluginCleanCmd.Flags().BoolVarP(&pluginYes, "yes", "y", false, "Auto-confirm removal")
 }
 
-func runPluginSync(cmd *cobra.Command, args []string) error { //nolint:gocognit // sync lock file with installed plugins, multiple sources
+func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // sync lock file with installed plugins, multiple sources
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
@@ -202,11 +202,12 @@ func runPluginSync(cmd *cobra.Command, args []string) error { //nolint:gocognit 
 		// Query plugin for updated metadata to get version
 		if meta.Path != "" {
 			_, _, _, version, _ := queryPluginMetadata(meta.Path)
-			if version != "" && oldVersion != "" && version != oldVersion {
+			switch {
+			case version != "" && oldVersion != "" && version != oldVersion:
 				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("%s → %s", oldVersion, version)})
-			} else if version != "" {
+			case version != "":
 				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("Installed (%s)", version)})
-			} else {
+			default:
 				table.UpdateRow(name, map[string]string{"STATUS": "Installed"})
 			}
 		} else {
@@ -228,7 +229,7 @@ func runPluginSync(cmd *cobra.Command, args []string) error { //nolint:gocognit 
 	return nil
 }
 
-func runPluginClean(cmd *cobra.Command, args []string) error {
+func runPluginClean(_ *cobra.Command, _ []string) error { //nolint:gocyclo
 	// Read lock file.
 	lock, _, err := loadPluginLock()
 	if err != nil {

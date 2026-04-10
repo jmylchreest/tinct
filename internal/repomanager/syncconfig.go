@@ -59,7 +59,7 @@ func LoadSyncConfig(path string) (*SyncConfig, error) {
 		line := scanner.Text()
 
 		// Skip empty lines
-		if len(line) == 0 {
+		if line == "" {
 			continue
 		}
 

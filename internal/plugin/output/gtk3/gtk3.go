@@ -152,7 +152,7 @@ func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
 }
 
 // PostExecute provides instructions for configuring GTK3 and attempts live reload via D-Bus.
-func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, _ []string) error {
+func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, _ []string) error { //nolint:gocyclo
 	if execCtx.DryRun {
 		return nil
 	}

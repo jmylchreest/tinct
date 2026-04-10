@@ -50,7 +50,7 @@ func createCategorisedColour(c color.Color, weight float64) CategorisedColour {
 
 // selectBackgroundWithHints selects background color, applying hints if available.
 func selectBackgroundWithHints(extracted, allExtracted []CategorisedColour,
-	hints map[Role]int, themeType ThemeType, hintsApplied map[Role]bool) (CategorisedColour, int, ThemeType) {
+	hints map[Role]int, themeType ThemeType, hintsApplied map[Role]bool) (bg CategorisedColour, bgIdx int, resolvedTheme ThemeType) {
 
 	// Check for hinted background.
 	if bgIdx, hasHint := hints[RoleBackground]; hasHint {
@@ -63,12 +63,12 @@ func selectBackgroundWithHints(extracted, allExtracted []CategorisedColour,
 	}
 
 	// No hint, select background normally.
-	bg, finalTheme := selectBackground(extracted, themeType)
+	bg, resolvedTheme = selectBackground(extracted, themeType)
 
 	// Find index.
-	bgIdx := findColourIndex(extracted, bg.Hex)
+	bgIdx = findColourIndex(extracted, bg.Hex)
 
-	return bg, bgIdx, finalTheme
+	return bg, bgIdx, resolvedTheme
 }
 
 // applyRoleHints applies all non-background role hints to the palette.

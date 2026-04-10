@@ -45,6 +45,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/ptyxis"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt5"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt6"
+	"github.com/jmylchreest/tinct/internal/plugin/output/rosec"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
@@ -131,6 +132,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(markdownout.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(ptyxis.New())
+	m.outputRegistry.Register(rosec.New())
 	m.outputRegistry.Register(qt5.New())
 	m.outputRegistry.Register(qt6.New())
 	m.outputRegistry.Register(swayosd.New())
@@ -153,14 +155,14 @@ func (m *Manager) OutputRegistry() *output.Registry {
 
 // GetInputPlugin retrieves an input plugin by name.
 func (m *Manager) GetInputPlugin(name string) (input.Plugin, bool) {
-	plugin, ok := m.inputRegistry.Get(name)
-	return plugin, ok
+	p, ok := m.inputRegistry.Get(name)
+	return p, ok
 }
 
 // GetOutputPlugin retrieves an output plugin by name.
 func (m *Manager) GetOutputPlugin(name string) (output.Plugin, bool) {
-	plugin, ok := m.outputRegistry.Get(name)
-	return plugin, ok
+	p, ok := m.outputRegistry.Get(name)
+	return p, ok
 }
 
 // AllInputPlugins returns all registered input plugins.
@@ -217,12 +219,12 @@ func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description str
 
 	switch pluginType {
 	case "output":
-		plugin := NewExternalOutputPlugin(name, description, path)
-		m.outputRegistry.Register(plugin)
+		p := NewExternalOutputPlugin(name, description, path)
+		m.outputRegistry.Register(p)
 		return nil
 	case "input":
-		plugin := NewExternalInputPlugin(name, description, path)
-		m.inputRegistry.Register(plugin)
+		p := NewExternalInputPlugin(name, description, path)
+		m.inputRegistry.Register(p)
 		return nil
 	default:
 		return fmt.Errorf("unknown plugin type: %s", pluginType)
@@ -241,13 +243,13 @@ type PluginInfo struct {
 // queryPluginInfo queries a plugin for its metadata.
 func queryPluginInfo(pluginPath string) (PluginInfo, error) {
 	cmd := exec.Command(pluginPath, "--plugin-info")
-	output, err := cmd.Output()
+	cmdOutput, err := cmd.Output()
 	if err != nil {
 		return PluginInfo{}, fmt.Errorf("failed to execute plugin: %w", err)
 	}
 
 	var info PluginInfo
-	if err := json.Unmarshal(output, &info); err != nil {
+	if err := json.Unmarshal(cmdOutput, &info); err != nil {
 		return PluginInfo{}, fmt.Errorf("failed to parse plugin info: %w", err)
 	}
 
@@ -295,13 +297,13 @@ func (b *externalPluginBase) GetDryRun() bool { return b.dryRun }
 
 // getFlagHelp queries the plugin executable for flag help via RPC.
 func (b *externalPluginBase) getFlagHelp() []input.FlagHelp {
-	exec, err := executor.NewWithVerbose(b.path, false)
+	pluginExec, err := executor.NewWithVerbose(b.path, false)
 	if err != nil {
 		return []input.FlagHelp{}
 	}
-	defer exec.Close()
+	defer pluginExec.Close()
 
-	flagHelp, err := exec.GetFlagHelp(context.Background())
+	flagHelp, err := pluginExec.GetFlagHelp(context.Background())
 	if err != nil {
 		return []input.FlagHelp{}
 	}
@@ -336,13 +338,13 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 	}
 
 	// Create executor (detects protocol automatically).
-	exec, err := executor.NewWithVerbose(p.path, opts.Verbose)
+	pluginExec, err := executor.NewWithVerbose(p.path, opts.Verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
 	}
 
 	// Store the executor so we can query wallpaper path later
-	p.lastExecutor = exec
+	p.lastExecutor = pluginExec
 
 	// Merge plugin args from opts with plugin's own args.
 	mergedArgs := make(map[string]any)
@@ -365,7 +367,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 	}
 
 	// Execute input plugin.
-	colors, err := exec.ExecuteInput(ctx, protocolOpts)
+	colors, err := pluginExec.ExecuteInput(ctx, protocolOpts)
 	if err != nil {
 		return nil, fmt.Errorf("plugin execution failed: %w", err)
 	}
@@ -447,11 +449,11 @@ func (p *ExternalOutputPlugin) SetAlternatePalette(palette *colour.CategorisedPa
 // Generate executes the external plugin and returns its output.
 func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	// Create executor (detects protocol automatically).
-	exec, err := executor.NewWithVerbose(p.path, p.verbose)
+	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
 	}
-	defer exec.Close()
+	defer pluginExec.Close()
 
 	// Extract palette from themeData.
 	palette := themeData.Palette()
@@ -460,7 +462,7 @@ func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string
 	paletteData := convertCategorisedPaletteToProtocolWithAlternate(palette, p.alternatePalette, p.args, p.dryRun, p.verbose)
 
 	// Execute output plugin.
-	files, err := exec.ExecuteOutput(context.Background(), paletteData)
+	files, err := pluginExec.ExecuteOutput(context.Background(), paletteData)
 	if err != nil {
 		return nil, fmt.Errorf("plugin execution failed: %w", err)
 	}
@@ -495,14 +497,14 @@ func (p *ExternalOutputPlugin) DefaultOutputDir() string {
 // Implements the output.PreExecuteHook interface.
 func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
 	// Create executor (detects protocol automatically).
-	exec, err := executor.NewWithVerbose(p.path, p.verbose)
+	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
 	if err != nil {
 		return false, "", fmt.Errorf("failed to create plugin executor: %w", err)
 	}
-	defer exec.Close()
+	defer pluginExec.Close()
 
 	// Execute pre-execute hook.
-	return exec.PreExecute(ctx)
+	return pluginExec.PreExecute(ctx)
 }
 
 // GetFlagHelp returns help information for plugin flags.
@@ -515,14 +517,14 @@ func (p *ExternalOutputPlugin) GetFlagHelp() []input.FlagHelp {
 // Implements the output.PostExecuteHook interface.
 func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
 	// Create executor (detects protocol automatically).
-	exec, err := executor.NewWithVerbose(p.path, p.verbose)
+	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
 	if err != nil {
 		return fmt.Errorf("failed to create plugin executor: %w", err)
 	}
-	defer exec.Close()
+	defer pluginExec.Close()
 
 	// Execute post-execute hook.
-	return exec.PostExecute(ctx, writtenFiles)
+	return pluginExec.PostExecute(ctx, writtenFiles)
 }
 
 // toCategorisedColour converts a single colour.CategorisedColour to the protocol representation.
@@ -545,18 +547,18 @@ func toCategorisedColour(c colour.CategorisedColour) plugin.CategorisedColour {
 
 // convertCategorisedPaletteToMaps converts the colour maps and slices of a CategorisedPalette
 // to the protocol format, returning (coloursMap, allColoursSlice, themeType).
-func convertCategorisedPaletteToMaps(p *colour.CategorisedPalette) (map[string]plugin.CategorisedColour, []plugin.CategorisedColour, string) {
-	colours := make(map[string]plugin.CategorisedColour, len(p.Colours))
+func convertCategorisedPaletteToMaps(p *colour.CategorisedPalette) (colours map[string]plugin.CategorisedColour, allColours []plugin.CategorisedColour, themeType string) {
+	colours = make(map[string]plugin.CategorisedColour, len(p.Colours))
 	for role, c := range p.Colours {
 		colours[string(role)] = toCategorisedColour(c)
 	}
 
-	allColours := make([]plugin.CategorisedColour, len(p.AllColours))
+	allColours = make([]plugin.CategorisedColour, len(p.AllColours))
 	for i, c := range p.AllColours {
 		allColours[i] = toCategorisedColour(c)
 	}
 
-	themeType := "dark"
+	themeType = "dark"
 	if p.ThemeType == colour.ThemeLight {
 		themeType = "light"
 	}
@@ -565,12 +567,12 @@ func convertCategorisedPaletteToMaps(p *colour.CategorisedPalette) (map[string]p
 }
 
 // convertCategorisedPaletteToProtocol converts a CategorisedPalette to plugin.PaletteData.
-func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool, verbose bool) plugin.PaletteData {
+func convertCategorisedPaletteToProtocol(palette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun, verbose bool) plugin.PaletteData {
 	return convertCategorisedPaletteToProtocolWithAlternate(palette, nil, pluginArgs, dryRun, verbose)
 }
 
 // convertCategorisedPaletteToProtocolWithAlternate converts a CategorisedPalette to plugin.PaletteData with optional alternate theme.
-func convertCategorisedPaletteToProtocolWithAlternate(palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun bool, verbose bool) plugin.PaletteData {
+func convertCategorisedPaletteToProtocolWithAlternate(palette, alternatePalette *colour.CategorisedPalette, pluginArgs map[string]any, dryRun, verbose bool) plugin.PaletteData {
 	colours, allColours, themeType := convertCategorisedPaletteToMaps(palette)
 
 	paletteData := plugin.PaletteData{

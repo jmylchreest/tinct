@@ -53,7 +53,7 @@ func Generate(theme *Theme, includeThumbnail bool, thumbnailData string) (string
 }
 
 // generateMarkdownBody creates the human-readable markdown content.
-func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData string) string {
+func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData string) string { //nolint:gocyclo
 	var buf bytes.Buffer
 
 	// Title
@@ -103,16 +103,17 @@ func generateMarkdownBody(theme *Theme, includeThumbnail bool, thumbnailData str
 	// Wallpaper info
 	buf.WriteString("## Wallpaper\n\n")
 	if theme.Wallpaper != nil {
-		if theme.Wallpaper.Embedded {
+		switch {
+		case theme.Wallpaper.Embedded:
 			size := len(theme.Wallpaper.Data)
 			// Estimate actual size (base64 is ~1.33x original)
 			actualSize := float64(size) * 0.75 / 1024 / 1024
 			fmt.Fprintf(&buf, "Embedded as base64 in front matter (%dx%d %s, %.1f MB)\n\n",
 				theme.Wallpaper.Width, theme.Wallpaper.Height,
 				strings.ToUpper(theme.Wallpaper.Format), actualSize)
-		} else if theme.Wallpaper.Path != "" {
+		case theme.Wallpaper.Path != "":
 			fmt.Fprintf(&buf, "External file: `%s`\n\n", theme.Wallpaper.Path)
-		} else if theme.Wallpaper.URL != "" {
+		case theme.Wallpaper.URL != "":
 			fmt.Fprintf(&buf, "External URL: %s\n\n", theme.Wallpaper.URL)
 		}
 	} else {

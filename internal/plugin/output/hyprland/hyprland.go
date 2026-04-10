@@ -108,19 +108,19 @@ func (p *Plugin) GetTargetVersion() string {
 }
 
 // detectHyprlandVersion runs "hyprctl version" or "hyprland --version" to get the version.
-func detectHyprlandVersion(verbose bool) string {
+func detectHyprlandVersion(_ bool) string {
 	// Try hyprctl version first (works when Hyprland is running)
-	output, err := exec.Command("hyprctl", "version").Output()
+	cmdOutput, err := exec.Command("hyprctl", "version").Output()
 	if err == nil {
-		if v := parseHyprlandVersion(string(output)); v != "" {
+		if v := parseHyprlandVersion(string(cmdOutput)); v != "" {
 			return v
 		}
 	}
 
 	// Fall back to hyprland --version
-	output, err = exec.Command("hyprland", "--version").Output()
+	cmdOutput, err = exec.Command("hyprland", "--version").Output()
 	if err == nil {
-		if v := parseHyprlandVersion(string(output)); v != "" {
+		if v := parseHyprlandVersion(string(cmdOutput)); v != "" {
 			return v
 		}
 	}
@@ -129,8 +129,8 @@ func detectHyprlandVersion(verbose bool) string {
 }
 
 // parseHyprlandVersion extracts the version number from Hyprland version output.
-func parseHyprlandVersion(output string) string {
-	matches := versionRegex.FindStringSubmatch(output)
+func parseHyprlandVersion(versionOutput string) string {
+	matches := versionRegex.FindStringSubmatch(versionOutput)
 	if len(matches) >= 2 {
 		return strings.TrimSpace(matches[1])
 	}
@@ -330,9 +330,9 @@ func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ [
 
 	// Reload hyprland configuration using hyprctl.
 	cmd := exec.CommandContext(ctx, "hyprctl", "reload")
-	output, err := cmd.CombinedOutput()
+	cmdOutput, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to reload hyprland config: %w (output: %s)", err, string(output))
+		return fmt.Errorf("failed to reload hyprland config: %w (output: %s)", err, string(cmdOutput))
 	}
 
 	return nil

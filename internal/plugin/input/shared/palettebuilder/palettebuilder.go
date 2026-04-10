@@ -16,7 +16,7 @@ import (
 // If mapping is non-empty, role hints are applied: each entry maps a source
 // colour name to a colour.Role string. When verbose is true, missing source
 // keys are reported as warnings.
-func BuildPalette(colors map[string]string, mapping map[string]string, verbose bool) (*colour.Palette, error) {
+func BuildPalette(colors, mapping map[string]string, verbose bool) (*colour.Palette, error) { //nolint:gocyclo
 	if len(colors) == 0 {
 		return nil, fmt.Errorf("no colors extracted")
 	}

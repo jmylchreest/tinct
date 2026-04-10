@@ -300,7 +300,7 @@ func (e *PluginExecutor) executeOutputGoPlugin(ctx context.Context, palette plug
 	return client.Generate(ctx, palette)
 }
 
-func (e *PluginExecutor) preExecuteGoPlugin(ctx context.Context) (bool, string, error) {
+func (e *PluginExecutor) preExecuteGoPlugin(ctx context.Context) (skip bool, reason string, err error) {
 	client, err := e.getOutputRPCClient(ctx)
 	if err != nil {
 		return false, "", err
@@ -496,7 +496,7 @@ func (e *PluginExecutor) parseStructuredResponse(stdout []byte) (map[string][]by
 	return result, nil
 }
 
-func (e *PluginExecutor) preExecuteJSON(ctx context.Context) (bool, string, error) {
+func (e *PluginExecutor) preExecuteJSON(ctx context.Context) (skip bool, reason string, err error) {
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 

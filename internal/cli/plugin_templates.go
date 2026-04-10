@@ -85,7 +85,7 @@ func init() {
 	pluginTemplatesListCmd.Flags().StringSliceVarP(&templateOutputPlugins, "output-plugins", "o", []string{}, "comma-separated list of output plugins to list (default: all)")
 }
 
-func runPluginTemplatesList(cmd *cobra.Command, args []string) error {
+func runPluginTemplatesList(_ *cobra.Command, _ []string) error {
 	// Get all registered output plugins from the manager.
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
@@ -152,7 +152,7 @@ func runPluginTemplatesList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginTemplatesDump(cmd *cobra.Command, args []string) error { //nolint:gocognit // template extraction for multiple plugins with filtering
+func runPluginTemplatesDump(_ *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // template extraction for multiple plugins with filtering
 	// Get all registered output plugins from the manager.
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {

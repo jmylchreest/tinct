@@ -449,10 +449,7 @@ func TestLoader_FindVersionDirectories(t *testing.T) {
 		customBase: t.TempDir(),
 	}
 
-	versions, err := loader.findVersionDirectories()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	versions := loader.findVersionDirectories()
 
 	if len(versions) != 2 {
 		t.Errorf("expected 2 versions, got %d: %v", len(versions), versions)

@@ -14,7 +14,7 @@ package colour
 //   - ThemeLight: Select most dominant LIGHT color (luminance >= 0.5) by weight.
 //
 // - Everything else in the palette is proportionate to this background color.
-func selectBackground(extracted []CategorisedColour, themeType ThemeType) (CategorisedColour, ThemeType) { //nolint:gocognit // multi-criteria selection algorithm
+func selectBackground(extracted []CategorisedColour, themeType ThemeType) (bg CategorisedColour, resolvedTheme ThemeType) { //nolint:gocyclo,gocognit // multi-criteria selection algorithm
 	if len(extracted) == 0 {
 		// Fallback to a default background.
 		return CategorisedColour{}, themeType
@@ -40,7 +40,7 @@ func selectBackground(extracted []CategorisedColour, themeType ThemeType) (Categ
 		}
 
 		// Background is the most dominant color.
-		bg := extracted[maxWeightIdx]
+		bg = extracted[maxWeightIdx]
 		bg.Role = RoleBackground
 		return bg, themeType
 	}
@@ -97,7 +97,7 @@ func selectBackground(extracted []CategorisedColour, themeType ThemeType) (Categ
 		maxWeightIdx = 0
 	}
 
-	bg := extracted[maxWeightIdx]
+	bg = extracted[maxWeightIdx]
 	bg.Role = RoleBackground
 	return bg, themeType
 }

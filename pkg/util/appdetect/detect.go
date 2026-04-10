@@ -28,7 +28,7 @@ import (
 //	IsPresentAny([]string{"ptyxis", "kgx"}, nil)                   // Check for either binary
 //	IsPresentAny(nil, []string{"~/.config/hypr", "~/.config/i3"}) // Check for either config
 //	IsPresentAny([]string{"kitty"}, []string{"~/.config/kitty"})  // Check for binary OR config
-func IsPresentAny(binaries []string, directories []string) bool {
+func IsPresentAny(binaries, directories []string) bool {
 	// Check binaries
 	for _, binary := range binaries {
 		if binary == "" {
@@ -79,7 +79,7 @@ func IsPresentAny(binaries []string, directories []string) bool {
 //	IsPresentAll([]string{"kitty", "kitten"}, nil)                  // Require both binaries
 //	IsPresentAll(nil, []string{"~/.config/hypr"})                   // Require config dir
 //	IsPresentAll([]string{"ptyxis"}, []string{"~/.local/share/org.gnome.Ptyxis/"}) // Require both
-func IsPresentAll(binaries []string, directories []string) bool {
+func IsPresentAll(binaries, directories []string) bool {
 	// Check all binaries
 	for _, binary := range binaries {
 		if binary == "" {
@@ -249,7 +249,7 @@ func matchesPattern(s, pattern string) bool {
 //
 //	GetInstallationType([]string{"ptyxis"}, nil)           // Check only for binary
 //	GetInstallationType(nil, []string{"/path/to/config"})  // Check only for directory
-func GetInstallationType(binaries []string, directories []string) string {
+func GetInstallationType(binaries, directories []string) string {
 	// Check binaries first
 	for _, binary := range binaries {
 		if binary == "" {

@@ -34,7 +34,7 @@ type pluginMetadata struct {
 
 // resolvePluginSource resolves a plugin source path and determines if it's already installed.
 // Returns: (sourcePath, isAlreadyInstalled, error).
-func resolvePluginSource(source, pluginDir, forcedSourceType string, verbose bool) (string, bool, error) {
+func resolvePluginSource(source, pluginDir, forcedSourceType string, verbose bool) (sourcePath string, isAlreadyInstalled bool, err error) {
 	// For local files, resolve to absolute path
 	if !strings.HasPrefix(source, "http://") && !strings.HasPrefix(source, "https://") && !strings.HasSuffix(source, ".git") {
 		absSource, err := filepath.Abs(source)
@@ -251,7 +251,7 @@ func printPluginAddSuccess(pluginInfo *pluginMetadata, action pluginAction, exis
 // buildPluginSource creates a structured PluginSource from the raw source string.
 // This populates the Source field so that sync/update operations know how to
 // reinstall the plugin.
-func buildPluginSource(source, forcedSourceType, finalPath string) *repository.PluginSource {
+func buildPluginSource(source, forcedSourceType, _ string) *repository.PluginSource {
 	sourceType, sourceInfo := parsePluginSource(source)
 
 	// Override with forced source type if provided.

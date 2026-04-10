@@ -188,7 +188,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 
 // PostExecute touches the theme file to trigger histui hot-reload.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writtenFiles []string) error {
+func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, _ []string) error {
 	// histui watches theme files via inotify - imports are inlined at load time,
 	// so changing tinct-colors.css alone won't trigger a reload.
 	// Users should configure their tinct theme.css to be watched, or restart histuid.

@@ -121,7 +121,7 @@ func (p *Plugin) Validate() error {
 }
 
 // Generate creates an image using OpenRouter and extracts colors.
-func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) { //nolint:gocyclo
 	// If list-models flag is set, list models and exit
 	if aiflags.ListModels {
 		if err := p.listAvailableModels(ctx, opts.Verbose); err != nil {
@@ -394,7 +394,7 @@ func (e *APIError) CodeString() string {
 // generateImage calls OpenRouter API to create an image.
 // outputBasePath is the path without extension - the actual extension is determined
 // from the API response and the final path is returned.
-func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) {
+func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) { //nolint:gocyclo
 	apiKey, err := getAPIKey()
 	if err != nil {
 		return "", err
@@ -457,20 +457,19 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 
 	// Execute request
 	client := &http.Client{Timeout: 5 * time.Minute}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is the OpenRouter API endpoint configured by the user
 	if err != nil {
 		return "", fmt.Errorf("API request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Response status: %d\n", resp.StatusCode)
+		fmt.Fprintf(os.Stderr, "Response status: %d\n", resp.StatusCode) // #nosec G705 -- status code is an integer, not user-controlled content
 	}
 
 	// Check for HTTP errors
@@ -644,7 +643,7 @@ func wrapText(text string, width int, indent string) string {
 		if wordLen > width-len(indent) && !firstLine {
 			// Write what fits on current line
 			remaining := word
-			for len(remaining) > 0 {
+			for remaining != "" {
 				available := width - lineLen
 				if available <= 0 {
 					result.WriteString("\n")
@@ -754,7 +753,7 @@ func (p *Plugin) fetchModels(ctx context.Context) ([]Model, error) {
 	}
 
 	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is the OpenRouter models API endpoint
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -779,9 +778,9 @@ func (p *Plugin) fetchModels(ctx context.Context) ([]Model, error) {
 // filterImageModels returns only models that support image output.
 func filterImageModels(models []Model) []Model {
 	var imageModels []Model
-	for _, model := range models {
-		if slices.Contains(model.Architecture.OutputModalities, "image") {
-			imageModels = append(imageModels, model)
+	for i := range models {
+		if slices.Contains(models[i].Architecture.OutputModalities, "image") {
+			imageModels = append(imageModels, models[i])
 		}
 	}
 	return imageModels
@@ -987,12 +986,12 @@ func (p *Plugin) selectCheapestModel(ctx context.Context, verbose bool) (string,
 
 	// If preferFree is enabled, try to find a free model first
 	if p.preferFree {
-		for _, model := range imageModels {
-			if isModelFree(model) {
+		for i := range imageModels {
+			if isModelFree(imageModels[i]) {
 				if verbose {
-					fmt.Fprintf(os.Stderr, "Selected free model: %s\n", model.ID)
+					fmt.Fprintf(os.Stderr, "Selected free model: %s\n", imageModels[i].ID)
 				}
-				return model.ID, nil
+				return imageModels[i].ID, nil
 			}
 		}
 	}
@@ -1018,9 +1017,7 @@ func (p *Plugin) listAvailableModels(ctx context.Context, verbose bool) error {
 
 	models, err := p.fetchModels(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Unable to fetch models from API.\n")
-		return nil
+		return fmt.Errorf("unable to fetch models from API: %w", err)
 	}
 
 	imageModels := filterImageModels(models)
@@ -1045,20 +1042,18 @@ func (p *Plugin) listAvailableModels(ctx context.Context, verbose bool) error {
 		return costI < costJ
 	})
 
-	for _, model := range imageModels {
-		fmt.Printf("Model: %s\n", model.ID)
-		if model.Name != "" && model.Name != model.ID {
-			fmt.Printf("  Name: %s\n", model.Name)
+	for i := range imageModels {
+		fmt.Printf("Model: %s\n", imageModels[i].ID)
+		if imageModels[i].Name != "" && imageModels[i].Name != imageModels[i].ID {
+			fmt.Printf("  Name: %s\n", imageModels[i].Name)
 		}
-		if model.Description != "" {
-			// Word-wrap long descriptions with proper indentation
-			// Strip markdown links for cleaner display
-			desc := stripMarkdownLinks(model.Description)
+		if imageModels[i].Description != "" {
+			desc := stripMarkdownLinks(imageModels[i].Description)
 			fmt.Printf("  Description: %s\n", wrapText(desc, 80, "               "))
 		}
-		fmt.Printf("  Pricing: %s\n", formatPricing(model))
-		fmt.Printf("  Input: %v\n", model.Architecture.InputModalities)
-		fmt.Printf("  Output: %v\n", model.Architecture.OutputModalities)
+		fmt.Printf("  Pricing: %s\n", formatPricing(imageModels[i]))
+		fmt.Printf("  Input: %v\n", imageModels[i].Architecture.InputModalities)
+		fmt.Printf("  Output: %v\n", imageModels[i].Architecture.OutputModalities)
 		fmt.Println()
 	}
 

@@ -397,9 +397,9 @@ func TestWireFormatArrayDimension(t *testing.T) {
 	if !ok {
 		t.Fatal("missing dimension output.plugins")
 	}
-	arr, ok := raw.([]interface{})
+	arr, ok := raw.([]any)
 	if !ok {
-		t.Fatalf("output.plugins is %T, want []interface{} (JSON array)", raw)
+		t.Fatalf("output.plugins is %T, want []any (JSON array)", raw)
 	}
 	want := []string{"kitty", "waybar", "gtk4"}
 	if len(arr) != len(want) {
@@ -417,7 +417,7 @@ func TestWireFormatSessionIDIsPerClient(t *testing.T) {
 
 	// Create two separate clients — each should get a distinct session_id.
 	var sessionIDs [2]string
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		sfClient := statsfactory.New(statsfactory.Config{
 			ServerURL:     srv.URL,
 			AppKey:        "key",
@@ -487,10 +487,10 @@ func TestSendSetsDistinctID(t *testing.T) {
 	}
 }
 
-func TestFlushWithCancelledContext(t *testing.T) {
+func TestFlushWithCancelledContext(_ *testing.T) {
 	// Server that blocks forever.
 	unblock := make(chan struct{})
-	slowSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	slowSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		<-unblock
 		w.WriteHeader(200)
 	}))

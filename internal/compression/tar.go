@@ -24,7 +24,7 @@ type newReaderFunc func() (io.ReadCloser, error)
 // Pass 1 — enumerate entries through a 100 MB LimitedReader to find the best
 // candidate file.  Pass 2 — re-open the archive and extract just that file
 // with a per-file 100 MB decompression limit.
-func extractFromTar(newReader newReaderFunc, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) { //nolint:gocognit // archive extraction with two-pass error handling
+func extractFromTar(newReader newReaderFunc, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) { //nolint:gocyclo,gocognit // archive extraction with two-pass error handling
 	// --- Pass 1: enumerate entries to find the best candidate ---
 
 	rc, err := newReader()
@@ -95,15 +95,16 @@ func extractFromTar(newReader newReaderFunc, targetFile, archiveName, destDir st
 
 	// Determine target path or error.
 	targetPath := ""
-	if best != nil {
+	switch {
+	case best != nil:
 		targetPath = best.path
-	} else if targetFile != "" {
+	case targetFile != "":
 		return nil, fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
-	} else if len(foundFiles) == 0 {
+	case len(foundFiles) == 0:
 		return nil, fmt.Errorf("no files found in archive")
-	} else if len(foundFiles) > 1 {
+	case len(foundFiles) > 1:
 		return nil, fmt.Errorf("multiple files in archive but none match expected plugin name '%s' (found: %v)", archiveName, foundFiles)
-	} else {
+	default:
 		targetPath = foundFiles[0]
 	}
 

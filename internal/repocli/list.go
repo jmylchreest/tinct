@@ -10,7 +10,7 @@ import (
 )
 
 // ListCmd returns the list command.
-func ListCmd() *cobra.Command { //nolint:gocognit // CLI command builder with filtering and output formatting
+func ListCmd() *cobra.Command { //nolint:gocyclo,gocognit // CLI command builder with filtering and output formatting
 	var (
 		manifestPath  string
 		availableOnly bool

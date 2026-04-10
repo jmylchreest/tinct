@@ -31,7 +31,7 @@ func TestIsPresentAny_Binaries(t *testing.T) {
 func TestIsPresentAny_Directories(t *testing.T) {
 	tmpDir := t.TempDir()
 	tmpDir2 := filepath.Join(tmpDir, "subdir")
-	if err := os.Mkdir(tmpDir2, 0755); err != nil {
+	if err := os.Mkdir(tmpDir2, 0o755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
@@ -95,7 +95,7 @@ func TestIsPresentAll_Binaries(t *testing.T) {
 func TestIsPresentAll_Directories(t *testing.T) {
 	tmpDir := t.TempDir()
 	tmpDir2 := filepath.Join(tmpDir, "subdir")
-	if err := os.Mkdir(tmpDir2, 0755); err != nil {
+	if err := os.Mkdir(tmpDir2, 0o755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
@@ -191,7 +191,7 @@ func TestDirExists(t *testing.T) {
 
 	// Create a file (not a directory)
 	tmpFile := filepath.Join(tmpDir, "file.txt")
-	if err := os.WriteFile(tmpFile, []byte("test"), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte("test"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 

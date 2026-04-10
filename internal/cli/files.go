@@ -13,6 +13,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/manifest"
 )
 
+const unknownValue = "unknown"
+
 var (
 	// Files command flags.
 	filesPlugin  string
@@ -241,7 +243,7 @@ func runCacheList() error {
 			relPath = path // Fallback to full path
 		}
 		parts := strings.SplitN(relPath, string(filepath.Separator), 2)
-		plugin := "unknown"
+		plugin := unknownValue
 		if len(parts) > 0 {
 			plugin = parts[0]
 		}
@@ -287,7 +289,7 @@ func runCacheList() error {
 }
 
 // runFilesDelete deletes tracked files.
-func runFilesDelete(_ *cobra.Command, args []string) error { //nolint:gocognit // multiple deletion modes with error handling
+func runFilesDelete(_ *cobra.Command, args []string) error { //nolint:gocyclo // multiple deletion modes with error handling
 	// Handle cache deletion separately.
 	if filesCache {
 		return runCacheDelete(args)
@@ -303,7 +305,8 @@ func runFilesDelete(_ *cobra.Command, args []string) error { //nolint:gocognit /
 
 	var filesToDelete []string
 
-	if len(args) > 0 {
+	switch {
+	case len(args) > 0:
 		// Delete specific files.
 		for _, arg := range args {
 			absPath, err := filepath.Abs(arg)
@@ -317,13 +320,13 @@ func runFilesDelete(_ *cobra.Command, args []string) error { //nolint:gocognit /
 				fmt.Fprintf(os.Stderr, "Warning: %s is not tracked by tinct\n", arg)
 			}
 		}
-	} else if filesPlugin != "" {
+	case filesPlugin != "":
 		// Delete all files from a plugin.
 		files := mgr.GetFilesByPlugin(filesPlugin)
 		for path := range files {
 			filesToDelete = append(filesToDelete, path)
 		}
-	} else {
+	default:
 		return fmt.Errorf("specify files to delete or use --plugin")
 	}
 
@@ -369,7 +372,7 @@ func runFilesDelete(_ *cobra.Command, args []string) error { //nolint:gocognit /
 }
 
 // runCacheDelete deletes cached files.
-func runCacheDelete(args []string) error { //nolint:gocognit // multiple cache types with selective deletion
+func runCacheDelete(args []string) error { //nolint:gocyclo,gocognit // multiple cache types with selective deletion
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get home directory: %w", err)
@@ -379,15 +382,14 @@ func runCacheDelete(args []string) error { //nolint:gocognit // multiple cache t
 
 	var filesToDelete []string
 
-	if len(args) > 0 {
-		// Delete specific files.
+	switch {
+	case len(args) > 0:
 		for _, arg := range args {
 			absPath, err := filepath.Abs(arg)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: invalid path %s: %v\n", arg, err)
 				continue
 			}
-			// Check if file exists and is in cache directory.
 			if _, err := os.Stat(absPath); err == nil {
 				if strings.HasPrefix(absPath, cacheDir) {
 					filesToDelete = append(filesToDelete, absPath)
@@ -403,8 +405,7 @@ func runCacheDelete(args []string) error { //nolint:gocognit // multiple cache t
 				fmt.Fprintf(os.Stderr, "Warning: %s does not exist\n", arg)
 			}
 		}
-	} else if filesPlugin != "" {
-		// Delete all cached files from a plugin.
+	case filesPlugin != "":
 		pluginCacheDir := filepath.Join(cacheDir, filesPlugin)
 		if _, err := os.Stat(pluginCacheDir); os.IsNotExist(err) {
 			fmt.Printf("No cached files for plugin: %s\n", filesPlugin)
@@ -423,8 +424,7 @@ func runCacheDelete(args []string) error { //nolint:gocognit // multiple cache t
 		if err != nil {
 			return fmt.Errorf("failed to walk cache directory: %w", err)
 		}
-	} else {
-		// Delete all cached files.
+	default:
 		if _, err := os.Stat(cacheDir); os.IsNotExist(err) {
 			fmt.Println("No cached files found")
 			return nil
@@ -481,7 +481,7 @@ func runCacheDelete(args []string) error { //nolint:gocognit // multiple cache t
 }
 
 // runFilesAdopt adopts existing files into the manifest for a specific plugin.
-func runFilesAdopt(_ *cobra.Command, args []string) error { //nolint:gocognit // file discovery and manifest update
+func runFilesAdopt(_ *cobra.Command, args []string) error { //nolint:gocyclo,gocognit // file discovery and manifest update
 	mgr, err := manifest.NewManager("")
 	if err != nil {
 		return fmt.Errorf("failed to create manifest manager: %w", err)
@@ -601,15 +601,16 @@ func runFilesVerify(_ *cobra.Command, _ []string) error {
 			continue
 		}
 
-		if !exists {
+		switch {
+		case !exists:
 			if filesVerbose {
 				fmt.Printf("MISSING: %s\n", shortenPath(path))
 			}
 			missing++
-		} else if !matches {
+		case !matches:
 			fmt.Printf("MODIFIED: %s\n", shortenPath(path))
 			modified++
-		} else {
+		default:
 			if filesVerbose {
 				fmt.Printf("OK: %s\n", shortenPath(path))
 			}
@@ -732,8 +733,6 @@ func runFilesClean(_ *cobra.Command, _ []string) error {
 // getAvailablePluginNames returns the names of all available plugins.
 // This includes both built-in and external plugins loaded from the lock file.
 func getAvailablePluginNames() []string {
-	var names []string
-
 	// Load plugin lock to get external plugins.
 	// Errors are ignored as we fall back to built-in plugins only.
 	lock, _, err := loadPluginLock()
@@ -742,13 +741,15 @@ func getAvailablePluginNames() []string {
 	}
 	mgr := createManagerFromLock(lock)
 
-	// Get input plugins.
-	for name := range mgr.AllInputPlugins() {
+	inputPlugins := mgr.AllInputPlugins()
+	outputPlugins := mgr.AllOutputPlugins()
+	names := make([]string, 0, len(inputPlugins)+len(outputPlugins))
+
+	for name := range inputPlugins {
 		names = append(names, name)
 	}
 
-	// Get output plugins.
-	for name := range mgr.AllOutputPlugins() {
+	for name := range outputPlugins {
 		names = append(names, name)
 	}
 

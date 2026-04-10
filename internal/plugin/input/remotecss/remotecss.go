@@ -410,13 +410,3 @@ func linearToSRGB(c float64) float64 {
 func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.Palette, error) {
 	return palettebuilder.BuildPalette(colors, p.mapping, verbose)
 }
-
-// parseHex parses a hex color string into an RGB struct.
-func parseHex(hex string) (colour.RGB, error) {
-	return palettebuilder.ParseHex(hex)
-}
-
-// parseColourRole parses a role name string into a Role constant.
-func parseColourRole(name string) (colour.Role, error) {
-	return palettebuilder.ParseColourRole(name)
-}

@@ -214,7 +214,7 @@ func RGBToRGBA(rgb RGB) RGBA {
 // adjustLuminanceForContrast iteratively adjusts luminance until minimum contrast is achieved.
 // Used by foreground, accent, and semantic color generation to ensure WCAG compliance.
 // stepSize defaults to 0.05 if set to 0.
-func adjustLuminanceForContrast(h, s, targetLum float64, bgColor color.Color, minContrast float64, theme ThemeType, maxAttempts int) (float64, RGB) {
+func adjustLuminanceForContrast(h, s, targetLum float64, bgColor color.Color, minContrast float64, theme ThemeType, maxAttempts int) (adjustedLum float64, result RGB) {
 	stepSize := 0.05 // Default step size
 
 	rgb := HSLToRGB(h, s, targetLum)

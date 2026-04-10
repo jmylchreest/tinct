@@ -56,7 +56,7 @@ func (m *mockOutputPlugin) Generate(_ context.Context, _ PaletteData) (map[strin
 	return m.files, nil
 }
 
-func (m *mockOutputPlugin) PreExecute(_ context.Context) (bool, string, error) {
+func (m *mockOutputPlugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	if m.preExecErr != nil {
 		return false, "", m.preExecErr
 	}

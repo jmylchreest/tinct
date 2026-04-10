@@ -49,7 +49,7 @@ func PruneManifest(
 // PruneManifestWithOptions performs comprehensive pruning on a manifest with advanced options.
 // It validates downloads against filters, marks unavailable URLs, removes old entries,
 // prunes incompatible plugins, and limits the number of versions kept per plugin.
-func PruneManifestWithOptions( //nolint:gocognit // multi-phase pruning with validation and filtering
+func PruneManifestWithOptions( //nolint:gocyclo,gocognit // multi-phase pruning with validation and filtering
 	mgr *repomanager.ManifestManager,
 	opts *PruneOptions,
 	changelog *ChangeLog,
@@ -166,20 +166,15 @@ func PruneManifestWithOptions( //nolint:gocognit // multi-phase pruning with val
 							mgr.MarkDirty()
 						}
 					}
-				} else {
-					// Mark as available and clear unavailable fields
-					if !opts.DryRun {
-						// Only mark dirty if availability status changed
-						wasUnavailable := !download.Available || download.UnavailableSince != nil
+				} else if !opts.DryRun {
+					// Only mark dirty if availability status changed
+					wasUnavailable := !download.Available || download.UnavailableSince != nil
 
-						if wasUnavailable {
-							// Status changed from unavailable to available
-							download.Available = true
-							download.UnavailableSince = nil
-							download.UnavailableReason = ""
-							mgr.MarkDirty()
-						}
-						// Don't update any timestamps if status hasn't changed
+					if wasUnavailable {
+						download.Available = true
+						download.UnavailableSince = nil
+						download.UnavailableReason = ""
+						mgr.MarkDirty()
 					}
 				}
 			}

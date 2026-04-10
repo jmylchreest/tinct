@@ -88,7 +88,7 @@ Test markdown content.
 `
 
 	themePath := filepath.Join(tmpDir, "test-theme.md")
-	if err := os.WriteFile(themePath, []byte(themeContent), 0644); err != nil {
+	if err := os.WriteFile(themePath, []byte(themeContent), 0o644); err != nil {
 		t.Fatalf("Failed to write test theme file: %v", err)
 	}
 
@@ -141,7 +141,7 @@ colors:
 `
 
 	themePath := filepath.Join(tmpDir, "wallpaper-theme.md")
-	if err := os.WriteFile(themePath, []byte(themeContent), 0644); err != nil {
+	if err := os.WriteFile(themePath, []byte(themeContent), 0o644); err != nil {
 		t.Fatalf("Failed to write test theme file: %v", err)
 	}
 
@@ -192,7 +192,7 @@ func TestPlugin_Generate_ExternalWallpaper(t *testing.T) {
 		0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44,
 		0xae, 0x42, 0x60, 0x82,
 	}
-	if err := os.WriteFile(wallpaperPath, pngData, 0644); err != nil {
+	if err := os.WriteFile(wallpaperPath, pngData, 0o644); err != nil {
 		t.Fatalf("Failed to write wallpaper file: %v", err)
 	}
 
@@ -213,7 +213,7 @@ colors:
 `
 
 	themePath := filepath.Join(tmpDir, "external-theme.md")
-	if err := os.WriteFile(themePath, []byte(themeContent), 0644); err != nil {
+	if err := os.WriteFile(themePath, []byte(themeContent), 0o644); err != nil {
 		t.Fatalf("Failed to write test theme file: %v", err)
 	}
 
@@ -252,7 +252,7 @@ No YAML front matter here.
 `
 
 	themePath := filepath.Join(tmpDir, "invalid-theme.md")
-	if err := os.WriteFile(themePath, []byte(themeContent), 0644); err != nil {
+	if err := os.WriteFile(themePath, []byte(themeContent), 0o644); err != nil {
 		t.Fatalf("Failed to write test theme file: %v", err)
 	}
 
@@ -285,7 +285,7 @@ colors: []
 `
 
 	themePath := filepath.Join(tmpDir, "empty-theme.md")
-	if err := os.WriteFile(themePath, []byte(themeContent), 0644); err != nil {
+	if err := os.WriteFile(themePath, []byte(themeContent), 0o644); err != nil {
 		t.Fatalf("Failed to write test theme file: %v", err)
 	}
 

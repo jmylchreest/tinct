@@ -138,7 +138,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 	// Handle wallpaper
 	var thumbnailData string
-	if themeData.WallpaperPath != "" {
+	if themeData.WallpaperPath != "" { //nolint:nestif
 		if p.noEmbed {
 			// Reference externally
 			theme.Wallpaper = themeformat.ExternalWallpaper(themeData.WallpaperPath)

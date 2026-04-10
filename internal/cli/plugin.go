@@ -213,7 +213,7 @@ func runPluginList(cmd *cobra.Command, _ []string) error {
 }
 
 // runPluginAdd adds an external plugin with comprehensive safety checks.
-func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocognit // multi-source plugin installation with validation
+func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocyclo,gocognit // multi-source plugin installation with validation
 	source := args[0]
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
@@ -280,7 +280,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocognit /
 
 	// Stage 5: Install plugin to final location (if not already there)
 	var finalPath string
-	if pluginNoCopy {
+	if pluginNoCopy { //nolint:nestif
 		// Use the source path directly without copying
 		finalPath = sourcePath
 		if verbose {
@@ -334,7 +334,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocognit /
 }
 
 // runPluginDelete removes an external plugin.
-func runPluginDelete(cmd *cobra.Command, args []string) error {
+func runPluginDelete(cmd *cobra.Command, args []string) error { //nolint:gocyclo
 	pluginName := args[0]
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
@@ -474,7 +474,7 @@ func updatePluginFromRepository(meta *ExternalPluginMeta, pluginDir string, verb
 }
 
 // runPluginUpdate updates external plugins from lock file sources.
-func runPluginUpdate(cmd *cobra.Command, args []string) error { //nolint:gocognit // batch plugin update with per-plugin error handling
+func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // batch plugin update with per-plugin error handling
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
@@ -548,11 +548,12 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error { //nolint:gocogni
 		} else {
 			// Install plugin from other source types (HTTP, local, git).
 			var sourceForInstall string
-			if meta.Source != nil && meta.Source.URL != "" {
+			switch {
+			case meta.Source != nil && meta.Source.URL != "":
 				sourceForInstall = meta.Source.URL
-			} else if meta.SourceLegacy != "" {
+			case meta.SourceLegacy != "":
 				sourceForInstall = meta.SourceLegacy
-			} else {
+			default:
 				table.UpdateRow(name, map[string]string{"STATUS": "✗ No source information"})
 				failCount++
 				continue
@@ -603,11 +604,12 @@ func runPluginUpdate(cmd *cobra.Command, args []string) error { //nolint:gocogni
 
 		// Show version change or just new version
 		var status string
-		if oldVersion != "" && version != "" && oldVersion != version {
+		switch {
+		case oldVersion != "" && version != "" && oldVersion != version:
 			status = fmt.Sprintf("%s → %s", oldVersion, version)
-		} else if version != "" {
+		case version != "":
 			status = fmt.Sprintf("Updated (%s)", version)
-		} else {
+		default:
 			status = "Updated"
 		}
 		table.UpdateRow(name, map[string]string{"STATUS": status})

@@ -158,7 +158,7 @@ func TestPlugin_Generate_WithWallpaper(t *testing.T) {
 	}
 
 	wallpaperPath := filepath.Join(tmpDir, "wallpaper.png")
-	if err := os.WriteFile(wallpaperPath, pngData, 0644); err != nil {
+	if err := os.WriteFile(wallpaperPath, pngData, 0o644); err != nil {
 		t.Fatalf("Failed to write wallpaper: %v", err)
 	}
 
@@ -212,7 +212,7 @@ func TestPlugin_Generate_ExternalWallpaper(t *testing.T) {
 	}
 
 	wallpaperPath := filepath.Join(tmpDir, "wallpaper.png")
-	if err := os.WriteFile(wallpaperPath, pngData, 0644); err != nil {
+	if err := os.WriteFile(wallpaperPath, pngData, 0o644); err != nil {
 		t.Fatalf("Failed to write wallpaper: %v", err)
 	}
 

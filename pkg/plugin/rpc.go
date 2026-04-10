@@ -176,7 +176,7 @@ type OutputPluginRPCServer struct {
 }
 
 // Generate implements the RPC method for output generation.
-func (s *OutputPluginRPCServer) Generate(palette PaletteData, resp *map[string][]byte) error {
+func (s *OutputPluginRPCServer) Generate(palette PaletteData, resp *map[string][]byte) error { //nolint:gocritic // net/rpc requires pointer response params
 	result, err := s.Impl.Generate(context.Background(), palette)
 	if err != nil {
 		return err
@@ -239,13 +239,13 @@ func (c *OutputPluginRPCClient) Generate(_ context.Context, palette PaletteData)
 }
 
 // PreExecute calls the remote PreExecute method.
-func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (bool, string, error) {
+func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	var resp struct {
 		Skip   bool
 		Reason string
 		Error  string
 	}
-	err := c.client.Call("Plugin.PreExecute", new(any), &resp)
+	err = c.client.Call("Plugin.PreExecute", new(any), &resp)
 	if err != nil {
 		return false, "", fmt.Errorf("RPC call failed: %w", err)
 	}

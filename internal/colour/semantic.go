@@ -34,7 +34,7 @@ var SemanticHues = map[Role]float64{
 // - Purple = notification (badges, highlights)
 // - Must have good contrast with background for visibility.
 // - Enhanced saturation for visual distinctiveness.
-func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool, hintsApplied map[Role]bool) { //nolint:gocognit // hue-to-role mapping algorithm
+func assignSemanticRolesWithHints(palette *CategorisedPalette, accents []CategorisedColour, usedForSemantic map[string]bool, hintsApplied map[Role]bool) { //nolint:gocyclo,gocognit // hue-to-role mapping algorithm
 	// Map hue ranges to semantic roles.
 	// Red: 0-30, 330-360 (danger).
 	// Orange/Yellow: 30-60 (warning).

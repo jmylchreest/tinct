@@ -57,10 +57,9 @@ type Plugin struct {
 	cacheOverwrite bool   // Allow overwriting existing cached images
 
 	// Wallpaper support.
-	loadedImagePath    string // Stores the canonical path to the loaded image (for wallpaper setting)
-	rawWallpaperPath   string // Stores the literal user input path before canonicalization
-	userProvidedTilde  bool   // True if user provided a tilde-prefixed path
-	userProvidedPrefix string // The tilde prefix if user provided one (e.g., "~" or "~user")
+	loadedImagePath   string // Stores the canonical path to the loaded image (for wallpaper setting)
+	rawWallpaperPath  string // Stores the literal user input path before canonicalization
+	userProvidedTilde bool   // True if user provided a tilde-prefixed path
 }
 
 // New creates a new image input plugin with default settings.
@@ -245,7 +244,7 @@ func canonicalizePath(path string, userProvidedTilde bool) string {
 
 // Generate creates a raw colour palette by extracting colours from the image.
 // Returns only the extracted colors - categorization happens separately.
-func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) { //nolint:gocognit // image processing with multiple backends and fallbacks
+func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) { //nolint:gocyclo,gocognit // image processing with multiple backends and fallbacks
 	// Validate the backend first before doing any expensive operations.
 	if opts.Backend != "kmeans" {
 		return nil, fmt.Errorf("invalid backend: %s (only kmeans is currently supported)", opts.Backend)
@@ -364,7 +363,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	}
 
 	// Convert regions count to configuration.
-	config, err := regions.ConfigurationFromInt(p.regions)
+	regionConfig, err := regions.ConfigurationFromInt(p.regions)
 	if err != nil {
 		return nil, fmt.Errorf("invalid regions configuration: %w", err)
 	}
@@ -380,7 +379,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	}
 
 	// Extract colors from regions.
-	regionPalette, err := sampler.Extract(img, config)
+	regionPalette, err := sampler.Extract(img, regionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract region colors: %w", err)
 	}
@@ -406,7 +405,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		totalRegionWeight := regionWeightPerColor * float64(numRegionColors)
 		mainWeightMultiplier := (1.0 - totalRegionWeight)
 
-		adjustedMainWeights := make([]float64, numMainColors)
+		adjustedMainWeights := make([]float64, numMainColors, numMainColors+len(regionWeights))
 		for i, w := range palette.Weights {
 			adjustedMainWeights[i] = w * mainWeightMultiplier
 		}

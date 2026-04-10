@@ -29,7 +29,7 @@ type MockProcessRunner struct {
 }
 
 // Run executes the mock behavior.
-func (m *MockProcessRunner) Run(ctx context.Context, path string, args []string, stdin io.Reader) ([]byte, []byte, error) {
+func (m *MockProcessRunner) Run(ctx context.Context, path string, args []string, stdin io.Reader) (stdout, stderr []byte, err error) {
 	m.CallCount++
 	m.LastPath = path
 	m.LastArgs = args

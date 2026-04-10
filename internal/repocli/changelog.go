@@ -9,6 +9,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/repomanager"
 )
 
+const noChangesMessage = "No changes"
+
 // ChangeLog tracks all changes made during a sync operation.
 type ChangeLog struct {
 	// PluginsAdded tracks entirely new plugins (didn't exist before)
@@ -150,9 +152,9 @@ func (c *ChangeLog) HasMaterialChanges() bool {
 }
 
 // String formats the changelog as a human-readable string.
-func (c *ChangeLog) String() string { //nolint:gocognit // formatted output with sections, categories, and markdown
+func (c *ChangeLog) String() string { //nolint:gocyclo,gocognit // formatted output with sections, categories, and markdown
 	if c.IsEmpty() {
-		return "No changes"
+		return noChangesMessage
 	}
 
 	// Consolidate changes by plugin
@@ -258,7 +260,7 @@ func (c *ChangeLog) String() string { //nolint:gocognit // formatted output with
 
 // BuildFromManifestDiff creates a changelog from a manifest diff.
 // This is the proper way to build a changelog based on actual changes to the repository.
-func BuildFromManifestDiff(diff *repomanager.ManifestDiff) *ChangeLog { //nolint:gocognit // diff processing with categorization
+func BuildFromManifestDiff(diff *repomanager.ManifestDiff) *ChangeLog {
 	if diff == nil {
 		return NewChangeLog()
 	}
@@ -267,18 +269,18 @@ func BuildFromManifestDiff(diff *repomanager.ManifestDiff) *ChangeLog { //nolint
 
 	// Process newly added plugins
 	for name, plugin := range diff.PluginsAdded {
-		if len(plugin.Versions) > 0 {
-			// Use the newest version for the plugin addition
-			version := plugin.Versions[0]
-			platforms := []string{}
-			if version.Downloads != nil {
-				for platform := range version.Downloads {
-					platforms = append(platforms, platform)
-				}
-			}
-			sort.Strings(platforms)
-			changelog.AddPlugin(name, version.Version, platforms)
+		if len(plugin.Versions) == 0 {
+			continue
 		}
+		version := plugin.Versions[0]
+		platforms := []string{}
+		if version.Downloads != nil {
+			for platform := range version.Downloads {
+				platforms = append(platforms, platform)
+			}
+		}
+		sort.Strings(platforms)
+		changelog.AddPlugin(name, version.Version, platforms)
 	}
 
 	// Process changed plugins
@@ -415,7 +417,7 @@ func (c *ChangeLog) Format(format string) string {
 // formatShort returns a one-line summary.
 func (c *ChangeLog) formatShort() string {
 	if c.IsEmpty() {
-		return "No changes"
+		return noChangesMessage
 	}
 
 	parts := []string{}

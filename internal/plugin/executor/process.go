@@ -18,11 +18,11 @@ type ProcessRunner interface {
 type RealProcessRunner struct{}
 
 // Run executes a real external process.
-func (r *RealProcessRunner) Run(ctx context.Context, path string, args []string, stdin io.Reader) ([]byte, []byte, error) {
+func (r *RealProcessRunner) Run(ctx context.Context, path string, args []string, stdin io.Reader) (stdout, stderr []byte, err error) {
 	cmd := exec.CommandContext(ctx, path, args...) // #nosec G204 -- path is the plugin binary path from the lock file; exec.CommandContext does not invoke a shell so args cannot cause injection
 	cmd.Stdin = stdin
 
-	stdout, err := cmd.Output()
+	stdout, err = cmd.Output()
 	if err != nil {
 		// Output() returns stderr in the error if it's an ExitError
 		exitErr := &exec.ExitError{}

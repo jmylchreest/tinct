@@ -212,7 +212,7 @@ func (p *Plugin) handleWallpaper(theme *themeformat.Theme, verbose bool) error {
 	p.wallpaperPath = filepath.Join(outputDir, wallpaperFilename)
 
 	// Write wallpaper file
-	if err := os.WriteFile(p.wallpaperPath, data, 0600); err != nil {
+	if err := os.WriteFile(p.wallpaperPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write wallpaper: %w", err)
 	}
 

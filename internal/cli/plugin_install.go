@@ -130,13 +130,14 @@ func parsePluginSource(source string) (string, PluginSourceInfo) {
 	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
 		// Check for file path specification: url.tar.gz:path/to/plugin.
 		idx := strings.LastIndex(source, ":")
-		if idx <= 0 {
+		switch {
+		case idx <= 0:
 			info.URL = source
-		} else if idx > 7 && source[idx-2:idx] != "tp" && source[idx-3:idx] != "tps" {
-			// Check if it's part of the protocol (http:// or https://).
+		case idx > 7 && source[idx-2:idx] != "tp" && source[idx-3:idx] != "tps":
+			// Colon is not part of the protocol (http:// or https://).
 			info.URL = source[:idx]
 			info.FilePath = source[idx+1:]
-		} else {
+		default:
 			info.URL = source
 		}
 
@@ -273,11 +274,12 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 
 	if bar != nil {
 		// In quiet mode, don't print final message (table will show status)
-		if quiet {
+		switch {
+		case quiet:
 			bar.Finish("")
-		} else if downloadErr == nil {
+		case downloadErr == nil:
 			bar.Finish(fmt.Sprintf("Downloaded %s", pluginName))
-		} else {
+		default:
 			bar.Finish("Download failed")
 		}
 	}
@@ -326,7 +328,7 @@ func installFromHTTP(info PluginSourceInfo, pluginName, pluginDir string, verbos
 }
 
 // installFromGit clones a git repository and extracts the plugin.
-func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) {
+func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose bool) (string, error) { //nolint:gocyclo
 	// Check if git is available.
 	if _, err := exec.LookPath("git"); err != nil {
 		return "", fmt.Errorf("git is not installed or not in PATH")

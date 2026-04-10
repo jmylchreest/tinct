@@ -102,7 +102,7 @@ func (m *ManifestManager) Save() error {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	if err := os.WriteFile(m.path, buf.Bytes(), 0600); err != nil {
+	if err := os.WriteFile(m.path, buf.Bytes(), 0o600); err != nil {
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
@@ -114,7 +114,7 @@ func (m *ManifestManager) Save() error {
 
 // AddOrUpdatePluginVersion adds or updates a plugin version.
 // Returns detailed information about what was added/updated.
-func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *repository.Version) (*AddResult, error) { //nolint:gocognit // plugin version management with platform handling
+func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *repository.Version) (*AddResult, error) { //nolint:gocyclo,gocognit // plugin version management with platform handling
 	result := &AddResult{
 		PlatformsAdded: []string{},
 	}
@@ -140,52 +140,50 @@ func (m *ManifestManager) AddOrUpdatePluginVersion(pluginName string, version *r
 	// Check if version already exists
 	versionExists := false
 	for i, v := range plugin.Versions {
-		if v.Version == version.Version {
-			// Merge downloads from existing and new version
-			if version.Downloads != nil {
-				if v.Downloads == nil {
-					plugin.Versions[i].Downloads = version.Downloads
-					m.dirty = true
-					result.Updated = true
-					// All platforms are new
-					for platform := range version.Downloads {
-						result.PlatformsAdded = append(result.PlatformsAdded, platform)
-					}
-				} else {
-					// Merge platform-specific downloads
-					for platform, download := range version.Downloads {
-						existing, exists := v.Downloads[platform]
-						// Only mark dirty if platform is new or download details changed
-						if !exists {
-							v.Downloads[platform] = download
-							m.dirty = true
-							result.Updated = true
-							result.PlatformsAdded = append(result.PlatformsAdded, platform)
-						} else if existing.URL != download.URL || existing.Checksum != download.Checksum {
-							v.Downloads[platform] = download
-							m.dirty = true
-							result.Updated = true
-						}
-					}
-					plugin.Versions[i].Downloads = v.Downloads
-				}
-			}
-
-			// Update other fields if provided
-			if version.Compatibility != "" && plugin.Versions[i].Compatibility != version.Compatibility {
-				plugin.Versions[i].Compatibility = version.Compatibility
-				m.dirty = true
-				result.Updated = true
-			}
-			if version.ChangelogURL != "" && plugin.Versions[i].ChangelogURL != version.ChangelogURL {
-				plugin.Versions[i].ChangelogURL = version.ChangelogURL
-				m.dirty = true
-				result.Updated = true
-			}
-
-			versionExists = true
-			break
+		if v.Version != version.Version {
+			continue
 		}
+		// Merge downloads from existing and new version
+		if version.Downloads != nil {
+			if v.Downloads == nil {
+				plugin.Versions[i].Downloads = version.Downloads
+				m.dirty = true
+				result.Updated = true
+				for platform := range version.Downloads {
+					result.PlatformsAdded = append(result.PlatformsAdded, platform)
+				}
+			} else {
+				for platform, download := range version.Downloads {
+					existing, exists := v.Downloads[platform]
+					if !exists {
+						v.Downloads[platform] = download
+						m.dirty = true
+						result.Updated = true
+						result.PlatformsAdded = append(result.PlatformsAdded, platform)
+					} else if existing.URL != download.URL || existing.Checksum != download.Checksum {
+						v.Downloads[platform] = download
+						m.dirty = true
+						result.Updated = true
+					}
+				}
+				plugin.Versions[i].Downloads = v.Downloads
+			}
+		}
+
+		// Update other fields if provided
+		if version.Compatibility != "" && plugin.Versions[i].Compatibility != version.Compatibility {
+			plugin.Versions[i].Compatibility = version.Compatibility
+			m.dirty = true
+			result.Updated = true
+		}
+		if version.ChangelogURL != "" && plugin.Versions[i].ChangelogURL != version.ChangelogURL {
+			plugin.Versions[i].ChangelogURL = version.ChangelogURL
+			m.dirty = true
+			result.Updated = true
+		}
+
+		versionExists = true
+		break
 	}
 
 	if !versionExists {
@@ -308,7 +306,7 @@ func (m *ManifestManager) MarkDirty() {
 
 // SetPluginMetadata updates plugin metadata (description, author, etc.).
 // Returns list of fields that were changed.
-func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginMetadata) []string {
+func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginMetadata) []string { //nolint:gocyclo
 	changedFields := []string{}
 
 	plugin, exists := m.manifest.Plugins[pluginName]

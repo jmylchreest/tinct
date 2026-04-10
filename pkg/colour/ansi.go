@@ -130,7 +130,7 @@ func GetANSIColorNames() []string {
 
 // ANSIColorInfo returns information about an ANSI color name.
 // Returns the canonical name, RGB values, and whether it's a bright variant.
-func ANSIColorInfo(colorName string) (name string, r, g, b uint8, isBright, found bool) {
+func ANSIColorInfo(colorName string) (name string, r, g, b uint8, isBright, found bool) { //nolint:gocritic // returning a struct would break the public API
 	normalizedName := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(colorName, " ", ""), "-", ""))
 
 	for i := range ansiColors {

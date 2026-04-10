@@ -9,7 +9,7 @@ import (
 )
 
 // PruneCmd returns the prune command.
-func PruneCmd() *cobra.Command { //nolint:gocognit // CLI command builder with many prune options
+func PruneCmd() *cobra.Command { //nolint:gocyclo,gocognit // CLI command builder with many prune options
 	var (
 		manifestPath    string
 		verifyAll       bool
@@ -158,16 +158,17 @@ Examples:
 			}
 
 			// Save manifest
-			if !dryRun && (unavailable > 0 || removed > 0) {
+			switch {
+			case !dryRun && (unavailable > 0 || removed > 0):
 				now := time.Now()
 				manifest.LastPruned = &now
 				if err := mgr.Save(); err != nil {
 					return fmt.Errorf("failed to save manifest: %w", err)
 				}
 				fmt.Printf("\n✓ Manifest saved: %s\n", manifestPath)
-			} else if dryRun {
+			case dryRun:
 				fmt.Println("\n(Dry run - no changes saved)")
-			} else {
+			default:
 				fmt.Println("\n(No changes to save)")
 			}
 

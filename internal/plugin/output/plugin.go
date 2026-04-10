@@ -162,14 +162,14 @@ func NewRegistry() *Registry {
 }
 
 // Register adds a plugin to the registry.
-func (r *Registry) Register(plugin Plugin) {
-	r.plugins[plugin.Name()] = plugin
+func (r *Registry) Register(p Plugin) {
+	r.plugins[p.Name()] = p
 }
 
 // Get retrieves a plugin by name.
 func (r *Registry) Get(name string) (Plugin, bool) {
-	plugin, ok := r.plugins[name]
-	return plugin, ok
+	p, ok := r.plugins[name]
+	return p, ok
 }
 
 // List returns all registered plugin names.

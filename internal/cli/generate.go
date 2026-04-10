@@ -554,7 +554,7 @@ func writeFile(path string, content []byte, verbose bool) error {
 // It sends:
 //   - One "generate" summary event with overall stats
 //   - One "plugin_used" event per output plugin (for per-plugin popularity analytics)
-func sendGenerateTelemetry(ctx context.Context, executions []pluginExecution, palette *colour.CategorisedPalette) {
+func sendGenerateTelemetry(ctx context.Context, executions []pluginExecution, palette *colour.CategorisedPalette) { //nolint:gocyclo
 	client := telemetry.New(telemetry.WithVerbose(generateVerbose))
 	if !client.IsEnabled() {
 		return

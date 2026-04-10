@@ -102,8 +102,8 @@ func TestChangeLogEmpty(t *testing.T) {
 
 	output := changelog.String()
 
-	if output != "No changes" {
-		t.Errorf("Expected 'No changes', got: %s", output)
+	if output != noChangesMessage {
+		t.Errorf("Expected '%s', got: %s", noChangesMessage, output)
 	}
 
 	if !changelog.IsEmpty() {
@@ -367,8 +367,8 @@ func TestBuildFromManifestDiffNoChanges(t *testing.T) {
 	changelog := BuildFromManifestDiff(diff)
 	output := changelog.String()
 
-	if output != "No changes" {
-		t.Errorf("Expected 'No changes', got: %s", output)
+	if output != noChangesMessage {
+		t.Errorf("Expected '%s', got: %s", noChangesMessage, output)
 	}
 
 	if !changelog.IsEmpty() {

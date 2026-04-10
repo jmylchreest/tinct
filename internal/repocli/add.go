@@ -11,7 +11,7 @@ import (
 )
 
 // AddCmd returns the add command.
-func AddCmd() *cobra.Command { //nolint:gocognit // CLI command builder with many flags and validation
+func AddCmd() *cobra.Command { //nolint:gocyclo,gocognit // CLI command builder with many flags and validation
 	var (
 		pluginName    string
 		pluginType    string
@@ -80,7 +80,7 @@ Examples:
 				metadata    *repomanager.PluginMetadata
 			)
 
-			if filePath != "" {
+			if filePath != "" { //nolint:nestif
 				// Handle local file
 				absPath, err := filepath.Abs(filePath)
 				if err != nil {

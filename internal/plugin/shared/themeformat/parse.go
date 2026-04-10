@@ -79,7 +79,7 @@ func extractFrontMatter(data []byte) ([]byte, error) {
 // DecodeWallpaper extracts wallpaper bytes from a theme.
 // For embedded wallpapers, decodes the base64 data.
 // For external references, reads from path or URL.
-func DecodeWallpaper(theme *Theme, basePath string) ([]byte, string, error) {
+func DecodeWallpaper(theme *Theme, basePath string) (data []byte, format string, err error) {
 	if theme.Wallpaper == nil {
 		return nil, "", fmt.Errorf("no wallpaper in theme")
 	}

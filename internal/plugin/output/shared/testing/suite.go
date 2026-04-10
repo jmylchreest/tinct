@@ -14,7 +14,7 @@ import (
 )
 
 // TestBasicInterface tests the basic plugin interface methods that all plugins must implement.
-func TestBasicInterface(t *testing.T, p output.Plugin, expectedName string, expectedDirSubstring string) {
+func TestBasicInterface(t *testing.T, p output.Plugin, expectedName, expectedDirSubstring string) {
 	t.Run("Name", func(t *testing.T) {
 		if p.Name() != expectedName {
 			t.Errorf("Name() = %s, want %s", p.Name(), expectedName)
@@ -125,7 +125,7 @@ func TestFlags(t *testing.T, p output.Plugin, expectedFlagPrefix string) {
 }
 
 // TestPreExecuteHook tests the PreExecute hook if the plugin implements it.
-func TestPreExecuteHook(t *testing.T, p any, expectedBinaryName string) {
+func TestPreExecuteHook(t *testing.T, p any, _ string) {
 	peh, ok := p.(interface {
 		PreExecute(context.Context) (bool, string, error)
 	})

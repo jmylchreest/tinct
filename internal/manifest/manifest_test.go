@@ -169,7 +169,7 @@ func TestDeleteFile(t *testing.T) {
 	// Create actual file
 	testPath := filepath.Join(tmpDir, "test.txt")
 	content := []byte("test content")
-	if err := os.WriteFile(testPath, content, 0644); err != nil {
+	if err := os.WriteFile(testPath, content, 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -206,7 +206,7 @@ func TestVerifyFile(t *testing.T) {
 	// Create actual file
 	testPath := filepath.Join(tmpDir, "test.txt")
 	content := []byte("test content")
-	if err := os.WriteFile(testPath, content, 0644); err != nil {
+	if err := os.WriteFile(testPath, content, 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -228,7 +228,7 @@ func TestVerifyFile(t *testing.T) {
 	}
 
 	// Modify file
-	if err := os.WriteFile(testPath, []byte("modified"), 0644); err != nil {
+	if err := os.WriteFile(testPath, []byte("modified"), 0o644); err != nil {
 		t.Fatalf("Failed to modify test file: %v", err)
 	}
 
@@ -282,7 +282,7 @@ func TestGetMissing(t *testing.T) {
 
 	// Create actual file
 	existingPath := filepath.Join(tmpDir, "existing.txt")
-	if err := os.WriteFile(existingPath, []byte("content"), 0644); err != nil {
+	if err := os.WriteFile(existingPath, []byte("content"), 0o644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 

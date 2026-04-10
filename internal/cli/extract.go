@@ -84,7 +84,7 @@ func init() {
 }
 
 // runExtract executes the extract command.
-func runExtract(cmd *cobra.Command, args []string) error {
+func runExtract(cmd *cobra.Command, _ []string) error { //nolint:gocyclo
 	ctx := cmd.Context()
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {

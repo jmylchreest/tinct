@@ -47,8 +47,9 @@ func loadAndConfigurePlugins() error {
 func getAndValidateInputPlugin() (input.Plugin, error) {
 	plugin, ok := sharedPluginManager.GetInputPlugin(generateInputPlugin)
 	if !ok {
-		availablePlugins := make([]string, 0)
-		for pluginName := range sharedPluginManager.AllInputPlugins() {
+		allInput := sharedPluginManager.AllInputPlugins()
+		availablePlugins := make([]string, 0, len(allInput))
+		for pluginName := range allInput {
 			availablePlugins = append(availablePlugins, pluginName)
 		}
 		return nil, fmt.Errorf("unknown input plugin: %s (available: %s)", generateInputPlugin, strings.Join(availablePlugins, ", "))
@@ -63,7 +64,7 @@ func getAndValidateInputPlugin() (input.Plugin, error) {
 
 // generateInputPalette generates a raw palette from the input plugin.
 // Returns the palette, canonical wallpaper path, and raw wallpaper path.
-func generateInputPalette(ctx context.Context, inputPlugin input.Plugin) (*colour.Palette, string, string, error) {
+func generateInputPalette(ctx context.Context, inputPlugin input.Plugin) (palette *colour.Palette, wallpaperPath, wallpaperRawPath string, err error) {
 	if generateVerbose {
 		fmt.Fprintf(os.Stderr, " Input plugin: %s\n", inputPlugin.Name())
 		fmt.Fprintf(os.Stderr, "   %s\n", inputPlugin.Description())
@@ -73,22 +74,22 @@ func generateInputPalette(ctx context.Context, inputPlugin input.Plugin) (*colou
 	inputOpts := buildInputOptions()
 
 	// Generate raw palette from input plugin.
-	rawPalette, err := inputPlugin.Generate(ctx, inputOpts)
+	palette, err = inputPlugin.Generate(ctx, inputOpts)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed to generate palette: %w", err)
 	}
 
 	if generateVerbose {
-		fmt.Fprintf(os.Stderr, "   Generated raw palette (%d colours)\n", len(rawPalette.Colors))
+		fmt.Fprintf(os.Stderr, "   Generated raw palette (%d colours)\n", len(palette.Colors))
 	}
 
 	// Extract wallpaper paths if available.
-	wallpaperPath, wallpaperRawPath := extractWallpaperPaths(inputPlugin)
+	wallpaperPath, wallpaperRawPath = extractWallpaperPaths(inputPlugin)
 	if generateVerbose && wallpaperPath != "" {
 		fmt.Fprintf(os.Stderr, "   Wallpaper source: %s\n", wallpaperPath)
 	}
 
-	return rawPalette, wallpaperPath, wallpaperRawPath, nil
+	return palette, wallpaperPath, wallpaperRawPath, nil
 }
 
 // buildInputOptions creates input plugin options.
@@ -119,7 +120,7 @@ func buildInputOptions() input.GenerateOptions {
 
 // extractWallpaperPaths extracts both canonical and raw wallpaper paths from input plugin.
 // Returns (canonicalPath, rawPath) - both may be empty if plugin doesn't provide wallpapers.
-func extractWallpaperPaths(inputPlugin input.Plugin) (string, string) {
+func extractWallpaperPaths(inputPlugin input.Plugin) (canonicalPath, rawPath string) {
 	if provider, ok := inputPlugin.(input.WallpaperProvider); ok {
 		return provider.WallpaperPath(), provider.WallpaperRawPath()
 	}
@@ -128,7 +129,7 @@ func extractWallpaperPaths(inputPlugin input.Plugin) (string, string) {
 
 // categorizePalette categorizes a raw palette for both primary and alternate themes.
 // Always returns both primary and alternate palettes to support dual-theme plugins.
-func categorizePalette(rawPalette *colour.Palette, inputPlugin input.Plugin, desaturate bool) (*colour.CategorisedPalette, *colour.CategorisedPalette) {
+func categorizePalette(rawPalette *colour.Palette, inputPlugin input.Plugin, desaturate bool) (primary, alternate *colour.CategorisedPalette) {
 	themeType := determineThemeType(inputPlugin)
 
 	// Determine primary theme
@@ -475,7 +476,7 @@ func shouldSkipFromPreHook(ctx context.Context, plugin output.Plugin, exec *plug
 }
 
 // generateAndWriteFiles generates files from plugins and writes them to disk.
-func generateAndWriteFiles(executions []pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath, wallpaperRawPath string) int {
+func generateAndWriteFiles(executions []pluginExecution, palette, alternatePalette *colour.CategorisedPalette, wallpaperPath, wallpaperRawPath string) int {
 	successCount := 0
 	firstOutputPlugin := true
 
@@ -499,7 +500,7 @@ func generateAndWriteFiles(executions []pluginExecution, palette *colour.Categor
 }
 
 // processPluginGeneration generates and writes files for a single plugin.
-func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedPalette, alternatePalette *colour.CategorisedPalette, wallpaperPath, wallpaperRawPath string) bool {
+func processPluginGeneration(exec *pluginExecution, palette, alternatePalette *colour.CategorisedPalette, wallpaperPath, wallpaperRawPath string) bool {
 	plugin := exec.plugin
 
 	if generateVerbose {
@@ -557,7 +558,7 @@ func processPluginGeneration(exec *pluginExecution, palette *colour.CategorisedP
 }
 
 // writePluginFiles writes generated files to disk.
-func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[string][]byte) bool { //nolint:gocognit // file write with backup, conflict handling, and verbose output
+func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[string][]byte) bool { //nolint:gocyclo,gocognit// file write with backup, conflict handling, and verbose output
 	outputDir := plugin.DefaultOutputDir()
 	exec.writtenFiles = make([]string, 0, len(files))
 
@@ -574,7 +575,7 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 
 		// nil content means the plugin already wrote the file (protocol >= 0.2.0).
 		// Track it in the manifest but don't re-write it.
-		if content == nil {
+		if content == nil { //nolint:nestif
 			if generateDryRun {
 				fmt.Printf("   Plugin wrote: %s\n", fullPath)
 			} else {
@@ -600,7 +601,7 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 			continue
 		}
 
-		if generateDryRun {
+		if generateDryRun { //nolint:nestif
 			fmt.Printf("   Would write: %s (%d bytes)\n", fullPath, len(content))
 		} else {
 			// Check for untracked file protection.

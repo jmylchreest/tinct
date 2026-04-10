@@ -29,7 +29,7 @@ const (
 
 // ExtractColors extracts a colour palette from the image at imagePath.
 // It honours all commonflags settings (seed mode, colour count, region extraction).
-func ExtractColors(imagePath string, verbose bool) (*colour.Palette, error) {
+func ExtractColors(imagePath string, verbose bool) (*colour.Palette, error) { //nolint:gocyclo
 	// Load image using tinct's SmartLoader.
 	loader := image.NewSmartLoader()
 	img, err := loader.Load(imagePath)

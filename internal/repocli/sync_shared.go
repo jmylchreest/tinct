@@ -47,7 +47,7 @@ func (c *MetadataHydrationCache) GetMetadata(pluginName, version string) (*repom
 }
 
 // SetMetadata stores metadata and hydrates any pending plugins.
-func (c *MetadataHydrationCache) SetMetadata( //nolint:gocognit // metadata storage with pending plugin hydration
+func (c *MetadataHydrationCache) SetMetadata( //nolint:gocyclo // metadata storage with pending plugin hydration
 	pluginName string,
 	version string,
 	metadata *repomanager.PluginMetadata,
@@ -104,11 +104,12 @@ func (c *MetadataHydrationCache) SetMetadata( //nolint:gocognit // metadata stor
 
 			// Track changes in changelog
 			if result != nil && result.Updated && changelog != nil {
-				if result.PluginAdded {
+				switch {
+				case result.PluginAdded:
 					changelog.AddPlugin(pending.PluginName, pending.PluginVersion, result.PlatformsAdded)
-				} else if result.VersionAdded {
+				case result.VersionAdded:
 					changelog.AddVersion(pending.PluginName, pending.PluginVersion, result.PlatformsAdded)
-				} else if len(result.PlatformsAdded) > 0 {
+				case len(result.PlatformsAdded) > 0:
 					for _, platform := range result.PlatformsAdded {
 						changelog.AddPlatform(pending.PluginName, pending.PluginVersion, platform)
 					}
@@ -152,7 +153,7 @@ func NewProtocolVersionTracker() *ProtocolVersionTracker {
 
 // ShouldSkip checks if a plugin version should be skipped based on protocol filtering.
 // Returns true if this version should be skipped (either failed directly or older than a failure).
-func (t *ProtocolVersionTracker) ShouldSkip(pluginName, pluginVersion, protocolVersion, minProtocol string) (bool, string) {
+func (t *ProtocolVersionTracker) ShouldSkip(pluginName, pluginVersion, protocolVersion, minProtocol string) (shouldSkip bool, reason string) {
 	// Check direct protocol version
 	if minProtocol != "" && !repomanager.CheckProtocolVersion(protocolVersion, minProtocol) {
 		// Record this failure
@@ -184,18 +185,16 @@ func (t *ProtocolVersionTracker) RecordFailure(pluginName, version string) {
 }
 
 // ProcessGitHubSourceWithProtocol processes a GitHub sync source with protocol filtering.
-func ProcessGitHubSourceWithProtocol( //nolint:gocognit // GitHub API processing with release filtering and protocol validation
+func ProcessGitHubSourceWithProtocol( //nolint:gocyclo,gocognit // GitHub API processing with release filtering and protocol validation
 	source *repomanager.SyncSource,
 	client *repomanager.GitHubClient,
 	mgr *repomanager.ManifestManager,
 	minProtocolVersion string,
 	tracker *ProtocolVersionTracker,
 	hydrationCache *MetadataHydrationCache,
-	skipQuery bool,
-	dryRun bool,
-	verbose bool,
+	skipQuery, dryRun, verbose bool,
 	changelog *ChangeLog,
-) (added int, skipped int, errors int) {
+) (added, skipped, errors int) {
 	// Parse GitHub repo
 	owner, repo, err := repomanager.ParseGitHubRepo(source.Repo)
 	if err != nil {
@@ -264,7 +263,7 @@ func ProcessGitHubSourceWithProtocol( //nolint:gocognit // GitHub API processing
 			var metadata *repomanager.PluginMetadata
 			var compatibility string
 
-			if !skipQuery {
+			if !skipQuery { //nolint:nestif
 				// Check cache first for this plugin+version combination
 				cachedMetadata, hasCached := hydrationCache.GetMetadata(pluginName, pluginVersion)
 
@@ -362,11 +361,12 @@ func ProcessGitHubSourceWithProtocol( //nolint:gocognit // GitHub API processing
 
 				// Track changes in changelog
 				if result != nil && result.Updated && changelog != nil {
-					if result.PluginAdded {
+					switch {
+					case result.PluginAdded:
 						changelog.AddPlugin(pluginName, pluginVersion, result.PlatformsAdded)
-					} else if result.VersionAdded {
+					case result.VersionAdded:
 						changelog.AddVersion(pluginName, pluginVersion, result.PlatformsAdded)
-					} else if len(result.PlatformsAdded) > 0 {
+					case len(result.PlatformsAdded) > 0:
 						for _, platform := range result.PlatformsAdded {
 							changelog.AddPlatform(pluginName, pluginVersion, platform)
 						}
@@ -389,17 +389,15 @@ func ProcessGitHubSourceWithProtocol( //nolint:gocognit // GitHub API processing
 }
 
 // ProcessURLSourceWithProtocol processes a URL sync source with protocol filtering.
-func ProcessURLSourceWithProtocol( //nolint:gocognit // URL fetching with JSON parsing and protocol validation
+func ProcessURLSourceWithProtocol( //nolint:gocyclo,gocognit // URL fetching with JSON parsing and protocol validation
 	source *repomanager.SyncSource,
 	mgr *repomanager.ManifestManager,
 	minProtocolVersion string,
 	tracker *ProtocolVersionTracker,
 	hydrationCache *MetadataHydrationCache,
-	skipQuery bool,
-	dryRun bool,
-	verbose bool,
+	skipQuery, dryRun, verbose bool,
 	changelog *ChangeLog,
-) (added int, errors int) {
+) (added, errors int) {
 
 	fmt.Printf("  URL: %s\n", source.URL)
 	fmt.Printf("  Plugin: %s (%s)\n", source.Plugin, source.PluginType)
@@ -421,7 +419,7 @@ func ProcessURLSourceWithProtocol( //nolint:gocognit // URL fetching with JSON p
 	var compatibility string
 
 	// Auto-detect version if "-" or query for metadata
-	if pluginVersion == "-" || !skipQuery {
+	if pluginVersion == "-" || !skipQuery { //nolint:nestif
 		// For URL sources, check cache if we have a version
 		var hasCached bool
 		var cachedMetadata *repomanager.PluginMetadata
@@ -536,11 +534,12 @@ func ProcessURLSourceWithProtocol( //nolint:gocognit // URL fetching with JSON p
 
 		// Track changes in changelog
 		if result != nil && result.Updated && changelog != nil {
-			if result.PluginAdded {
+			switch {
+			case result.PluginAdded:
 				changelog.AddPlugin(source.Plugin, pluginVersion, result.PlatformsAdded)
-			} else if result.VersionAdded {
+			case result.VersionAdded:
 				changelog.AddVersion(source.Plugin, pluginVersion, result.PlatformsAdded)
-			} else if len(result.PlatformsAdded) > 0 {
+			case len(result.PlatformsAdded) > 0:
 				for _, platform := range result.PlatformsAdded {
 					changelog.AddPlatform(source.Plugin, pluginVersion, platform)
 				}

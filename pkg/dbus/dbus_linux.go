@@ -18,6 +18,7 @@ type Connection struct {
 
 // SessionBus connects to the session bus.
 func SessionBus(ctx context.Context) (*Connection, error) {
+	_ = ctx
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to session bus: %w", err)
@@ -27,6 +28,7 @@ func SessionBus(ctx context.Context) (*Connection, error) {
 
 // SystemBus connects to the system bus.
 func SystemBus(ctx context.Context) (*Connection, error) {
+	_ = ctx
 	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to system bus: %w", err)
@@ -37,7 +39,9 @@ func SystemBus(ctx context.Context) (*Connection, error) {
 // Close closes the D-Bus connection.
 func (c *Connection) Close() error {
 	if c.conn != nil {
-		return c.conn.Close()
+		if err := c.conn.Close(); err != nil {
+			return fmt.Errorf("closing D-Bus connection: %w", err)
+		}
 	}
 	return nil
 }
@@ -48,7 +52,7 @@ type Object struct {
 }
 
 // Object gets a D-Bus object.
-func (c *Connection) Object(dest string, path string) *Object {
+func (c *Connection) Object(dest, path string) *Object {
 	return &Object{
 		obj: c.conn.Object(dest, dbus.ObjectPath(path)),
 	}
@@ -74,6 +78,7 @@ func (o *Object) CallWithReturn(ctx context.Context, method string, args ...any)
 
 // GetProperty gets a D-Bus property.
 func (o *Object) GetProperty(ctx context.Context, property string) (any, error) {
+	_ = ctx
 	variant, err := o.obj.GetProperty(property)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get property: %w", err)
@@ -83,6 +88,7 @@ func (o *Object) GetProperty(ctx context.Context, property string) (any, error) 
 
 // SetProperty sets a D-Bus property.
 func (o *Object) SetProperty(ctx context.Context, property string, value any) error {
+	_ = ctx
 	err := o.obj.SetProperty(property, dbus.MakeVariant(value))
 	if err != nil {
 		return fmt.Errorf("failed to set property: %w", err)

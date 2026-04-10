@@ -132,7 +132,7 @@ func (m *Manager) Save() error {
 		return fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
-	if err := os.WriteFile(m.path, data, 0600); err != nil {
+	if err := os.WriteFile(m.path, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
@@ -275,7 +275,7 @@ func (m *Manager) IsTracked(path string) bool {
 
 // VerifyFile checks if a file's current checksum matches the manifest.
 // Returns: (exists on disk, matches checksum, error).
-func (m *Manager) VerifyFile(path string) (bool, bool, error) {
+func (m *Manager) VerifyFile(path string) (exists, matches bool, err error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

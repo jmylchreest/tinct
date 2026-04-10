@@ -23,7 +23,7 @@ func IsProtocolCompatible(pluginProtocolVersion string) (bool, error) {
 
 // ShouldKeepDownload checks if a download entry should be kept during pruning.
 // It validates that the URL matches expected plugin asset patterns.
-func (v *PruneValidator) ShouldKeepDownload(url string) (bool, string) {
+func (v *PruneValidator) ShouldKeepDownload(url string) (keep bool, reason string) {
 	// Extract filename from URL
 	filename := filepath.Base(url)
 

@@ -68,7 +68,7 @@ func Fetch(ctx context.Context, url string, opts FetchOptions) ([]byte, error) {
 		req.Header.Set(key, value)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is validated by the caller
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

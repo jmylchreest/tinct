@@ -243,12 +243,6 @@ func TestGenerateInstallationID(t *testing.T) {
 		t.Error("expected unique IDs")
 	}
 }
-
-//go:fix inline
-func boolPtr(b bool) *bool {
-	return new(b)
-}
-
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && containsStr(s, substr)
 }

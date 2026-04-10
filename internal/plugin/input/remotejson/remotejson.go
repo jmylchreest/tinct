@@ -187,7 +187,7 @@ func (p *Plugin) applyQuery(data any, query string) (any, error) {
 }
 
 // extractColors recursively extracts color values from JSON data.
-func (p *Plugin) extractColors(data any, prefix string, colors map[string]string) { //nolint:gocognit // recursive JSON traversal with type switching
+func (p *Plugin) extractColors(data any, prefix string, colors map[string]string) { //nolint:gocyclo,gocognit // recursive JSON traversal with type switching
 	switch v := data.(type) {
 	case map[string]any:
 		// Check if this object looks like a color object (has hex/rgb properties).
@@ -266,14 +266,4 @@ func isColor(s string) bool {
 // buildPalette converts extracted colors to a Palette.
 func (p *Plugin) buildPalette(colors map[string]string, verbose bool) (*colour.Palette, error) {
 	return palettebuilder.BuildPalette(colors, p.mapping, verbose)
-}
-
-// parseHex parses a hex color string into an RGB struct.
-func parseHex(hex string) (colour.RGB, error) {
-	return palettebuilder.ParseHex(hex)
-}
-
-// parseColourRole parses a role name string into a Role constant.
-func parseColourRole(name string) (colour.Role, error) {
-	return palettebuilder.ParseColourRole(name)
 }

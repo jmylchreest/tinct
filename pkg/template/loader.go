@@ -96,16 +96,13 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 
 	// Try versioned template if targetVersion is set.
 	if l.targetVersion != "" {
-		versionedContent, versionUsed, vErr := l.loadVersionedTemplate(filename)
-		if vErr == nil && versionedContent != nil {
+		versionedContent, versionUsed := l.loadVersionedTemplate(filename)
+		if versionedContent != nil {
 			if l.verbose && l.logger != nil {
 				l.logger.Printf("   Using versioned template: templates/%s/%s (target: %s)",
 					versionUsed, filename, l.targetVersion)
 			}
 			return versionedContent, false, nil
-		}
-		if l.verbose && l.logger != nil && vErr != nil {
-			l.logger.Printf("   Versioned template not available for %s: %v", filename, vErr)
 		}
 	}
 
@@ -126,34 +123,34 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 // It finds all version directories (e.g., templates/0.53/), selects the highest
 // version that doesn't exceed targetVersion, and loads the template from there.
 // Returns the content, the version used, and any error.
-func (l *Loader) loadVersionedTemplate(filename string) ([]byte, string, error) {
-	versions, err := l.findVersionDirectories()
-	if err != nil || len(versions) == 0 {
-		return nil, "", err
+func (l *Loader) loadVersionedTemplate(filename string) (content []byte, version string) {
+	versions := l.findVersionDirectories()
+	if len(versions) == 0 {
+		return nil, ""
 	}
 
 	bestVersion := semver.FindBestMatch(l.targetVersion, versions)
 	if bestVersion == "" {
-		return nil, "", nil // No suitable version found
+		return nil, ""
 	}
 
 	versionedPath := filepath.Join("templates", bestVersion, filename)
 	content, err := l.embedFS.ReadFile(versionedPath)
 	if err != nil {
-		return nil, "", nil // Template doesn't exist in this version directory
+		return nil, "" // Template doesn't exist in this version directory
 	}
 
-	return content, bestVersion, nil
+	return content, bestVersion
 }
 
 // findVersionDirectories scans the embedded filesystem for version directories
 // under templates/. Returns a list of version strings (e.g., ["0.52", "0.53"]).
-func (l *Loader) findVersionDirectories() ([]string, error) {
+func (l *Loader) findVersionDirectories() []string {
 	var versions []string
 
 	entries, err := fs.ReadDir(l.embedFS, "templates")
 	if err != nil {
-		return nil, nil // templates directory doesn't exist — that's fine
+		return nil // templates directory doesn't exist — that's fine
 	}
 
 	for _, entry := range entries {
@@ -169,7 +166,7 @@ func (l *Loader) findVersionDirectories() ([]string, error) {
 		return semver.CompareStrings(versions[i], versions[j]) < 0
 	})
 
-	return versions, nil
+	return versions
 }
 
 // CustomPath returns the path where a custom template would be located.

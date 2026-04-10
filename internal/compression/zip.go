@@ -13,7 +13,7 @@ import (
 )
 
 // extractFromZip extracts a plugin from a zip archive.
-func extractFromZip(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) {
+func extractFromZip(data []byte, targetFile, archiveName, destDir string, verbose bool) (*ExtractResult, error) { //nolint:gocyclo
 	// Create zip reader
 	reader := bytes.NewReader(data)
 	zr, err := zip.NewReader(reader, int64(len(data)))
@@ -65,15 +65,16 @@ func extractFromZip(data []byte, targetFile, archiveName, destDir string, verbos
 	}
 
 	var targetZipFile *zip.File
-	if best != nil {
+	switch {
+	case best != nil:
 		targetZipFile = best.file
-	} else if targetFile != "" {
+	case targetFile != "":
 		return nil, fmt.Errorf("file '%s' not found in archive (found: %v)", targetFile, foundFiles)
-	} else if len(foundFiles) == 0 {
+	case len(foundFiles) == 0:
 		return nil, fmt.Errorf("no files found in archive")
-	} else if len(foundFiles) > 1 {
+	case len(foundFiles) > 1:
 		return nil, fmt.Errorf("multiple files in archive but none match expected plugin name '%s' (found: %v)", archiveName, foundFiles)
-	} else {
+	default:
 		targetZipFile = zr.File[0]
 	}
 

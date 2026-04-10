@@ -273,7 +273,7 @@ func (p *Plugin) generateColorSchemeVariant(themeData *colour.ThemeData, variant
 // Both plasma-apply-colorscheme (with variant toggling) and D-Bus reload are used together:
 // - plasma-apply-colorscheme applies the .colors file system-wide
 // - D-Bus reload ensures KWin and Plasma Shell reload their configurations immediately.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error { //nolint:gocognit // KDE theme application with variant toggling and D-Bus reload
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error { //nolint:gocyclo,gocognit // KDE theme application with variant toggling and D-Bus reload
 	if execCtx.DryRun {
 		return nil
 	}
@@ -302,11 +302,12 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	if _, err := exec.LookPath("plasma-apply-colorscheme"); err != nil {
 		if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Warning: plasma-apply-colorscheme not found, theme not auto-applied\n")
-			if hasDark && hasLight {
+			switch {
+			case hasDark && hasLight:
 				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctDark1 (or TinctLight1)\n")
-			} else if hasDark {
+			case hasDark:
 				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctDark1\n")
-			} else {
+			default:
 				fmt.Fprintf(os.Stderr, "   To apply manually: plasma-apply-colorscheme TinctLight1\n")
 			}
 		}
@@ -315,23 +316,24 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 
 	// Determine base theme name (without variant) based on system preference
 	var baseThemeName string
-	if hasDark && hasLight {
+	switch {
+	case hasDark && hasLight:
 		// Dual-theme: detect system preference
 		detected := p.detectSystemColorScheme(ctx)
-		if strings.Contains(detected, "Dark") {
+		switch {
+		case strings.Contains(detected, "Dark"):
 			baseThemeName = themeDark
-		} else if strings.Contains(detected, "Light") {
+		case strings.Contains(detected, "Light"):
 			baseThemeName = themeLight
-		} else {
-			// Couldn't detect, default to dark
+		default:
 			baseThemeName = themeDark
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   Could not detect system color preference, defaulting to TinctDark\n")
 			}
 		}
-	} else if hasDark {
+	case hasDark:
 		baseThemeName = themeDark
-	} else {
+	default:
 		baseThemeName = themeLight
 	}
 
@@ -406,15 +408,13 @@ func (p *Plugin) applyWallpaper(ctx context.Context, wallpaperPath string) error
 // - If current scheme is TinctDark2 or TinctLight2, return 1
 // - Otherwise (first run or different scheme), return 1.
 func (p *Plugin) determineVariantToApply(ctx context.Context, baseThemeName string) int {
-	// Get current color scheme name
 	cmd := exec.CommandContext(ctx, "kreadconfig5", "--file", "kdeglobals", "--group", "General", "--key", "ColorScheme")
-	output, err := cmd.Output()
+	cmdOutput, err := cmd.Output()
 	if err != nil {
-		// Can't determine, default to variant 1
 		return 1
 	}
 
-	currentScheme := strings.TrimSpace(string(output))
+	currentScheme := strings.TrimSpace(string(cmdOutput))
 
 	// Check if current scheme is one of our variants
 	if currentScheme == fmt.Sprintf("%s1", baseThemeName) {
@@ -428,12 +428,10 @@ func (p *Plugin) determineVariantToApply(ctx context.Context, baseThemeName stri
 }
 
 func (p *Plugin) detectSystemColorScheme(ctx context.Context) string {
-	// KDE stores color scheme preference in kdeglobals
-	// We can check if the current color scheme name contains "dark" or "light"
 	cmd := exec.CommandContext(ctx, "kreadconfig5", "--file", "kdeglobals", "--group", "General", "--key", "ColorScheme")
-	output, err := cmd.Output()
+	cmdOutput, err := cmd.Output()
 	if err == nil {
-		currentScheme := strings.ToLower(strings.TrimSpace(string(output)))
+		currentScheme := strings.ToLower(strings.TrimSpace(string(cmdOutput)))
 		if strings.Contains(currentScheme, "dark") {
 			return themeDark
 		} else if strings.Contains(currentScheme, "light") {
@@ -443,9 +441,9 @@ func (p *Plugin) detectSystemColorScheme(ctx context.Context) string {
 
 	// Fallback: check if plasma is in dark mode via lookAndFeelPackage
 	cmd = exec.CommandContext(ctx, "kreadconfig5", "--file", "kdeglobals", "--group", "KDE", "--key", "LookAndFeelPackage")
-	output, err = cmd.Output()
+	cmdOutput, err = cmd.Output()
 	if err == nil {
-		lnf := strings.ToLower(strings.TrimSpace(string(output)))
+		lnf := strings.ToLower(strings.TrimSpace(string(cmdOutput)))
 		if strings.Contains(lnf, "dark") {
 			return themeDark
 		} else if strings.Contains(lnf, "light") {

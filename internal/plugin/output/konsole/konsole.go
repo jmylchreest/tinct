@@ -162,11 +162,7 @@ func listSessions(ctx context.Context) ([]session, error) {
 		}
 
 		// Get session paths for this Konsole instance
-		sessionPaths, err := getSessionPaths(ctx, conn, name)
-		if err != nil {
-			// Skip this instance if we can't enumerate sessions
-			continue
-		}
+		sessionPaths := getSessionPaths(ctx, conn, name)
 
 		for _, path := range sessionPaths {
 			sessions = append(sessions, session{
@@ -180,7 +176,7 @@ func listSessions(ctx context.Context) ([]session, error) {
 }
 
 // getSessionPaths retrieves all session object paths for a Konsole service.
-func getSessionPaths(ctx context.Context, conn *dbus.Connection, serviceName string) ([]string, error) {
+func getSessionPaths(ctx context.Context, conn *dbus.Connection, serviceName string) []string {
 	var paths []string
 
 	// Konsole typically has sessions at /Sessions/1, /Sessions/2, etc.
@@ -199,7 +195,7 @@ func getSessionPaths(ctx context.Context, conn *dbus.Connection, serviceName str
 		paths = append(paths, sessionPath)
 	}
 
-	return paths, nil
+	return paths
 }
 
 // setColorScheme sets the color scheme for a Konsole session.
@@ -321,7 +317,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 
 // PostExecute provides usage instructions for applying the theme and attempts to reload.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, generatedFiles []string) error {
+func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, generatedFiles []string) error {
 	if len(generatedFiles) == 0 {
 		return nil
 	}

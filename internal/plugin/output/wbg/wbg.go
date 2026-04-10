@@ -154,8 +154,6 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 		if p.verbose {
 			fmt.Fprintf(os.Stderr, "   Warning: wbg not found - wallpaper setting will not be available\n")
 		}
-		// Not fatal - we can still generate the config file.
-		err = nil //nolint:wastedassign // Explicitly clear error for readability
 	}
 
 	// Check if config directory exists (create it if not).

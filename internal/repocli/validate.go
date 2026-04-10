@@ -8,7 +8,7 @@ import (
 )
 
 // ValidateCmd returns the validate command.
-func ValidateCmd() *cobra.Command { //nolint:gocognit // CLI command builder with comprehensive validation checks
+func ValidateCmd() *cobra.Command { //nolint:gocyclo,gocognit // CLI command builder with comprehensive validation checks
 	var (
 		manifestPath string
 	)

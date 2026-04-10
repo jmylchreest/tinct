@@ -11,7 +11,7 @@ import (
 )
 
 // SyncCmd returns the sync command.
-func SyncCmd() *cobra.Command { //nolint:gocognit // CLI command builder with source handling and parallel sync
+func SyncCmd() *cobra.Command {
 	var (
 		configPath         string
 		minProtocolVersion string
@@ -137,7 +137,6 @@ Examples:
 			}
 
 			return finalizeSyncResults(mgr, changelog, pruneStats, prune, dryRun, manifestPath, changelogOutput, changelogFormat)
-
 		},
 	}
 
@@ -172,7 +171,7 @@ Examples:
 }
 
 // syncFromConfig handles syncing from a configuration file.
-func syncFromConfig( //nolint:gocognit // config parsing and multi-source sync
+func syncFromConfig(
 	configPath string,
 	manifestPath string,
 	minProtocolVersion string,
@@ -228,13 +227,14 @@ func syncFromConfig( //nolint:gocognit // config parsing and multi-source sync
 	totalErrors := 0
 
 	// Process each source
-	for i, source := range config.Sources {
+	for i := range config.Sources {
+		source := &config.Sources[i]
 		fmt.Printf("[%d/%d] Processing %s source\n", i+1, len(config.Sources), source.Type)
 
 		switch source.Type {
 		case repomanager.SyncSourceGitHub:
 			added, skipped, errors := ProcessGitHubSourceWithProtocol(
-				&source, client, mgr, minProtocolVersion, tracker, hydrationCache,
+				source, client, mgr, minProtocolVersion, tracker, hydrationCache,
 				skipQuery, dryRun, verbose, changelog,
 			)
 			totalAdded += added
@@ -243,7 +243,7 @@ func syncFromConfig( //nolint:gocognit // config parsing and multi-source sync
 
 		case repomanager.SyncSourceURL:
 			added, errors := ProcessURLSourceWithProtocol(
-				&source, mgr, minProtocolVersion, tracker, hydrationCache,
+				source, mgr, minProtocolVersion, tracker, hydrationCache,
 				skipQuery, dryRun, verbose, changelog,
 			)
 			totalAdded += added
@@ -292,6 +292,7 @@ func runPruneIfRequested(
 	verbose bool,
 	changelog *ChangeLog,
 ) (*PruneStats, error) {
+
 	if !prune {
 		return nil, nil
 	}
@@ -347,9 +348,11 @@ func finalizeSyncResults(
 	changelogOutput string,
 	changelogFormat string,
 ) error {
+
 	saveNeeded := changelog.HasMaterialChanges()
 
-	if !dryRun && saveNeeded {
+	switch {
+	case !dryRun && saveNeeded:
 		if prune && pruneStats != nil && pruneStats.Removed > 0 {
 			now := time.Now()
 			mgr.GetManifest().LastPruned = &now
@@ -360,9 +363,9 @@ func finalizeSyncResults(
 			return fmt.Errorf("failed to save manifest: %w", err)
 		}
 		fmt.Printf("\n✓ Manifest saved: %s\n", manifestPath)
-	} else if dryRun {
+	case dryRun:
 		fmt.Println("\n(Dry run - no changes saved)")
-	} else {
+	default:
 		fmt.Println("\n(No changes to save)")
 	}
 
@@ -390,5 +393,5 @@ func writeChangelog(changelog *ChangeLog, output, format string) error {
 	}
 
 	// Write to file
-	return os.WriteFile(output, []byte(content), 0600)
+	return os.WriteFile(output, []byte(content), 0o600)
 }

@@ -23,7 +23,7 @@ const (
 
 // GenerateThumbnail creates a smaller preview image from the original.
 // Returns base64-encoded JPEG data.
-func GenerateThumbnail(imageData []byte, maxWidth int, quality int) (string, error) {
+func GenerateThumbnail(imageData []byte, maxWidth, quality int) (string, error) {
 	if maxWidth <= 0 {
 		maxWidth = DefaultThumbnailMaxWidth
 	}

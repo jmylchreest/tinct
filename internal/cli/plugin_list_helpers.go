@@ -117,9 +117,9 @@ func (c *pluginCollector) getPluginProtocolVersion(name, pluginType string) stri
 				if protocolVersion != "" {
 					return protocolVersion
 				}
-				// If query failed, print warning and return "unknown"
+				// If query failed, print warning and return unknown
 				fmt.Printf("Warning: Failed to query protocol version from external plugin '%s' (%s) at %s\n", name, pluginType, meta.Path)
-				return "unknown"
+				return unknownValue
 			}
 		}
 	}
@@ -171,13 +171,13 @@ func (c *pluginCollector) buildExternalOnlyInfo(name string, meta *ExternalPlugi
 		version = meta.Version
 	}
 	if version == "" {
-		version = "unknown"
+		version = unknownValue
 	}
 
 	protocolVersion := queryProtocolVersion
 	if protocolVersion == "" {
 		fmt.Printf("Warning: Failed to query protocol version from external plugin '%s' (%s) at %s\n", name, meta.Type, meta.Path)
-		protocolVersion = "unknown"
+		protocolVersion = unknownValue
 	}
 
 	return pluginInfo{
@@ -256,7 +256,7 @@ func addPluginToTable(tbl *Table, p pluginInfo, showPath bool) {
 
 	// Check protocol compatibility
 	compatible := "Y"
-	if p.protocolVersion == "" || p.protocolVersion == "unknown" {
+	if p.protocolVersion == "" || p.protocolVersion == unknownValue {
 		// Plugin query failed or protocol version unavailable
 		compatible = "N"
 	} else {

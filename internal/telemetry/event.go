@@ -109,7 +109,7 @@ func NewGenerateEvent(params GenerateEventParams) Event {
 //   - plugin.version  — plugin version (omitted if empty)
 //   - plugin.external — whether the plugin is external (contrib)
 //   - plugin.status   — execution status: "ok", "failed", or "skipped"
-func NewPluginUsedEvent(pluginName string, pluginVersion string, isExternal bool, status string) Event {
+func NewPluginUsedEvent(pluginName, pluginVersion string, isExternal bool, status string) Event {
 	e := NewEvent("plugin_used")
 	e.Props["plugin.name"] = pluginName
 	e.Props["plugin.external"] = isExternal

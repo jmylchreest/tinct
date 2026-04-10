@@ -95,13 +95,14 @@ func ValidateRuntimeHTTPURL(urlStr string) error {
 	scheme := strings.ToLower(parsed.Scheme)
 	allowInsecure := isInsecureHTTPAllowed()
 
-	if scheme == "https" {
-		// Always OK — fall through to host checks.
-	} else if scheme == "http" && allowInsecure {
-		// Allowed when env var is set — fall through to host checks.
-	} else if scheme == "http" {
+	switch {
+	case scheme == "https":
+		// OK
+	case scheme == "http" && allowInsecure:
+		// OK — env var permits plain HTTP
+	case scheme == "http":
 		return fmt.Errorf("only HTTPS URLs are allowed (got http); set TINCT_ALLOW_INSECURE_HTTP=1 to permit plain HTTP")
-	} else {
+	default:
 		return fmt.Errorf("unsupported URL scheme: %s", scheme)
 	}
 
@@ -243,7 +244,7 @@ func NewLimitedReader(r io.Reader, maxBytes int64) *LimitedReader {
 }
 
 // isLocalOrPrivateHost checks if a hostname is localhost or a private IP.
-func isLocalOrPrivateHost(host string) bool {
+func isLocalOrPrivateHost(host string) bool { //nolint:gocyclo
 	// Check for localhost variations
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
 		return true

@@ -144,7 +144,7 @@ func TestMetadataHydrationCache_SetMetadata_WithPending(t *testing.T) {
 
 	// Write a valid empty manifest JSON
 	manifestJSON := `{"plugins":{}}`
-	err := os.WriteFile(manifestPath, []byte(manifestJSON), 0600)
+	err := os.WriteFile(manifestPath, []byte(manifestJSON), 0o600)
 	if err != nil {
 		t.Fatalf("Failed to create temp manifest: %v", err)
 	}

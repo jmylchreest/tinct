@@ -20,7 +20,7 @@ func NewFilter(include, exclude []string) *Filter {
 }
 
 // Match checks if an asset name matches the filter and returns the plugin name.
-func (f *Filter) Match(assetName string) (bool, string) {
+func (f *Filter) Match(assetName string) (matched bool, pluginName string) {
 	// Skip non-plugin assets (SBOM, checksums, etc.)
 	if !isPluginAsset(assetName) {
 		return false, ""

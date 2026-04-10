@@ -129,7 +129,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	}
 
 	userThemesPath := filepath.Join(home, ".local", "share", "gnome-shell", "extensions", userThemeExtensionID)
-	systemThemesPath := filepath.Join("/usr/share/gnome-shell/extensions", userThemeExtensionID)
+	systemThemesPath := "/usr/share/gnome-shell/extensions/" + userThemeExtensionID
 
 	// Check both user and system installation locations
 	if !appdetect.IsPresentAny(nil, []string{userThemesPath, systemThemesPath}) {
@@ -138,10 +138,9 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 
 	// Check if User Themes extension is enabled
 	cmd := exec.Command("gnome-extensions", "info", userThemeExtensionID)
-	output, err := cmd.Output()
+	cmdOutput, err := cmd.Output()
 	if err == nil {
-		// Parse the output to check if State: ENABLED
-		outputStr := string(output)
+		outputStr := string(cmdOutput)
 		if !strings.Contains(outputStr, "State: ENABLED") && !strings.Contains(outputStr, "State: ACTIVE") {
 			return true, fmt.Sprintf("User Themes extension is installed but not enabled. Enable with:\n  gnome-extensions enable %s\n  Then log out and back in", userThemeExtensionID), nil
 		}
@@ -247,7 +246,7 @@ func (p *Plugin) reloadThemeViaDBus(ctx context.Context) (bool, error) {
 // PostExecute applies theme settings and sets wallpaper automatically.
 // Strategy 1: D-Bus theme reload (most reliable, no theme toggling needed)
 // Strategy 2: gsettings theme toggling (fallback).
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error { //nolint:gocognit // multi-strategy GNOME theme application with fallbacks
+func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, _ []string) error { //nolint:gocyclo,gocognit // multi-strategy GNOME theme application with fallbacks
 	if execCtx.DryRun {
 		return nil
 	}
@@ -303,10 +302,10 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 
 	// Get current theme setting
 	cmd := exec.CommandContext(ctx, "gsettings", "get", "org.gnome.shell.extensions.user-theme", "name")
-	output, err := cmd.Output()
+	cmdOutput, err := cmd.Output()
 	currentTheme := ""
 	if err == nil {
-		currentTheme = strings.Trim(strings.TrimSpace(string(output)), "'\"")
+		currentTheme = strings.Trim(strings.TrimSpace(string(cmdOutput)), "'\"")
 	}
 
 	// Determine which theme to switch to (alternate between tinct-a and tinct-b)
@@ -348,7 +347,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	}
 
 	// Set wallpaper if available
-	if execCtx.WallpaperPath != "" {
+	if execCtx.WallpaperPath != "" { //nolint:nestif
 		wallpaperURI := "file://" + execCtx.WallpaperPath
 
 		// Get current wallpaper (check both light and dark)
