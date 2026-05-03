@@ -3,12 +3,11 @@ package zellij
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"runtime"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -18,6 +17,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -99,12 +100,24 @@ func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/zellij/themes"
+	if os.Getenv("XDG_CONFIG_HOME") == "" && runtime.GOOS == "darwin" {
+		return filepath.Join(paths.MacOSAppSupport("org.Zellij-Contributors.Zellij"), "themes")
 	}
-	return filepath.Join(home, ".config", "zellij", "themes")
+	return filepath.Join(paths.XDGConfigDir(), "zellij", "themes")
+}
+
+// Hooks declares zellij's pre/post-execute behaviour. Zellij doesn't
+// expose a hot-reload signal, so the post message just nudges the user
+// to set the theme in their config.
+func (p *Plugin) Hooks() hooks.Spec {
+	themeName := p.themeName
+	return hooks.Spec{
+		RequiredBinaries: []string{"zellij"},
+		AutoCreateDir:    true,
+		InstructionsFn: func(_ hooks.Context) string {
+			return fmt.Sprintf("   To use this theme in Zellij, add 'theme %q' to your config.kdl or temporarily by executing: zellij options --theme %s", themeName, themeName)
+		},
+	}
 }
 
 // Generate creates the theme file.
@@ -160,33 +173,6 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 
 // PreExecute checks if zellij config directory exists before generating the theme.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if zellij executable exists on PATH.
-	_, err = exec.LookPath("zellij")
-	if err != nil {
-		return true, "zellij executable not found on $PATH", nil
-	}
-
-	// Check if config directory exists, create if it doesn't.
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the directory.
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("zellij themes directory not found and could not be created: %s", configDir), nil
-		}
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Created zellij themes directory: %s\n", configDir)
-		}
-	}
-
-	return false, "", nil
-}
 
 // PostExecute provides instructions for enabling the theme.
 // Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writtenFiles []string) error {
-	if p.verbose && len(writtenFiles) > 0 {
-		fmt.Fprintf(os.Stderr, "   To use this theme in Zellij, add 'theme \"%s\"' to your config.kdl or temporarily by executing: zellij options --theme %s\n", p.themeName, p.themeName)
-	}
-	return nil
-}
