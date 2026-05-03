@@ -22,6 +22,15 @@ palette {
     warn   "{{ get . "warning" | hex }}"
     crit   "{{ get . "danger" | hex }}"
     muted  "{{ get . "foregroundMuted" | hex }}"
+
+    // Overflow state (value > max). awob-daemon auto-applies
+    // `style="overflow"` whenever the incoming value exceeds the max.
+    // Defaults: keep the same surface bg (only the bar flips), and
+    // map the accent to danger so the bar reads as "past the limit"
+    // — semantically a hard warning. Override here for a more
+    // dramatic overflow look (e.g. a flashing background).
+    overflow_bg     "rgba({{ get . "background" | rgbDecimal }},0.85)"
+    overflow_accent "{{ get . "danger" | hex }}"
 }
 
 styles {
@@ -30,4 +39,7 @@ styles {
     style "warn"     accent="$warn"
     style "critical" accent="$crit"
     style "muted"    accent="$crit" alpha="0.6"
+    // Auto-applied when value > max. Falls back to base bg so only
+    // the bar (accent) flips; bg can be punched up in custom themes.
+    style "overflow" bg="$overflow_bg" accent="$overflow_accent"
 }
