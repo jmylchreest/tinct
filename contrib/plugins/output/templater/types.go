@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// PaletteInput represents the JSON input from Tinct
+// PaletteInput represents the JSON input from Tinct.
 type PaletteInput struct {
 	Colours    map[string]CategorisedColour `json:"colours"`
 	AllColours []CategorisedColour          `json:"all_colours"`
@@ -14,7 +14,7 @@ type PaletteInput struct {
 	DryRun     bool                         `json:"dry_run"`
 }
 
-// CategorisedColour represents a color from the palette
+// CategorisedColour represents a color from the palette.
 type CategorisedColour struct {
 	Hex   string `json:"hex"`
 	Role  string `json:"role"`
@@ -22,7 +22,7 @@ type CategorisedColour struct {
 	RGB   RGB    `json:"rgb"`
 }
 
-// RGB represents RGB color values
+// RGB represents RGB color values.
 type RGB struct {
 	R uint8 `json:"r"`
 	G uint8 `json:"g"`
@@ -30,7 +30,7 @@ type RGB struct {
 }
 
 // ThemeData is the data structure passed to templates
-// This mirrors the internal tinct ThemeData structure
+// This mirrors the internal tinct ThemeData structure.
 type ThemeData struct {
 	Colors        map[string]*ColorValue
 	AllColors     []*ColorValue
@@ -39,7 +39,7 @@ type ThemeData struct {
 	themeType     string
 }
 
-// ColorValue represents a color with multiple format accessors
+// ColorValue represents a color with multiple format accessors.
 type ColorValue struct {
 	hex   string
 	role  string
@@ -47,7 +47,7 @@ type ColorValue struct {
 	rgb   RGB
 }
 
-// Format methods for ColorValue
+// Format methods for ColorValue.
 func (c *ColorValue) Hex() string        { return c.hex }
 func (c *ColorValue) HexNoHash() string  { return strings.TrimPrefix(c.hex, "#") }
 func (c *ColorValue) RGB() string        { return fmt.Sprintf("rgb(%d,%d,%d)", c.rgb.R, c.rgb.G, c.rgb.B) }
@@ -59,12 +59,12 @@ func (c *ColorValue) Role() string       { return c.role }
 func (c *ColorValue) Index() int         { return c.index }
 func (c *ColorValue) RGBDecimal() string { return fmt.Sprintf("%d,%d,%d", c.rgb.R, c.rgb.G, c.rgb.B) }
 
-// ThemeType returns the theme type as a string
+// ThemeType returns the theme type as a string.
 func (td *ThemeData) ThemeType() string {
 	return td.themeType
 }
 
-// ProcessingResult represents the result of processing a template
+// ProcessingResult represents the result of processing a template.
 type ProcessingResult struct {
 	TemplateName string
 	OutputPath   string
@@ -74,7 +74,7 @@ type ProcessingResult struct {
 	Content      string // For go-plugin mode - rendered template content
 }
 
-// convertToThemeData converts PaletteInput to ThemeData for templates
+// convertToThemeData converts PaletteInput to ThemeData for templates.
 func convertToThemeData(input *PaletteInput) *ThemeData {
 	themeData := &ThemeData{
 		Colors:    make(map[string]*ColorValue),

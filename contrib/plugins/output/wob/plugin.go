@@ -14,7 +14,7 @@ import (
 //go:embed templates/*.tmpl
 var templatesFS embed.FS
 
-// runPlugin runs in Tinct plugin mode (JSON-stdio protocol 0.2.0)
+// runPlugin runs in Tinct plugin mode (JSON-stdio protocol 0.2.0).
 func runPlugin() error {
 	// Read palette from stdin (JSON)
 	var palette map[string]any
@@ -68,7 +68,7 @@ func runPlugin() error {
 	return nil
 }
 
-// generateWobThemeFromMap creates wob INI content from palette map (JSON-stdio mode)
+// generateWobThemeFromMap creates wob INI content from palette map (JSON-stdio mode).
 func generateWobThemeFromMap(palette map[string]any) (string, error) {
 	// Load template from embedded filesystem
 	tmplContent, err := templatesFS.ReadFile("templates/tinct.ini.tmpl")

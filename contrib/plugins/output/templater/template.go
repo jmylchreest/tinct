@@ -8,14 +8,14 @@ import (
 	"text/template"
 )
 
-// TemplateProcessor handles template processing
+// TemplateProcessor handles template processing.
 type TemplateProcessor struct {
 	config  *Config
 	verbose bool
 	dryRun  bool
 }
 
-// NewTemplateProcessor creates a new template processor
+// NewTemplateProcessor creates a new template processor.
 func NewTemplateProcessor(config *Config, verbose, dryRun bool) *TemplateProcessor {
 	return &TemplateProcessor{
 		config:  config,
@@ -24,8 +24,8 @@ func NewTemplateProcessor(config *Config, verbose, dryRun bool) *TemplateProcess
 	}
 }
 
-// ProcessTemplates processes all enabled templates
-func (tp *TemplateProcessor) ProcessTemplates(themeData *ThemeData) ([]ProcessingResult, error) {
+// ProcessTemplates processes all enabled templates.
+func (tp *TemplateProcessor) ProcessTemplates(themeData *ThemeData) []ProcessingResult {
 	var results []ProcessingResult
 
 	for _, tmplConfig := range tp.config.Templates {
@@ -40,10 +40,10 @@ func (tp *TemplateProcessor) ProcessTemplates(themeData *ThemeData) ([]Processin
 		results = append(results, result)
 	}
 
-	return results, nil
+	return results
 }
 
-// processTemplate processes a single template
+// processTemplate processes a single template.
 func (tp *TemplateProcessor) processTemplate(tmplConfig TemplateConfig, themeData *ThemeData) ProcessingResult {
 	result := ProcessingResult{
 		TemplateName: tmplConfig.Name,
@@ -125,7 +125,7 @@ func (tp *TemplateProcessor) processTemplate(tmplConfig TemplateConfig, themeDat
 	return result
 }
 
-// templateFuncs returns custom template functions compatible with Tinct templates
+// templateFuncs returns custom template functions compatible with Tinct templates.
 func templateFuncs() template.FuncMap {
 	return template.FuncMap{
 		// get - Get color by role name

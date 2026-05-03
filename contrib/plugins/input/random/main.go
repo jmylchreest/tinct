@@ -60,7 +60,7 @@ var (
 type RandomPlugin struct{}
 
 // Generate creates a random color palette.
-func (p *RandomPlugin) Generate(ctx context.Context, opts tinctplugin.InputOptions) ([]color.Color, error) {
+func (p *RandomPlugin) Generate(_ context.Context, opts tinctplugin.InputOptions) ([]color.Color, error) {
 	// Extract configuration from plugin args
 	seed := uint64(0)
 	if seedArg, ok := opts.PluginArgs["seed"].(float64); ok {

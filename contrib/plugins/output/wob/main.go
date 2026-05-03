@@ -21,18 +21,18 @@ var (
 )
 
 const (
-	// Plugin metadata
+	// Plugin metadata.
 	pluginName        = "wob"
 	pluginDescription = "Generate wob (Wayland Overlay Bar) theme and provide wrapper functionality"
 
-	// Runtime configuration
+	// Runtime configuration.
 	defaultRuntimeDir = "wob" // under $XDG_RUNTIME_DIR
 	defaultPipeName   = "wob.fifo"
 	defaultConfigName = "wob-merged.ini"
 	defaultPIDFile    = "wob.pid"
 )
 
-// Apply env defaults
+// Apply env defaults.
 func init() {
 	if os.Getenv("WOB_PIPE") == "" {
 		_ = os.Setenv("WOB_PIPE", defaultPipeName) // Setenv only fails if key/value are invalid
@@ -42,6 +42,10 @@ func init() {
 	}
 }
 
+// main dispatches CLI subcommands. The branchiness is inherent to
+// CLI dispatch — each subcommand maps to a separate runner.
+//
+//nolint:gocyclo,gosec // CLI dispatch + JSON-stdio plugin protocol
 func main() {
 	// Handle --plugin-info flag for protocol detection
 	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {

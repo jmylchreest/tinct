@@ -378,10 +378,7 @@ func TestGetTinctColoursPath(t *testing.T) {
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getTinctColoursPath()
-	if err != nil {
-		t.Fatalf("getTinctColoursPath failed: %v", err)
-	}
+	path := getTinctColoursPath()
 
 	expected := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-colours.css")
 	if path != expected {
@@ -396,10 +393,7 @@ func TestGetTinctCustomPath(t *testing.T) {
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getTinctCustomPath()
-	if err != nil {
-		t.Fatalf("getTinctCustomPath failed: %v", err)
-	}
+	path := getTinctCustomPath()
 
 	expected := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "tinct-custom.css")
 	if path != expected {
@@ -413,10 +407,7 @@ func TestGetTinctColoursPath_DefaultHome(t *testing.T) {
 	os.Unsetenv("XDG_CONFIG_HOME")
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getTinctColoursPath()
-	if err != nil {
-		t.Fatalf("getTinctColoursPath failed: %v", err)
-	}
+	path := getTinctColoursPath()
 
 	home, _ := os.UserHomeDir()
 	expected := filepath.Join(home, ".config", "keylightd", "keylightd-tray", "tinct-colours.css")
@@ -432,10 +423,7 @@ func TestGetCustomCSSPath(t *testing.T) {
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 	defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
 
-	path, err := getCustomCSSPath()
-	if err != nil {
-		t.Fatalf("getCustomCSSPath failed: %v", err)
-	}
+	path := getCustomCSSPath()
 
 	expected := filepath.Join(tmpDir, "keylightd", "keylightd-tray", "custom.css")
 	if path != expected {
@@ -468,9 +456,13 @@ func TestPlugin_PostExecute_WithImport(t *testing.T) {
 
 	// Create the directory and custom.css with import
 	configDir := filepath.Join(tmpDir, "keylightd", "keylightd-tray")
-	os.MkdirAll(configDir, 0755)
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
 	customCSS := filepath.Join(configDir, "custom.css")
-	os.WriteFile(customCSS, []byte("@import url(\"tinct-custom.css\");\n"), 0644)
+	if err := os.WriteFile(customCSS, []byte("@import url(\"tinct-custom.css\");\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
 
 	p := &Plugin{}
 	ctx := context.Background()

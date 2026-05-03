@@ -56,7 +56,7 @@ type DunstifyPlugin struct{}
 // Generate is a no-op for notification plugins.
 // Notification plugins typically don't generate files, they only act in PostExecute.
 // This demonstrates that not all plugin methods need complex implementations.
-func (p *DunstifyPlugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
+func (p *DunstifyPlugin) Generate(_ context.Context, _ tinctplugin.PaletteData) (map[string][]byte, error) {
 	// Notification plugins don't generate files
 	return map[string][]byte{}, nil
 }
@@ -64,7 +64,7 @@ func (p *DunstifyPlugin) Generate(ctx context.Context, palette tinctplugin.Palet
 // PreExecute checks if dunstify or notify-send is available.
 // This demonstrates the PreExecute hook which can skip plugin execution
 // if prerequisites aren't met. Return (true, reason, nil) to skip gracefully.
-func (p *DunstifyPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *DunstifyPlugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Try dunstify first
 	if _, err := exec.LookPath("dunstify"); err == nil {
 		return false, "", nil

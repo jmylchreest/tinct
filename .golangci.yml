@@ -213,6 +213,14 @@ linters:
           - godot
         source: "^// TODO"
 
+      # Exclude godot for the standard "// Injected at build time via:"
+      # comment that appears next to Version/Commit/Date vars in every
+      # plugin's main.go. Adding a period would suggest the comment is a
+      # complete sentence; it's actually a label for the ldflag below.
+      - linters:
+          - godot
+        source: "^\\t// Injected at build time via:"
+
       # Allow blank identifiers in main and init functions
       - path: cmd/
         text: "G104:"

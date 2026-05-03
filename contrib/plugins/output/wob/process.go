@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-// isWobRunning checks if wob is currently running
+// isWobRunning checks if wob is currently running.
 func isWobRunning() (bool, error) {
 	paths, err := getRuntimePaths()
 	if err != nil {
@@ -41,12 +41,12 @@ func isWobRunning() (bool, error) {
 	return err == nil, nil
 }
 
-// writePIDFile writes the PID to the PID file
+// writePIDFile writes the PID to the PID file.
 func writePIDFile(paths *RuntimePaths, pid int) error {
-	return os.WriteFile(paths.PID, fmt.Appendf(nil, "%d\n", pid), 0600)
+	return os.WriteFile(paths.PID, fmt.Appendf(nil, "%d\n", pid), 0o600) //nolint:gosec // PID under wob runtime dir, ownership-checked
 }
 
-// lookupWobBinary finds the wob binary on PATH
+// lookupWobBinary finds the wob binary on PATH.
 func lookupWobBinary() (string, error) {
 	wobBin := os.Getenv("WOB_BIN")
 	if wobBin == "" {
@@ -60,7 +60,7 @@ func lookupWobBinary() (string, error) {
 	return exec.LookPath(wobBin)
 }
 
-// ensureFIFO creates the FIFO pipe if it doesn't exist
+// ensureFIFO creates the FIFO pipe if it doesn't exist.
 func ensureFIFO(paths *RuntimePaths) error {
 	// Check if pipe exists
 	if info, err := os.Stat(paths.Pipe); err == nil {
@@ -77,7 +77,7 @@ func ensureFIFO(paths *RuntimePaths) error {
 	}
 
 	// Create FIFO
-	if err := syscall.Mkfifo(paths.Pipe, 0600); err != nil {
+	if err := syscall.Mkfifo(paths.Pipe, 0o600); err != nil {
 		return fmt.Errorf("failed to create FIFO: %w", err)
 	}
 

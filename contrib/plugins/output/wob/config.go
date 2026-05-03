@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// RuntimePaths holds all runtime file paths
+// RuntimePaths holds all runtime file paths.
 type RuntimePaths struct {
 	Dir        string
 	Pipe       string
@@ -18,13 +18,13 @@ type RuntimePaths struct {
 	ConfigInfo string
 }
 
-// ConfigInfo tracks config sources for reload detection
+// ConfigInfo tracks config sources for reload detection.
 type ConfigInfo struct {
 	BaseConfig    string   `json:"base_config"`
 	AppendConfigs []string `json:"append_configs"`
 }
 
-// getRuntimePaths returns the runtime directory paths
+// getRuntimePaths returns the runtime directory paths.
 func getRuntimePaths() (*RuntimePaths, error) {
 	var baseDir string
 
@@ -37,21 +37,24 @@ func getRuntimePaths() (*RuntimePaths, error) {
 		if username == "" {
 			username = "unknown"
 		}
-		baseDir = filepath.Join("/tmp", fmt.Sprintf("%s-wob-runtime", username))
+		baseDir = filepath.Join(os.TempDir(), fmt.Sprintf("%s-wob-runtime", username))
 	}
 
-	// Create runtime directory if it doesn't exist
-	if err := os.MkdirAll(baseDir, 0700); err != nil {
+	// Create runtime directory if it doesn't exist.
+	if err := os.MkdirAll(baseDir, 0o700); err != nil { //nolint:gosec // baseDir is XDG_RUNTIME_DIR or $TMPDIR/$USER-wob-runtime
 		return nil, fmt.Errorf("failed to create runtime directory: %w", err)
 	}
 
-	// Verify directory ownership
-	fileInfo, err := os.Stat(baseDir)
+	// Verify directory ownership.
+	fileInfo, err := os.Stat(baseDir) //nolint:gosec // baseDir is XDG_RUNTIME_DIR or $TMPDIR/$USER-wob-runtime
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat runtime directory: %w", err)
 	}
 
-	stat := fileInfo.Sys().(*syscall.Stat_t)
+	stat, ok := fileInfo.Sys().(*syscall.Stat_t)
+	if !ok {
+		return nil, fmt.Errorf("unexpected stat type %T (need syscall.Stat_t)", fileInfo.Sys())
+	}
 	// Safe conversion: UIDs are always positive
 	currentUID := os.Getuid()
 	if currentUID < 0 {
@@ -70,16 +73,16 @@ func getRuntimePaths() (*RuntimePaths, error) {
 	}, nil
 }
 
-// saveConfigInfo saves config info to JSON file
+// saveConfigInfo saves config info to JSON file.
 func saveConfigInfo(paths *RuntimePaths, info *ConfigInfo) error {
 	data, err := json.Marshal(info)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(paths.ConfigInfo, data, 0600)
+	return os.WriteFile(paths.ConfigInfo, data, 0o600)
 }
 
-// loadConfigInfo loads config info from JSON file
+// loadConfigInfo loads config info from JSON file.
 func loadConfigInfo(paths *RuntimePaths) (*ConfigInfo, error) {
 	data, err := os.ReadFile(paths.ConfigInfo)
 	if err != nil {
@@ -92,13 +95,13 @@ func loadConfigInfo(paths *RuntimePaths) (*ConfigInfo, error) {
 	return &info, nil
 }
 
-// needsConfigReload checks if any source configs are newer than merged config
-func needsConfigReload(paths *RuntimePaths, configInfo *ConfigInfo) (bool, error) {
+// needsConfigReload checks if any source configs are newer than merged config.
+func needsConfigReload(paths *RuntimePaths, configInfo *ConfigInfo) bool {
 	// Check if merged config exists
 	mergedInfo, err := os.Stat(paths.Config)
 	if err != nil {
 		// Merged config doesn't exist - reload needed
-		return true, nil
+		return true
 	}
 	mergedTime := mergedInfo.ModTime()
 
@@ -106,7 +109,7 @@ func needsConfigReload(paths *RuntimePaths, configInfo *ConfigInfo) (bool, error
 	if configInfo.BaseConfig != "" {
 		baseInfo, err := os.Stat(configInfo.BaseConfig)
 		if err == nil && baseInfo.ModTime().After(mergedTime) {
-			return true, nil
+			return true
 		}
 	}
 
@@ -114,14 +117,20 @@ func needsConfigReload(paths *RuntimePaths, configInfo *ConfigInfo) (bool, error
 	for _, appendPath := range configInfo.AppendConfigs {
 		appendInfo, err := os.Stat(appendPath)
 		if err == nil && appendInfo.ModTime().After(mergedTime) {
-			return true, nil
+			return true
 		}
 	}
 
-	return false, nil
+	return false
 }
 
-// mergeConfigs merges base and append configs into a single file
+// mergeConfigs merges base and append configs into a single file.
+// The user-supplied config paths are read and merged into the runtime
+// dir verbatim — gosec's path-traversal/XSS taint analysis flags every
+// path use here, but the inputs are intentionally user-controlled
+// config file paths exactly as wob expects.
+//
+//nolint:gosec // user-supplied wob config paths read intentionally
 func mergeConfigs(paths *RuntimePaths, baseConfig string, appendConfigs []string) (string, error) {
 	tmpFile, err := os.CreateTemp(paths.Dir, ".wob-merged.*.ini")
 	if err != nil {
@@ -163,7 +172,7 @@ func mergeConfigs(paths *RuntimePaths, baseConfig string, appendConfigs []string
 		return "", fmt.Errorf("failed to rename merged config: %w", err)
 	}
 
-	if err := os.Chmod(finalPath, 0600); err != nil {
+	if err := os.Chmod(finalPath, 0o600); err != nil {
 		return "", fmt.Errorf("failed to chmod merged config: %w", err)
 	}
 

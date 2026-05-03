@@ -24,57 +24,38 @@ type Plugin struct {
 // Resolution order: --keylightd-tray.output-dir flag (currently
 // unsupported) → TINCT_PLUGIN_KEYLIGHTD_TRAY_OUTPUT_DIR → platform XDG
 // config dir + keylightd/keylightd-tray.
-func getConfigDir() (string, error) {
+func getConfigDir() string {
 	fallback := filepath.Join(paths.XDGConfigDir(), "keylightd", "keylightd-tray")
-	return config.Resolve("keylightd-tray", "output_dir", "", fallback), nil
+	return config.Resolve("keylightd-tray", "output_dir", "", fallback)
 }
 
 // getTinctColoursPath returns the path to the tinct-colours.css file.
-func getTinctColoursPath() (string, error) {
-	configDir, err := getConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(configDir, "tinct-colours.css"), nil
+func getTinctColoursPath() string {
+	return filepath.Join(getConfigDir(), "tinct-colours.css")
 }
 
 // getTinctCustomPath returns the path to the tinct-custom.css file.
-func getTinctCustomPath() (string, error) {
-	configDir, err := getConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(configDir, "tinct-custom.css"), nil
+func getTinctCustomPath() string {
+	return filepath.Join(getConfigDir(), "tinct-custom.css")
 }
 
 // getCustomCSSPath returns the path to the custom.css file.
-func getCustomCSSPath() (string, error) {
-	configDir, err := getConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(configDir, "custom.css"), nil
+func getCustomCSSPath() string {
+	return filepath.Join(getConfigDir(), "custom.css")
 }
 
 // Generate creates tinct-colours.css and tinct-custom.css files for keylightd-tray from the palette data.
-func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
-	coloursPath, err := getTinctColoursPath()
-	if err != nil {
-		return nil, err
-	}
+func (p *Plugin) Generate(_ context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
+	coloursPath := getTinctColoursPath()
+	customPath := getTinctCustomPath()
 
-	customPath, err := getTinctCustomPath()
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the directory if it doesn't exist
+	// Create the directory if it doesn't exist.
 	outputDir := filepath.Dir(coloursPath)
 	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create config directory %q: %w", outputDir, err)
 	}
 
-	// Generate CSS content
+	// Generate CSS content.
 	coloursCSS := p.generateColoursCSS(palette)
 	customCSS := p.generateCustomCSS()
 
@@ -91,7 +72,13 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 	}, nil
 }
 
-// generateColoursCSS creates the CSS content with raw colour variable definitions only.
+// generateColoursCSS creates the CSS content with raw colour variable
+// definitions only. Each role check is a single if; the cyclomatic
+// count is inflated by the role-fallback chains (accent → accent1,
+// green → accent2, etc.). A future refactor can extract a
+// writeVarWithFallback helper.
+//
+//nolint:gocyclo // see comment above
 func (p *Plugin) generateColoursCSS(palette tinctplugin.PaletteData) string {
 	var sb strings.Builder
 
@@ -102,70 +89,70 @@ func (p *Plugin) generateColoursCSS(palette tinctplugin.PaletteData) string {
 	// Export all palette colours as CSS variables with tinct- prefix
 	// Background colors
 	if bg, ok := palette.Colours["background"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-background: %s;\n", bg.Hex))
+		fmt.Fprintf(&sb, "  --tinct-background: %s;\n", bg.Hex)
 	}
 	if fg, ok := palette.Colours["foreground"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-foreground: %s;\n", fg.Hex))
+		fmt.Fprintf(&sb, "  --tinct-foreground: %s;\n", fg.Hex)
 	}
 	if surface, ok := palette.Colours["surface"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-surface: %s;\n", surface.Hex))
+		fmt.Fprintf(&sb, "  --tinct-surface: %s;\n", surface.Hex)
 	}
 	if subtle, ok := palette.Colours["subtle"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-subtle: %s;\n", subtle.Hex))
+		fmt.Fprintf(&sb, "  --tinct-subtle: %s;\n", subtle.Hex)
 	}
 	if overlay, ok := palette.Colours["overlay"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-overlay: %s;\n", overlay.Hex))
+		fmt.Fprintf(&sb, "  --tinct-overlay: %s;\n", overlay.Hex)
 	}
 
 	// Surface containers
 	if containerLowest, ok := palette.Colours["surfaceContainerLowest"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-surface-container-lowest: %s;\n", containerLowest.Hex))
+		fmt.Fprintf(&sb, "  --tinct-surface-container-lowest: %s;\n", containerLowest.Hex)
 	}
 	if containerLow, ok := palette.Colours["surfaceContainerLow"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-surface-container-low: %s;\n", containerLow.Hex))
+		fmt.Fprintf(&sb, "  --tinct-surface-container-low: %s;\n", containerLow.Hex)
 	}
 	if container, ok := palette.Colours["surfaceContainer"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-surface-container: %s;\n", container.Hex))
+		fmt.Fprintf(&sb, "  --tinct-surface-container: %s;\n", container.Hex)
 	}
 	if containerHigh, ok := palette.Colours["surfaceContainerHigh"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-surface-container-high: %s;\n", containerHigh.Hex))
+		fmt.Fprintf(&sb, "  --tinct-surface-container-high: %s;\n", containerHigh.Hex)
 	}
 	if containerHighest, ok := palette.Colours["surfaceContainerHighest"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-surface-container-highest: %s;\n", containerHighest.Hex))
+		fmt.Fprintf(&sb, "  --tinct-surface-container-highest: %s;\n", containerHighest.Hex)
 	}
 
 	// Border colors
 	if borderMuted, ok := palette.Colours["borderMuted"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-border-muted: %s;\n", borderMuted.Hex))
+		fmt.Fprintf(&sb, "  --tinct-border-muted: %s;\n", borderMuted.Hex)
 	}
 	if outlineVariant, ok := palette.Colours["outlineVariant"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-outline-variant: %s;\n", outlineVariant.Hex))
+		fmt.Fprintf(&sb, "  --tinct-outline-variant: %s;\n", outlineVariant.Hex)
 	}
 
 	// Accent colors
 	if accent, ok := palette.Colours["accent1"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-accent: %s;\n", accent.Hex))
+		fmt.Fprintf(&sb, "  --tinct-accent: %s;\n", accent.Hex)
 	} else if accent, ok := palette.Colours["accent"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-accent: %s;\n", accent.Hex))
+		fmt.Fprintf(&sb, "  --tinct-accent: %s;\n", accent.Hex)
 	}
 
 	// State colors
 	if green, ok := palette.Colours["green"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-green: %s;\n", green.Hex))
+		fmt.Fprintf(&sb, "  --tinct-green: %s;\n", green.Hex)
 	} else if accent2, ok := palette.Colours["accent2"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-green: %s;\n", accent2.Hex))
+		fmt.Fprintf(&sb, "  --tinct-green: %s;\n", accent2.Hex)
 	}
 
 	if yellow, ok := palette.Colours["yellow"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-yellow: %s;\n", yellow.Hex))
+		fmt.Fprintf(&sb, "  --tinct-yellow: %s;\n", yellow.Hex)
 	} else if accent3, ok := palette.Colours["accent3"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-yellow: %s;\n", accent3.Hex))
+		fmt.Fprintf(&sb, "  --tinct-yellow: %s;\n", accent3.Hex)
 	}
 
 	if red, ok := palette.Colours["red"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-red: %s;\n", red.Hex))
+		fmt.Fprintf(&sb, "  --tinct-red: %s;\n", red.Hex)
 	} else if accent4, ok := palette.Colours["accent4"]; ok {
-		sb.WriteString(fmt.Sprintf("  --tinct-red: %s;\n", accent4.Hex))
+		fmt.Fprintf(&sb, "  --tinct-red: %s;\n", accent4.Hex)
 	}
 
 	sb.WriteString("}\n")
@@ -219,12 +206,9 @@ func (p *Plugin) checkImport(verbose bool) {
 		return
 	}
 
-	customCSSPath, err := getCustomCSSPath()
-	if err != nil {
-		return
-	}
+	customCSSPath := getCustomCSSPath()
 
-	// Check if custom.css exists and contains the import
+	// Check if custom.css exists and contains the import.
 	content, err := os.ReadFile(customCSSPath) // #nosec G304 -- Config file path from XDG config dir
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -247,13 +231,13 @@ func (p *Plugin) checkImport(verbose bool) {
 }
 
 // PreExecute is called before Generate to perform any setup or validation.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Always generate - keylightd-tray will pick up the file when it exists
 	return false, "", nil
 }
 
 // PostExecute is called after files are written.
-func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
+func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
 	// Import check is done in Generate since PostExecute stderr may not be forwarded via RPC
 	return nil
 }

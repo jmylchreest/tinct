@@ -5,17 +5,25 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/pkg/colour"
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 	tincttemplate "github.com/jmylchreest/tinct/pkg/template"
 )
 
 //go:embed templates/*.tmpl
 var templatesFS embed.FS
+
+const (
+	themeTypeDark  = "dark"
+	themeTypeLight = "light"
+)
 
 // Plugin implements the tinct OutputPlugin interface for OpenCode themes.
 type Plugin struct {
@@ -26,38 +34,37 @@ type Plugin struct {
 }
 
 // detectOpenCodePaths finds all installed OpenCode theme directories.
+//
+// Looks for both the resolved XDG config dir (paths.XDGConfigDir, which
+// honours $XDG_CONFIG_HOME and falls back to platform defaults) and
+// the conventional ~/.config/opencode in case the user has that
+// configured but XDG_CONFIG_HOME points elsewhere. Duplicates are
+// elided so we don't write the same theme twice.
 func detectOpenCodePaths() ([]string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	var paths []string
-
-	// Check for XDG_CONFIG_HOME first.
-	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
-	if xdgConfig != "" {
-		opencodePath := filepath.Join(xdgConfig, "opencode")
-		if _, err := os.Stat(opencodePath); err == nil {
-			paths = append(paths, filepath.Join(opencodePath, "themes"))
+	var found []string
+	add := func(dir string) {
+		themesPath := filepath.Join(dir, "themes")
+		if slices.Contains(found, themesPath) {
+			return
+		}
+		if _, statErr := os.Stat(dir); statErr == nil {
+			found = append(found, themesPath)
 		}
 	}
 
-	// Check for standard OpenCode config directory.
-	standardPath := filepath.Join(home, ".config", "opencode")
-	if _, err := os.Stat(standardPath); err == nil {
-		themesPath := filepath.Join(standardPath, "themes")
-		// Avoid adding duplicate if XDG_CONFIG_HOME resolved to the same path.
-		if len(paths) == 0 || paths[0] != themesPath {
-			paths = append(paths, themesPath)
-		}
-	}
+	add(filepath.Join(paths.XDGConfigDir(), "opencode"))
+	add(filepath.Join(home, ".config", "opencode"))
 
-	return paths, nil
+	return found, nil
 }
 
 // Generate creates an OpenCode theme JSON file from the palette data.
-func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
+func (p *Plugin) Generate(_ context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
 	// Load and parse template.
 	tmpl, err := p.loadTemplate(palette.Verbose)
 	if err != nil {
@@ -101,9 +108,9 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 		}
 
 		// Determine alternate filename based on theme type.
-		altSuffix := "light"
-		if palette.AlternateTheme.ThemeType == "dark" {
-			altSuffix = "dark"
+		altSuffix := themeTypeLight
+		if palette.AlternateTheme.ThemeType == themeTypeDark {
+			altSuffix = themeTypeDark
 		}
 
 		altFiles, err := p.writeThemeFilesWithName(altBuf.Bytes(), fmt.Sprintf("tinct-%s.json", altSuffix))
@@ -111,9 +118,7 @@ func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) 
 			return nil, err
 		}
 
-		for k, v := range altFiles {
-			files[k] = v
-		}
+		maps.Copy(files, altFiles)
 
 		return files, nil
 	}
@@ -199,7 +204,7 @@ func (p *Plugin) writeThemeFilesWithName(content []byte, filename string) (map[s
 }
 
 // PreExecute checks if OpenCode config directory exists.
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Detect OpenCode installations.
 	detectedPaths, err := detectOpenCodePaths()
 	if err != nil {
@@ -216,7 +221,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute runs after theme files are written.
 // OpenCode does not currently support hot-reloading themes, so this is a no-op.
-func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
+func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
 	return nil
 }
 

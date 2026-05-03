@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -522,10 +523,8 @@ func TestPlugin_Generate_DualTheme(t *testing.T) {
 	palette := newTestPalette("dark")
 
 	// Build an alternate (light) palette.
-	altColours := make(map[string]tinctplugin.CategorisedColour)
-	for role, cc := range palette.Colours {
-		altColours[role] = cc
-	}
+	altColours := make(map[string]tinctplugin.CategorisedColour, len(palette.Colours))
+	maps.Copy(altColours, palette.Colours)
 	// Override a few to differentiate.
 	altColours["background"] = tinctplugin.CategorisedColour{
 		Hex: "#eff1f5", RGB: tinctplugin.RGBColour{R: 239, G: 241, B: 245}, Role: "background",

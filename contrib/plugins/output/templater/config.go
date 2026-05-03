@@ -10,13 +10,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the plugin configuration
+// Config represents the plugin configuration.
 type Config struct {
 	Templates []TemplateConfig `yaml:"templates" json:"templates"`
 	Settings  Settings         `yaml:"settings" json:"settings"`
 }
 
-// TemplateConfig represents a single template configuration
+// TemplateConfig represents a single template configuration.
 type TemplateConfig struct {
 	Name         string `yaml:"name" json:"name"`
 	Description  string `yaml:"description" json:"description"`
@@ -25,7 +25,7 @@ type TemplateConfig struct {
 	Enabled      bool   `yaml:"enabled" json:"enabled"`
 }
 
-// Settings represents global plugin settings
+// Settings represents global plugin settings.
 type Settings struct {
 	CreateDirs   bool   `yaml:"create_dirs" json:"create_dirs"`
 	Backup       bool   `yaml:"backup" json:"backup"`
@@ -34,7 +34,7 @@ type Settings struct {
 	FileMode     uint32 `yaml:"file_mode" json:"file_mode"`
 }
 
-// LoadConfig loads configuration from a file (YAML or JSON)
+// LoadConfig loads configuration from a file (YAML or JSON).
 func LoadConfig(path string) (*Config, error) {
 	// Expand path
 	var err error
@@ -84,14 +84,14 @@ func LoadConfig(path string) (*Config, error) {
 	return &config, nil
 }
 
-// applyDefaults applies default values to config
+// applyDefaults applies default values to config.
 func applyDefaults(config *Config) error {
 	// Default settings
 	if config.Settings.BackupSuffix == "" {
 		config.Settings.BackupSuffix = ".backup"
 	}
 	if config.Settings.FileMode == 0 {
-		config.Settings.FileMode = 0644
+		config.Settings.FileMode = 0o644
 	}
 
 	// Expand paths in templates
@@ -109,7 +109,7 @@ func applyDefaults(config *Config) error {
 	return nil
 }
 
-// validateConfig validates the configuration
+// validateConfig validates the configuration.
 func validateConfig(config *Config) error {
 	if len(config.Templates) == 0 {
 		return fmt.Errorf("no templates defined in config")

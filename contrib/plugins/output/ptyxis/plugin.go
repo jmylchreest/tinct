@@ -195,10 +195,12 @@ func executeFace(tmpl *template.Template, themeData *colour.ThemeData) ([]byte, 
 	return buf.Bytes(), nil
 }
 
-// splitByMode returns (lightFace, darkFace) given the two themes and their
-// rendered faces. If both themes report the same mode (shouldn't happen
-// via the dual-theme pipeline), `a` is treated as light.
-func splitByMode(a, b *colour.ThemeData, faceA, faceB []byte) (light, dark []byte) {
+// splitByMode returns (lightFace, darkFace) given the primary theme's
+// data and the two rendered faces. The b parameter is intentionally
+// taken for call-site symmetry but unused — only a's mode determines
+// the order. If both themes report the same mode (shouldn't happen via
+// the dual-theme pipeline), `a` is treated as light.
+func splitByMode(a, _ *colour.ThemeData, faceA, faceB []byte) (light, dark []byte) {
 	if a.ThemeType() == colour.ThemeLight {
 		return faceA, faceB
 	}

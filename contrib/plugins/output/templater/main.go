@@ -28,7 +28,7 @@ const (
 	Name = "templater"
 )
 
-// PluginInfo represents the plugin metadata for Tinct discovery
+// PluginInfo represents the plugin metadata for Tinct discovery.
 type PluginInfo struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
@@ -70,7 +70,6 @@ func main() {
 }
 
 func runLegacyMode() {
-
 	// Read palette data from stdin
 	var input PaletteInput
 	if err := json.NewDecoder(os.Stdin).Decode(&input); err != nil {
@@ -109,13 +108,9 @@ func runLegacyMode() {
 	// Convert palette to ThemeData structure
 	themeData := convertToThemeData(&input)
 
-	// Process each enabled template
+	// Process each enabled template.
 	processor := NewTemplateProcessor(config, verbose, input.DryRun)
-	results, err := processor.ProcessTemplates(themeData)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error processing templates: %v\n", err)
-		os.Exit(1)
-	}
+	results := processor.ProcessTemplates(themeData)
 
 	// Output results
 	if len(results) == 0 {
@@ -137,7 +132,7 @@ func runLegacyMode() {
 	}
 }
 
-// getConfigPath returns the config file path from plugin args or default location
+// getConfigPath returns the config file path from plugin args or default location.
 func getConfigPath(args map[string]any) string {
 	// Check plugin args first
 	if configPath, ok := args["config"].(string); ok && configPath != "" {
@@ -163,9 +158,9 @@ func getConfigPath(args map[string]any) string {
 	return expandPathSimple(defaults[0])
 }
 
-// expandPathSimple expands ~ to home directory (JSON-stdio mode)
+// expandPathSimple expands ~ to home directory (JSON-stdio mode).
 func expandPathSimple(path string) string {
-	if len(path) > 0 && path[0] == '~' {
+	if path != "" && path[0] == '~' {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return path
@@ -175,7 +170,7 @@ func expandPathSimple(path string) string {
 	return path
 }
 
-// applyPluginArgs applies plugin arguments to override config settings
+// applyPluginArgs applies plugin arguments to override config settings.
 func applyPluginArgs(config *Config, args map[string]any) {
 	// Filter templates by name if specified
 	if templates, ok := args["templates"].([]any); ok {

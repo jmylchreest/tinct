@@ -51,7 +51,7 @@ func detectZedPaths() ([]string, error) {
 }
 
 // Generate creates a Zed theme JSON file from the palette data.
-func (p *Plugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
+func (p *Plugin) Generate(_ context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
 	// Load and parse template once
 	tmpl, err := p.loadTemplate(palette.Verbose)
 	if err != nil {
@@ -175,7 +175,6 @@ func (p *Plugin) executeTemplate(tmpl *template.Template, themeData *colour.Them
 
 // writeThemeFiles writes theme content to all appropriate output directories.
 func (p *Plugin) writeThemeFiles(content []byte) (map[string][]byte, error) {
-
 	// Determine output directories.
 	var outputDirs []string
 	if p.outputDir != "" {
@@ -217,7 +216,7 @@ func (p *Plugin) writeThemeFiles(content []byte) (map[string][]byte, error) {
 }
 
 // PreExecute checks if Zed is installed (config directory exists).
-func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Detect Zed installations.
 	detectedPaths, err := detectZedPaths()
 	if err != nil {
@@ -234,7 +233,7 @@ func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err 
 
 // PostExecute is no longer needed - file watcher compatibility is now handled
 // by disabling backups in the file write logic.
-func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
+func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
 	return nil
 }
 

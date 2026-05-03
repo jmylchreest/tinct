@@ -9,7 +9,12 @@ import (
 	"syscall"
 )
 
-// runStart starts wob with optional config (runs in background, does not block)
+// runStart starts wob with optional config (runs in background, does
+// not block). The function is necessarily branchy: it parses CLI flags,
+// resolves merged-config paths, spawns tail+wob via pipes, and tracks
+// PIDs. Refactor candidate, but the dispatch shape is stable.
+//
+//nolint:gocyclo,gosec // CLI dispatch + intentional shell coordination
 func runStart(args []string) error {
 	var baseConfig string
 	var appendConfigs []string
@@ -103,14 +108,14 @@ func runStart(args []string) error {
 	}
 
 	if err := wobCmd.Start(); err != nil {
-		_ = tailCmd.Process.Kill() // Best effort cleanup
+		_ = tailCmd.Process.Kill() //nolint:errcheck // best-effort cleanup; process may already be gone
 		return fmt.Errorf("failed to start wob: %w", err)
 	}
 
 	// Write PID file
 	if err := writePIDFile(paths, wobCmd.Process.Pid); err != nil {
-		_ = wobCmd.Process.Kill()  // Best effort cleanup
-		_ = tailCmd.Process.Kill() // Best effort cleanup
+		_ = wobCmd.Process.Kill()  //nolint:errcheck // best-effort cleanup
+		_ = tailCmd.Process.Kill() //nolint:errcheck // best-effort cleanup
 		return fmt.Errorf("failed to write PID file: %w", err)
 	}
 
@@ -131,7 +136,7 @@ func runStart(args []string) error {
 	return nil
 }
 
-// runStop stops the running wob instance
+// runStop stops the running wob instance.
 func runStop() error {
 	paths, err := getRuntimePaths()
 	if err != nil {
@@ -171,7 +176,11 @@ func runStop() error {
 	return nil
 }
 
-// runSend sends a value to wob, restarting it if config changed
+// runSend sends a value to wob, restarting it if config changed. The
+// branching reflects the multi-arg parsing (current/max forms),
+// percentage normalisation, and pipe-vs-restart decision flow.
+//
+//nolint:gocognit,gocyclo,nestif // intentional branching for CLI args + shell coordination
 func runSend(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("send requires at least one argument")
@@ -219,8 +228,7 @@ func runSend(args []string) error {
 	// Try to load saved config info and check if reload needed
 	configInfo, err := loadConfigInfo(paths)
 	if err == nil {
-		needsReload, err := needsConfigReload(paths, configInfo)
-		if err == nil && needsReload {
+		if needsConfigReload(paths, configInfo) {
 			// Stop current wob
 			if err := runStop(); err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to stop wob: %v\n", err)
@@ -251,8 +259,8 @@ func runSend(args []string) error {
 	if len(values) == 2 && values[1] > 0 {
 		// Two values: treat as current/max
 		current := values[0]
-		max := values[1]
-		percentage = (100*current + max/2) / max // Rounded percentage
+		maxVal := values[1]
+		percentage = (100*current + maxVal/2) / maxVal // Rounded percentage
 	} else {
 		// Single value or multiple: send first value
 		percentage = values[0]

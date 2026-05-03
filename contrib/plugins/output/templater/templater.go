@@ -9,11 +9,11 @@ import (
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 )
 
-// TemplaterPlugin implements the tinctplugin.OutputPlugin interface
+// TemplaterPlugin implements the tinctplugin.OutputPlugin interface.
 type TemplaterPlugin struct{}
 
-// Generate processes templates and returns generated files
-func (p *TemplaterPlugin) Generate(ctx context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
+// Generate processes templates and returns generated files.
+func (p *TemplaterPlugin) Generate(_ context.Context, palette tinctplugin.PaletteData) (map[string][]byte, error) {
 	// Convert tinctplugin.PaletteData to internal PaletteInput format
 	input := convertProtocolPalette(palette)
 
@@ -45,12 +45,9 @@ func (p *TemplaterPlugin) Generate(ctx context.Context, palette tinctplugin.Pale
 	// Convert palette to ThemeData structure
 	themeData := convertToThemeData(&input)
 
-	// Process each enabled template
+	// Process each enabled template.
 	processor := NewTemplateProcessor(config, verbose, input.DryRun)
-	results, err := processor.ProcessTemplates(themeData)
-	if err != nil {
-		return nil, fmt.Errorf("error processing templates: %w", err)
-	}
+	results := processor.ProcessTemplates(themeData)
 
 	// Convert results to file map
 	files := make(map[string][]byte)
@@ -86,8 +83,8 @@ func (p *TemplaterPlugin) Generate(ctx context.Context, palette tinctplugin.Pale
 	return files, nil
 }
 
-// PreExecute checks if config file exists
-func (p *TemplaterPlugin) PreExecute(ctx context.Context) (bool, string, error) {
+// PreExecute checks if config file exists.
+func (p *TemplaterPlugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if default config exists
 	configPath := getConfigPath(nil)
 	expandedPath, err := expandPath(configPath)
@@ -103,14 +100,14 @@ func (p *TemplaterPlugin) PreExecute(ctx context.Context) (bool, string, error) 
 	return false, "", nil
 }
 
-// PostExecute runs post-template commands if configured
-func (p *TemplaterPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+// PostExecute runs post-template commands if configured.
+func (p *TemplaterPlugin) PostExecute(_ context.Context, _ []string) error {
 	// Could implement post-commands here if needed
 	// For now, templater handles this internally
 	return nil
 }
 
-// GetMetadata returns plugin metadata
+// GetMetadata returns plugin metadata.
 func (p *TemplaterPlugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            Name,
@@ -122,7 +119,7 @@ func (p *TemplaterPlugin) GetMetadata() tinctplugin.PluginInfo {
 	}
 }
 
-// GetFlagHelp returns help information for plugin flags
+// GetFlagHelp returns help information for plugin flags.
 func (p *TemplaterPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
 	return []tinctplugin.FlagHelp{
 		{
@@ -156,7 +153,7 @@ func (p *TemplaterPlugin) GetFlagHelp() []tinctplugin.FlagHelp {
 	}
 }
 
-// convertProtocolPalette converts tinctplugin.PaletteData to internal PaletteInput
+// convertProtocolPalette converts tinctplugin.PaletteData to internal PaletteInput.
 func convertProtocolPalette(palette tinctplugin.PaletteData) PaletteInput {
 	colours := make(map[string]CategorisedColour)
 	for role, color := range palette.Colours {
@@ -200,9 +197,9 @@ func convertProtocolPalette(palette tinctplugin.PaletteData) PaletteInput {
 	}
 }
 
-// expandPath expands ~ and environment variables in paths
+// expandPath expands ~ and environment variables in paths.
 func expandPath(path string) (string, error) {
-	if len(path) == 0 {
+	if path == "" {
 		return path, nil
 	}
 
