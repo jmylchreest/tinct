@@ -52,7 +52,12 @@ const (
 // runner. It mirrors the manager's notion of an execution context but
 // stays inside the public SDK so plugins can implement Provider without
 // importing internal packages.
+//
+// PluginName is the name of the plugin owning this execution; it is used
+// to prefix verbose-mode messages (e.g. "kitty: Created directory: ...")
+// so multi-plugin runs are easy to scan.
 type Context struct {
+	PluginName    string
 	DryRun        bool
 	Verbose       bool
 	OutputDir     string

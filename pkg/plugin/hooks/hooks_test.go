@@ -9,7 +9,7 @@ import (
 )
 
 func TestRunPre_NoSpec(t *testing.T) {
-	skip, reason, err := RunPre(Spec{}, "", false)
+	skip, reason, err := RunPre(Spec{}, Context{})
 	if skip || reason != "" || err != nil {
 		t.Errorf("empty Spec should be a no-op; got skip=%v reason=%q err=%v", skip, reason, err)
 	}
@@ -18,7 +18,7 @@ func TestRunPre_NoSpec(t *testing.T) {
 func TestRunPre_RequiredBinaryMissing(t *testing.T) {
 	skip, reason, err := RunPre(Spec{
 		RequiredBinaries: []string{"definitely-not-a-real-binary-xyzzy"},
-	}, "", false)
+	}, Context{})
 	if !skip {
 		t.Error("expected skip=true when required binary missing")
 	}
@@ -33,7 +33,7 @@ func TestRunPre_RequiredBinaryMissing(t *testing.T) {
 func TestRunPre_RequiredDirMissing(t *testing.T) {
 	skip, reason, _ := RunPre(Spec{
 		RequiredDirs: []string{"/definitely/not/a/real/dir/xyzzy"},
-	}, "", false)
+	}, Context{})
 	if !skip {
 		t.Error("expected skip=true when required dir missing")
 	}
@@ -46,7 +46,7 @@ func TestRunPre_AutoCreateDir(t *testing.T) {
 	tmp := t.TempDir()
 	target := filepath.Join(tmp, "nested", "subdir")
 
-	skip, _, err := RunPre(Spec{AutoCreateDir: true}, target, false)
+	skip, _, err := RunPre(Spec{AutoCreateDir: true}, Context{OutputDir: target})
 	if skip || err != nil {
 		t.Fatalf("AutoCreateDir should not skip; got skip=%v err=%v", skip, err)
 	}
@@ -57,7 +57,7 @@ func TestRunPre_AutoCreateDir(t *testing.T) {
 
 func TestRunPre_AutoCreateDirIdempotent(t *testing.T) {
 	tmp := t.TempDir()
-	skip, _, err := RunPre(Spec{AutoCreateDir: true}, tmp, false)
+	skip, _, err := RunPre(Spec{AutoCreateDir: true}, Context{OutputDir: tmp})
 	if skip || err != nil {
 		t.Errorf("AutoCreateDir on existing dir should not skip; got skip=%v err=%v", skip, err)
 	}

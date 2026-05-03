@@ -13,19 +13,23 @@ import (
 
 // RunPre evaluates the spec's pre-execute checks. It returns the same
 // (skip, reason, err) shape the manager already uses for imperative
-// pre-hooks, so it can be called either before or instead of one. dir
-// is the plugin's resolved output directory (used for AutoCreateDir).
-func RunPre(spec Spec, dir string, verbose bool) (skip bool, reason string, err error) {
+// pre-hooks, so it can be called either before or instead of one.
+//
+// hctx supplies the plugin name (used to prefix verbose-mode messages),
+// the resolved output directory (consulted by AutoCreateDir), and the
+// verbose flag. WrittenFiles / WallpaperPath are unused here but the
+// shared Context shape keeps the runner API symmetric with RunPost.
+func RunPre(spec Spec, hctx Context) (skip bool, reason string, err error) {
 	for _, bin := range spec.RequiredBinaries {
 		if !appdetect.IsPresentAny([]string{bin}, nil) {
 			return true, fmt.Sprintf("%s executable not found on $PATH", bin), nil
 		}
 	}
 
-	if verbose {
+	if hctx.Verbose {
 		for _, bin := range spec.OptionalBinaries {
 			if !appdetect.IsPresentAny([]string{bin}, nil) {
-				fmt.Fprintf(os.Stderr, "   Warning: %s not found - some functionality may be limited\n", bin)
+				fmt.Fprintf(os.Stderr, "%sWarning: %s not found - some functionality may be limited\n", linePrefix(hctx.PluginName), bin)
 			}
 		}
 	}
@@ -36,18 +40,29 @@ func RunPre(spec Spec, dir string, verbose bool) (skip bool, reason string, err 
 		}
 	}
 
-	if spec.AutoCreateDir && dir != "" {
-		if _, statErr := os.Stat(dir); os.IsNotExist(statErr) {
-			if mkErr := os.MkdirAll(dir, 0o750); mkErr != nil {
-				return true, fmt.Sprintf("failed to create directory %s: %v", dir, mkErr), nil
+	if spec.AutoCreateDir && hctx.OutputDir != "" {
+		if _, statErr := os.Stat(hctx.OutputDir); os.IsNotExist(statErr) {
+			if mkErr := os.MkdirAll(hctx.OutputDir, 0o750); mkErr != nil {
+				return true, fmt.Sprintf("failed to create directory %s: %v", hctx.OutputDir, mkErr), nil
 			}
-			if verbose {
-				fmt.Fprintf(os.Stderr, "   Created directory: %s\n", dir)
+			if hctx.Verbose {
+				fmt.Fprintf(os.Stderr, "%sCreated directory: %s\n", linePrefix(hctx.PluginName), hctx.OutputDir)
 			}
 		}
 	}
 
 	return false, "", nil
+}
+
+// linePrefix returns the verbose-output prefix for a plugin. When name is
+// non-empty we produce "   kitty: " so users can scan multi-plugin runs.
+// When name is empty (older callers, tests) we keep the historical
+// three-space indent so output stays aligned with the rest of tinct.
+func linePrefix(name string) string {
+	if name == "" {
+		return "   "
+	}
+	return "   " + name + ": "
 }
 
 // RunPost evaluates the spec's post-execute actions: chmod marked files,
@@ -61,12 +76,12 @@ func RunPost(ctx context.Context, spec Spec, hctx Context) error {
 	}
 
 	if len(spec.MakeExecutable) > 0 {
-		applyMakeExecutable(spec.MakeExecutable, hctx.WrittenFiles, hctx.Verbose)
+		applyMakeExecutable(spec.MakeExecutable, hctx.WrittenFiles, hctx.PluginName, hctx.Verbose)
 	}
 
 	if spec.ReloadFn != nil {
 		if err := spec.ReloadFn(ctx); err != nil && hctx.Verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: reload failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%sWarning: reload failed: %v\n", linePrefix(hctx.PluginName), err)
 		}
 	} else if spec.Reload != nil {
 		runReloadVerb(ctx, *spec.Reload, hctx.Verbose)
@@ -74,7 +89,7 @@ func RunPost(ctx context.Context, spec Spec, hctx Context) error {
 
 	if spec.SupportsWallpaper && spec.Wallpaper != nil && hctx.WallpaperPath != "" {
 		if err := spec.Wallpaper(ctx, hctx.WallpaperPath); err != nil && hctx.Verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: wallpaper apply failed: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%sWarning: wallpaper apply failed: %v\n", linePrefix(hctx.PluginName), err)
 		}
 	}
 
@@ -85,14 +100,14 @@ func RunPost(ctx context.Context, spec Spec, hctx Context) error {
 	return nil
 }
 
-func applyMakeExecutable(names, written []string, verbose bool) {
+func applyMakeExecutable(names, written []string, pluginName string, verbose bool) {
 	for _, name := range names {
 		for _, f := range written {
 			if filepath.Base(f) != name {
 				continue
 			}
 			if err := os.Chmod(f, 0o755); err != nil && verbose {
-				fmt.Fprintf(os.Stderr, "   Warning: failed to chmod %s: %v\n", f, err)
+				fmt.Fprintf(os.Stderr, "%sWarning: failed to chmod %s: %v\n", linePrefix(pluginName), f, err)
 			}
 		}
 	}

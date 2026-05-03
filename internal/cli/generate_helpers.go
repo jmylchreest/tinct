@@ -453,7 +453,12 @@ func preparePluginExecutions(ctx context.Context, plugins []output.Plugin) []plu
 func shouldSkipFromPreHook(ctx context.Context, plugin output.Plugin, exec *pluginExecution) bool {
 	if provider, ok := plugin.(hooks.Provider); ok {
 		spec := provider.Hooks()
-		skip, reason, err := hooks.RunPre(spec, plugin.DefaultOutputDir(), generateVerbose)
+		hctx := hooks.Context{
+			PluginName: plugin.Name(),
+			Verbose:    generateVerbose,
+			OutputDir:  plugin.DefaultOutputDir(),
+		}
+		skip, reason, err := hooks.RunPre(spec, hctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, " %s pre-execution check failed: %v\n", plugin.Name(), err)
 			exec.skip = true
@@ -694,6 +699,7 @@ func runPostExecutionHooks(ctx context.Context, executions []pluginExecution, wa
 		if provider, ok := plugin.(hooks.Provider); ok {
 			spec := provider.Hooks()
 			hctx := hooks.Context{
+				PluginName:    plugin.Name(),
 				DryRun:        execContext.DryRun,
 				Verbose:       execContext.Verbose,
 				OutputDir:     execContext.OutputDir,
