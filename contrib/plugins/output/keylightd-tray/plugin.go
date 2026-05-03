@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin/config"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 // Plugin implements the tinct OutputPlugin interface for keylightd-tray themes.
@@ -18,18 +20,13 @@ type Plugin struct {
 }
 
 // getConfigDir returns the path to the keylightd-tray config directory.
+//
+// Resolution order: --keylightd-tray.output-dir flag (currently
+// unsupported) → TINCT_PLUGIN_KEYLIGHTD_TRAY_OUTPUT_DIR → platform XDG
+// config dir + keylightd/keylightd-tray.
 func getConfigDir() (string, error) {
-	// Check XDG_CONFIG_HOME first
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("failed to get home directory: %w", err)
-		}
-		configHome = filepath.Join(home, ".config")
-	}
-
-	return filepath.Join(configHome, "keylightd", "keylightd-tray"), nil
+	fallback := filepath.Join(paths.XDGConfigDir(), "keylightd", "keylightd-tray")
+	return config.Resolve("keylightd-tray", "output_dir", "", fallback), nil
 }
 
 // getTinctColoursPath returns the path to the tinct-colours.css file.
