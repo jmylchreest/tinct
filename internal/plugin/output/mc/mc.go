@@ -12,11 +12,9 @@ package mc
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
@@ -27,6 +25,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -97,21 +97,29 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
+// MC uses XDG_DATA_HOME everywhere, which paths.XDGDataDir resolves
+// consistently across Linux, macOS, and Windows.
 func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
+	return filepath.Join(paths.XDGDataDir(), "mc", "skins")
+}
 
-	// Respect XDG_DATA_HOME if set.
-	if dataHome := os.Getenv("XDG_DATA_HOME"); dataHome != "" {
-		return filepath.Join(dataHome, "mc", "skins")
+// Hooks declares mc's pre/post-execute behaviour. MC does not support
+// hot-reload of skins, so the post-execute message just instructs the
+// user how to apply it manually.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"mc"},
+		AutoCreateDir:    true,
+		Instructions: `   MC skin generated. To apply:
+     mc -S tinct
+   Or set in ~/.config/mc/ini:
+     skin=tinct
+   Note: MC does not support hot-reloading skins.
+   Restart mc or select the skin via Options > Appearance.`,
 	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".local/share/mc/skins"
-	}
-	return filepath.Join(home, ".local", "share", "mc", "skins")
 }
 
 // Generate creates the skin file.
@@ -161,43 +169,4 @@ func (p *Plugin) generateSkin(themeData *colour.ThemeData) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-// PreExecute checks if mc is available before generating the skin.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if mc executable exists on PATH.
-	_, err = exec.LookPath("mc")
-	if err != nil {
-		return true, "mc executable not found on $PATH", nil
-	}
-
-	// Check if skins directory exists (create it if not).
-	skinsDir := p.DefaultOutputDir()
-	if _, err := os.Stat(skinsDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(skinsDir, 0o750); err != nil {
-			return true, fmt.Sprintf("mc skins directory does not exist and cannot be created: %s", skinsDir), nil
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute prints usage instructions after successful skin generation.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, _ []string) error {
-	if execCtx.DryRun {
-		return nil
-	}
-
-	if p.verbose {
-		fmt.Fprintf(os.Stderr, "   MC skin generated. To apply:\n")
-		fmt.Fprintf(os.Stderr, "     mc -S tinct\n")
-		fmt.Fprintf(os.Stderr, "   Or set in ~/.config/mc/ini:\n")
-		fmt.Fprintf(os.Stderr, "     skin=tinct\n")
-		fmt.Fprintf(os.Stderr, "   Note: MC does not support hot-reloading skins.\n")
-		fmt.Fprintf(os.Stderr, "   Restart mc or select the skin via Options > Appearance.\n")
-	}
-
-	return nil
 }
