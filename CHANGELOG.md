@@ -46,6 +46,9 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
   external plugin (same name, same semantics) and continues to honour
   the `TINCT_PLUGIN_PTYXIS_OUTPUT_DIR` environment variable.
 
+## [0.2.3]
+*2026-05-03*
+
 ## [0.2.2]
 *2026-04-10*
 
