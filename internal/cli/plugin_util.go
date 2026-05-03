@@ -9,16 +9,16 @@ import (
 	"path/filepath"
 
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 // getPluginDir returns the plugin directory path, creating it if it doesn't exist.
+//
+// Uses the XDG data dir (~/.local/share on Linux/macOS, %LocalAppData%
+// on Windows) so external plugins land in a platform-appropriate
+// location consistent with the rest of tinct.
 func getPluginDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	pluginDir := filepath.Join(home, ".local", "share", "tinct", "plugins")
+	pluginDir := filepath.Join(paths.XDGDataDir(), "tinct", "plugins")
 
 	// Ensure directory exists.
 	if err := os.MkdirAll(pluginDir, 0o750); err != nil {

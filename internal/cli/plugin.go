@@ -14,6 +14,7 @@ import (
 
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 const (
@@ -632,13 +633,12 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,go
 	return nil
 }
 
-// getDefaultLockFilePath returns the default lock file path at ~/.config/tinct/plugins.lock.json.
+// getDefaultLockFilePath returns the default lock file path at
+// ~/.config/tinct/plugins.lock.json on Linux/macOS, %AppData%/tinct/...
+// on Windows. Uses paths.XDGConfigDir so macOS lands on ~/.config/tinct
+// rather than ~/Library/Application Support/tinct (matching docs).
 func getDefaultLockFilePath() (string, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get config directory: %w", err)
-	}
-	return filepath.Join(configDir, "tinct", PluginLockFile), nil
+	return filepath.Join(paths.XDGConfigDir(), "tinct", PluginLockFile), nil
 }
 
 // migrateLegacyLockFile checks for lock files at legacy locations and migrates

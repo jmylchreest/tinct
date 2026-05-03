@@ -21,6 +21,8 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 const (
@@ -148,13 +150,13 @@ func defaults() *Config {
 	}
 }
 
-// configDir returns ~/.config/tinct (or the XDG equivalent).
+// configDir returns ~/.config/tinct on Linux and macOS, %AppData%/tinct
+// on Windows. macOS intentionally uses ~/.config rather than the
+// platform-native ~/Library/Application Support, matching what most
+// modern XDG-aware CLI tools do — and matching what
+// docs/configuration.md tells users to expect.
 func configDir() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("get config directory: %w", err)
-	}
-	return filepath.Join(dir, configDirName), nil
+	return filepath.Join(paths.XDGConfigDir(), configDirName), nil
 }
 
 // configFilePath returns the full path to tinct.toml.
