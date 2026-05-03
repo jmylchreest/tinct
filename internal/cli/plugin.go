@@ -637,8 +637,8 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,go
 // ~/.config/tinct/plugins.lock.json on Linux/macOS, %AppData%/tinct/...
 // on Windows. Uses paths.XDGConfigDir so macOS lands on ~/.config/tinct
 // rather than ~/Library/Application Support/tinct (matching docs).
-func getDefaultLockFilePath() (string, error) {
-	return filepath.Join(paths.XDGConfigDir(), "tinct", PluginLockFile), nil
+func getDefaultLockFilePath() string {
+	return filepath.Join(paths.XDGConfigDir(), "tinct", PluginLockFile)
 }
 
 // migrateLegacyLockFile checks for lock files at legacy locations and migrates
@@ -686,11 +686,7 @@ func loadPluginLock() (*PluginLock, string, error) {
 	lockPath := pluginLockPath
 
 	if lockPath == "" {
-		// Use the new default path.
-		defaultPath, err := getDefaultLockFilePath()
-		if err != nil {
-			return nil, "", fmt.Errorf("no plugin lock file found")
-		}
+		defaultPath := getDefaultLockFilePath()
 
 		if _, err := os.Stat(defaultPath); err == nil {
 			lockPath = defaultPath
@@ -729,11 +725,7 @@ func loadOrCreatePluginLock() (lock *PluginLock, lockPath string) {
 	// Create new lock file at the default path.
 	lockPath = pluginLockPath
 	if lockPath == "" {
-		if defaultPath, err := getDefaultLockFilePath(); err == nil {
-			lockPath = defaultPath
-		} else {
-			lockPath = PluginLockFile
-		}
+		lockPath = getDefaultLockFilePath()
 	}
 
 	lock = &PluginLock{

@@ -90,11 +90,7 @@ func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,goco
 	if err != nil {
 		defaultPath := pluginLockPath
 		if defaultPath == "" {
-			if dp, dpErr := getDefaultLockFilePath(); dpErr == nil {
-				defaultPath = dp
-			} else {
-				defaultPath = PluginLockFile
-			}
+			defaultPath = getDefaultLockFilePath()
 		}
 		return fmt.Errorf("lock file not found at %s\n\nCreate one by installing plugins with 'tinct plugins add'", defaultPath)
 	}

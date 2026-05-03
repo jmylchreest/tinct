@@ -229,6 +229,22 @@ linters:
         linters:
           - wrapcheck
 
+      # contrib/ plugins legitimately use a `replace github.com/jmylchreest/tinct
+      # => ../../../../` directive so the plugin always builds against the
+      # current local tinct module (rather than an outdated published version).
+      # That's a design choice, not a mistake — silence the linter complaint.
+      - path: contrib/
+        linters:
+          - gomoddirectives
+
+      # contrib/ plugins are external — they can't rely on tinct's internal
+      # error wrapping conventions, so wrapcheck false-positives heavily.
+      # The plugins still wrap their own errors via fmt.Errorf %w; what
+      # wrapcheck flags here is propagating tinct SDK errors verbatim.
+      - path: contrib/
+        linters:
+          - wrapcheck
+
       # Package names that intentionally shadow stdlib (established naming)
       - text: "var-naming: avoid package names that conflict with Go standard library"
         linters:
@@ -296,9 +312,12 @@ run:
   # Allow multiple parallel golangci-lint instances
   allow-parallel-runners: true
 
-  # The mode used to evaluate relative paths
+  # The mode used to evaluate relative paths.
+  # gitroot is needed so contrib/-scoped exclusions in `issues.exclusions.rules`
+  # still apply when golangci-lint is invoked from inside a contrib/plugins/
+  # submodule (each plugin has its own go.mod).
   # Options: gomod, gitroot, cfg, wd
-  relative-path-mode: gomod
+  relative-path-mode: gitroot
 
 # Severity settings
 severity:

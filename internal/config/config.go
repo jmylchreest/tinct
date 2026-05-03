@@ -155,34 +155,23 @@ func defaults() *Config {
 // platform-native ~/Library/Application Support, matching what most
 // modern XDG-aware CLI tools do — and matching what
 // docs/configuration.md tells users to expect.
-func configDir() (string, error) {
-	return filepath.Join(paths.XDGConfigDir(), configDirName), nil
+func configDir() string {
+	return filepath.Join(paths.XDGConfigDir(), configDirName)
 }
 
 // configFilePath returns the full path to tinct.toml.
-func configFilePath() (string, error) {
-	dir, err := configDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, configFileName), nil
+func configFilePath() string {
+	return filepath.Join(configDir(), configFileName)
 }
 
 // idFilePath returns the full path to telemetry.id.
-func idFilePath() (string, error) {
-	dir, err := configDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, idFileName), nil
+func idFilePath() string {
+	return filepath.Join(configDir(), idFileName)
 }
 
 // loadFromDisk reads tinct.toml, creating it with defaults if absent or corrupt.
 func loadFromDisk() (*Config, string, error) {
-	path, err := configFilePath()
-	if err != nil {
-		return defaults(), "", fmt.Errorf("determine config path: %w", err)
-	}
+	path := configFilePath()
 
 	data, err := os.ReadFile(path) // #nosec G304 -- path is derived from os.UserConfigDir(), not user-controlled input
 	if err == nil {
@@ -203,11 +192,7 @@ func loadFromDisk() (*Config, string, error) {
 
 // loadOrCreateID loads, validates, and (if necessary) generates the installation ID.
 func loadOrCreateID() string {
-	path, err := idFilePath()
-	if err != nil {
-		// Can't determine path — generate an ephemeral ID for this session.
-		return generateInstallationID()
-	}
+	path := idFilePath()
 
 	// Attempt to read and validate an existing ID.
 	if data, readErr := os.ReadFile(path); readErr == nil { // #nosec G304
