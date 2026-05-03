@@ -55,6 +55,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/wbg"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wezterm"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wofi"
+	"github.com/jmylchreest/tinct/internal/plugin/output/yazi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 	"github.com/jmylchreest/tinct/pkg/plugin"
@@ -148,6 +149,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(wbg.New())
 	m.outputRegistry.Register(wezterm.New())
 	m.outputRegistry.Register(wofi.New())
+	m.outputRegistry.Register(yazi.New())
 	m.outputRegistry.Register(zellij.New())
 }
 
