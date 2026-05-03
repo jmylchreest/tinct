@@ -3,11 +3,9 @@ package wofi
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
@@ -18,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl tinct-colors
@@ -185,20 +184,10 @@ func (p *Plugin) generateStyle(themeData *colour.ThemeData) ([]byte, error) {
 
 // PreExecute checks if wofi is available and config directory exists.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if wofi executable exists on PATH.
-	_, err = exec.LookPath("wofi")
-	if err != nil {
-		return true, "wofi executable not found on $PATH", nil
+// Hooks declares wofi's pre-execute behaviour.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"wofi"},
+		AutoCreateDir:    true,
 	}
-
-	// Check if config directory exists (create it if not).
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("wofi config directory does not exist and cannot be created: %s", configDir), nil
-		}
-	}
-
-	return false, "", nil
 }
