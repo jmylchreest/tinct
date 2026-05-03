@@ -199,10 +199,12 @@ func (e *PluginExecutor) dispenseRPCPlugin(name string, pluginMap map[string]gop
 	}
 
 	// Initialize go-plugin client.
+	rpcCmd := exec.Command(e.path) //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
+	rpcCmd.Env = pluginEnv()
 	e.client = goplug.NewClient(&goplug.ClientConfig{
 		HandshakeConfig:  protocol.Handshake,
 		Plugins:          pluginMap,
-		Cmd:              exec.Command(e.path), //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
+		Cmd:              rpcCmd,
 		AllowedProtocols: []goplug.Protocol{goplug.ProtocolNetRPC},
 		Logger:           logger,
 		SyncStderr:       os.Stderr, // Forward plugin stderr to parent

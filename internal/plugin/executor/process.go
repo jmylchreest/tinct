@@ -20,6 +20,7 @@ type RealProcessRunner struct{}
 // Run executes a real external process.
 func (r *RealProcessRunner) Run(ctx context.Context, path string, args []string, stdin io.Reader) (stdout, stderr []byte, err error) {
 	cmd := exec.CommandContext(ctx, path, args...) // #nosec G204 -- path is the plugin binary path from the lock file; exec.CommandContext does not invoke a shell so args cannot cause injection
+	cmd.Env = pluginEnv()
 	cmd.Stdin = stdin
 
 	stdout, err = cmd.Output()
