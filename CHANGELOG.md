@@ -13,6 +13,23 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING**: AUR per-plugin packages (`tinct-plugin-random-bin`,
+  `tinct-plugin-wob-bin`, `tinct-plugin-templater-bin`,
+  `tinct-plugin-dunstify-bin`, `tinct-plugin-zed-bin`,
+  `tinct-plugin-opencode-bin`, `tinct-plugin-keylightd-tray-bin`) are no
+  longer built. Plugins should be installed via the plugin manager:
+
+      tinct plugin install <name>
+
+  This is the canonical install path — it pins versions, sandboxes
+  installs to `~/.local/share/tinct/plugins/`, and uninstalls cleanly.
+  The `tinct-bin` AUR package for tinct itself remains supported. The
+  goreleaser config keeps a commented-out `tinct-plugin-templater-bin`
+  block as a copy-paste reference for anyone re-enabling AUR
+  distribution for a specific plugin.
+
 ### Changed
 
 - **BREAKING**: `ptyxis` is no longer a built-in output plugin. It has

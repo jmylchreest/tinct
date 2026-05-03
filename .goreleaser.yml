@@ -701,215 +701,45 @@ aurs:
         fi
       done
 
-  # Plugin: random
-  - name: tinct-plugin-random-bin
-    ids:
-      - tinct-plugin-random-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Random color palette generator plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-random-bin.git"
-    depends:
-      - tinct
-    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    package: |-
-      # bin
-      install -Dm755 "./tinct-plugin-random" "${pkgdir}/usr/bin/tinct-plugin-random"
+  # =====================================================================
+  # Per-plugin AUR packages were dropped in favour of `tinct plugin
+  # install <name>`, which provides version pinning, sandboxed installs,
+  # and consistent uninstall semantics across all plugins. The block
+  # below is preserved as a copy-paste reference: uncomment it (and
+  # the matching install script at
+  # .goreleaser/aur-install-scripts/plugin-templater.install) to
+  # re-enable AUR distribution for a single plugin. Repeat the pattern
+  # for any other plugin you want to ship via AUR.
+  # =====================================================================
+  # - name: tinct-plugin-templater-bin
+  #   ids:
+  #     - tinct-plugin-templater-archive
+  #   homepage: "https://github.com/jmylchreest/tinct"
+  #   description: "Template-based output plugin for Tinct"
+  #   maintainers:
+  #     - "John Mylchreest <jmylchreest@gmail.com>"
+  #   license: MIT
+  #   private_key: "{{ .Env.AUR_KEY }}"
+  #   git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-templater-bin.git"
+  #   depends:
+  #     - tinct
+  #   url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+  #   package: |-
+  #     # bin
+  #     install -Dm755 "./tinct-plugin-templater" "${pkgdir}/usr/bin/tinct-plugin-templater"
+  #
+  #     # license
+  #     install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-templater/LICENSE"
+  #
+  #     # sbom
+  #     for sbom in *.sbom.json; do
+  #       if [ -f "$sbom" ]; then
+  #         install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-templater/sbom.json"
+  #         break
+  #       fi
+  #     done
+  #   install: .goreleaser/aur-install-scripts/plugin-templater.install
 
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-random/LICENSE"
-
-      # sbom
-      for sbom in *.sbom.json; do
-        if [ -f "$sbom" ]; then
-          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-random/sbom.json"
-          break
-        fi
-      done
-    install: .goreleaser/aur-install-scripts/plugin-random.install
-
-  # Plugin: templater
-  - name: tinct-plugin-templater-bin
-    ids:
-      - tinct-plugin-templater-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Template-based output plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-templater-bin.git"
-    depends:
-      - tinct
-    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    package: |-
-      # bin
-      install -Dm755 "./tinct-plugin-templater" "${pkgdir}/usr/bin/tinct-plugin-templater"
-
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-templater/LICENSE"
-
-      # sbom
-      for sbom in *.sbom.json; do
-        if [ -f "$sbom" ]; then
-          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-templater/sbom.json"
-          break
-        fi
-      done
-    install: .goreleaser/aur-install-scripts/plugin-templater.install
-
-  # Plugin: wob
-  - name: tinct-plugin-wob-bin
-    ids:
-      - tinct-plugin-wob-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Wob (Wayland Overlay Bar) output plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-wob-bin.git"
-    depends:
-      - tinct
-    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    package: |-
-      # bin
-      install -Dm755 "./tinct-plugin-wob" "${pkgdir}/usr/bin/tinct-plugin-wob"
-
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-wob/LICENSE"
-
-      # sbom
-      for sbom in *.sbom.json; do
-        if [ -f "$sbom" ]; then
-          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-wob/sbom.json"
-          break
-        fi
-      done
-    install: .goreleaser/aur-install-scripts/plugin-wob.install
-
-  # Plugin: dunstify
-  - name: tinct-plugin-dunstify-bin
-    ids:
-      - tinct-plugin-dunstify-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Desktop notification plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-dunstify-bin.git"
-    depends:
-      - tinct
-    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    package: |-
-      # bin
-      install -Dm755 "./tinct-plugin-dunstify" "${pkgdir}/usr/bin/tinct-plugin-dunstify"
-
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-dunstify/LICENSE"
-
-      # sbom
-      for sbom in *.sbom.json; do
-        if [ -f "$sbom" ]; then
-          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-dunstify/sbom.json"
-          break
-        fi
-      done
-    install: .goreleaser/aur-install-scripts/plugin-dunstify.install
-
-  # Plugin: zed
-  - name: tinct-plugin-zed-bin
-    ids:
-      - tinct-plugin-zed-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "Zed editor theme plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-zed-bin.git"
-    depends:
-      - tinct
-    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    package: |-
-      # bin
-      install -Dm755 "./tinct-plugin-zed" "${pkgdir}/usr/bin/tinct-plugin-zed"
-
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-zed/LICENSE"
-
-      # sbom
-      for sbom in *.sbom.json; do
-        if [ -f "$sbom" ]; then
-          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-zed/sbom.json"
-          break
-        fi
-      done
-    install: .goreleaser/aur-install-scripts/plugin-zed.install
-
-  # Plugin: opencode
-  - name: tinct-plugin-opencode-bin
-    ids:
-      - tinct-plugin-opencode-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "OpenCode theme plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-opencode-bin.git"
-    depends:
-      - tinct
-    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    package: |-
-      # bin
-      install -Dm755 "./tinct-plugin-opencode" "${pkgdir}/usr/bin/tinct-plugin-opencode"
-
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-opencode/LICENSE"
-
-      # sbom
-      for sbom in *.sbom.json; do
-        if [ -f "$sbom" ]; then
-          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-opencode/sbom.json"
-          break
-        fi
-      done
-    install: .goreleaser/aur-install-scripts/plugin-opencode.install
-
-  # Plugin: keylightd-tray
-  - name: tinct-plugin-keylightd-tray-bin
-    ids:
-      - tinct-plugin-keylightd-tray-archive
-    homepage: "https://github.com/jmylchreest/tinct"
-    description: "keylightd-tray theme plugin for Tinct"
-    maintainers:
-      - "John Mylchreest <jmylchreest@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/tinct-plugin-keylightd-tray-bin.git"
-    depends:
-      - tinct
-    url_template: "https://github.com/jmylchreest/tinct/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    package: |-
-      # bin
-      install -Dm755 "./tinct-plugin-keylightd-tray" "${pkgdir}/usr/bin/tinct-plugin-keylightd-tray"
-
-      # license
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/tinct-plugin-keylightd-tray/LICENSE"
-
-      # sbom
-      for sbom in *.sbom.json; do
-        if [ -f "$sbom" ]; then
-          install -Dm644 "$sbom" "${pkgdir}/usr/share/doc/tinct-plugin-keylightd-tray/sbom.json"
-          break
-        fi
-      done
-    install: .goreleaser/aur-install-scripts/plugin-keylightd-tray.install
 # ============================================================================
 # GITHUB RELEASE
 # ============================================================================
