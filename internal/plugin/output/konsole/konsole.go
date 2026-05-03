@@ -20,7 +20,7 @@ import (
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/dbus"
-	"github.com/jmylchreest/tinct/pkg/util/appdetect"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -230,6 +230,17 @@ func (p *Plugin) DefaultOutputDir() string {
 	return filepath.Join(home, ".local", "share", "konsole")
 }
 
+// Hooks declares konsole's pre-execute behaviour. PostExecute (D-Bus
+// session-update + konsoleprofile fallback + content-aware messaging)
+// stays imperative — it has bespoke fallback logic and per-strategy
+// messaging the data-only spec can't express.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"konsole"},
+		AutoCreateDir:    true,
+	}
+}
+
 // Generate creates the theme file.
 // Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
@@ -290,29 +301,6 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-// PreExecute checks if konsole is available before generating the theme.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if konsole executable exists (native, Flatpak, or AppImage).
-	if !appdetect.IsPresentAny([]string{"konsole"}, nil) {
-		return true, "konsole executable not found on $PATH", nil
-	}
-
-	// Check if config directory exists, create if it doesn't.
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the config directory.
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("failed to create konsole config directory: %s", configDir), nil
-		}
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Created konsole config directory: %s\n", configDir)
-		}
-	}
-
-	return false, "", nil
 }
 
 // PostExecute provides usage instructions for applying the theme and attempts to reload.
