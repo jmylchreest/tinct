@@ -18,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -92,12 +93,7 @@ func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/rosec"
-	}
-	return filepath.Join(home, ".config", "rosec")
+	return filepath.Join(paths.XDGConfigDir(), "rosec")
 }
 
 // Generate creates the theme files.
