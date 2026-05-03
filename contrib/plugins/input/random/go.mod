@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/jmylchreest/tinct v0.1.1
+	github.com/jmylchreest/tinct v0.2.3
 )
 
 require (
