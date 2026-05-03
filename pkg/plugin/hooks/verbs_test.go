@@ -18,7 +18,7 @@ func TestRunReloadVerb_Exec(t *testing.T) {
 		Verb: VerbExec,
 		Args: []string{"/bin/sh", "-c", "touch " + marker},
 	}
-	runReloadVerb(context.Background(), spec, false)
+	runReloadVerb(context.Background(), spec, "", false)
 
 	if _, err := os.Stat(marker); err != nil {
 		t.Errorf("VerbExec did not invoke the command (marker missing): %v", err)
@@ -35,7 +35,7 @@ func TestRunReloadVerb_ExecBareShorthand(t *testing.T) {
 		// No Verb set — empty string ("") falls through to VerbExec.
 		Args: []string{"/bin/sh", "-c", "touch " + marker},
 	}
-	runReloadVerb(context.Background(), spec, false)
+	runReloadVerb(context.Background(), spec, "", false)
 
 	if _, err := os.Stat(marker); err != nil {
 		t.Errorf("bare-args exec shorthand did not run: %v", err)
@@ -50,8 +50,8 @@ func TestRunExecVerb_NoArgs(t *testing.T) {
 			t.Errorf("runExecVerb panicked on empty args: %v", r)
 		}
 	}()
-	runExecVerb(context.Background(), nil, false)
-	runExecVerb(context.Background(), []string{}, false)
+	runExecVerb(context.Background(), nil, "", false)
+	runExecVerb(context.Background(), []string{}, "", false)
 }
 
 // TestRunExecVerb_BadCommand verifies the runner does not panic or block on
@@ -62,7 +62,7 @@ func TestRunExecVerb_BadCommand(t *testing.T) {
 			t.Errorf("runExecVerb panicked on bad command: %v", r)
 		}
 	}()
-	runExecVerb(context.Background(), []string{"definitely-not-a-real-binary-xyz"}, false)
+	runExecVerb(context.Background(), []string{"definitely-not-a-real-binary-xyz"}, "", false)
 }
 
 // TestRunReloadVerb_UnknownVerb verifies unknown verb names don't crash —
@@ -73,7 +73,7 @@ func TestRunReloadVerb_UnknownVerb(t *testing.T) {
 			t.Errorf("runReloadVerb panicked on unknown verb: %v", r)
 		}
 	}()
-	runReloadVerb(context.Background(), ReloadSpec{Verb: "totally-bogus", Args: []string{"x"}}, false)
+	runReloadVerb(context.Background(), ReloadSpec{Verb: "totally-bogus", Args: []string{"x"}}, "", false)
 }
 
 // TestPrintInstructions_TemplateRendering covers the InstructionsFn path.

@@ -29,7 +29,7 @@ func RunPre(spec Spec, hctx Context) (skip bool, reason string, err error) {
 	if hctx.Verbose {
 		for _, bin := range spec.OptionalBinaries {
 			if !appdetect.IsPresentAny([]string{bin}, nil) {
-				fmt.Fprintf(os.Stderr, "%sWarning: %s not found - some functionality may be limited\n", linePrefix(hctx.PluginName), bin)
+				fmt.Fprintf(os.Stderr, "%swarning: %s not found - some functionality may be limited\n", linePrefix(hctx.PluginName), bin)
 			}
 		}
 	}
@@ -46,7 +46,7 @@ func RunPre(spec Spec, hctx Context) (skip bool, reason string, err error) {
 				return true, fmt.Sprintf("failed to create directory %s: %v", hctx.OutputDir, mkErr), nil
 			}
 			if hctx.Verbose {
-				fmt.Fprintf(os.Stderr, "%sCreated directory: %s\n", linePrefix(hctx.PluginName), hctx.OutputDir)
+				fmt.Fprintf(os.Stderr, "%screated directory: %s\n", linePrefix(hctx.PluginName), hctx.OutputDir)
 			}
 		}
 	}
@@ -81,15 +81,15 @@ func RunPost(ctx context.Context, spec Spec, hctx Context) error {
 
 	if spec.ReloadFn != nil {
 		if err := spec.ReloadFn(ctx); err != nil && hctx.Verbose {
-			fmt.Fprintf(os.Stderr, "%sWarning: reload failed: %v\n", linePrefix(hctx.PluginName), err)
+			fmt.Fprintf(os.Stderr, "%swarning: reload failed: %v\n", linePrefix(hctx.PluginName), err)
 		}
 	} else if spec.Reload != nil {
-		runReloadVerb(ctx, *spec.Reload, hctx.Verbose)
+		runReloadVerb(ctx, *spec.Reload, hctx.PluginName, hctx.Verbose)
 	}
 
 	if spec.SupportsWallpaper && spec.Wallpaper != nil && hctx.WallpaperPath != "" {
 		if err := spec.Wallpaper(ctx, hctx.WallpaperPath); err != nil && hctx.Verbose {
-			fmt.Fprintf(os.Stderr, "%sWarning: wallpaper apply failed: %v\n", linePrefix(hctx.PluginName), err)
+			fmt.Fprintf(os.Stderr, "%swarning: wallpaper apply failed: %v\n", linePrefix(hctx.PluginName), err)
 		}
 	}
 
@@ -107,7 +107,7 @@ func applyMakeExecutable(names, written []string, pluginName string, verbose boo
 				continue
 			}
 			if err := os.Chmod(f, 0o755); err != nil && verbose {
-				fmt.Fprintf(os.Stderr, "%sWarning: failed to chmod %s: %v\n", linePrefix(pluginName), f, err)
+				fmt.Fprintf(os.Stderr, "%swarning: failed to chmod %s: %v\n", linePrefix(pluginName), f, err)
 			}
 		}
 	}

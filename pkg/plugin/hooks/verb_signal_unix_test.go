@@ -53,11 +53,11 @@ func TestRunSignalVerb_BadArgs(t *testing.T) {
 			t.Errorf("runSignalVerb panicked: %v", r)
 		}
 	}()
-	runSignalVerb(nil, false)
-	runSignalVerb([]string{}, false)
-	runSignalVerb([]string{"only-one-arg"}, false)
-	runSignalVerb([]string{"foo", "SIGBOGUS"}, false)
-	runSignalVerb([]string{"definitely-not-a-process-xyz", "SIGUSR1"}, false)
+	runSignalVerb(nil, "", false)
+	runSignalVerb([]string{}, "", false)
+	runSignalVerb([]string{"only-one-arg"}, "", false)
+	runSignalVerb([]string{"foo", "SIGBOGUS"}, "", false)
+	runSignalVerb([]string{"definitely-not-a-process-xyz", "SIGUSR1"}, "", false)
 }
 
 // TestRunSignalVerb_SelfSignal exercises the full signal delivery path. We
@@ -80,7 +80,7 @@ func TestRunSignalVerb_SelfSignal(t *testing.T) {
 	}
 	procName := filepath.Base(exe)
 
-	runSignalVerb([]string{procName, "SIGUSR2"}, false)
+	runSignalVerb([]string{procName, "SIGUSR2"}, "", false)
 
 	select {
 	case <-sig:

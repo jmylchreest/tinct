@@ -15,10 +15,11 @@ import (
 // (SIGUSR1, SIGUSR2, SIGHUP, SIGTERM). Used by reload-on-signal apps
 // like kitty (SIGUSR1) and ghostty (SIGUSR2). On non-Unix platforms a
 // stub in verb_signal_other.go warns and returns.
-func runSignalVerb(args []string, verbose bool) {
+func runSignalVerb(args []string, pluginName string, verbose bool) {
+	prefix := linePrefix(pluginName)
 	if len(args) < 2 {
 		if verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: signal verb requires [process_name, signal]\n")
+			fmt.Fprintf(os.Stderr, "%swarning: signal verb requires [process_name, signal]\n", prefix)
 		}
 		return
 	}
@@ -27,7 +28,7 @@ func runSignalVerb(args []string, verbose bool) {
 	sig := parseSignal(sigName)
 	if sig == nil {
 		if verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: unknown signal: %s\n", sigName)
+			fmt.Fprintf(os.Stderr, "%swarning: unknown signal: %s\n", prefix, sigName)
 		}
 		return
 	}
@@ -35,7 +36,7 @@ func runSignalVerb(args []string, verbose bool) {
 	procs, err := ps.Processes()
 	if err != nil {
 		if verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: failed to list processes: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%swarning: failed to list processes: %v\n", prefix, err)
 		}
 		return
 	}
@@ -55,7 +56,7 @@ func runSignalVerb(args []string, verbose bool) {
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "   Sent %s to %d %s instance(s)\n", sigName, sent, procName)
+		fmt.Fprintf(os.Stderr, "%ssent %s to %d %s instance(s)\n", prefix, sigName, sent, procName)
 	}
 }
 

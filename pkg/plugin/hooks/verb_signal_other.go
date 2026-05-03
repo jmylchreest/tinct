@@ -12,12 +12,12 @@ import (
 // applications use different reload mechanisms (named events, IPC).
 // Plugins targeting Windows should use VerbExec (e.g. invoking a CLI
 // reload command) or implement ReloadFn themselves.
-func runSignalVerb(args []string, verbose bool) {
+func runSignalVerb(args []string, pluginName string, verbose bool) {
 	if verbose {
 		name := "<unknown>"
 		if len(args) > 0 {
 			name = args[0]
 		}
-		fmt.Fprintf(os.Stderr, "   Warning: signal-based reload not supported on this platform (target: %s)\n", name)
+		fmt.Fprintf(os.Stderr, "%swarning: signal-based reload not supported on this platform (target: %s)\n", linePrefix(pluginName), name)
 	}
 }
