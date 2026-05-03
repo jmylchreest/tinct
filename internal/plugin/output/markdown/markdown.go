@@ -15,6 +15,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/shared/themeformat"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 // Plugin implements the output.Plugin interface for markdown theme export.
@@ -88,12 +89,7 @@ func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/tinct/themes"
-	}
-	return filepath.Join(home, ".config", "tinct", "themes")
+	return filepath.Join(paths.XDGConfigDir(), "tinct", "themes")
 }
 
 // Generate creates a markdown theme file from the given theme data.
