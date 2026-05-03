@@ -239,6 +239,44 @@ PostExecute lifecycle:
 
 `DryRun` short-circuits the entire spec post-execute.
 
+## User-overridable plugin config
+
+Plugins should resolve user-overridable strings (like `DefaultOutputDir`)
+through `internal/pluginconfig.Resolve`. It walks a fixed precedence
+chain so users get a consistent experience across plugins:
+
+```go
+import "github.com/jmylchreest/tinct/internal/pluginconfig"
+
+func (p *Plugin) DefaultOutputDir() string {
+    return pluginconfig.Resolve("kitty", "output_dir", p.outputDir,
+        filepath.Join(paths.XDGConfigDir(), "kitty", "themes"))
+}
+```
+
+The arguments are:
+
+1. **plugin name** — must match what `Name()` returns (used in
+   `[plugin.<name>]` and `TINCT_PLUGIN_<NAME>_*`).
+2. **key** — the field name in tinct.toml; underscores translate to
+   uppercase letters in the env var.
+3. **flag value** — the value cobra has already bound from
+   `--<plugin>.<key>` (typically the plugin's struct field).
+4. **fallback** — what to use when nothing else is set; usually a
+   `paths.XDGConfigDir()`-prefixed path.
+
+Resolution chain (highest priority first):
+
+1. Cobra flag value (treated as set when the string is non-empty).
+2. `TINCT_PLUGIN_<NAME>_<KEY>` environment variable.
+3. `[plugin.<name>] <key>` in tinct.toml.
+4. The fallback you passed.
+
+Linux behaviour with no TOML/env is byte-identical to the fallback you
+provide, so adopting Resolve in a new plugin is a no-op for users who
+don't care about overrides — they keep getting the same default path
+they always did.
+
 ## Cross-platform path resolution
 
 Use the `pkg/plugin/paths` helpers instead of computing paths yourself —
