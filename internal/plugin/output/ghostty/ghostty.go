@@ -3,16 +3,13 @@ package ghostty
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"syscall"
+	"runtime"
 	"text/template"
 
-	"github.com/mitchellh/go-ps"
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
@@ -20,6 +17,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -94,16 +93,37 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
+// On Linux: $XDG_CONFIG_HOME/ghostty/themes (default ~/.config/ghostty/themes).
+// On macOS: $XDG_CONFIG_HOME if set, else ~/Library/Application Support/
+// com.mitchellh.ghostty/themes (Ghostty's documented macOS path).
+// On Windows: %APPDATA%/ghostty/themes (best-effort; Ghostty Windows
+// support is preview as of writing).
 func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/ghostty/themes"
+	if os.Getenv("XDG_CONFIG_HOME") == "" && runtime.GOOS == "darwin" {
+		return filepath.Join(paths.MacOSAppSupport("com.mitchellh.ghostty"), "themes")
 	}
-	return filepath.Join(home, ".config", "ghostty", "themes")
+	return filepath.Join(paths.XDGConfigDir(), "ghostty", "themes")
+}
+
+// Hooks declares ghostty's pre/post-execute behaviour. The SIGUSR2
+// reload broadcast is expressed via VerbSignal — the shared hooks
+// runner handles process discovery and signal delivery, with a Windows
+// stub that no-ops with a warning.
+func (p *Plugin) Hooks() hooks.Spec {
+	spec := hooks.Spec{
+		RequiredBinaries: []string{"ghostty"},
+		AutoCreateDir:    true,
+	}
+	if p.reload {
+		spec.Reload = &hooks.ReloadSpec{
+			Verb: hooks.VerbSignal,
+			Args: []string{"ghostty", "SIGUSR2"},
+		}
+	}
+	return spec
 }
 
 // Generate creates the theme files.
@@ -152,98 +172,4 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-// PreExecute checks if ghostty is available before generating the theme.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if ghostty executable exists on PATH.
-	_, err = exec.LookPath("ghostty")
-	if err != nil {
-		return true, "ghostty executable not found on $PATH", nil
-	}
-
-	// Check if config directory exists (create it if not).
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("ghostty config directory does not exist and cannot be created: %s", configDir), nil
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute reloads ghostty configuration after successful theme generation.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, _ []string) error {
-	// Skip reload in dry-run mode or if reload is disabled.
-	if execCtx.DryRun || !p.reload {
-		return nil
-	}
-
-	if p.verbose {
-		fmt.Fprintf(os.Stderr, "   Reloading ghostty configuration...\n")
-	}
-
-	// Find all ghostty processes.
-	pids, err := findProcessByName("ghostty")
-	if err != nil {
-		return fmt.Errorf("failed to find ghostty processes: %w", err)
-	}
-
-	if len(pids) == 0 {
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   No running ghostty instances found\n")
-		}
-		return nil
-	}
-
-	// Send SIGUSR2 to all ghostty processes to reload configuration.
-	successCount := 0
-	for _, pid := range pids {
-		process, err := os.FindProcess(pid)
-		if err != nil {
-			if p.verbose {
-				fmt.Fprintf(os.Stderr, "   Warning: Failed to find process %d: %v\n", pid, err)
-			}
-			continue
-		}
-
-		if err := process.Signal(syscall.SIGUSR2); err != nil {
-			if p.verbose {
-				fmt.Fprintf(os.Stderr, "   Warning: Failed to send SIGUSR2 to ghostty process %d: %v\n", pid, err)
-			}
-			continue
-		}
-
-		successCount++
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Sent SIGUSR2 to ghostty process %d\n", pid)
-		}
-	}
-
-	if p.verbose && successCount > 0 {
-		fmt.Fprintf(os.Stderr, "   Successfully reloaded %d ghostty instance(s)\n", successCount)
-	}
-
-	return nil
-}
-
-// findProcessByName finds all PIDs of processes with the given name.
-// Uses go-ps library for cross-platform process discovery.
-func findProcessByName(name string) ([]int, error) {
-	processes, err := ps.Processes()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get process list: %w", err)
-	}
-
-	var pids []int
-	for _, p := range processes {
-		if p.Executable() == name {
-			pids = append(pids, p.Pid())
-		}
-	}
-
-	return pids, nil
 }
