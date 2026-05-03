@@ -18,7 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
-	"github.com/jmylchreest/tinct/pkg/util/appdetect"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -98,19 +98,14 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // PreExecute checks if the GTK4 config directory exists.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return true, "cannot determine home directory", nil
+// Hooks declares libadwaita's pre-execute behaviour. The GTK4 config
+// dir must exist (libadwaita lives alongside GTK4). PostExecute stays
+// imperative because it inherits gtk4-style content-aware messaging.
+func (p *Plugin) Hooks() hooks.Spec {
+	home, _ := os.UserHomeDir() //nolint:errcheck // empty home leaves an invalid path that fails RequiredDirs cleanly
+	return hooks.Spec{
+		RequiredDirs: []string{filepath.Join(home, ".config", "gtk-4.0")},
 	}
-
-	gtk4ConfigDir := filepath.Join(home, ".config", "gtk-4.0")
-
-	if !appdetect.IsPresentAll(nil, []string{gtk4ConfigDir}) {
-		return true, fmt.Sprintf("GTK4 config directory does not exist (%s). Install a GTK4 application first.", gtk4ConfigDir), nil
-	}
-
-	return false, "", nil
 }
 
 // Generate creates the libadwaita theme files.
