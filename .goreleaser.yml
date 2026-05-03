@@ -348,6 +348,40 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: ptyxis (Go)
+  - id: tinct-plugin-ptyxis
+    main: .
+    binary: tinct-plugin-ptyxis
+    dir: ./contrib/plugins/output/ptyxis
+
+    # Build for Linux only (Ptyxis is a GNOME terminal, GNOME is Linux-only)
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 # ============================================================================
 # ARCHIVES
 # ============================================================================
@@ -558,6 +592,28 @@ archives:
     files:
       - src: contrib/plugins/output/keylightd-tray/README.md
         dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-ptyxis-archive
+    ids:
+      - tinct-plugin-ptyxis
+    name_template: >-
+      tinct-plugin-ptyxis_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+
+    files:
+      - src: contrib/plugins/output/ptyxis/README.md
+        dst: README.md
+      - src: contrib/plugins/output/ptyxis/templates/*.tmpl
+        dst: templates/
       - src: LICENSE
         dst: LICENSE
 
