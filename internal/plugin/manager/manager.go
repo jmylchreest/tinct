@@ -49,6 +49,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/rofi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/rosec"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
+	"github.com/jmylchreest/tinct/internal/plugin/output/tmux"
 	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wbg"
@@ -140,6 +141,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(qt5.New())
 	m.outputRegistry.Register(qt6.New())
 	m.outputRegistry.Register(swayosd.New())
+	m.outputRegistry.Register(tmux.New())
 	m.outputRegistry.Register(walker.New())
 	m.outputRegistry.Register(waybar.New())
 	m.outputRegistry.Register(wbg.New())
