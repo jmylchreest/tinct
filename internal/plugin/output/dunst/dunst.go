@@ -3,11 +3,9 @@ package dunst
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
@@ -18,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -100,6 +99,21 @@ func (p *Plugin) DefaultOutputDir() string {
 	return filepath.Join(home, ".config", "dunst", "dunstrc.d")
 }
 
+// Hooks declares dunst's pre/post-execute behaviour. Dunst is required;
+// dunstctl is optional (reload-only). The reload runs dunstctl reload via
+// VerbExec; failure is logged but non-fatal.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"dunst"},
+		OptionalBinaries: []string{"dunstctl"},
+		AutoCreateDir:    true,
+		Reload: &hooks.ReloadSpec{
+			Verb: hooks.VerbExec,
+			Args: []string{"dunstctl", "reload"},
+		},
+	}
+}
+
 // Generate creates the theme file.
 // Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
@@ -148,54 +162,4 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-// PreExecute checks if dunst and dunstctl are available and config directory exists.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if dunst executable exists on PATH.
-	_, err = exec.LookPath("dunst")
-	if err != nil {
-		return true, "dunst executable not found on $PATH", nil
-	}
-
-	// Check if dunstctl executable exists on PATH (needed for reload).
-	_, err = exec.LookPath("dunstctl")
-	if err != nil {
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: dunstctl not found - config reload will not be available\n")
-		}
-	}
-
-	// Check if config directory exists (create it if not).
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// For dunst, we can create the directory since it's straightforward.
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("dunst config directory does not exist and cannot be created: %s", configDir), nil
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute reloads dunst configuration after theme generation.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
-	// Reload dunst configuration using dunstctl.
-	cmd := exec.CommandContext(ctx, "dunstctl", "reload")
-	if err := cmd.Run(); err != nil {
-		// If dunstctl reload fails, inform the user but don't treat it as an error.
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Note: Could not reload dunst config automatically\n")
-			fmt.Fprintf(os.Stderr, "   Please restart dunst manually to apply changes\n")
-		}
-		return nil
-	}
-
-	if p.verbose {
-		fmt.Fprintf(os.Stderr, "   Dunst configuration reloaded\n")
-	}
-
-	return nil
 }
