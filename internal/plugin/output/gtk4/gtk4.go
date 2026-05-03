@@ -18,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -97,13 +98,13 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // PreExecute checks if the GTK4 config directory exists.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf("GTK4 config directory does not exist (%s). Install a GTK4 application first.", configDir), nil
+// Hooks declares gtk4's pre-execute behaviour. PostExecute stays
+// imperative because it does content-aware inspection of gtk.css to
+// emit a conditional install message.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredDirs: []string{p.DefaultOutputDir()},
 	}
-
-	return false, "", nil
 }
 
 // Generate creates the GTK4 theme files.
