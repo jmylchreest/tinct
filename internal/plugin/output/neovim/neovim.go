@@ -2,11 +2,9 @@
 package neovim
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -15,6 +13,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -92,16 +92,36 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
+// Neovim follows XDG everywhere — Linux/macOS use $XDG_CONFIG_HOME/nvim,
+// Windows uses %LOCALAPPDATA%/nvim (per pkg/plugin/paths.XDGConfigDir).
 func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
+	return filepath.Join(paths.XDGConfigDir(), "nvim", "colors")
+}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/nvim/colors"
+// Hooks declares neovim's pre/post-execute behaviour. The InstructionsFn
+// captures p.themeName from the closure so the message stays in sync with
+// the --neovim.theme-name flag without templating gymnastics.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"nvim"},
+		AutoCreateDir:    true,
+		InstructionsFn: func(_ hooks.Context) string {
+			return fmt.Sprintf(`   Neovim colorscheme generated successfully!
+
+   To use this theme, add to your init.lua:
+   vim.cmd('colorscheme %s')
+
+   Or in init.vim:
+   colorscheme %s
+
+   Lualine: theme = 'auto' works out of the box.
+   For the dedicated theme: theme = '%s'
+`, p.themeName, p.themeName, p.themeName)
+		},
 	}
-	return filepath.Join(home, ".config", "nvim", "colors")
 }
 
 // lualineThemePath returns the relative path (from DefaultOutputDir) for the
@@ -171,50 +191,4 @@ func (p *Plugin) generateLualineTheme(themeData *colour.ThemeData) ([]byte, erro
 		fmt.Fprintf(os.Stderr, "   Using custom template for lualine_theme.lua.tmpl\n")
 	}
 	return out, nil
-}
-
-// PreExecute checks if neovim config directory exists before generating the theme.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if nvim executable exists on PATH.
-	_, err = exec.LookPath("nvim")
-	if err != nil {
-		return true, "nvim executable not found on $PATH", nil
-	}
-
-	// Check if config directory exists, create if it doesn't.
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the directory.
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("neovim colors directory not found and could not be created: %s", configDir), nil
-		}
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Created neovim colors directory: %s\n", configDir)
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute provides usage instructions.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, writtenFiles []string) error {
-	if p.verbose && len(writtenFiles) > 0 {
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Neovim colorscheme generated successfully!\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   To use this theme, add to your init.lua:\n")
-		fmt.Fprintf(os.Stderr, "   vim.cmd('colorscheme %s')\n", p.themeName)
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Or in init.vim:\n")
-		fmt.Fprintf(os.Stderr, "   colorscheme %s\n", p.themeName)
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Lualine: theme = 'auto' works out of the box.\n")
-		fmt.Fprintf(os.Stderr, "   For the dedicated theme: theme = '%s'\n", p.themeName)
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Note: The colorscheme will auto-reload when tinct updates it.\n")
-		fmt.Fprintf(os.Stderr, "   This works via a file system watcher built into the theme.\n")
-	}
-	return nil
 }
