@@ -16,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
@@ -96,10 +97,14 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
+// DefaultOutputDir returns the default output directory for this plugin.
+// Resolution: --zellij.output-dir → TINCT_PLUGIN_ZELLIJ_OUTPUT_DIR →
+// [plugin.zellij] output_dir → platform default.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
+	return pluginconfig.Resolve("zellij", "output_dir", p.outputDir, p.platformDefault())
+}
+
+func (p *Plugin) platformDefault() string {
 	if os.Getenv("XDG_CONFIG_HOME") == "" && runtime.GOOS == "darwin" {
 		return filepath.Join(paths.MacOSAppSupport("org.Zellij-Contributors.Zellij"), "themes")
 	}

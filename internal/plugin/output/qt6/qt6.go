@@ -17,7 +17,9 @@ import (
 	kdedbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_kde"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
@@ -86,15 +88,8 @@ func (p *Plugin) Validate() error {
 
 // DefaultOutputDir returns the default output directory.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/qt6ct/colors"
-	}
-	return filepath.Join(home, ".config", "qt6ct", "colors")
+	return pluginconfig.Resolve("qt6", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), "qt6ct", "colors"))
 }
 
 // PreExecute checks if the qt6ct config directory exists.

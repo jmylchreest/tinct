@@ -17,8 +17,10 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -84,15 +86,8 @@ func (p *Plugin) Validate() error {
 
 // DefaultOutputDir returns the default output directory for this plugin.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/wbg"
-	}
-	return filepath.Join(home, ".config", "wbg")
+	return pluginconfig.Resolve("wbg", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), "wbg"))
 }
 
 // Generate creates the shell script for wbg wallpaper persistence.

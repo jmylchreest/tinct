@@ -18,9 +18,11 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/dbus"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -177,7 +179,7 @@ func listSessions(ctx context.Context) ([]session, error) {
 
 // getSessionPaths retrieves all session object paths for a Konsole service.
 func getSessionPaths(ctx context.Context, conn *dbus.Connection, serviceName string) []string {
-	var paths []string
+	var sessionPaths []string
 
 	// Konsole typically has sessions at /Sessions/1, /Sessions/2, etc.
 	// We'll try to enumerate them by attempting to access known patterns
@@ -192,10 +194,10 @@ func getSessionPaths(ctx context.Context, conn *dbus.Connection, serviceName str
 			continue
 		}
 
-		paths = append(paths, sessionPath)
+		sessionPaths = append(sessionPaths, sessionPath)
 	}
 
-	return paths
+	return sessionPaths
 }
 
 // setColorScheme sets the color scheme for a Konsole session.
@@ -218,16 +220,10 @@ func (s *session) setColorScheme(ctx context.Context, colorScheme string) error 
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
+// Konsole reads ~/.local/share/konsole on Linux; XDG_DATA_HOME honoured.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".local/share/konsole"
-	}
-	return filepath.Join(home, ".local", "share", "konsole")
+	return pluginconfig.Resolve("konsole", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGDataDir(), "konsole"))
 }
 
 // Hooks declares konsole's pre-execute behaviour. PostExecute (D-Bus

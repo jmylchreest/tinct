@@ -17,6 +17,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
@@ -90,10 +91,8 @@ func (p *Plugin) Validate() error {
 
 // DefaultOutputDir returns the default output directory for this plugin.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-	return filepath.Join(paths.XDGConfigDir(), "rosec")
+	return pluginconfig.Resolve("rosec", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), "rosec"))
 }
 
 // Generate creates the theme files.

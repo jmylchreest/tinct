@@ -15,6 +15,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
@@ -88,13 +89,14 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
-// Alacritty honours $XDG_CONFIG_HOME on macOS too, and uses %APPDATA%
-// on Windows — paths.XDGConfigDir handles both.
+// Resolution chain (highest priority first): --alacritty.output-dir flag,
+// TINCT_PLUGIN_ALACRITTY_OUTPUT_DIR env var, [plugin.alacritty] output_dir
+// in tinct.toml, then the platform-resolved default. Alacritty honours
+// $XDG_CONFIG_HOME on macOS too, so paths.XDGConfigDir works on every
+// alacritty target platform.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-	return filepath.Join(paths.XDGConfigDir(), "alacritty")
+	return pluginconfig.Resolve("alacritty", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), "alacritty"))
 }
 
 // Hooks declares alacritty's pre/post-execute behaviour. The instructions

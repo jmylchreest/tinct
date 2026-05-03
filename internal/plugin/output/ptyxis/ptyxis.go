@@ -16,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
@@ -136,9 +137,10 @@ func flatpakPalettesDir(home string) string {
 // Picks the Flatpak host-visible path if Ptyxis is only installed via Flatpak,
 // otherwise falls back to the native XDG_DATA_HOME path.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
+	return pluginconfig.Resolve("ptyxis", "output_dir", p.outputDir, p.platformDefault())
+}
+
+func (p *Plugin) platformDefault() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return filepath.Join(".local", "share", ptyxisAppID, "palettes")

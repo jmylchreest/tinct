@@ -17,6 +17,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
@@ -90,13 +91,12 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
-// Kitty honours $XDG_CONFIG_HOME on macOS too, so XDGConfigDir works on
-// every platform kitty supports.
+// Resolution: --kitty.output-dir → TINCT_PLUGIN_KITTY_OUTPUT_DIR →
+// [plugin.kitty] output_dir → platform default. Kitty honours
+// $XDG_CONFIG_HOME on macOS too.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-	return filepath.Join(paths.XDGConfigDir(), "kitty", "themes")
+	return pluginconfig.Resolve("kitty", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), "kitty", "themes"))
 }
 
 // Hooks declares kitty's pre/post-execute behaviour. The conflict

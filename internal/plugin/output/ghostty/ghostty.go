@@ -16,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
@@ -93,15 +94,17 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
-// On Linux: $XDG_CONFIG_HOME/ghostty/themes (default ~/.config/ghostty/themes).
-// On macOS: $XDG_CONFIG_HOME if set, else ~/Library/Application Support/
-// com.mitchellh.ghostty/themes (Ghostty's documented macOS path).
-// On Windows: %APPDATA%/ghostty/themes (best-effort; Ghostty Windows
-// support is preview as of writing).
+// Resolution: --ghostty.output-dir → TINCT_PLUGIN_GHOSTTY_OUTPUT_DIR →
+// [plugin.ghostty] output_dir → platform default. Defaults are:
+//   - Linux: $XDG_CONFIG_HOME/ghostty/themes
+//   - macOS: $XDG_CONFIG_HOME/ghostty/themes if set, else
+//     ~/Library/Application Support/com.mitchellh.ghostty/themes
+//   - Windows: %APPDATA%/ghostty/themes
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
+	return pluginconfig.Resolve("ghostty", "output_dir", p.outputDir, p.platformDefault())
+}
+
+func (p *Plugin) platformDefault() string {
 	if os.Getenv("XDG_CONFIG_HOME") == "" && runtime.GOOS == "darwin" {
 		return filepath.Join(paths.MacOSAppSupport("com.mitchellh.ghostty"), "themes")
 	}

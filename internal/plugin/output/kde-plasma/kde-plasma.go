@@ -19,8 +19,10 @@ import (
 	kdedbus "github.com/jmylchreest/tinct/internal/plugin/output/shared/dbus_kde"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/dbus"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -93,15 +95,8 @@ func (p *Plugin) Validate() error {
 
 // DefaultOutputDir returns the default output directory.
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".local/share/color-schemes"
-	}
-	return filepath.Join(home, ".local", "share", "color-schemes")
+	return pluginconfig.Resolve("kde-plasma", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGDataDir(), "color-schemes"))
 }
 
 // PreExecute checks if KDE Plasma is installed.

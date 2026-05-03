@@ -12,6 +12,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
+	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
@@ -92,13 +93,12 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
-// Neovim follows XDG everywhere — Linux/macOS use $XDG_CONFIG_HOME/nvim,
-// Windows uses %LOCALAPPDATA%/nvim (per pkg/plugin/paths.XDGConfigDir).
+// Resolution: --neovim.output-dir → TINCT_PLUGIN_NEOVIM_OUTPUT_DIR →
+// [plugin.neovim] output_dir → platform default. Neovim follows XDG
+// everywhere (~/.config/nvim on Linux/macOS, %LOCALAPPDATA%/nvim on Windows).
 func (p *Plugin) DefaultOutputDir() string {
-	if p.outputDir != "" {
-		return p.outputDir
-	}
-	return filepath.Join(paths.XDGConfigDir(), "nvim", "colors")
+	return pluginconfig.Resolve("neovim", "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), "nvim", "colors"))
 }
 
 // Hooks declares neovim's pre/post-execute behaviour. The InstructionsFn
