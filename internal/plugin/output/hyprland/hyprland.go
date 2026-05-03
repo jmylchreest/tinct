@@ -3,7 +3,6 @@ package hyprland
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
@@ -21,7 +20,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
-	"github.com/jmylchreest/tinct/pkg/util/appdetect"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl templates
@@ -167,6 +166,26 @@ func (p *Plugin) DefaultOutputDir() string {
 	return filepath.Join(home, ".config", "hypr", "themes")
 }
 
+// Hooks declares hyprland's pre/post-execute behaviour. The Hyprland
+// config dir must exist (signal that Hyprland is installed); hyprctl is
+// optional. When --hyprland.reload is set, runs hyprctl reload via the
+// shared exec verb runner.
+func (p *Plugin) Hooks() hooks.Spec {
+	home, _ := os.UserHomeDir() //nolint:errcheck // empty home leaves an invalid path that fails RequiredDirs cleanly
+	spec := hooks.Spec{
+		RequiredDirs:     []string{filepath.Join(home, ".config", "hypr")},
+		OptionalBinaries: []string{"hyprctl"},
+		AutoCreateDir:    true,
+	}
+	if p.reloadConfig {
+		spec.Reload = &hooks.ReloadSpec{
+			Verb: hooks.VerbExec,
+			Args: []string{"hyprctl", "reload"},
+		}
+	}
+	return spec
+}
+
 // Generate creates the theme file and optional stub configuration.
 // Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
@@ -283,57 +302,4 @@ func (p *Plugin) generateStubConfig(themeData *colour.ThemeData) ([]byte, error)
 	}
 
 	return buf.Bytes(), nil
-}
-
-// PreExecute checks if the config directory exists before generating the theme.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return true, "cannot determine home directory", nil
-	}
-
-	hyprConfigDir := filepath.Join(home, ".config", "hypr")
-
-	// Check if hyprland config directory exists to determine if Hyprland is installed.
-	if !appdetect.IsPresentAll(nil, []string{hyprConfigDir}) {
-		return true, "Hyprland config directory not found (Hyprland may not be installed)", nil
-	}
-
-	// Check if hyprctl executable exists on PATH (needed for reload).
-	_, err = exec.LookPath("hyprctl")
-	if err != nil {
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: hyprctl not found - config reload will not be available\n")
-		}
-	}
-
-	// Check if themes subdirectory exists - create it if needed.
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the themes directory.
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("hyprland themes directory cannot be created: %s", configDir), nil
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute reloads hyprland configuration if requested.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, _ output.ExecutionContext, _ []string) error {
-	// Reload hyprland configuration if requested.
-	if !p.reloadConfig {
-		return nil
-	}
-
-	// Reload hyprland configuration using hyprctl.
-	cmd := exec.CommandContext(ctx, "hyprctl", "reload")
-	cmdOutput, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to reload hyprland config: %w (output: %s)", err, string(cmdOutput))
-	}
-
-	return nil
 }
