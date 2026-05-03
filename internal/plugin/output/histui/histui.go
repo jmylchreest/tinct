@@ -18,6 +18,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -92,12 +94,18 @@ func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
+	return filepath.Join(paths.XDGConfigDir(), "histui", "themes")
+}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/histui/themes"
+// Hooks declares the routine bits of histui's lifecycle. The "binary OR
+// config-dir present" gate stays imperative below — it's an OR check the
+// data-only spec can't represent.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		AutoCreateDir: true,
+		Instructions: `   tinct-colors.css written to histui themes directory
+   Touch your theme.css or restart histuid to apply changes`,
 	}
-	return filepath.Join(home, ".config", "histui", "themes")
 }
 
 // Generate creates the theme file.
@@ -150,53 +158,19 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if histui is available and config directory exists.
-// Implements the output.PreExecuteHook interface.
+// PreExecute keeps histui's bespoke "histuid on PATH OR config dir
+// present" gate. The data-only spec can't express OR semantics, so this
+// stays imperative; the spec covers AutoCreateDir for the themes
+// subdirectory and the post-execute message.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Get the histui config base directory (~/.config/histui)
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return true, "cannot determine home directory", nil
-	}
-	histuiConfigDir := filepath.Join(home, ".config", "histui")
-
-	// Check if histuid executable exists on PATH.
-	_, lookErr := exec.LookPath("histuid")
-	if lookErr != nil {
-		// histuid not found - check if config directory exists anyway
-		// (user may have histui installed but not in PATH, or want to pre-generate themes)
+	histuiConfigDir := filepath.Join(paths.XDGConfigDir(), "histui")
+	if _, lookErr := exec.LookPath("histuid"); lookErr != nil {
 		if _, statErr := os.Stat(histuiConfigDir); os.IsNotExist(statErr) {
-			return true, "histuid executable not found on $PATH and ~/.config/histui does not exist", nil
+			return true, "histuid executable not found on $PATH and " + histuiConfigDir + " does not exist", nil
 		}
-		// Config directory exists, continue with generation
 		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Note: histuid not found on $PATH but ~/.config/histui exists - continuing\n")
+			fmt.Fprintf(os.Stderr, "   Note: histuid not found on $PATH but %s exists - continuing\n", histuiConfigDir)
 		}
 	}
-
-	// Check if themes directory exists (create it if not).
-	themesDir := p.DefaultOutputDir()
-	if _, statErr := os.Stat(themesDir); os.IsNotExist(statErr) {
-		// #nosec G301 -- Theme directory needs to be readable by histui daemon
-		if mkErr := os.MkdirAll(themesDir, 0o750); mkErr != nil {
-			return true, fmt.Sprintf("histui themes directory does not exist and cannot be created: %s", themesDir), nil
-		}
-	}
-
 	return false, "", nil
-}
-
-// PostExecute touches the theme file to trigger histui hot-reload.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, _ []string) error {
-	// histui watches theme files via inotify - imports are inlined at load time,
-	// so changing tinct-colors.css alone won't trigger a reload.
-	// Users should configure their tinct theme.css to be watched, or restart histuid.
-
-	if p.verbose {
-		fmt.Fprintf(os.Stderr, "   tinct-colors.css written to histui themes directory\n")
-		fmt.Fprintf(os.Stderr, "   Touch your theme.css or restart histuid to apply changes\n")
-	}
-
-	return nil
 }
