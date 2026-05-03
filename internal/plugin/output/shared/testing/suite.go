@@ -13,6 +13,13 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 )
 
+// envSafe converts a plugin name to the form used inside TINCT_PLUGIN_*
+// environment variables: uppercase, with hyphens turned into underscores.
+// Mirrors envName() in internal/pluginconfig.
+func envSafe(s string) string {
+	return strings.ToUpper(strings.ReplaceAll(s, "-", "_"))
+}
+
 // TestBasicInterface tests the basic plugin interface methods that all plugins must implement.
 func TestBasicInterface(t *testing.T, p output.Plugin, expectedName, expectedDirSubstring string) {
 	t.Run("Name", func(t *testing.T) {
@@ -40,6 +47,19 @@ func TestBasicInterface(t *testing.T, p output.Plugin, expectedName, expectedDir
 		}
 		if !strings.Contains(dir, checkString) {
 			t.Errorf("DefaultOutputDir() = %s, should contain '%s'", dir, checkString)
+		}
+	})
+
+	// TINCT_PLUGIN_<NAME>_OUTPUT_DIR must override the platform default.
+	// This proves every migrated plugin's DefaultOutputDir actually flows
+	// through pluginconfig.Resolve (rather than only happening to return
+	// the same path by coincidence).
+	t.Run("DefaultOutputDir_EnvOverride", func(t *testing.T) {
+		envName := "TINCT_PLUGIN_" + envSafe(p.Name()) + "_OUTPUT_DIR"
+		const override = "/tmp/tinct-test-override"
+		t.Setenv(envName, override)
+		if got := p.DefaultOutputDir(); got != override {
+			t.Errorf("with %s set, DefaultOutputDir() = %q, want %q", envName, got, override)
 		}
 	})
 
