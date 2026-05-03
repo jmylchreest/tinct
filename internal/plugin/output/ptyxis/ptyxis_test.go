@@ -13,9 +13,10 @@ func TestPtyxisPlugin(t *testing.T) {
 	plugin := New()
 
 	config := plugintesting.TestConfig{
-		ExpectedName:       "ptyxis",
-		ExpectedFiles:      []string{"tinct.palette"},
-		ExpectedBinaryName: "ptyxis",
+		ExpectedName:         "ptyxis",
+		ExpectedDirSubstring: "Ptyxis",
+		ExpectedFiles:        []string{"tinct.palette"},
+		ExpectedBinaryName:   "ptyxis",
 	}
 
 	plugintesting.RunAllTests(t, plugin, config)

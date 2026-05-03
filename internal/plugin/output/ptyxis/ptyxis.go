@@ -23,6 +23,22 @@ import (
 //go:embed *.tmpl
 var templates embed.FS
 
+const (
+	// ptyxisAppID matches APP_ID in Ptyxis's meson build — the GNOME-style
+	// reverse-DNS application id used as the user-data subdirectory name.
+	// Ref: ptyxis_get_user_palettes_dir() in src/ptyxis-palette.c.
+	ptyxisAppID = "org.gnome.Ptyxis"
+
+	// ptyxisFlatpakID is the Flathub application id for Ptyxis. Inside the
+	// sandbox XDG_DATA_HOME maps to ~/.var/app/<flatpak-id>/data, so the
+	// host-visible palette dir is ~/.var/app/<flatpak-id>/data/<app-id>/palettes.
+	ptyxisFlatpakID = "app.devsuite.Ptyxis"
+
+	// paletteFilename is the filename written to the Ptyxis palette dir. The
+	// basename (minus .palette) becomes the palette id Ptyxis exposes.
+	paletteFilename = "tinct.palette"
+)
+
 // GetEmbeddedTemplates returns the embedded template filesystem.
 // This is used by the template management commands.
 func GetEmbeddedTemplates() embed.FS {
@@ -37,10 +53,7 @@ type Plugin struct {
 
 // New creates a new Ptyxis output plugin with default settings.
 func New() *Plugin {
-	return &Plugin{
-		outputDir: "",
-		verbose:   false,
-	}
+	return &Plugin{}
 }
 
 // Name returns the plugin name.
@@ -60,17 +73,16 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&p.outputDir, "ptyxis.output-dir", "", "Output directory (default: ~/.local/share/ptyxis/palettes)")
+	cmd.Flags().StringVar(&p.outputDir, "ptyxis.output-dir", "",
+		"Output directory (default: auto-detect native or Flatpak palette dir)")
 }
 
 // SetVerbose enables or disables verbose logging for the plugin.
-// Implements the output.VerbosePlugin interface.
 func (p *Plugin) SetVerbose(verbose bool) {
 	p.verbose = verbose
 }
 
 // GetEmbeddedFS returns the embedded template filesystem.
-// Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() any {
 	return templates
 }
@@ -78,7 +90,13 @@ func (p *Plugin) GetEmbeddedFS() any {
 // GetFlagHelp returns help information for all plugin flags.
 func (p *Plugin) GetFlagHelp() []output.FlagHelp {
 	return []output.FlagHelp{
-		{Name: "ptyxis.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.local/share/ptyxis/palettes)", Required: false},
+		{
+			Name:        "ptyxis.output-dir",
+			Type:        "string",
+			Default:     "",
+			Description: "Output directory (default: auto-detect native or Flatpak palette dir)",
+			Required:    false,
+		},
 	}
 }
 
@@ -87,57 +105,132 @@ func (p *Plugin) Validate() error {
 	return nil
 }
 
+// nativeDataDir returns Ptyxis's user data dir for a native install:
+// $XDG_DATA_HOME/org.gnome.Ptyxis (default $XDG_DATA_HOME = ~/.local/share).
+func nativeDataDir(home string) string {
+	xdg := os.Getenv("XDG_DATA_HOME")
+	if xdg == "" {
+		xdg = filepath.Join(home, ".local", "share")
+	}
+	return filepath.Join(xdg, ptyxisAppID)
+}
+
+// nativePalettesDir returns the palettes subdirectory for a native install.
+func nativePalettesDir(home string) string {
+	return filepath.Join(nativeDataDir(home), "palettes")
+}
+
+// flatpakDataDir returns Ptyxis's user data dir as visible from the host
+// when Ptyxis is installed via Flatpak.
+func flatpakDataDir(home string) string {
+	return filepath.Join(home, ".var", "app", ptyxisFlatpakID, "data", ptyxisAppID)
+}
+
+// flatpakPalettesDir returns the palettes subdirectory inside the Flatpak
+// per-app data dir.
+func flatpakPalettesDir(home string) string {
+	return filepath.Join(flatpakDataDir(home), "palettes")
+}
+
 // DefaultOutputDir returns the default output directory for this plugin.
+// Picks the Flatpak host-visible path if Ptyxis is only installed via Flatpak,
+// otherwise falls back to the native XDG_DATA_HOME path.
 func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
-
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".local/share/ptyxis/palettes"
+		return filepath.Join(".local", "share", ptyxisAppID, "palettes")
 	}
-	return filepath.Join(home, ".local", "share", "ptyxis", "palettes")
+	if appdetect.GetInstallationType([]string{"ptyxis"}, nil) == "flatpak" {
+		return flatpakPalettesDir(home)
+	}
+	return nativePalettesDir(home)
 }
 
 // PreExecute checks if ptyxis is installed before generating the palette.
-// Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return true, "cannot determine home directory", nil
 	}
-
-	ptyxisDataDir := filepath.Join(home, ".local", "share", "org.gnome.Ptyxis")
-
-	// Check for ptyxis binary (native/PATH) and common Flatpak/config locations
-	if !appdetect.IsPresentAny([]string{"ptyxis"}, []string{ptyxisDataDir}) {
+	if !appdetect.IsPresentAny([]string{"ptyxis"}, []string{nativeDataDir(home), flatpakDataDir(home)}) {
 		return true, "Ptyxis terminal is not installed", nil
 	}
 	return false, "", nil
 }
 
-// Generate creates the Ptyxis palette file.
+// Generate creates a single-mode Ptyxis palette file. All colour keys are
+// written directly under [Palette]; Ptyxis derives whether the palette is
+// light or dark from the background luminance (is_dark() in ptyxis-palette.c).
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
-
-	files := make(map[string][]byte)
-
-	// Generate the palette file
-	paletteContent, err := p.generatePalette(themeData)
+	face, err := p.renderFace(themeData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate palette: %w", err)
+		return nil, err
 	}
 
-	files["tinct.palette"] = paletteContent
+	var buf bytes.Buffer
+	buf.WriteString("# Ptyxis colour palette generated by Tinct\n")
+	buf.WriteString("[Palette]\n")
+	buf.WriteString("Name=Tinct\n")
+	buf.Write(face)
 
-	return files, nil
+	return map[string][]byte{paletteFilename: buf.Bytes()}, nil
 }
 
-// generatePalette creates the Ptyxis .palette file content.
-func (p *Plugin) generatePalette(themeData *colour.ThemeData) ([]byte, error) {
+// GenerateDualTheme creates a dual-mode Ptyxis palette file with separate
+// [Light] and [Dark] sections holding the actual light/dark variants. Ptyxis
+// switches between them automatically based on the system colour preference.
+// Implements output.DualThemePlugin.
+func (p *Plugin) GenerateDualTheme(primaryTheme, alternateTheme *colour.ThemeData) (map[string][]byte, error) {
+	if primaryTheme == nil {
+		return nil, fmt.Errorf("primary theme data cannot be nil")
+	}
+	if alternateTheme == nil {
+		return nil, fmt.Errorf("alternate theme data cannot be nil")
+	}
+
+	light, dark := splitByMode(primaryTheme, alternateTheme)
+
+	lightFace, err := p.renderFace(light)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render light face: %w", err)
+	}
+	darkFace, err := p.renderFace(dark)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render dark face: %w", err)
+	}
+
+	var buf bytes.Buffer
+	buf.WriteString("# Ptyxis colour palette generated by Tinct\n")
+	buf.WriteString("[Palette]\n")
+	buf.WriteString("Name=Tinct\n\n")
+	buf.WriteString("[Light]\n")
+	buf.Write(lightFace)
+	buf.WriteString("\n[Dark]\n")
+	buf.Write(darkFace)
+
+	return map[string][]byte{paletteFilename: buf.Bytes()}, nil
+}
+
+// splitByMode returns (light, dark) given two themes of opposite mode. If both
+// themes report the same mode (shouldn't happen via the dual-theme pipeline),
+// the first argument is treated as light.
+func splitByMode(a, b *colour.ThemeData) (light, dark *colour.ThemeData) {
+	if a.ThemeType() == colour.ThemeLight {
+		return a, b
+	}
+	return b, a
+}
+
+// renderFace renders the face body (the colour keys for one variant) using
+// the embedded template. The output has no [Palette]/[Light]/[Dark] header;
+// the caller assembles the surrounding sections.
+func (p *Plugin) renderFace(themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("ptyxis", templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
@@ -147,7 +240,6 @@ func (p *Plugin) generatePalette(themeData *colour.ThemeData) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load template: %w", err)
 	}
-
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for tinct.palette.tmpl\n")
 	}
@@ -161,66 +253,27 @@ func (p *Plugin) generatePalette(themeData *colour.ThemeData) ([]byte, error) {
 	if err := tmpl.Execute(&buf, themeData); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
-
 	return buf.Bytes(), nil
 }
 
-// PostExecute provides instructions for installing the palette in Ptyxis.
-// Implements the output.PostExecuteHook interface.
+// PostExecute prints installation guidance after writing the palette. Because
+// the file is written directly into Ptyxis's watched palette dir,
+// PtyxisUserPalettes picks it up live via GFileMonitor — no import step.
 func (p *Plugin) PostExecute(_ context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
-	if execCtx.DryRun || !p.verbose {
+	if execCtx.DryRun || !p.verbose || len(writtenFiles) == 0 {
 		return nil
 	}
-
-	// Only show instructions if we actually wrote a palette file
-	if len(writtenFiles) == 0 {
-		return nil
-	}
-
-	// Determine installation type to provide appropriate instructions
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil
-	}
-	ptyxisDataDir := filepath.Join(home, ".local", "share", "org.gnome.Ptyxis")
-	installType := appdetect.GetInstallationType([]string{"ptyxis"}, []string{ptyxisDataDir})
 
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	fmt.Fprintf(os.Stderr, "  Ptyxis Palette Installation\n")
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	fmt.Fprintf(os.Stderr, "\n")
-
-	if installType == "flatpak" {
-		fmt.Fprintf(os.Stderr, "Detected Flatpak installation of Ptyxis.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "To install the palette:\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "  Method 1 (Ptyxis 49+):\n")
-		fmt.Fprintf(os.Stderr, "    flatpak run app.devsuite.Ptyxis --import-palette %s\n", writtenFiles[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "  Method 2 (All versions):\n")
-		fmt.Fprintf(os.Stderr, "    Drag and drop the palette file into Ptyxis\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Then select the 'Tinct' palette in Ptyxis preferences.\n")
-	} else {
-		fmt.Fprintf(os.Stderr, "To install the palette:\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "  Method 1 (Ptyxis 49+):\n")
-		fmt.Fprintf(os.Stderr, "    ptyxis --import-palette %s\n", writtenFiles[0])
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "  Method 2 (All versions):\n")
-		fmt.Fprintf(os.Stderr, "    Drag and drop the palette file into Ptyxis\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "Then select the 'Tinct' palette in Ptyxis preferences:\n")
-		fmt.Fprintf(os.Stderr, "  Preferences → Appearance → Palette → Tinct\n")
-	}
-
+	fmt.Fprintf(os.Stderr, "Wrote palette to: %s\n", writtenFiles[0])
 	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "The palette includes window dressing support:\n")
-	fmt.Fprintf(os.Stderr, "  • Bell notifications use warning color\n")
-	fmt.Fprintf(os.Stderr, "  • Remote sessions use info color\n")
-	fmt.Fprintf(os.Stderr, "  • Superuser sessions use danger color\n")
+	fmt.Fprintf(os.Stderr, "Ptyxis watches its palette directory and picks up new\n")
+	fmt.Fprintf(os.Stderr, "palettes immediately. Select 'Tinct' in:\n")
+	fmt.Fprintf(os.Stderr, "  Preferences → Appearance → Palette → Tinct\n")
 	fmt.Fprintf(os.Stderr, "\n")
 
 	return nil
