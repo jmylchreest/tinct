@@ -523,7 +523,17 @@ func (p *ExternalOutputPlugin) GetFlagHelp() []input.FlagHelp {
 
 // PostExecute calls the external plugin's post-execute hook.
 // Implements the output.PostExecuteHook interface.
-func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
+//
+// The wire-level PostExecute RPC takes only (ctx, writtenFiles) — the
+// execution context isn't currently propagated to external plugins
+// because the protocol predates ExecutionContext. The execCtx
+// parameter is accepted here so this method satisfies the 3-arg
+// output.PostExecuteHook interface (the hook check in
+// internal/cli/generate_helpers.go performs a type assertion against
+// it). When the protocol grows ExecutionContext fields, fold them
+// into pluginExec.PostExecute and the parameter becomes load-bearing
+// without changing this signature.
+func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, _ output.ExecutionContext, writtenFiles []string) error {
 	// Create executor (detects protocol automatically).
 	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
 	if err != nil {

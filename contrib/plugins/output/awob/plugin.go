@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"text/template"
+	"time"
 
 	"github.com/jmylchreest/tinct/pkg/colour"
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
@@ -153,27 +154,75 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	return true, "awob not installed (no awob/awob-daemon on PATH and no ~/.config/awob)", nil
 }
 
-// PostExecute prints follow-up guidance.
-func (p *Plugin) PostExecute(_ context.Context, files []string) error {
+// PostExecute installs the freshly-written palette as awob's runtime
+// force-palette overlay so the new colours apply immediately,
+// regardless of which theme the daemon currently has active.
+//
+// `awob force-palette set <path>` is exactly the right hook here:
+// the daemon overlays the palette + styles after the active theme's
+// own palette resolution, so tinct's colours win on every theme
+// without editing anyone's scene.kdl. The daemon also adds the
+// overlay to its hot-reload watch list, so future tinct runs that
+// rewrite the same file refresh in place.
+//
+// If the awob CLI isn't on PATH (user installed via cargo to a custom
+// prefix, or the daemon isn't running yet) the call is a no-op and
+// the user sees the print-only fallback instead.
+func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
 	if len(files) == 0 {
 		return nil
 	}
+
+	palettePath := findPalettePath(files)
+	overlayInstalled := false
+	if palettePath != "" {
+		if _, err := exec.LookPath("awob"); err == nil {
+			cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(cctx, "awob", "force-palette", "set", palettePath)
+			if err := cmd.Run(); err == nil {
+				overlayInstalled = true
+			}
+			// Failure is non-fatal — the daemon may simply not be
+			// running yet. Fall through to the activation guide so
+			// the user knows how to apply the palette manually.
+		}
+	}
+
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	fmt.Fprintf(os.Stderr, "  awob theme installed\n")
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Wrote %d files. Activate with one of:\n", len(files))
-	fmt.Fprintf(os.Stderr, "  awob-daemon --theme tinct\n")
-	fmt.Fprintf(os.Stderr, "  # or set 'theme = \"tinct\"' in ~/.config/awob/awob.toml\n")
+	if overlayInstalled {
+		fmt.Fprintf(os.Stderr, "Force-palette overlay applied: %s\n", palettePath)
+		fmt.Fprintf(os.Stderr, "Tinct colours are now active over whichever theme is\n")
+		fmt.Fprintf(os.Stderr, "selected. Run `awob force-palette clear` to remove.\n")
+	} else {
+		fmt.Fprintf(os.Stderr, "Wrote %d files. To apply the tinct palette to the active theme:\n", len(files))
+		fmt.Fprintf(os.Stderr, "  awob force-palette set %s\n", palettePath)
+		fmt.Fprintf(os.Stderr, "Or activate the bundled theme outright:\n")
+		fmt.Fprintf(os.Stderr, "  awob theme set tinct\n")
+	}
 	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Already-installed themes can adopt the tinct palette by\n")
-	fmt.Fprintf(os.Stderr, "adding `import \"../_palettes/tinct.kdl\"` to their scene.kdl\n")
-	fmt.Fprintf(os.Stderr, "and referencing $bg / $fg / $track / $accent / $low / $normal\n")
-	fmt.Fprintf(os.Stderr, "/ $warn / $crit / $muted. The palette refreshes in place on\n")
-	fmt.Fprintf(os.Stderr, "every tinct generate; awob-daemon hot-reloads.\n")
+	fmt.Fprintf(os.Stderr, "Themes can also adopt the palette via `import` (no daemon\n")
+	fmt.Fprintf(os.Stderr, "needed): add `import \"../_palettes/tinct.kdl\"` to scene.kdl\n")
+	fmt.Fprintf(os.Stderr, "and reference $bg / $fg / $track / $accent / $low / $normal\n")
+	fmt.Fprintf(os.Stderr, "/ $warn / $crit / $muted / $overflow_bg / $overflow_accent.\n")
 	fmt.Fprintf(os.Stderr, "\n")
 	return nil
+}
+
+// findPalettePath returns the path of the palette file from a list of
+// written files (the `_palettes/tinct.kdl` member). Used by PostExecute
+// to drive `awob force-palette set`.
+func findPalettePath(files []string) string {
+	for _, f := range files {
+		if filepath.Base(f) == paletteBasename && filepath.Base(filepath.Dir(f)) == palettesDirName {
+			return f
+		}
+	}
+	return ""
 }
 
 // stdLogger implements the Logger interface for template loading.
