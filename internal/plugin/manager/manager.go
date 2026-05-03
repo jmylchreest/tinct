@@ -43,7 +43,6 @@ import (
 	markdownout "github.com/jmylchreest/tinct/internal/plugin/output/markdown"
 	"github.com/jmylchreest/tinct/internal/plugin/output/mc"
 	"github.com/jmylchreest/tinct/internal/plugin/output/neovim"
-	"github.com/jmylchreest/tinct/internal/plugin/output/ptyxis"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt5"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt6"
 	"github.com/jmylchreest/tinct/internal/plugin/output/rofi"
@@ -137,7 +136,6 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(mc.New())
 	m.outputRegistry.Register(markdownout.New())
 	m.outputRegistry.Register(neovim.New())
-	m.outputRegistry.Register(ptyxis.New())
 	m.outputRegistry.Register(rofi.New())
 	m.outputRegistry.Register(rosec.New())
 	m.outputRegistry.Register(qt5.New())

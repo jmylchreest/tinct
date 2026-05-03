@@ -13,6 +13,22 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING**: `ptyxis` is no longer a built-in output plugin. It has
+  been migrated to an external plugin so its bespoke Flatpak detection,
+  dual-mode `[Light]`/`[Dark]` palette generation, and live-reload
+  install hint can iterate independently of tinct releases. Users who
+  previously relied on the built-in plugin can install the external
+  one with:
+
+      tinct plugin install ptyxis
+
+  Behaviour and output paths are unchanged once installed. The
+  `--ptyxis.output-dir` flag becomes `--ptyxis.output-dir` on the
+  external plugin (same name, same semantics) and continues to honour
+  the `TINCT_PLUGIN_PTYXIS_OUTPUT_DIR` environment variable.
+
 ## [0.2.2]
 *2026-04-10*
 
