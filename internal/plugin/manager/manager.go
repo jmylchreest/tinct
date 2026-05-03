@@ -46,6 +46,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/ptyxis"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt5"
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt6"
+	"github.com/jmylchreest/tinct/internal/plugin/output/rofi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/rosec"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
@@ -134,6 +135,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(markdownout.New())
 	m.outputRegistry.Register(neovim.New())
 	m.outputRegistry.Register(ptyxis.New())
+	m.outputRegistry.Register(rofi.New())
 	m.outputRegistry.Register(rosec.New())
 	m.outputRegistry.Register(qt5.New())
 	m.outputRegistry.Register(qt6.New())
