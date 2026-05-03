@@ -1,0 +1,33 @@
+// Tinct-generated awob palette ({{ themeType . }}).
+// https://github.com/jmylchreest/tinct
+//
+// awob themes import this file via:
+//
+//   import "../_palettes/tinct.kdl"
+//
+// after which they can use $bg / $fg / $track / $low / $normal / $warn /
+// $crit / $muted in scene primitives, and `style "low"`/`"normal"`/...
+// for accent overrides keyed off the event severity.
+//
+// To make any theme follow tinct, drop the same import line at the top
+// of its scene.kdl. The palette is rewritten in place on every
+// `tinct generate`; awob-daemon hot-reloads.
+
+palette {
+    bg     "rgba({{ get . "background" | rgbDecimal }},0.85)"
+    fg     "{{ get . "foreground" | hex }}"
+    track  "rgba({{ get . "onSurface" | rgbDecimal }},0.08)"
+    low    "{{ get . "success" | hex }}"
+    normal "{{ get . "accent1" | hex }}"
+    warn   "{{ get . "warning" | hex }}"
+    crit   "{{ get . "danger" | hex }}"
+    muted  "{{ get . "foregroundMuted" | hex }}"
+}
+
+styles {
+    style "low"      accent="$low"
+    style "normal"   accent="$normal"
+    style "warn"     accent="$warn"
+    style "critical" accent="$crit"
+    style "muted"    accent="$crit" alpha="0.6"
+}

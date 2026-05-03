@@ -1,0 +1,65 @@
+// Tinct-generated awob theme.
+// https://github.com/jmylchreest/tinct
+//
+// Activate with:
+//   awob-daemon --theme tinct
+//   # or set 'theme = "tinct"' in ~/.config/awob/awob.toml
+//
+// This scene imports the tinct palette and uses every awob primitive
+// the engine exposes — surface phases, an icon, a label, a track, a
+// bar with $lastValue tweening, and severity-driven $accent (driven
+// by `style "low"`, `"normal"`, etc. in the imported palette).
+//
+// USING THE TINCT PALETTE IN YOUR OWN THEME
+// ------------------------------------------
+// Add this single line to the top of your theme's scene.kdl:
+//
+//     import "../_palettes/tinct.kdl"
+//
+// then reference $bg / $fg / $track / $accent / $low / $normal / $warn /
+// $crit / $muted anywhere a colour is expected. Tinct refreshes the
+// palette in place on every `tinct generate`; awob-daemon hot-reloads.
+
+import "../_palettes/tinct.kdl"
+
+surface {
+    width 360
+    height 64
+    anchor "bottom"
+    offset 0 -56
+
+    // Animation phases. Cycle = fade-in → value-transition (post fade-in)
+    // → settled show → fade-out. Total visible window = fade-in + show
+    // + fade-out (the value transition runs *during* show).
+    fade-in    "150ms"
+    show       "2000ms"
+    fade-out   "150ms"
+    // Bar value tween. Sequenced *after* fade-in completes so the bar
+    // appears at the previous value, then visibly transitions toward the
+    // new one.
+    transition "300ms"
+}
+
+scene {
+    // Container with rounded corners + soft drop shadow.
+    rect z=0 \
+        x=0 y=0 width="100%" height="100%" \
+        radius=12 fill="$bg" \
+        shadow="0 8 24 rgba(0,0,0,0.4)"
+
+    // Icon: send-time $icon wins; otherwise fall back to event default.
+    image z=1 src="{$icon ?? icon($event)}" \
+        x=14 y="center" width=22 height=22
+
+    // Label: send-time $app wins; otherwise event-derived label.
+    text z=1 value="{$app ?? label($event)}" \
+        x=46 y=14 font="Inter 14 500" colour="$fg"
+
+    // Track behind the bar.
+    rect z=1 x=46 y=42 width="100%-60" height=8 radius=999 fill="$track"
+
+    // The bar. `from` taps lastValue so the engine tweens between renders.
+    bar z=2 x=46 y=42 width="100%-60" height=8 radius=999 \
+        fill="$accent" \
+        min=0 max="$max" value="$value" from="{$lastValue ?? $value}"
+}

@@ -348,6 +348,40 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: awob (Go)
+  - id: tinct-plugin-awob
+    main: .
+    binary: tinct-plugin-awob
+    dir: ./contrib/plugins/output/awob
+
+    # Build for Linux only (awob is a Wayland-specific tool)
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
   # Plugin: ptyxis (Go)
   - id: tinct-plugin-ptyxis
     main: .
@@ -592,6 +626,28 @@ archives:
     files:
       - src: contrib/plugins/output/keylightd-tray/README.md
         dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-awob-archive
+    ids:
+      - tinct-plugin-awob
+    name_template: >-
+      tinct-plugin-awob_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+
+    files:
+      - src: contrib/plugins/output/awob/README.md
+        dst: README.md
+      - src: contrib/plugins/output/awob/templates/*.tmpl
+        dst: templates/
       - src: LICENSE
         dst: LICENSE
 

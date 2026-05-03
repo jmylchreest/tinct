@@ -13,6 +13,16 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Added
+
+- New external plugin **awob** for the [animated Wayland Overlay Bar](https://github.com/jmylchreest/awob).
+  Writes `~/.config/awob/themes/_palettes/tinct.kdl` (a shared palette +
+  named-style block) plus a `tinct/` theme directory containing
+  `scene.kdl` and `manifest.toml`. Other awob themes can adopt the
+  tinct palette by adding `import "../_palettes/tinct.kdl"` to their
+  scene; the palette refreshes in place on every `tinct generate` and
+  awob-daemon hot-reloads. Install with `tinct plugin install awob`.
+
 ### Removed
 
 - **BREAKING**: AUR per-plugin packages (`tinct-plugin-random-bin`,
