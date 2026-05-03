@@ -3,7 +3,6 @@ package alacritty
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
@@ -17,7 +16,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
-	"github.com/jmylchreest/tinct/pkg/util/appdetect"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -88,16 +88,33 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
+// Alacritty honours $XDG_CONFIG_HOME on macOS too, and uses %APPDATA%
+// on Windows — paths.XDGConfigDir handles both.
 func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
+	return filepath.Join(paths.XDGConfigDir(), "alacritty")
+}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/alacritty"
+// Hooks declares alacritty's pre/post-execute behaviour. The instructions
+// template references {{index .WrittenFiles 0}} so the import path stays
+// in sync with whatever DefaultOutputDir resolves to per platform.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"alacritty"},
+		AutoCreateDir:    true,
+		Instructions: `   Alacritty theme generated successfully!
+
+   To use this theme, add to your alacritty.toml:
+
+   import = [
+     "{{index .WrittenFiles 0}}"
+   ]
+
+   Note: Alacritty automatically reloads config when files change.
+   New colors will apply immediately to all open terminals.`,
 	}
-	return filepath.Join(home, ".config", "alacritty")
 }
 
 // Generate creates the theme file.
@@ -152,48 +169,4 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-// PreExecute checks if alacritty is available before generating the theme.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if alacritty executable exists (native, Flatpak, or AppImage).
-	if !appdetect.IsPresentAny([]string{"alacritty"}, nil) {
-		return true, "alacritty executable not found on $PATH", nil
-	}
-
-	// Check if config directory exists, create if it doesn't.
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		// Try to create the config directory.
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("failed to create alacritty config directory: %s", configDir), nil
-		}
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Created alacritty config directory: %s\n", configDir)
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute provides usage instructions for applying the theme.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, generatedFiles []string) error {
-	if p.verbose && len(generatedFiles) > 0 {
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Alacritty theme generated successfully!\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   To use this theme, add to your alacritty.toml:\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   import = [\n")
-		fmt.Fprintf(os.Stderr, "     \"%s\"\n", filepath.Join(p.DefaultOutputDir(), "tinct-colors.toml"))
-		fmt.Fprintf(os.Stderr, "   ]\n")
-		fmt.Fprintf(os.Stderr, "\n")
-		fmt.Fprintf(os.Stderr, "   Note: Alacritty automatically reloads config when files change.\n")
-		fmt.Fprintf(os.Stderr, "   New colors will apply immediately to all open terminals.\n")
-		fmt.Fprintf(os.Stderr, "\n")
-	}
-
-	return nil
 }
