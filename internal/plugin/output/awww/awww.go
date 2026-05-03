@@ -19,6 +19,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -203,39 +204,20 @@ func (p *Plugin) generateConfig(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if awww is available.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if awww executable exists on PATH (needed for wallpaper control).
-	_, err = exec.LookPath("awww")
-	if err != nil {
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: awww not found - wallpaper setting will not be available\n")
-		}
+// Hooks declares awww's pre/post-execute behaviour. awww is optional
+// (we still write the helper script without the daemon); chmod +x and
+// wallpaper application use the spec's MakeExecutable and Wallpaper
+// callback. The bespoke setWallpaper logic (transition opts,
+// daemon-running probe, fill-color, resize-mode) is exposed via
+// Wallpaper.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		OptionalBinaries:  []string{"awww"},
+		AutoCreateDir:     true,
+		MakeExecutable:    []string{"tinct-awww.sh"},
+		SupportsWallpaper: true,
+		Wallpaper:         p.setWallpaper,
 	}
-
-	// Check if config directory exists (create it if not).
-	configDir := p.DefaultOutputDir()
-	if _, statErr := os.Stat(configDir); os.IsNotExist(statErr) {
-		if mkErr := os.MkdirAll(configDir, 0o750); mkErr != nil {
-			return true, fmt.Sprintf("awww config directory does not exist and cannot be created: %s", configDir), nil
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute makes the generated script executable and applies the wallpaper.
-// Implements the output.PostExecuteHook interface.
-func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContext, writtenFiles []string) error {
-	// Make the generated shell script executable.
-	utils.MakeScriptExecutable(writtenFiles, "tinct-awww.sh", p.verbose)
-
-	if execCtx.WallpaperPath == "" {
-		return nil
-	}
-
-	return p.setWallpaper(ctx, execCtx.WallpaperPath)
 }
 
 // setWallpaper applies the wallpaper using awww.
