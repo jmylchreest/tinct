@@ -79,42 +79,62 @@ func generatePriority1SurfaceColors(palette *CategorisedPalette, bg, fg Categori
 	}
 }
 
-// generateSurface creates a surface color slightly different from background.
-// Material Design 3 uses tonal elevation - surfaces are slightly lighter/darker than background.
-func generateSurface(bg CategorisedColour, theme ThemeType) CategorisedColour {
-	rgb := bg.RGB
-	h, s, l := rgbToHSL(rgb)
+// luminanceOffsetParams describes a colour derivation that shifts the source
+// luminance (theme-dependent) and scales its saturation. In dark themes the
+// luminance is raised by lumDelta and capped at darkLumCap; in light themes
+// it is lowered by lumDelta and floored at lightLumFloor.
+type luminanceOffsetParams struct {
+	role          Role
+	lumDelta      float64
+	darkLumCap    float64
+	lightLumFloor float64
+	satFactor     float64
+	satFloor      float64
+}
 
-	// Adjust luminance based on theme.
-	// Dark theme: surface is lighter than background.
-	// Light theme: surface is darker than background.
-	// This creates subtle depth perception.
+// generateLuminanceOffset returns a CategorisedColour derived from source by
+// applying a theme-aware luminance shift and saturation scale per p. Used for
+// surface variants where the relationship to the source colour is uniform but
+// the magnitudes differ (surface vs outline vs border).
+func generateLuminanceOffset(source CategorisedColour, theme ThemeType, p luminanceOffsetParams) CategorisedColour {
+	h, s, l := rgbToHSL(source.RGB)
+
 	var newL float64
 	if theme == ThemeDark {
-		// Increase luminance by 5-8%.
-		newL = l + 0.06
-		if newL > 0.25 {
-			newL = 0.25 // Cap to prevent too bright surfaces in dark themes
+		newL = l + p.lumDelta
+		if newL > p.darkLumCap {
+			newL = p.darkLumCap
 		}
 	} else {
-		// Decrease luminance by 5-8%.
-		newL = l - 0.06
-		if newL < 0.75 {
-			newL = 0.75 // Cap to prevent too dark surfaces in light themes
+		newL = l - p.lumDelta
+		if newL < p.lightLumFloor {
+			newL = p.lightLumFloor
 		}
 	}
 
-	// Slightly reduce saturation for surfaces (more neutral).
-	newS := s * 0.9
-	if newS < 0.05 {
-		newS = 0.05
+	newS := s * p.satFactor
+	if newS < p.satFloor {
+		newS = p.satFloor
 	}
 
 	newRGB := HSLToRGB(h, newS, newL)
-	c := newGeneratedColour(RoleSurface, newRGB, newL)
+	c := newGeneratedColour(p.role, newRGB, newL)
 	c.Hue = h
 	c.Saturation = newS
 	return c
+}
+
+// generateSurface creates a surface color slightly different from background.
+// Material Design 3 uses tonal elevation - surfaces are slightly lighter/darker than background.
+func generateSurface(bg CategorisedColour, theme ThemeType) CategorisedColour {
+	return generateLuminanceOffset(bg, theme, luminanceOffsetParams{
+		role:          RoleSurface,
+		lumDelta:      0.06,
+		darkLumCap:    0.25,
+		lightLumFloor: 0.75,
+		satFactor:     0.9,
+		satFloor:      0.05,
+	})
 }
 
 // generateOnSurface creates a high-contrast text color for surface.
@@ -160,67 +180,27 @@ func generateOnSurface(surface, fg CategorisedColour, theme ThemeType) Categoris
 // generateOutline creates a desaturated border color with moderate contrast.
 // Used for dividers, borders, and outlines.
 func generateOutline(surface CategorisedColour, theme ThemeType) CategorisedColour {
-	rgb := surface.RGB
-	h, s, l := rgbToHSL(rgb)
-
-	// Outline should have ~15-20% luminance difference from surface.
-	var newL float64
-	if theme == ThemeDark {
-		newL = l + 0.18
-		if newL > 0.35 {
-			newL = 0.35
-		}
-	} else {
-		newL = l - 0.18
-		if newL < 0.60 {
-			newL = 0.60
-		}
-	}
-
-	// Very low saturation for neutral outline.
-	newS := s * 0.3
-	if newS < 0.02 {
-		newS = 0.02
-	}
-
-	newRGB := HSLToRGB(h, newS, newL)
-	c := newGeneratedColour(RoleOutline, newRGB, newL)
-	c.Hue = h
-	c.Saturation = newS
-	return c
+	return generateLuminanceOffset(surface, theme, luminanceOffsetParams{
+		role:          RoleOutline,
+		lumDelta:      0.18,
+		darkLumCap:    0.35,
+		lightLumFloor: 0.60,
+		satFactor:     0.3,
+		satFloor:      0.02,
+	})
 }
 
 // generateBorder creates a border color similar to outline but slightly more prominent.
 // Used for primary borders, focus indicators.
 func generateBorder(surface CategorisedColour, theme ThemeType) CategorisedColour {
-	rgb := surface.RGB
-	h, s, l := rgbToHSL(rgb)
-
-	// Border should have ~25-30% luminance difference (more than outline).
-	var newL float64
-	if theme == ThemeDark {
-		newL = l + 0.28
-		if newL > 0.45 {
-			newL = 0.45
-		}
-	} else {
-		newL = l - 0.28
-		if newL < 0.50 {
-			newL = 0.50
-		}
-	}
-
-	// Low saturation but slightly more than outline.
-	newS := s * 0.4
-	if newS < 0.03 {
-		newS = 0.03
-	}
-
-	newRGB := HSLToRGB(h, newS, newL)
-	c := newGeneratedColour(RoleBorder, newRGB, newL)
-	c.Hue = h
-	c.Saturation = newS
-	return c
+	return generateLuminanceOffset(surface, theme, luminanceOffsetParams{
+		role:          RoleBorder,
+		lumDelta:      0.28,
+		darkLumCap:    0.45,
+		lightLumFloor: 0.50,
+		satFactor:     0.4,
+		satFloor:      0.03,
+	})
 }
 
 // generatePriority2Colors generates surface/border variants and on-colors.
@@ -428,61 +408,57 @@ func generateOnColor(palette *CategorisedPalette, bgRole, onRole Role, hintsAppl
 	})
 }
 
+// fixedLuminanceParams describes a colour derivation that pins the resulting
+// luminance to a theme-specific constant while preserving source hue.
+// satFactor scales the source saturation (1.0 preserves it; <1 desaturates).
+type fixedLuminanceParams struct {
+	role      Role
+	darkL     float64
+	lightL    float64
+	satFactor float64
+}
+
+// generateFixedLuminance returns a CategorisedColour with luminance pinned per
+// theme. Used for inverse-surface variants where the hue carries over from the
+// source but the luminance is independent of it.
+func generateFixedLuminance(source CategorisedColour, theme ThemeType, p fixedLuminanceParams) CategorisedColour {
+	h, s, _ := rgbToHSL(source.RGB)
+	newL := p.darkL
+	if theme != ThemeDark {
+		newL = p.lightL
+	}
+	newRGB := HSLToRGB(h, s*p.satFactor, newL)
+	return newGeneratedColour(p.role, newRGB, newL)
+}
+
 // generateInverseSurface creates an inverse surface color (opposite theme).
 func generateInverseSurface(bg CategorisedColour, theme ThemeType) CategorisedColour {
-	rgb := bg.RGB
-	h, s, _ := rgbToHSL(rgb)
-
-	// Inverse luminance.
-	var newL float64
-	if theme == ThemeDark {
-		// Dark theme: inverse is light.
-		newL = 0.90
-	} else {
-		// Light theme: inverse is dark.
-		newL = 0.15
-	}
-
-	newRGB := HSLToRGB(h, s, newL)
-	return newGeneratedColour(RoleInverseSurface, newRGB, newL)
+	return generateFixedLuminance(bg, theme, fixedLuminanceParams{
+		role:      RoleInverseSurface,
+		darkL:     0.90,
+		lightL:    0.15,
+		satFactor: 1.0,
+	})
 }
 
 // generateInverseOnSurface creates text color for inverse surface.
 func generateInverseOnSurface(inverseSurface CategorisedColour, theme ThemeType) CategorisedColour {
-	// Simply use opposite of what inverse surface is.
-	var newL float64
-	if theme == ThemeDark {
-		// Inverse surface is light, so text is dark.
-		newL = 0.10
-	} else {
-		// Inverse surface is dark, so text is light.
-		newL = 0.95
-	}
-
-	rgb := inverseSurface.RGB
-	h, s, _ := rgbToHSL(rgb)
-
-	newRGB := HSLToRGB(h, s*0.1, newL)
-	return newGeneratedColour(RoleInverseOnSurface, newRGB, newL)
+	return generateFixedLuminance(inverseSurface, theme, fixedLuminanceParams{
+		role:      RoleInverseOnSurface,
+		darkL:     0.10,
+		lightL:    0.95,
+		satFactor: 0.1,
+	})
 }
 
 // generateInversePrimary creates an inverse accent color.
 func generateInversePrimary(primary, _ CategorisedColour, theme ThemeType) CategorisedColour {
-	rgb := primary.RGB
-	h, s, _ := rgbToHSL(rgb)
-
-	// Adjust luminance to work on inverse surface.
-	var newL float64
-	if theme == ThemeDark {
-		// For dark theme, inverse primary is darker.
-		newL = 0.40
-	} else {
-		// For light theme, inverse primary is lighter.
-		newL = 0.70
-	}
-
-	newRGB := HSLToRGB(h, s, newL)
-	return newGeneratedColour(RoleInversePrimary, newRGB, newL)
+	return generateFixedLuminance(primary, theme, fixedLuminanceParams{
+		role:      RoleInversePrimary,
+		darkL:     0.40,
+		lightL:    0.70,
+		satFactor: 1.0,
+	})
 }
 
 // generateScrim creates a dark overlay color with alpha for modals.

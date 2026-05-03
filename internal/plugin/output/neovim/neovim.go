@@ -2,21 +2,18 @@
 package neovim
 
 import (
-	"bytes"
 	"context"
 	"embed"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"text/template"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
-	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
@@ -152,68 +149,28 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support.
-	loader := tmplloader.New("neovim", templates)
-	if p.verbose {
-		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
-	}
-	tmplContent, fromCustom, err := loader.Load("theme.lua.tmpl")
+	themeData.ThemeName = p.themeName
+	out, fromCustom, err := utils.RenderTemplate("neovim", "theme.lua.tmpl", templates, themeData, p.verbose)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read theme template: %w", err)
+		return nil, err
 	}
-
-	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for theme.lua.tmpl\n")
 	}
-
-	tmpl, err := template.New("theme").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse theme template: %w", err)
-	}
-
-	// Set plugin-specific themeName for template.
-	themeData.ThemeName = p.themeName
-
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, themeData); err != nil {
-		return nil, fmt.Errorf("failed to execute theme template: %w", err)
-	}
-
-	return buf.Bytes(), nil
+	return out, nil
 }
 
 // generateLualineTheme creates a standalone lualine theme file.
 func (p *Plugin) generateLualineTheme(themeData *colour.ThemeData) ([]byte, error) {
-	// Load template with custom override support.
-	loader := tmplloader.New("neovim", templates)
-	if p.verbose {
-		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
-	}
-	tmplContent, fromCustom, err := loader.Load("lualine_theme.lua.tmpl")
+	themeData.ThemeName = p.themeName
+	out, fromCustom, err := utils.RenderTemplate("neovim", "lualine_theme.lua.tmpl", templates, themeData, p.verbose)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read lualine theme template: %w", err)
+		return nil, err
 	}
-
-	// Log if using custom template.
 	if p.verbose && fromCustom {
 		fmt.Fprintf(os.Stderr, "   Using custom template for lualine_theme.lua.tmpl\n")
 	}
-
-	tmpl, err := template.New("lualine_theme").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse lualine theme template: %w", err)
-	}
-
-	// Set plugin-specific themeName for template.
-	themeData.ThemeName = p.themeName
-
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, themeData); err != nil {
-		return nil, fmt.Errorf("failed to execute lualine theme template: %w", err)
-	}
-
-	return buf.Bytes(), nil
+	return out, nil
 }
 
 // PreExecute checks if neovim config directory exists before generating the theme.

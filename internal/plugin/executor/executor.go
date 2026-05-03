@@ -136,55 +136,44 @@ func (e *PluginExecutor) GetFlagHelp(ctx context.Context) ([]input.FlagHelp, err
 	}
 }
 
-// GetWallpaperPath retrieves the canonical wallpaper path from an input plugin if available.
-// Works for both go-plugin RPC and JSON stdio protocols.
-func (e *PluginExecutor) GetWallpaperPath() string {
+// wallpaperFromInput returns a wallpaper path from the input plugin, dispatching
+// on the active protocol. For RPC plugins it calls rpcGetter on the dispensed
+// InputPluginRPCClient (returning "" if no client is connected); for JSON stdio
+// plugins it returns the stored value the executor cached on the last call.
+func (e *PluginExecutor) wallpaperFromInput(rpcGetter func(*plugin.InputPluginRPCClient) string, jsonValue string) string {
 	switch e.protocolType {
 	case protocol.PluginTypeGoPlugin:
-		// For RPC plugins, query via RPC
 		if e.rpcClient == nil {
 			return ""
 		}
-
 		if inputClient, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
-			return inputClient.WallpaperPath()
+			return rpcGetter(inputClient)
 		}
-
 		return ""
-
 	case protocol.PluginTypeJSON:
-		// For JSON stdio plugins, return stored value
-		return e.lastWallpaperPath
-
+		return jsonValue
 	default:
 		return ""
 	}
+}
+
+// GetWallpaperPath retrieves the canonical wallpaper path from an input plugin if available.
+// Works for both go-plugin RPC and JSON stdio protocols.
+func (e *PluginExecutor) GetWallpaperPath() string {
+	return e.wallpaperFromInput(
+		(*plugin.InputPluginRPCClient).WallpaperPath,
+		e.lastWallpaperPath,
+	)
 }
 
 // GetWallpaperRawPath retrieves the raw wallpaper path from an input plugin if available.
 // This is the literal path as provided by the user before any canonicalization.
 // Works for both go-plugin RPC and JSON stdio protocols.
 func (e *PluginExecutor) GetWallpaperRawPath() string {
-	switch e.protocolType {
-	case protocol.PluginTypeGoPlugin:
-		// For RPC plugins, query via RPC
-		if e.rpcClient == nil {
-			return ""
-		}
-
-		if inputClient, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
-			return inputClient.WallpaperRawPath()
-		}
-
-		return ""
-
-	case protocol.PluginTypeJSON:
-		// For JSON stdio plugins, return stored value
-		return e.lastWallpaperRawPath
-
-	default:
-		return ""
-	}
+	return e.wallpaperFromInput(
+		(*plugin.InputPluginRPCClient).WallpaperRawPath,
+		e.lastWallpaperRawPath,
+	)
 }
 
 // --- Go-Plugin RPC implementations ---
@@ -236,50 +225,38 @@ func (e *PluginExecutor) dispenseRPCPlugin(name string, pluginMap map[string]gop
 	return raw, nil
 }
 
-func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPluginRPCClient, error) {
+// rpcClientFor returns the cached RPC client of type T if it matches, or
+// dispenses a fresh one under kind (with the supplied goplug.Plugin) and
+// caches it. Generics let getInputRPCClient and getOutputRPCClient share the
+// same fetch/cast/cache flow without duplicating method bodies. Implemented
+// as a free function because Go does not allow generic methods.
+func rpcClientFor[T any](e *PluginExecutor, kind string, p goplug.Plugin) (T, error) {
+	var zero T
 	if e.rpcClient != nil {
-		if client, ok := e.rpcClient.(*plugin.InputPluginRPCClient); ok {
-			return client, nil
+		if existing, ok := e.rpcClient.(T); ok {
+			return existing, nil
 		}
 	}
 
-	raw, err := e.dispenseRPCPlugin("input", map[string]goplug.Plugin{
-		"input": &plugin.InputPluginRPC{},
-	})
+	raw, err := e.dispenseRPCPlugin(kind, map[string]goplug.Plugin{kind: p})
 	if err != nil {
-		return nil, err
+		return zero, err
 	}
 
-	client, ok := raw.(*plugin.InputPluginRPCClient)
+	client, ok := raw.(T)
 	if !ok {
-		return nil, fmt.Errorf("unexpected plugin type")
+		return zero, fmt.Errorf("unexpected plugin type")
 	}
 	e.rpcClient = client
-
 	return client, nil
 }
 
+func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPluginRPCClient, error) {
+	return rpcClientFor[*plugin.InputPluginRPCClient](e, "input", &plugin.InputPluginRPC{})
+}
+
 func (e *PluginExecutor) getOutputRPCClient(_ context.Context) (*plugin.OutputPluginRPCClient, error) {
-	if e.rpcClient != nil {
-		if client, ok := e.rpcClient.(*plugin.OutputPluginRPCClient); ok {
-			return client, nil
-		}
-	}
-
-	raw, err := e.dispenseRPCPlugin("output", map[string]goplug.Plugin{
-		"output": &plugin.OutputPluginRPC{},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	client, ok := raw.(*plugin.OutputPluginRPCClient)
-	if !ok {
-		return nil, fmt.Errorf("unexpected plugin type")
-	}
-	e.rpcClient = client
-
-	return client, nil
+	return rpcClientFor[*plugin.OutputPluginRPCClient](e, "output", &plugin.OutputPluginRPC{})
 }
 
 func (e *PluginExecutor) executeInputGoPlugin(ctx context.Context, opts plugin.InputOptions) ([]color.Color, error) {

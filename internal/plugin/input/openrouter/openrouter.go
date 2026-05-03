@@ -27,20 +27,13 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/aiflags"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/aiprompt"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/commonflags"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/imagecolours"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
 const (
-	// wallpaperEnhancement contains the suffix added to prompts to optimize
-	// generated images for use as desktop wallpapers.
-	wallpaperEnhancement = ", high quality desktop wallpaper suitable for widescreen and ultrawidescreen computer monitors, edge-to-edge composition, full bleed, seamless edges, vibrant colors, no borders, no frames, no padding"
-
-	// defaultNegativePrompt contains the default negative prompt used to prevent
-	// unwanted borders, frames, and visual artifacts in generated images.
-	defaultNegativePrompt = "white borders, white edges, black borders, black edges, gray borders, padding, margins, letterbox, pillarbox, widescreen bars, black bars, frames, picture frames, border around image, vignette edges, faded edges, cropped edges, incomplete edges, cut off edges, canvas texture, matting, mounting"
-
 	// apiBaseURL is the base URL for OpenRouter API.
 	apiBaseURL = "https://openrouter.ai/api/v1"
 )
@@ -170,7 +163,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 
 	// Generate image if not cached
 	if imagePath == "" {
-		enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
+		enhancedPrompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
 		additionalPrompt := enhancedPrompt[len(aiflags.Prompt):]
 		fmt.Fprintf(os.Stderr, "[openrouter] model=%s prompt=\"%s\" additional=\"%s\"\n",
 			model, aiflags.Prompt, additionalPrompt)
@@ -296,26 +289,6 @@ func getAPIKey() (string, error) {
 	return apiKey, nil
 }
 
-// enhancePromptForWallpaper adds wallpaper-specific enhancements to a user prompt.
-// Returns the original prompt unchanged if noExtendedPrompt is enabled.
-func (p *Plugin) enhancePromptForWallpaper(basePrompt string) string {
-	if aiflags.NoExtendedPrompt {
-		return basePrompt
-	}
-	return basePrompt + wallpaperEnhancement
-}
-
-// buildNegativePrompt constructs the final negative prompt.
-func buildNegativePrompt(noNegativePrompt bool) string {
-	if noNegativePrompt {
-		return ""
-	}
-	if aiflags.NegativePrompt != "" {
-		return fmt.Sprintf("%s, %s", aiflags.NegativePrompt, defaultNegativePrompt)
-	}
-	return defaultNegativePrompt
-}
-
 // ChatCompletionRequest represents the request body for OpenRouter chat completions.
 type ChatCompletionRequest struct {
 	Model       string       `json:"model"`
@@ -401,8 +374,8 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 	}
 
 	// Build the prompt with negative prompt if applicable
-	enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
-	negativePrompt := buildNegativePrompt(aiflags.NoNegativePrompt)
+	enhancedPrompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
+	negativePrompt := aiprompt.BuildNegative(aiflags.NegativePrompt, aiflags.NoNegativePrompt)
 
 	// Combine prompt with negative prompt instruction
 	fullPrompt := enhancedPrompt
@@ -548,7 +521,7 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 	metadata := &ImageMetadata{
 		Prompt:         aiflags.Prompt,
 		EnhancedPrompt: enhancedPrompt,
-		NegativePrompt: buildNegativePrompt(aiflags.NoNegativePrompt),
+		NegativePrompt: aiprompt.BuildNegative(aiflags.NegativePrompt, aiflags.NoNegativePrompt),
 		Model:          model,
 		AspectRatio:    commonflags.AspectRatio,
 		CreatedAt:      time.Now(),

@@ -10,26 +10,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// syncOptions bundles the flags accepted by the `sync` cobra command. The
+// same set is consumed by both the GitHub-mode RunE body and syncFromConfig,
+// so the bundle replaces what would otherwise be a duplicated long parameter
+// list. GitHub-only fields (githubRepo, version, pluginFilter, exclude) are
+// unused by config-mode sync.
+type syncOptions struct {
+	configPath         string
+	minProtocolVersion string
+	githubRepo         string
+	version            string
+	pluginFilter       []string
+	exclude            []string
+	manifestPath       string
+	skipQuery          bool
+	dryRun             bool
+	verbose            bool
+	prune              bool
+	pruneRemoveAfter   string
+	pruneIncompatible  bool
+	keepRecent         int
+	changelogOutput    string
+	changelogFormat    string
+}
+
 // SyncCmd returns the sync command.
 func SyncCmd() *cobra.Command {
-	var (
-		configPath         string
-		minProtocolVersion string
-		githubRepo         string
-		version            string
-		pluginFilter       []string
-		exclude            []string
-		manifestPath       string
-		skipQuery          bool
-		dryRun             bool
-		verbose            bool
-		prune              bool
-		pruneRemoveAfter   string
-		pruneIncompatible  bool
-		keepRecent         int
-		changelogOutput    string
-		changelogFormat    string
-	)
+	var opts syncOptions
 
 	cmd := &cobra.Command{
 		Use:   "sync",
@@ -70,20 +77,20 @@ Examples:
 `,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			// Validate mode selection
-			if configPath == "" && githubRepo == "" {
+			if opts.configPath == "" && opts.githubRepo == "" {
 				return fmt.Errorf("must specify either --config or --github")
 			}
 
 			// If config is specified, delegate to config-based sync
-			if configPath != "" {
-				return syncFromConfig(configPath, manifestPath, minProtocolVersion, skipQuery, dryRun, verbose, prune, pruneRemoveAfter, pruneIncompatible, keepRecent, changelogOutput, changelogFormat)
+			if opts.configPath != "" {
+				return syncFromConfig(opts)
 			}
 
 			// GitHub mode - validate required flags
-			if version == "" {
+			if opts.version == "" {
 				return fmt.Errorf("--version is required when using --github")
 			}
-			if len(pluginFilter) == 0 {
+			if len(opts.pluginFilter) == 0 {
 				return fmt.Errorf("--plugin-filter is required when using --github")
 			}
 
@@ -91,7 +98,7 @@ Examples:
 			client := repomanager.NewGitHubClient()
 
 			// Load manifest
-			mgr, err := repomanager.LoadManifest(manifestPath)
+			mgr, err := repomanager.LoadManifest(opts.manifestPath)
 			if err != nil {
 				return fmt.Errorf("failed to load manifest: %w", err)
 			}
@@ -110,16 +117,16 @@ Examples:
 			// Create a synthetic source for the shared processing function
 			source := &repomanager.SyncSource{
 				Type:    repomanager.SyncSourceGitHub,
-				Repo:    githubRepo,
-				Version: version,
-				Filter:  pluginFilter,
-				Exclude: exclude,
+				Repo:    opts.githubRepo,
+				Version: opts.version,
+				Filter:  opts.pluginFilter,
+				Exclude: opts.exclude,
 			}
 
 			// Process using the shared function
 			totalAdded, totalSkipped, totalErrors := ProcessGitHubSourceWithProtocol(
-				source, client, mgr, minProtocolVersion, tracker, hydrationCache,
-				skipQuery, dryRun, verbose, changelog,
+				source, client, mgr, opts.minProtocolVersion, tracker, hydrationCache,
+				opts.skipQuery, opts.dryRun, opts.verbose, changelog,
 			)
 
 			// Summary
@@ -131,36 +138,36 @@ Examples:
 			}
 
 			// Prune if requested
-			pruneStats, err := runPruneIfRequested(mgr, prune, pruneRemoveAfter, pruneIncompatible, keepRecent, dryRun, verbose, changelog)
+			pruneStats, err := runPruneIfRequested(mgr, opts.prune, opts.pruneRemoveAfter, opts.pruneIncompatible, opts.keepRecent, opts.dryRun, opts.verbose, changelog)
 			if err != nil {
 				return err
 			}
 
-			return finalizeSyncResults(mgr, changelog, pruneStats, prune, dryRun, manifestPath, changelogOutput, changelogFormat)
+			return finalizeSyncResults(mgr, changelog, pruneStats, opts.prune, opts.dryRun, opts.manifestPath, opts.changelogOutput, opts.changelogFormat)
 		},
 	}
 
 	// Mode selection flags
-	cmd.Flags().StringVarP(&configPath, "config", "c", "", "Path to sync configuration file (JSONL)")
-	cmd.Flags().StringVar(&githubRepo, "github", "", "GitHub repository (owner/repo)")
+	cmd.Flags().StringVarP(&opts.configPath, "config", "c", "", "Path to sync configuration file (JSONL)")
+	cmd.Flags().StringVar(&opts.githubRepo, "github", "", "GitHub repository (owner/repo)")
 
 	// GitHub mode flags
-	cmd.Flags().StringVar(&version, "version", "", "Release version/tag (or 'latest'/'all')")
-	cmd.Flags().StringSliceVar(&pluginFilter, "plugin-filter", []string{}, "Plugin patterns to include")
-	cmd.Flags().StringSliceVar(&exclude, "exclude", []string{}, "Patterns to exclude")
+	cmd.Flags().StringVar(&opts.version, "version", "", "Release version/tag (or 'latest'/'all')")
+	cmd.Flags().StringSliceVar(&opts.pluginFilter, "plugin-filter", []string{}, "Plugin patterns to include")
+	cmd.Flags().StringSliceVar(&opts.exclude, "exclude", []string{}, "Patterns to exclude")
 
 	// Common flags
-	cmd.Flags().StringVar(&minProtocolVersion, "min-protocol-version", "", "Minimum plugin protocol version (e.g., 0.0.1)")
-	cmd.Flags().StringVar(&manifestPath, "manifest", "repository.json", "Path to manifest")
-	cmd.Flags().BoolVar(&skipQuery, "skip-query", false, "Skip querying plugin metadata")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without saving")
-	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
-	cmd.Flags().BoolVar(&prune, "prune", false, "Verify and prune unavailable entries after sync")
-	cmd.Flags().StringVar(&pruneRemoveAfter, "prune-remove-after", "720h", "Remove entries unavailable for duration (e.g., 720h)")
-	cmd.Flags().BoolVar(&pruneIncompatible, "prune-incompatible", false, "Remove plugin versions incompatible with current protocol")
-	cmd.Flags().IntVar(&keepRecent, "keep-recent", 0, "Keep only the N most recent versions per plugin (0 = keep all)")
-	cmd.Flags().StringVar(&changelogOutput, "changelog-output", "", "Write changelog to file (use '-' for stdout)")
-	cmd.Flags().StringVar(&changelogFormat, "changelog-format", "text", "Changelog format: text, short, json")
+	cmd.Flags().StringVar(&opts.minProtocolVersion, "min-protocol-version", "", "Minimum plugin protocol version (e.g., 0.0.1)")
+	cmd.Flags().StringVar(&opts.manifestPath, "manifest", "repository.json", "Path to manifest")
+	cmd.Flags().BoolVar(&opts.skipQuery, "skip-query", false, "Skip querying plugin metadata")
+	cmd.Flags().BoolVar(&opts.dryRun, "dry-run", false, "Preview changes without saving")
+	cmd.Flags().BoolVarP(&opts.verbose, "verbose", "v", false, "Verbose output")
+	cmd.Flags().BoolVar(&opts.prune, "prune", false, "Verify and prune unavailable entries after sync")
+	cmd.Flags().StringVar(&opts.pruneRemoveAfter, "prune-remove-after", "720h", "Remove entries unavailable for duration (e.g., 720h)")
+	cmd.Flags().BoolVar(&opts.pruneIncompatible, "prune-incompatible", false, "Remove plugin versions incompatible with current protocol")
+	cmd.Flags().IntVar(&opts.keepRecent, "keep-recent", 0, "Keep only the N most recent versions per plugin (0 = keep all)")
+	cmd.Flags().StringVar(&opts.changelogOutput, "changelog-output", "", "Write changelog to file (use '-' for stdout)")
+	cmd.Flags().StringVar(&opts.changelogFormat, "changelog-format", "text", "Changelog format: text, short, json")
 
 	// Make flags mutually exclusive (either --config OR --github)
 	cmd.MarkFlagsMutuallyExclusive("config", "github")
@@ -171,35 +178,22 @@ Examples:
 }
 
 // syncFromConfig handles syncing from a configuration file.
-func syncFromConfig(
-	configPath string,
-	manifestPath string,
-	minProtocolVersion string,
-	skipQuery bool,
-	dryRun bool,
-	verbose bool,
-	prune bool,
-	pruneRemoveAfter string,
-	pruneIncompatible bool,
-	keepRecent int,
-	changelogOutput string,
-	changelogFormat string,
-) error {
+func syncFromConfig(opts syncOptions) error {
 	// Load config
-	fmt.Printf("Loading sync configuration from: %s\n", configPath)
-	config, err := repomanager.LoadSyncConfig(configPath)
+	fmt.Printf("Loading sync configuration from: %s\n", opts.configPath)
+	config, err := repomanager.LoadSyncConfig(opts.configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	fmt.Printf("Found %d sync source(s)\n", len(config.Sources))
-	if minProtocolVersion != "" {
-		fmt.Printf("Minimum protocol version: %s\n", minProtocolVersion)
+	if opts.minProtocolVersion != "" {
+		fmt.Printf("Minimum protocol version: %s\n", opts.minProtocolVersion)
 	}
 	fmt.Println()
 
 	// Load manifest
-	mgr, err := repomanager.LoadManifest(manifestPath)
+	mgr, err := repomanager.LoadManifest(opts.manifestPath)
 	if err != nil {
 		return fmt.Errorf("failed to load manifest: %w", err)
 	}
@@ -234,8 +228,8 @@ func syncFromConfig(
 		switch source.Type {
 		case repomanager.SyncSourceGitHub:
 			added, skipped, errors := ProcessGitHubSourceWithProtocol(
-				source, client, mgr, minProtocolVersion, tracker, hydrationCache,
-				skipQuery, dryRun, verbose, changelog,
+				source, client, mgr, opts.minProtocolVersion, tracker, hydrationCache,
+				opts.skipQuery, opts.dryRun, opts.verbose, changelog,
 			)
 			totalAdded += added
 			totalSkipped += skipped
@@ -243,8 +237,8 @@ func syncFromConfig(
 
 		case repomanager.SyncSourceURL:
 			added, errors := ProcessURLSourceWithProtocol(
-				source, mgr, minProtocolVersion, tracker, hydrationCache,
-				skipQuery, dryRun, verbose, changelog,
+				source, mgr, opts.minProtocolVersion, tracker, hydrationCache,
+				opts.skipQuery, opts.dryRun, opts.verbose, changelog,
 			)
 			totalAdded += added
 			totalErrors += errors
@@ -268,7 +262,7 @@ func syncFromConfig(
 	}
 
 	// Prune if requested
-	pruneStats, err := runPruneIfRequested(mgr, prune, pruneRemoveAfter, pruneIncompatible, keepRecent, dryRun, verbose, changelog)
+	pruneStats, err := runPruneIfRequested(mgr, opts.prune, opts.pruneRemoveAfter, opts.pruneIncompatible, opts.keepRecent, opts.dryRun, opts.verbose, changelog)
 	if err != nil {
 		return err
 	}
@@ -277,7 +271,7 @@ func syncFromConfig(
 	// the authoritative changelog (syncFromConfig uses snapshots).
 	realChangelog := BuildFromManifestDiff(mgr.ComputeDiff())
 
-	return finalizeSyncResults(mgr, realChangelog, pruneStats, prune, dryRun, manifestPath, changelogOutput, changelogFormat)
+	return finalizeSyncResults(mgr, realChangelog, pruneStats, opts.prune, opts.dryRun, opts.manifestPath, opts.changelogOutput, opts.changelogFormat)
 }
 
 // runPruneIfRequested executes pruning when enabled and prints the prune summary.

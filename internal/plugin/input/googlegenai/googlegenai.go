@@ -20,20 +20,13 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/aiflags"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/aiprompt"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/commonflags"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/imagecolours"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
 const (
-	// wallpaperEnhancement contains the suffix added to prompts to optimize
-	// generated images for use as desktop wallpapers.
-	wallpaperEnhancement = ", high quality desktop wallpaper suitable for widescreen and ultrawidescreen computer monitors, edge-to-edge composition, full bleed, seamless edges, vibrant colors, no borders, no frames, no padding"
-
-	// defaultNegativePrompt contains the default negative prompt used to prevent
-	// unwanted borders, frames, and visual artifacts in generated images.
-	defaultNegativePrompt = "white borders, white edges, black borders, black edges, gray borders, padding, margins, letterbox, pillarbox, widescreen bars, black bars, frames, picture frames, border around image, vignette edges, faded edges, cropped edges, incomplete edges, cut off edges, canvas texture, matting, mounting"
-
 	// modelPrefix is the prefix that Google API returns for model names.
 	modelPrefix = "models/"
 
@@ -168,7 +161,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 
 	// Generate image if needed
 	if commonflags.CacheOverwrite || !fileExists(imagePath) {
-		enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
+		enhancedPrompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
 		additionalPrompt := enhancedPrompt[len(aiflags.Prompt):]
 		fmt.Fprintf(os.Stderr, "[google-genai] backend=%s model=%s prompt=\"%s\" additional=\"%s\"\n",
 			p.backend, model, aiflags.Prompt, additionalPrompt)
@@ -283,27 +276,6 @@ func (p *Plugin) clientSetup(ctx context.Context, verbose bool) (*genai.Client, 
 	return client, nil
 }
 
-// enhancePromptForWallpaper adds wallpaper-specific enhancements to a user prompt.
-// Returns the original prompt unchanged if noExtendedPrompt is enabled.
-func (p *Plugin) enhancePromptForWallpaper(basePrompt string) string {
-	if aiflags.NoExtendedPrompt {
-		return basePrompt
-	}
-	return basePrompt + wallpaperEnhancement
-}
-
-// buildNegativePrompt constructs the final negative prompt by combining
-// user-provided and default negative prompts.
-func buildNegativePrompt(userPrompt string, noNegative bool) string {
-	if noNegative {
-		return ""
-	}
-	if userPrompt == "" {
-		return defaultNegativePrompt
-	}
-	return fmt.Sprintf("%s, %s", userPrompt, defaultNegativePrompt)
-}
-
 // isGeminiModel checks if a model uses the Gemini API (GenerateContent) vs Imagen API (GenerateImages).
 func isGeminiModel(model string) bool {
 	return model == "gemini-2.5-flash-image"
@@ -326,7 +298,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath 
 	}
 
 	// Enhance prompt for wallpaper suitability
-	enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
+	enhancedPrompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
 
 	// Build generation config
 	genConfig := &genai.GenerateImagesConfig{
@@ -343,7 +315,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath 
 	// Build negative prompt to avoid borders, frames, and unwanted elements
 	// Note: Negative prompts are only supported in Vertex AI backend, not Gemini API
 	if client.ClientConfig().Backend == genai.BackendVertexAI && !aiflags.NoNegativePrompt {
-		genConfig.NegativePrompt = buildNegativePrompt(aiflags.NegativePrompt, aiflags.NoNegativePrompt)
+		genConfig.NegativePrompt = aiprompt.BuildNegative(aiflags.NegativePrompt, aiflags.NoNegativePrompt)
 	} else if aiflags.NegativePrompt != "" && !aiflags.NoNegativePrompt {
 		// Gemini API doesn't support negative prompts, warn user if they provided one
 		fmt.Fprintf(os.Stderr, "Warning: Negative prompts are not supported with Gemini API backend (only Vertex AI)\n")
@@ -442,7 +414,7 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputPath 
 	}
 
 	// Enhance prompt for wallpaper suitability
-	enhancedPrompt := p.enhancePromptForWallpaper(aiflags.Prompt)
+	enhancedPrompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Calling GenerateContent with model: %s\n", model)

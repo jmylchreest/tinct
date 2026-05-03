@@ -308,58 +308,6 @@ func TestGenerateDryRun(t *testing.T) {
 	}
 }
 
-// TestEnhancePromptForWallpaper tests prompt enhancement.
-func TestEnhancePromptForWallpaper(t *testing.T) {
-	resetFlags()
-	plugin := New()
-	basePrompt := "a mountain landscape"
-
-	// With enhancement enabled (default)
-	aiflags.NoExtendedPrompt = false
-	enhanced := plugin.enhancePromptForWallpaper(basePrompt)
-	if enhanced == basePrompt {
-		t.Error("Expected prompt to be enhanced by default")
-	}
-	if len(enhanced) <= len(basePrompt) {
-		t.Error("Enhanced prompt should be longer than base prompt")
-	}
-
-	// With enhancement disabled
-	aiflags.NoExtendedPrompt = true
-	notEnhanced := plugin.enhancePromptForWallpaper(basePrompt)
-	if notEnhanced != basePrompt {
-		t.Errorf("Expected prompt to not be enhanced when disabled, got '%s'", notEnhanced)
-	}
-}
-
-// TestBuildNegativePrompt tests negative prompt building.
-func TestBuildNegativePrompt(t *testing.T) {
-	// With negative prompt enabled (empty user prompt)
-	negPrompt := buildNegativePrompt("", false)
-	if negPrompt == "" {
-		t.Error("Expected non-empty negative prompt when enabled")
-	}
-	if negPrompt != defaultNegativePrompt {
-		t.Errorf("Expected default negative prompt, got '%s'", negPrompt)
-	}
-
-	// With user-provided negative prompt
-	userPrompt := "ugly, bad quality"
-	combined := buildNegativePrompt(userPrompt, false)
-	if combined == "" {
-		t.Error("Expected non-empty combined negative prompt")
-	}
-	if combined != userPrompt+", "+defaultNegativePrompt {
-		t.Errorf("Expected combined prompt, got '%s'", combined)
-	}
-
-	// With negative prompt disabled
-	disabledPrompt := buildNegativePrompt("", true)
-	if disabledPrompt != "" {
-		t.Errorf("Expected empty negative prompt when disabled, got '%s'", disabledPrompt)
-	}
-}
-
 // TestDefaultModelValue tests that the default ai.model value is "auto".
 func TestDefaultModelValue(t *testing.T) {
 	resetFlags()

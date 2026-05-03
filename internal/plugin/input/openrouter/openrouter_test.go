@@ -288,48 +288,6 @@ func TestGenerateDryRun(t *testing.T) {
 	}
 }
 
-// TestEnhancePromptForWallpaper tests prompt enhancement.
-func TestEnhancePromptForWallpaper(t *testing.T) {
-	resetFlags()
-	plugin := New()
-	basePrompt := "a mountain landscape"
-
-	// With enhancement enabled (default)
-	aiflags.NoExtendedPrompt = false
-	enhanced := plugin.enhancePromptForWallpaper(basePrompt)
-	if enhanced == basePrompt {
-		t.Error("Expected prompt to be enhanced by default")
-	}
-	if len(enhanced) <= len(basePrompt) {
-		t.Error("Enhanced prompt should be longer than base prompt")
-	}
-
-	// With enhancement disabled
-	aiflags.NoExtendedPrompt = true
-	notEnhanced := plugin.enhancePromptForWallpaper(basePrompt)
-	if notEnhanced != basePrompt {
-		t.Errorf("Expected prompt to not be enhanced when disabled, got '%s'", notEnhanced)
-	}
-}
-
-// TestBuildNegativePrompt tests negative prompt building.
-func TestBuildNegativePrompt(t *testing.T) {
-	// With negative prompt enabled
-	negPrompt := buildNegativePrompt(false)
-	if negPrompt == "" {
-		t.Error("Expected non-empty negative prompt when enabled")
-	}
-	if negPrompt != defaultNegativePrompt {
-		t.Errorf("Expected default negative prompt, got '%s'", negPrompt)
-	}
-
-	// With negative prompt disabled
-	disabledPrompt := buildNegativePrompt(true)
-	if disabledPrompt != "" {
-		t.Errorf("Expected empty negative prompt when disabled, got '%s'", disabledPrompt)
-	}
-}
-
 // TestParsePrice tests the parsePrice function.
 func TestParsePrice(t *testing.T) {
 	tests := []struct {
