@@ -3,11 +3,9 @@ package walker
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
@@ -18,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -185,20 +184,11 @@ func (p *Plugin) generateStyle(themeData *colour.ThemeData) ([]byte, error) {
 
 // PreExecute checks if walker is available and config directory exists.
 // Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if walker executable exists on PATH.
-	_, err = exec.LookPath("walker")
-	if err != nil {
-		return true, "walker executable not found on $PATH", nil
+// Hooks declares walker's pre-execute behaviour. Walker has no
+// hot-reload mechanism so the spec is binary check + dir create only.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"walker"},
+		AutoCreateDir:    true,
 	}
-
-	// Check if config directory exists (create it if not).
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(configDir, 0o750); err != nil {
-			return true, fmt.Sprintf("walker config directory does not exist and cannot be created: %s", configDir), nil
-		}
-	}
-
-	return false, "", nil
 }
