@@ -18,6 +18,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -97,13 +98,15 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // PreExecute checks if the GTK3 config directory exists.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf("GTK3 config directory does not exist (%s). Install a GTK3 application first.", configDir), nil
+// Hooks declares gtk3's pre-execute behaviour. The config dir must
+// exist (signal that GTK3 is installed). PostExecute stays imperative
+// because it does content-aware inspection of gtk.css and settings.ini
+// to emit different install messages depending on what's already
+// configured — that's not expressible as a static template.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredDirs: []string{p.DefaultOutputDir()},
 	}
-
-	return false, "", nil
 }
 
 // Generate creates the GTK3 theme files.
