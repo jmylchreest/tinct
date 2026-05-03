@@ -7,7 +7,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -19,7 +18,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
-	"github.com/jmylchreest/tinct/pkg/util/appdetect"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
+	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
 //go:embed *.tmpl
@@ -90,16 +90,30 @@ func (p *Plugin) Validate() error {
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
+// Kitty honours $XDG_CONFIG_HOME on macOS too, so XDGConfigDir works on
+// every platform kitty supports.
 func (p *Plugin) DefaultOutputDir() string {
 	if p.outputDir != "" {
 		return p.outputDir
 	}
+	return filepath.Join(paths.XDGConfigDir(), "kitty", "themes")
+}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/kitty/themes"
+// Hooks declares kitty's pre/post-execute behaviour. The conflict
+// detection in PostExecute (custom message inspecting kitty.conf
+// content) stays imperative because it's not expressible as a spec
+// field — the spec covers the routine binary check, dir auto-create,
+// and SIGUSR1 reload broadcast.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"kitty"},
+		OptionalBinaries: []string{"kitten"},
+		AutoCreateDir:    true,
+		Reload: &hooks.ReloadSpec{
+			Verb: hooks.VerbSignal,
+			Args: []string{"kitty", "SIGUSR1"},
+		},
 	}
-	return filepath.Join(home, ".config", "kitty", "themes")
 }
 
 // Generate creates the theme file.
@@ -152,56 +166,10 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if kitty and kitten are available before generating the theme.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if kitty executable exists (native, Flatpak, or AppImage).
-	if !appdetect.IsPresentAny([]string{"kitty"}, nil) {
-		return true, "kitty executable not found on $PATH", nil
-	}
-
-	// Check if kitten executable exists on PATH (needed for reload).
-	_, err = exec.LookPath("kitten")
-	if err != nil {
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Warning: kitten not found - config reload will not be available\n")
-		}
-	}
-
-	// Check if themes directory exists, create if it doesn't.
-	themesDir := p.DefaultOutputDir()
-	if _, err := os.Stat(themesDir); os.IsNotExist(err) {
-		// Try to create the themes directory.
-		if err := os.MkdirAll(themesDir, 0o750); err != nil {
-			return true, fmt.Sprintf("failed to create kitty themes directory: %s", themesDir), nil
-		}
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Created kitty themes directory: %s\n", themesDir)
-		}
-	}
-
-	return false, "", nil
-}
-
-// PostExecute applies the theme to all running kitty instances.
-// Implements the output.PostExecuteHook interface.
+// PostExecute keeps the conflict-detection warning. The reload itself is
+// handled declaratively by the Hooks() spec (signal broadcast).
 func (p *Plugin) PostExecute(_ context.Context, _ output.ExecutionContext, _ []string) error {
-	// Check for conflicting current-theme.conf that might override tinct theme.
 	p.checkForConflictingTheme()
-
-	// Reload all kitty instances by sending SIGUSR1 signal.
-	// This works on Unix-like systems (Linux, macOS, BSD).
-	if err := p.reloadAllKittyInstances(); err != nil {
-		if p.verbose {
-			fmt.Fprintf(os.Stderr, "   Note: Could not reload kitty instances: %v\n", err)
-		}
-		return nil
-	}
-
-	if p.verbose {
-		fmt.Fprintf(os.Stderr, "   Kitty config reloaded in all instances\n")
-	}
-
 	return nil
 }
 
