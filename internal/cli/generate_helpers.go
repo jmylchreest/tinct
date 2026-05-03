@@ -15,6 +15,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 // loadAndConfigurePlugins loads the plugin lock file and configures plugins.
@@ -445,8 +446,30 @@ func preparePluginExecutions(ctx context.Context, plugins []output.Plugin) []plu
 	return executions
 }
 
-// shouldSkipFromPreHook runs the pre-execute hook and determines if plugin should be skipped.
+// shouldSkipFromPreHook runs the pre-execute checks and determines if a
+// plugin should be skipped. It evaluates the declarative hooks.Spec first
+// (if the plugin implements hooks.Provider), then the optional imperative
+// PreExecuteHook. Either gating skip propagates to the caller.
 func shouldSkipFromPreHook(ctx context.Context, plugin output.Plugin, exec *pluginExecution) bool {
+	if provider, ok := plugin.(hooks.Provider); ok {
+		spec := provider.Hooks()
+		skip, reason, err := hooks.RunPre(spec, plugin.DefaultOutputDir(), generateVerbose)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, " %s pre-execution check failed: %v\n", plugin.Name(), err)
+			exec.skip = true
+			exec.skipReason = fmt.Sprintf("pre-hook error: %v", err)
+			return true
+		}
+		if skip {
+			if generateVerbose {
+				fmt.Fprintf(os.Stderr, "⊘ Skipping %s: %s\n", plugin.Name(), reason)
+			}
+			exec.skip = true
+			exec.skipReason = reason
+			return true
+		}
+	}
+
 	preHook, ok := plugin.(output.PreExecuteHook)
 	if !ok {
 		return false
@@ -639,7 +662,10 @@ func writePluginFiles(exec *pluginExecution, plugin output.Plugin, files map[str
 	return true
 }
 
-// runPostExecutionHooks runs post-execute hooks for successful plugins.
+// runPostExecutionHooks runs post-execute behaviour for successful plugins.
+// The plugin's optional imperative PostExecuteHook runs first (so it can
+// emit custom state-aware warnings or messages), then the declarative
+// hooks.Spec runs (chmod, reload, wallpaper, instructions).
 func runPostExecutionHooks(ctx context.Context, executions []pluginExecution, wallpaperPath string) {
 	for _, exec := range executions {
 		if exec.skip || len(exec.writtenFiles) == 0 {
@@ -647,12 +673,6 @@ func runPostExecutionHooks(ctx context.Context, executions []pluginExecution, wa
 		}
 
 		plugin := exec.plugin
-		postHook, ok := plugin.(output.PostExecuteHook)
-		if !ok {
-			continue
-		}
-
-		// Build execution context for the hook.
 		execContext := output.ExecutionContext{
 			DryRun:        generateDryRun,
 			Verbose:       generateVerbose,
@@ -660,16 +680,31 @@ func runPostExecutionHooks(ctx context.Context, executions []pluginExecution, wa
 			WallpaperPath: wallpaperPath,
 		}
 
-		if generateVerbose {
-			fmt.Fprintf(os.Stderr, "→ Running %s post-hook...\n", plugin.Name())
+		if postHook, ok := plugin.(output.PostExecuteHook); ok {
+			if generateVerbose {
+				fmt.Fprintf(os.Stderr, "→ Running %s post-hook...\n", plugin.Name())
+			}
+			hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			if err := postHook.PostExecute(hookCtx, execContext, exec.writtenFiles); err != nil {
+				fmt.Fprintf(os.Stderr, "   %s post-hook failed: %v\n", plugin.Name(), err)
+			}
+			cancel()
 		}
 
-		hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		err := postHook.PostExecute(hookCtx, execContext, exec.writtenFiles)
-		cancel()
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "   %s post-hook failed: %v\n", plugin.Name(), err)
+		if provider, ok := plugin.(hooks.Provider); ok {
+			spec := provider.Hooks()
+			hctx := hooks.Context{
+				DryRun:        execContext.DryRun,
+				Verbose:       execContext.Verbose,
+				OutputDir:     execContext.OutputDir,
+				WallpaperPath: execContext.WallpaperPath,
+				WrittenFiles:  exec.writtenFiles,
+			}
+			specCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			if err := hooks.RunPost(specCtx, spec, hctx); err != nil {
+				fmt.Fprintf(os.Stderr, "   %s spec post-hook failed: %v\n", plugin.Name(), err)
+			}
+			cancel()
 		}
 	}
 }
