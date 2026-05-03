@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
@@ -35,7 +36,8 @@ func RunPre(spec Spec, hctx Context) (skip bool, reason string, err error) {
 	}
 
 	for _, d := range spec.RequiredDirs {
-		if _, statErr := os.Stat(d); os.IsNotExist(statErr) {
+		expanded := expandHome(d)
+		if _, statErr := os.Stat(expanded); os.IsNotExist(statErr) {
 			return true, fmt.Sprintf("required directory does not exist: %s", d), nil
 		}
 	}
@@ -63,6 +65,28 @@ func linePrefix(name string) string {
 		return "   "
 	}
 	return "   " + name + ": "
+}
+
+// expandHome expands a leading ~ (or ~/path) to the user's home dir so
+// plugins can declare RequiredDirs in the natural shell-style form
+// without having to call os.UserHomeDir themselves. Other ~user forms
+// are intentionally left alone — runner.go isn't the place to ape every
+// shell's tilde expansion.
+func expandHome(p string) string {
+	if !strings.HasPrefix(p, "~") {
+		return p
+	}
+	if p != "~" && !strings.HasPrefix(p, "~/") {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return p
+	}
+	if p == "~" {
+		return home
+	}
+	return filepath.Join(home, p[2:])
 }
 
 // RunPost evaluates the spec's post-execute actions: chmod marked files,

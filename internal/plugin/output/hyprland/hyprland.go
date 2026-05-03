@@ -165,9 +165,8 @@ func (p *Plugin) DefaultOutputDir() string {
 // optional. When --hyprland.reload is set, runs hyprctl reload via the
 // shared exec verb runner.
 func (p *Plugin) Hooks() hooks.Spec {
-	home, _ := os.UserHomeDir() //nolint:errcheck // empty home leaves an invalid path that fails RequiredDirs cleanly
 	spec := hooks.Spec{
-		RequiredDirs:     []string{filepath.Join(home, ".config", "hypr")},
+		RequiredDirs:     []string{"~/.config/hypr"},
 		OptionalBinaries: []string{"hyprctl"},
 		AutoCreateDir:    true,
 	}

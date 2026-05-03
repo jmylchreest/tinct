@@ -42,6 +42,49 @@ func TestRunPre_RequiredDirMissing(t *testing.T) {
 	}
 }
 
+// TestRunPre_RequiredDirTildeExpansion verifies plugins can declare
+// "~/.config/foo" in RequiredDirs without doing their own os.UserHomeDir
+// dance. We rebind HOME to a tmp dir, make the dir under it exist, and
+// confirm the runner doesn't skip.
+func TestRunPre_RequiredDirTildeExpansion(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+
+	target := filepath.Join(tmp, ".config", "tinct-tilde-test")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	skip, reason, err := RunPre(Spec{
+		RequiredDirs: []string{"~/.config/tinct-tilde-test"},
+	}, Context{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if skip {
+		t.Errorf("expected skip=false for existing tilde-prefixed dir, got skip=%v reason=%q", skip, reason)
+	}
+}
+
+// TestRunPre_RequiredDirTildeMissingStillSkips verifies the expansion
+// path doesn't accidentally swallow missing-dir cases.
+func TestRunPre_RequiredDirTildeMissingStillSkips(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+
+	skip, reason, _ := RunPre(Spec{
+		RequiredDirs: []string{"~/definitely-missing-xyzzy"},
+	}, Context{})
+	if !skip {
+		t.Error("expected skip=true for missing tilde-prefixed dir")
+	}
+	// The reason should preserve the original (un-expanded) path so the
+	// user sees what they wrote.
+	if !strings.Contains(reason, "~/definitely-missing-xyzzy") {
+		t.Errorf("reason should mention the original path; got %q", reason)
+	}
+}
+
 func TestRunPre_AutoCreateDir(t *testing.T) {
 	tmp := t.TempDir()
 	target := filepath.Join(tmp, "nested", "subdir")

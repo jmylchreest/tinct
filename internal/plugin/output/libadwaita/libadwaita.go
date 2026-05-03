@@ -97,9 +97,8 @@ func (p *Plugin) DefaultOutputDir() string {
 // dir must exist (libadwaita lives alongside GTK4). PostExecute stays
 // imperative because it inherits gtk4-style content-aware messaging.
 func (p *Plugin) Hooks() hooks.Spec {
-	home, _ := os.UserHomeDir() //nolint:errcheck // empty home leaves an invalid path that fails RequiredDirs cleanly
 	return hooks.Spec{
-		RequiredDirs: []string{filepath.Join(home, ".config", "gtk-4.0")},
+		RequiredDirs: []string{"~/.config/gtk-4.0"},
 	}
 }
 
