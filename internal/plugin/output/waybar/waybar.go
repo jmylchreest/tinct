@@ -3,15 +3,12 @@ package waybar
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
-	"github.com/mitchellh/go-ps"
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
@@ -19,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/shared/utils"
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 //go:embed *.tmpl
@@ -94,24 +92,6 @@ func (p *Plugin) GetFlagHelp() []output.FlagHelp {
 func (p *Plugin) Validate() error {
 	// Nothing to validate - all fields have defaults.
 	return nil
-}
-
-// findProcessByName finds all PIDs of processes with the given name.
-// Uses go-ps library for cross-platform process discovery.
-func findProcessByName(name string) ([]int, error) {
-	processes, err := ps.Processes()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get process list: %w", err)
-	}
-
-	var pids []int
-	for _, p := range processes {
-		if p.Executable() == name {
-			pids = append(pids, p.Pid())
-		}
-	}
-
-	return pids, nil
 }
 
 // DefaultOutputDir returns the default output directory for this plugin.
@@ -220,20 +200,22 @@ func (p *Plugin) generateStubCSS(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if waybar is available before generating the theme.
-// Implements the output.PreExecuteHook interface.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if waybar executable exists on PATH.
-	_, err = exec.LookPath("waybar")
-	if err != nil {
-		return true, "waybar executable not found on $PATH", nil
+// Hooks declares waybar's pre/post-execute behaviour. The themes
+// subdirectory is required (waybar must already be configured); reload
+// sends SIGUSR2 to all running waybar instances when --waybar.reload is
+// set (default). The previous implementation declared the SIGUSR2 flag
+// but never wired the signal — this connects it via the shared signal
+// verb runner.
+func (p *Plugin) Hooks() hooks.Spec {
+	spec := hooks.Spec{
+		RequiredBinaries: []string{"waybar"},
+		RequiredDirs:     []string{p.DefaultOutputDir()},
 	}
-
-	// Check if config directory exists.
-	configDir := p.DefaultOutputDir()
-	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		return true, fmt.Sprintf("waybar config directory not found: %s", configDir), nil
+	if p.reloadConfig {
+		spec.Reload = &hooks.ReloadSpec{
+			Verb: hooks.VerbSignal,
+			Args: []string{"waybar", "SIGUSR2"},
+		}
 	}
-
-	return false, "", nil
+	return spec
 }
