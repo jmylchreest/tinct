@@ -52,6 +52,14 @@ const (
 type Config struct {
 	Telemetry TelemetryConfig `toml:"telemetry"`
 	Cache     CacheConfig     `toml:"cache"`
+
+	// Plugins holds per-plugin overrides under [plugin.<name>] tables in
+	// tinct.toml. The internal/pluginconfig package consults this map to
+	// resolve plugin keys with deterministic precedence (flag > env >
+	// tinct.toml > fallback). Stored as a generic map so individual
+	// plugins can read whatever keys they expose without amending Config
+	// every time a new plugin or flag is added.
+	Plugins map[string]map[string]any `toml:"plugin,omitempty"`
 }
 
 // TelemetryConfig holds telemetry settings stored in tinct.toml.
