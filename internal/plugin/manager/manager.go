@@ -25,6 +25,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/alacritty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/awww"
+	"github.com/jmylchreest/tinct/internal/plugin/output/btop"
 	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
 	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
 	"github.com/jmylchreest/tinct/internal/plugin/output/ghostty"
@@ -114,6 +115,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	// Register output plugins.
 	m.outputRegistry.Register(alacritty.New())
 	m.outputRegistry.Register(awww.New())
+	m.outputRegistry.Register(btop.New())
 	m.outputRegistry.Register(dunst.New())
 	m.outputRegistry.Register(fuzzel.New())
 	m.outputRegistry.Register(ghostty.New())
