@@ -71,12 +71,6 @@ func resolveConfigPaths(writtenFiles []string) *configPaths {
 	}
 }
 
-// GetEmbeddedTemplates returns the embedded template filesystem.
-// This is used by the template management commands.
-func GetEmbeddedTemplates() embed.FS {
-	return templates
-}
-
 // Plugin implements the output.Plugin interface for Hyprpaper.
 type Plugin struct {
 	outputDir string

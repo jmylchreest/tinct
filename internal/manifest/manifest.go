@@ -339,18 +339,6 @@ func (m *Manager) GetMissing() map[string]*FileEntry {
 	return missing
 }
 
-// Path returns the manifest file path.
-func (m *Manager) Path() string {
-	return m.path
-}
-
-// FileCount returns the number of tracked files.
-func (m *Manager) FileCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.manifest.Files)
-}
-
 // TotalSize returns the total size of all tracked files.
 func (m *Manager) TotalSize() int64 {
 	m.mu.RLock()

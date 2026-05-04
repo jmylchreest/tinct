@@ -8,27 +8,12 @@ import (
 	_ "image/gif"  // Register GIF decoder
 	_ "image/jpeg" // Register JPEG decoder
 	_ "image/png"  // Register PNG decoder
-	"os"
 	"strings"
 
 	_ "golang.org/x/image/webp" // Register WebP decoder
 
 	"gopkg.in/yaml.v3"
 )
-
-// WriteFile writes a theme to a markdown file.
-func WriteFile(path string, theme *Theme, includeThumbnail bool, thumbnailData string) error {
-	content, err := Generate(theme, includeThumbnail, thumbnailData)
-	if err != nil {
-		return fmt.Errorf("failed to generate markdown: %w", err)
-	}
-
-	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
-}
 
 // Generate creates the complete markdown content for a theme.
 func Generate(theme *Theme, includeThumbnail bool, thumbnailData string) (string, error) {

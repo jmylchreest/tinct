@@ -593,12 +593,12 @@ func sendGenerateTelemetry(ctx context.Context, executions []pluginExecution, pa
 		var status string
 		switch {
 		case !exec.skip && len(exec.writtenFiles) > 0:
-			status = "ok"
+			status = telemetry.StatusOK
 		case !exec.skip && len(exec.writtenFiles) == 0:
 			// Plugin ran to completion without being skipped but wrote no
 			// tracked files. Side-effect-only plugins (e.g. notify-send)
 			// legitimately produce no files. Treat as "ok".
-			status = "ok"
+			status = telemetry.StatusOK
 		case exec.skip && len(exec.writtenFiles) == 0 && exec.skipReason != "":
 			// Distinguish skipped (never attempted) from failed (attempted but errored).
 			// Pre-hook skips and validation failures never reach generation,
@@ -609,12 +609,12 @@ func sendGenerateTelemetry(ctx context.Context, executions []pluginExecution, pa
 					!strings.HasPrefix(exec.skipReason, "dual-theme generation failed:") &&
 					!strings.HasPrefix(exec.skipReason, "write failed:")) {
 
-				status = "skipped"
+				status = telemetry.StatusSkipped
 			} else {
-				status = "failed"
+				status = telemetry.StatusFailed
 			}
 		default:
-			status = "failed"
+			status = telemetry.StatusFailed
 		}
 
 		client.Send(telemetry.NewPluginUsedEvent(exec.plugin.Name(), exec.plugin.Version(), isExternal, status))

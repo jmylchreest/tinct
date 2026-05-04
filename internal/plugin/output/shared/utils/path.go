@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -18,18 +16,4 @@ func IsValidPath(path string) bool {
 	}
 	cleaned := filepath.Clean(path)
 	return cleaned == path
-}
-
-// MakeScriptExecutable searches writtenFiles for a file with the given base
-// name and makes it executable (0o750). Errors are logged as warnings when
-// verbose is true but never returned — a non-executable script is not fatal.
-func MakeScriptExecutable(writtenFiles []string, scriptName string, verbose bool) {
-	for _, f := range writtenFiles {
-		if filepath.Base(f) == scriptName {
-			if err := os.Chmod(f, 0o750); err != nil && verbose { // #nosec G302 -- 0o750 is intentional: generated shell scripts must be executable by the owner
-				fmt.Fprintf(os.Stderr, "   Warning: failed to make %s executable: %v\n", f, err)
-			}
-			break
-		}
-	}
 }

@@ -92,8 +92,11 @@ func runPluginTemplatesList(_ *cobra.Command, _ []string) (err error) {
 
 	// Auto-register external plugins from the manifest so this command
 	// also reports templates from contrib plugins (paletty, awob, …),
-	// not just the built-in set.
-	_ = loadAndApplyPluginManifest()
+	// not just the built-in set. A missing manifest is fine; that just
+	// means there are no externals to add.
+	if mErr := loadAndApplyPluginManifest(); mErr != nil && globalVerbose() {
+		fmt.Fprintf(os.Stderr, "Note: %v\n", mErr)
+	}
 
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
@@ -166,8 +169,11 @@ func runPluginTemplatesDump(_ *cobra.Command, _ []string) (err error) { //nolint
 	defer func() { sendPluginSubcommandResult("templates", "dump", items, err) }()
 
 	// Auto-register external plugins so dump also reaches contrib
-	// plugins (paletty, awob, …), not just the built-in set.
-	_ = loadAndApplyPluginManifest()
+	// plugins (paletty, awob, …), not just the built-in set. A missing
+	// manifest is fine; that just means there are no externals to add.
+	if mErr := loadAndApplyPluginManifest(); mErr != nil && globalVerbose() {
+		fmt.Fprintf(os.Stderr, "Note: %v\n", mErr)
+	}
 
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {

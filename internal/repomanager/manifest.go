@@ -365,26 +365,6 @@ func (m *ManifestManager) SetPluginMetadata(pluginName string, metadata *PluginM
 	return changedFields
 }
 
-// SetManifestMetadata updates top-level manifest metadata.
-func (m *ManifestManager) SetManifestMetadata(name, description, url, maintainedBy string) {
-	if name != "" && m.manifest.Name != name {
-		m.manifest.Name = name
-		m.dirty = true
-	}
-	if description != "" && m.manifest.Description != description {
-		m.manifest.Description = description
-		m.dirty = true
-	}
-	if url != "" && m.manifest.URL != url {
-		m.manifest.URL = url
-		m.dirty = true
-	}
-	if maintainedBy != "" && m.manifest.MaintainedBy != maintainedBy {
-		m.manifest.MaintainedBy = maintainedBy
-		m.dirty = true
-	}
-}
-
 // CreateSnapshot creates a deep copy of the current manifest state.
 // This should be called before starting a sync operation.
 func (m *ManifestManager) CreateSnapshot() {

@@ -24,11 +24,6 @@ import (
 //go:embed *.tmpl
 var templates embed.FS
 
-// GetEmbeddedTemplates returns the embedded template filesystem.
-func GetEmbeddedTemplates() embed.FS {
-	return templates
-}
-
 // Plugin implements the output.Plugin interface for btop.
 type Plugin struct {
 	outputDir    string

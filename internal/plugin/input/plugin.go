@@ -120,15 +120,6 @@ func (r *Registry) Get(name string) (Plugin, bool) {
 	return plugin, ok
 }
 
-// List returns all registered plugin names.
-func (r *Registry) List() []string {
-	names := make([]string, 0, len(r.plugins))
-	for name := range r.plugins {
-		names = append(names, name)
-	}
-	return names
-}
-
 // All returns all registered plugins (including disabled ones).
 func (r *Registry) All() map[string]Plugin {
 	// Return a copy to prevent external modification.

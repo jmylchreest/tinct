@@ -65,9 +65,9 @@ func countConfiguredRepos() int {
 // item count, and the handler's named-return err. Status is derived
 // from err so handlers don't need an inline status variable.
 func sendPluginSubcommandResult(subcommand, action string, items int, err error) {
-	status := "ok"
+	status := telemetry.StatusOK
 	if err != nil {
-		status = "failed"
+		status = telemetry.StatusFailed
 	}
 	sendPluginCommandTelemetry(telemetry.PluginCommandEventParams{
 		Subcommand: subcommand,

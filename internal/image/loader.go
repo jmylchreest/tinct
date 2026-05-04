@@ -253,22 +253,6 @@ func ResolveImagePath(path string) (string, error) {
 	return selectedImage, nil
 }
 
-// GetImageDimensions returns the width and height of an image without fully loading it.
-func GetImageDimensions(path string) (width, height int, err error) {
-	file, err := os.Open(path) // #nosec G304 - User-specified image path, intended to be read
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to open image: %w", err)
-	}
-	defer file.Close()
-
-	config, _, err := image.DecodeConfig(file)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to decode image config: %w", err)
-	}
-
-	return config.Width, config.Height, nil
-}
-
 // SmartLoader loads images from both local files and HTTP(S) URLs.
 type SmartLoader struct {
 	fileLoader *FileLoader

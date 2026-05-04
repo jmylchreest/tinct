@@ -96,13 +96,13 @@ type ExternalPluginMeta struct {
 
 var (
 	// Plugin command flags.
-	pluginManifestPath   string
-	pluginType       string
-	pluginForce      bool
-	pluginYes        bool
-	pluginSourceType string
-	pluginNoCopy     bool
-	pluginShowPath   bool
+	pluginManifestPath string
+	pluginType         string
+	pluginForce        bool
+	pluginYes          bool
+	pluginSourceType   string
+	pluginNoCopy       bool
+	pluginShowPath     bool
 )
 
 // pluginsCmd represents the plugins command.
@@ -716,9 +716,9 @@ func migrateLegacyManifestFile(newPath string) string {
 	configDir := filepath.Dir(newPath) // ~/.config/tinct
 
 	legacyPaths := []string{
-		filepath.Join(configDir, legacyManifestFileV1),    // ~/.config/tinct/plugins.manifest.json (0.2.x)
-		filepath.Join(home, legacyManifestFileV0),         // ~/.tinct-plugins.json (pre-XDG)
-		legacyManifestFileV0,                              // ./.tinct-plugins.json (CWD fallback)
+		filepath.Join(configDir, legacyManifestFileV1), // ~/.config/tinct/plugins.manifest.json (0.2.x)
+		filepath.Join(home, legacyManifestFileV0),      // ~/.tinct-plugins.json (pre-XDG)
+		legacyManifestFileV0,                           // ./.tinct-plugins.json (CWD fallback)
 	}
 
 	for _, legacyPath := range legacyPaths {
@@ -900,11 +900,11 @@ func registerExternalPluginsFromManifest(manifest *PluginManifest, resolveAbsolu
 // points at no longer exists on disk (or has an empty path). Used to
 // auto-prune dangling entries from the runtime registration path.
 //
-// Returns (true, reason) when the entry should be skipped. URL-based
-// paths (http://, https://) are trusted at registration time and not
-// stat'd — a non-existent URL surfaces later when the plugin is
-// actually invoked.
-func isManifestEntryMissing(meta *ExternalPluginMeta) (bool, string) {
+// Returns (missing=true, reason) when the entry should be skipped.
+// URL-based paths (http://, https://) are trusted at registration
+// time and not stat'd — a non-existent URL surfaces later when the
+// plugin is actually invoked.
+func isManifestEntryMissing(meta *ExternalPluginMeta) (missing bool, reason string) {
 	if meta == nil || meta.Path == "" {
 		return true, "empty path"
 	}

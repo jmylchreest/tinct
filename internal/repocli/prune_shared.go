@@ -28,24 +28,6 @@ type PruneOptions struct {
 	Verbose             bool
 }
 
-// PruneManifest performs comprehensive pruning on a manifest.
-// It validates downloads against filters, marks unavailable URLs, and removes old entries.
-func PruneManifest(
-	mgr *repomanager.ManifestManager,
-	removeAfterDuration time.Duration,
-	dryRun bool,
-	verbose bool,
-) *PruneStats {
-
-	return PruneManifestWithOptions(mgr, &PruneOptions{
-		RemoveAfterDuration: removeAfterDuration,
-		PruneIncompatible:   false,
-		KeepRecent:          0,
-		DryRun:              dryRun,
-		Verbose:             verbose,
-	}, nil)
-}
-
 // PruneManifestWithOptions performs comprehensive pruning on a manifest with advanced options.
 // It validates downloads against filters, marks unavailable URLs, removes old entries,
 // prunes incompatible plugins, and limits the number of versions kept per plugin.

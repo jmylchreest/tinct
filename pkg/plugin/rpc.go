@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"maps"
 	"net/rpc"
 	"strings"
 
@@ -142,9 +143,9 @@ func (s *InputPluginRPCServer) GetFlagHelp(_ any, resp *[]FlagHelp) error {
 // Generate call (protocol >= 0.3.0). They return zero-values when the plugin
 // is older or did not provide hints.
 type InputPluginRPCClient struct {
-	client         *rpc.Client
-	lastRoleHints  map[string]int
-	lastThemeHint  string
+	client        *rpc.Client
+	lastRoleHints map[string]int
+	lastThemeHint string
 }
 
 // rgbBlock is the per-colour wire shape used by both response formats.
@@ -197,7 +198,7 @@ func (c *InputPluginRPCClient) LastThemeHint() string {
 // 0.3.0 envelope `{"colors": [...], "role_hints": {...}, "theme_hint": "..."}`.
 // Detection is by first non-whitespace byte to keep the two formats
 // unambiguous.
-func parseInputResponse(data []byte) ([]rgbBlock, map[string]int, string, error) {
+func parseInputResponse(data []byte) (colors []rgbBlock, roleHints map[string]int, themeHint string, err error) {
 	for _, b := range data {
 		switch b {
 		case ' ', '\t', '\n', '\r':
@@ -394,13 +395,11 @@ func (s *OutputPluginRPCServer) GetHooks(_ struct{}, resp *HookSpecPayload) erro
 // host treats that as "no templates" and skips the plugin in template
 // commands. As with GetHooks, the first arg is concrete `struct{}` to
 // keep the missing-method path safe on older clients.
-func (s *OutputPluginRPCServer) GetTemplates(_ struct{}, resp *map[string][]byte) error {
+func (s *OutputPluginRPCServer) GetTemplates(_ struct{}, resp *map[string][]byte) error { //nolint:gocritic // net/rpc requires reply params to be pointer types so the call site can assign through them
 	out := map[string][]byte{}
 	if t, ok := s.Impl.(TemplateLister); ok {
 		if listed := t.Templates(); len(listed) > 0 {
-			for k, v := range listed {
-				out[k] = v
-			}
+			maps.Copy(out, listed)
 		}
 	}
 	*resp = out

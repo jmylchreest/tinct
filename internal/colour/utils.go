@@ -60,31 +60,6 @@ func HueDistance(h1, h2 float64) float64 {
 	return diff
 }
 
-// IsAnalogous checks if two colors are analogous (similar hue).
-// Analogous colors are within 30° on the color wheel, creating visual harmony.
-// Based on design theory for cohesive color schemes.
-func IsAnalogous(h1, h2 float64) bool {
-	return HueDistance(h1, h2) <= 30
-}
-
-// AdjustSaturation adjusts the saturation of a color by a given factor.
-// factor < 1.0 reduces saturation (creates muted colors).
-// factor > 1.0 increases saturation (creates more vibrant colors).
-// factor = 1.0 leaves saturation unchanged.
-func AdjustSaturation(h, s, l, factor float64) RGB {
-	newS := math.Max(0.0, math.Min(1.0, s*factor))
-	return HSLToRGB(h, newS, l)
-}
-
-// AdjustLuminance adjusts the luminance of a color by a delta value.
-// delta > 0 makes the color lighter.
-// delta < 0 makes the color darker.
-// Result is clamped to [0.0, 1.0].
-func AdjustLuminance(h, s, l, delta float64) RGB {
-	newL := math.Max(0.0, math.Min(1.0, l+delta))
-	return HSLToRGB(h, s, newL)
-}
-
 // rgbToHSL converts RGB to HSL colour space.
 // Returns hue (0-360), saturation (0-1), lightness (0-1).
 func rgbToHSL(rgb RGB) (h, s, l float64) {

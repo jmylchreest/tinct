@@ -145,23 +145,6 @@ func (m *Manager) UpdateRepository(name string) error {
 	return m.saveConfig()
 }
 
-// UpdateAllRepositories refreshes all repositories.
-func (m *Manager) UpdateAllRepositories() error {
-	var errors []error
-
-	for _, repo := range m.config.Repositories {
-		if err := m.UpdateRepository(repo.Name); err != nil {
-			errors = append(errors, fmt.Errorf("%s: %w", repo.Name, err))
-		}
-	}
-
-	if len(errors) > 0 {
-		return fmt.Errorf("failed to update some repositories: %v", errors)
-	}
-
-	return nil
-}
-
 // Search searches for plugins across all repositories.
 func (m *Manager) Search(filter SearchFilter) ([]*SearchResult, error) {
 	if err := m.ensureManifestsLoaded(); err != nil {

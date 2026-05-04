@@ -61,13 +61,3 @@ func CalculateChecksum(url string) (checksum string, size int64, err error) {
 	checksum = fmt.Sprintf("%x", hash.Sum(nil))
 	return checksum, size, nil
 }
-
-// VerifyChecksum downloads a file and verifies its checksum.
-func VerifyChecksum(url, expectedChecksum string) (bool, error) {
-	actualChecksum, _, err := CalculateChecksum(url)
-	if err != nil {
-		return false, err
-	}
-
-	return actualChecksum == expectedChecksum, nil
-}

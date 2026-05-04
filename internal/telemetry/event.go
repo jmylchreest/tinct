@@ -4,6 +4,15 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
+// Status string constants used as the value of plugin.status /
+// plugins.status across telemetry events. Centralised here so the same
+// vocabulary appears on every event, and the spelling can't drift.
+const (
+	StatusOK      = "ok"
+	StatusFailed  = "failed"
+	StatusSkipped = "skipped"
+)
+
 // Event represents a telemetry event to be sent to statsfactory.
 type Event struct {
 	// Name is the event name (e.g. "generate", "plugin_used").

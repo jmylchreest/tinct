@@ -282,9 +282,3 @@ func (p *Plugin) setWallpaper(ctx context.Context, wallpaperPath string) error {
 
 	return nil
 }
-
-// GetEmbeddedTemplates returns the embedded template filesystem.
-// This is used by the template management commands.
-func GetEmbeddedTemplates() embed.FS {
-	return templates
-}

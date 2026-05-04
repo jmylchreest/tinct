@@ -25,12 +25,6 @@ import (
 //go:embed *.tmpl
 var templates embed.FS
 
-// GetEmbeddedTemplates returns the embedded template filesystem.
-// This is used by the template management commands.
-func GetEmbeddedTemplates() embed.FS {
-	return templates
-}
-
 // Plugin implements the output.Plugin interface for rosec.
 type Plugin struct {
 	outputDir string

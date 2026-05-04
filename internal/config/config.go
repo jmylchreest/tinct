@@ -89,7 +89,6 @@ type CacheConfig struct {
 // Singletons — lazy-initialised on first call to Load / InstallationID.
 var (
 	cachedConfig *Config
-	cfgPath      string
 	configOnce   sync.Once
 	errConfig    error
 
@@ -102,7 +101,7 @@ var (
 // return the cached value. Never returns a nil Config.
 func Load() (*Config, error) {
 	configOnce.Do(func() {
-		cachedConfig, cfgPath, errConfig = loadFromDisk()
+		cachedConfig, _, errConfig = loadFromDisk()
 		if cachedConfig != nil {
 			applyEnvOverrides(cachedConfig)
 		}
@@ -131,12 +130,6 @@ func InstallationID() string {
 		cachedID = loadOrCreateID()
 	})
 	return cachedID
-}
-
-// Path returns the path to the tinct.toml config file.
-func Path() string {
-	_, _ = Load() //nolint:errcheck // populate cfgPath, error not needed here
-	return cfgPath
 }
 
 // defaults returns a Config with default values.
@@ -337,7 +330,6 @@ func generateInstallationID() string {
 // ResetForTesting resets all cached state. Only call from test code.
 func ResetForTesting() {
 	cachedConfig = nil
-	cfgPath = ""
 	configOnce = sync.Once{}
 	errConfig = nil
 	cachedID = ""

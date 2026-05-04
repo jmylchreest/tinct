@@ -225,10 +225,3 @@ func TestRenderTemplate(t *testing.T) {
 		})
 	}
 }
-
-// Compile-time check that specProvider satisfies the Provider interface.
-var _ Provider = (*specProvider)(nil)
-
-type specProvider struct{ s Spec }
-
-func (s *specProvider) Hooks() Spec { return s.s }

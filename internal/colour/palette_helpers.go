@@ -25,21 +25,3 @@ const (
 
 // NewColorValue creates a ColorValue from RGBA with optional metadata.
 var NewColorValue = pkgcolour.NewColorValue
-
-// NewPaletteHelper creates a helper for the given categorised palette.
-// This is the internal factory that creates a PaletteHelper from a CategorisedPalette.
-func NewPaletteHelper(palette *CategorisedPalette) *PaletteHelper {
-	// Build color map and indexed array from palette.
-	colors := make(map[Role]ColorValue, len(palette.Colours))
-	indexed := make([]ColorValue, 0, len(palette.AllColours))
-
-	for role, cc := range palette.Colours {
-		colors[role] = NewColorValue(cc.RGBA, role, cc.Index)
-	}
-
-	for _, cc := range palette.AllColours {
-		indexed = append(indexed, NewColorValue(cc.RGBA, cc.Role, cc.Index))
-	}
-
-	return pkgcolour.NewPaletteHelper(palette.ThemeType, colors, indexed)
-}

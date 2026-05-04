@@ -125,39 +125,6 @@ func isInsecureHTTPAllowed() bool {
 	return v == "1" || v == "true"
 }
 
-// ValidatePluginPath validates a plugin path to prevent directory traversal.
-// Ensures the path stays within the allowed plugin directory.
-func ValidatePluginPath(pluginPath, baseDir string) error {
-	if pluginPath == "" {
-		return fmt.Errorf("empty plugin path")
-	}
-
-	// Clean the paths
-	cleanPluginPath := filepath.Clean(pluginPath)
-	cleanBaseDir := filepath.Clean(baseDir)
-
-	// Resolve to absolute paths
-	absPluginPath, err := filepath.Abs(cleanPluginPath)
-	if err != nil {
-		return fmt.Errorf("invalid plugin path: %w", err)
-	}
-
-	absBaseDir, err := filepath.Abs(cleanBaseDir)
-	if err != nil {
-		return fmt.Errorf("invalid base directory: %w", err)
-	}
-
-	// Ensure plugin path is within base directory
-
-	if !strings.HasPrefix(absPluginPath, absBaseDir+string(filepath.Separator)) &&
-		absPluginPath != absBaseDir {
-
-		return fmt.Errorf("plugin path must be within plugin directory (attempted path traversal)")
-	}
-
-	return nil
-}
-
 // ValidateFilePath validates a file path within an archive to prevent directory traversal.
 func ValidateFilePath(filePath, baseDir string) error {
 	if filePath == "" {
@@ -185,34 +152,6 @@ func ValidateFilePath(filePath, baseDir string) error {
 	}
 
 	return nil
-}
-
-// SafeUint8 safely converts an integer to uint8 with bounds checking.
-// Values outside 0-255 are clamped to the valid range.
-func SafeUint8(val int) uint8 {
-	if val < 0 {
-		return 0
-	}
-	if val > 255 {
-		return 255
-	}
-	return uint8(val)
-}
-
-// SafeUint8FromUint32 safely converts uint32 to uint8 with bounds checking.
-func SafeUint8FromUint32(val uint32) uint8 {
-	if val > 255 {
-		return 255
-	}
-	return uint8(val)
-}
-
-// SafeUint8FromUint64 safely converts uint64 to uint8 with bounds checking.
-func SafeUint8FromUint64(val uint64) uint8 {
-	if val > 255 {
-		return 255
-	}
-	return uint8(val)
 }
 
 // LimitedReader wraps an io.Reader and limits the total bytes that can be read.

@@ -34,8 +34,8 @@ type PluginExecutor struct {
 	client                *goplug.Client
 	rpcClient             any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
 	verbose               bool
-	lastWallpaperPath     string        // Stores canonical wallpaper path from JSON stdio plugins
-	lastWallpaperRawPath  string        // Stores raw wallpaper path from JSON stdio plugins
+	lastWallpaperPath     string // Stores canonical wallpaper path from JSON stdio plugins
+	lastWallpaperRawPath  string // Stores raw wallpaper path from JSON stdio plugins
 	lastRoleHints         map[string]int
 	lastThemeHint         string
 	processRunner         ProcessRunner // Abstraction for running external processes

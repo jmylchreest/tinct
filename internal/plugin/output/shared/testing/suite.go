@@ -168,13 +168,6 @@ func TestPreExecuteHook(t *testing.T, p any, _ string) {
 	})
 }
 
-// TestEmbeddedTemplates tests that embedded templates are accessible.
-func TestEmbeddedTemplates(t *testing.T, _ any, _ []string) {
-	// This is a bit awkward because embed.FS isn't directly testable.
-	// Skip this test for now - it's plugin-specific.
-	t.Skip("Template testing should be done per-plugin due to embed.FS limitations")
-}
-
 // CreateTestPalette creates a test palette with standard colors for testing.
 func CreateTestPalette(themeType colour.ThemeType) *colour.CategorisedPalette {
 	colors := []color.Color{

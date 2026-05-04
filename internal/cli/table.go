@@ -73,26 +73,6 @@ func (t *Table) WithWriter(w io.Writer) *Table {
 	return t
 }
 
-// StartBatch begins a batch operation where rendering is deferred.
-// Call EndBatch() to render the accumulated changes.
-func (t *Table) StartBatch() *Table {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.batching = true
-	return t
-}
-
-// EndBatch ends a batch operation and renders the table.
-func (t *Table) EndBatch() *Table {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.batching = false
-	if t.live {
-		t.renderLive()
-	}
-	return t
-}
-
 // SetColumnMaxWidth sets a maximum width for a specific column.
 // Text longer than this will be wrapped to multiple lines.
 func (t *Table) SetColumnMaxWidth(colIndex, maxWidth int) {

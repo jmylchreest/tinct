@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/jmylchreest/tinct/internal/compression"
 )
@@ -133,27 +132,6 @@ func queryPluginInfo(pluginPath string) (*PluginMetadata, error) {
 	}
 
 	return metadata, nil
-}
-
-// CalculateCompatibility generates compatibility string from protocol version.
-func CalculateCompatibility(protocolVersion string) string {
-	if protocolVersion == "" {
-		return ""
-	}
-
-	// Parse protocol version (e.g., "0.0.1")
-	parts := strings.Split(protocolVersion, ".")
-	if len(parts) < 2 {
-		return ""
-	}
-
-	major := parts[0]
-	minor := parts[1]
-
-	// Generate compatibility string
-	// Protocol 0.0.x requires tinct >= 0.0.1
-	// Protocol 0.1.x requires tinct >= 0.1.0
-	return fmt.Sprintf(">=%s.%s.0", major, minor)
 }
 
 // Helper functions

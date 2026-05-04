@@ -28,9 +28,7 @@ var (
 	// NegativePrompt is a custom negative prompt to discourage certain elements.
 	NegativePrompt string
 
-	// registered tracks whether flags have been registered to avoid duplicates.
-	registered bool
-	mu         sync.Mutex
+	mu sync.Mutex
 )
 
 // RegisterFlags registers the shared AI flags on the given command.
@@ -52,7 +50,6 @@ func RegisterFlags(cmd *cobra.Command) bool {
 	cmd.Flags().BoolVar(&NoNegativePrompt, "ai.no-negative-prompt", false, "Disable default negative prompt")
 	cmd.Flags().StringVar(&NegativePrompt, "ai.negative-prompt", "", "Custom negative prompt to discourage certain elements")
 
-	registered = true
 	return true
 }
 
@@ -67,12 +64,4 @@ func Reset() {
 	NoExtendedPrompt = false
 	NoNegativePrompt = false
 	NegativePrompt = ""
-	registered = false
-}
-
-// IsRegistered returns whether the flags have been registered.
-func IsRegistered() bool {
-	mu.Lock()
-	defer mu.Unlock()
-	return registered
 }

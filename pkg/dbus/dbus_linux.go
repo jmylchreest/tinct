@@ -26,16 +26,6 @@ func SessionBus(ctx context.Context) (*Connection, error) {
 	return &Connection{conn: conn}, nil
 }
 
-// SystemBus connects to the system bus.
-func SystemBus(ctx context.Context) (*Connection, error) {
-	_ = ctx
-	conn, err := dbus.ConnectSystemBus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to system bus: %w", err)
-	}
-	return &Connection{conn: conn}, nil
-}
-
 // Close closes the D-Bus connection.
 func (c *Connection) Close() error {
 	if c.conn != nil {
@@ -84,16 +74,6 @@ func (o *Object) GetProperty(ctx context.Context, property string) (any, error) 
 		return nil, fmt.Errorf("failed to get property: %w", err)
 	}
 	return variant.Value(), nil
-}
-
-// SetProperty sets a D-Bus property.
-func (o *Object) SetProperty(ctx context.Context, property string, value any) error {
-	_ = ctx
-	err := o.obj.SetProperty(property, dbus.MakeVariant(value))
-	if err != nil {
-		return fmt.Errorf("failed to set property: %w", err)
-	}
-	return nil
 }
 
 // ListNames lists all available names on the bus.
