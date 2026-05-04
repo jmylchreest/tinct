@@ -690,7 +690,9 @@ func runPostExecutionHooks(ctx context.Context, executions []pluginExecution, wa
 				fmt.Fprintf(os.Stderr, "→ Running %s post-hook...\n", plugin.Name())
 			}
 			hookCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			if err := postHook.PostExecute(hookCtx, execContext, exec.writtenFiles); err != nil {
+			if err := postHook.PostExecute(hookCtx, execContext, exec.writtenFiles); err != nil && generateVerbose {
+				// Post-hooks are best-effort (e.g. notifying a daemon that may
+				// not be running) — surface failures only in verbose mode.
 				fmt.Fprintf(os.Stderr, "   %s post-hook failed: %v\n", plugin.Name(), err)
 			}
 			cancel()
@@ -707,7 +709,7 @@ func runPostExecutionHooks(ctx context.Context, executions []pluginExecution, wa
 				WrittenFiles:  exec.writtenFiles,
 			}
 			specCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			if err := hooks.RunPost(specCtx, spec, hctx); err != nil {
+			if err := hooks.RunPost(specCtx, spec, hctx); err != nil && generateVerbose {
 				fmt.Fprintf(os.Stderr, "   %s spec post-hook failed: %v\n", plugin.Name(), err)
 			}
 			cancel()

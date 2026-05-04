@@ -4,6 +4,8 @@ package plugin
 import (
 	"context"
 	"image/color"
+
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 // InputPlugin is the interface that input plugins must implement for go-plugin RPC.
@@ -29,6 +31,65 @@ type InputPlugin interface {
 
 	// GetFlagHelp returns help information for plugin flags.
 	GetFlagHelp() []FlagHelp
+}
+
+// Validator is an optional interface input or output plugins may
+// implement to fail-fast before any expensive work runs.
+//
+// The host calls Validate(args) with the plugin's persistent arguments
+// (set via `tinct plugins config <name> args=…`) and aborts the run if
+// it returns a non-nil error. Use it for cheap, deterministic checks
+// against the supplied args — missing required keys, malformed values,
+// unsupported combinations — not for network calls or filesystem-state
+// probing, which belong in PreExecute or Generate.
+//
+// Per-invocation args supplied via `--plugin-args` are NOT included in
+// the map passed to Validate, because they're applied at Generate time
+// after Validate has run. Plugins that need to validate per-run args
+// should do so at the top of Generate.
+//
+// Plugins that don't implement Validator are treated as always-valid;
+// older plugins built against pre-0.3.0 SDKs continue to work unchanged.
+type Validator interface {
+	Validate(args map[string]any) error
+}
+
+// RoleHinter is an optional interface input plugins may implement to declare
+// explicit role assignments alongside the colours returned by Generate.
+//
+// Each entry maps a role name (matching the canonical Tinct role strings —
+// "background", "foreground", "danger", "success", "warning", "info",
+// "notification", "accent1".."accent4", "*muted" variants) to the index of
+// the colour in the slice returned by Generate.
+//
+// RoleHints is queried by the host immediately after a successful Generate
+// call. Implementations may return nil or an empty map to indicate no hints.
+type RoleHinter interface {
+	RoleHints() map[string]int
+}
+
+// ThemeHinter is an optional interface input plugins may implement to advise
+// the host categoriser about the intended theme variant.
+//
+// Returns "dark", "light", "auto", or "" (no hint). The host treats the value
+// as advisory — the categoriser may still override based on colour analysis.
+type ThemeHinter interface {
+	ThemeHint() string
+}
+
+// HooksProvider is an optional interface output plugins may implement to
+// declare routine pre/post-execute behaviour (binary checks, dir
+// auto-creation, reload commands, instructions text). The host runs the
+// returned spec around the plugin's optional imperative PreExecute /
+// PostExecute methods, so authors can move static behaviour off the
+// imperative path and let the shared hooks runner handle it.
+//
+// Function fields on hooks.Spec (ReloadFn, InstructionsFn, Wallpaper)
+// cannot be transmitted across the RPC boundary and are silently
+// dropped in the marshalled payload — keep using PostExecute when you
+// need dynamic argument templating or live state probing.
+type HooksProvider interface {
+	Hooks() hooks.Spec
 }
 
 // OutputPlugin is the interface that output plugins must implement for go-plugin RPC.

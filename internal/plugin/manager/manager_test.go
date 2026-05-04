@@ -353,17 +353,19 @@ func TestGetPluginMethods(t *testing.T) {
 	}
 }
 
-// TestExternalPluginValidate tests external plugin validation.
+// TestExternalPluginValidate tests that Validate calls the plugin's
+// optional Validator RPC. With a bogus binary path the executor cannot
+// even detect the protocol, so Validate surfaces a fail-fast error
+// rather than silently succeeding (the pre-0.3.0 no-op behaviour).
 func TestExternalPluginValidate(t *testing.T) {
 	inputPlugin := NewExternalInputPlugin("test", "Test", "/path/to/plugin")
 	outputPlugin := NewExternalOutputPlugin("test", "Test", "/path/to/plugin")
 
-	// Validate is currently a no-op, should not error.
-	if err := inputPlugin.Validate(); err != nil {
-		t.Errorf("Validate should not error: %v", err)
+	if err := inputPlugin.Validate(); err == nil {
+		t.Error("Validate should error for non-existent input plugin binary")
 	}
-	if err := outputPlugin.Validate(); err != nil {
-		t.Errorf("Validate should not error: %v", err)
+	if err := outputPlugin.Validate(); err == nil {
+		t.Error("Validate should error for non-existent output plugin binary")
 	}
 }
 

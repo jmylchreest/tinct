@@ -31,14 +31,15 @@ func GetEmbeddedTemplates() embed.FS {
 
 // Plugin implements the output.Plugin interface for btop.
 type Plugin struct {
-	outputDir string
-	themeName string
-	verbose   bool
+	outputDir    string
+	themeName    string
+	reloadConfig bool
+	verbose      bool
 }
 
 // New creates a new btop output plugin with default settings.
 func New() *Plugin {
-	return &Plugin{themeName: "tinct"}
+	return &Plugin{themeName: "tinct", reloadConfig: true}
 }
 
 // Name returns the plugin name.
@@ -54,6 +55,7 @@ func (p *Plugin) Version() string { return version.Version }
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "btop.output-dir", "", "Output directory (default: ~/.config/btop/themes)")
 	cmd.Flags().StringVar(&p.themeName, "btop.theme-name", "tinct", "Theme name (filename: <name>.theme)")
+	cmd.Flags().BoolVar(&p.reloadConfig, "btop.reload", true, "Reload running btop instances after generation (sends SIGUSR2)")
 }
 
 // SetVerbose enables or disables verbose logging.
@@ -67,6 +69,7 @@ func (p *Plugin) GetFlagHelp() []output.FlagHelp {
 	return []output.FlagHelp{
 		{Name: "btop.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/btop/themes)"},
 		{Name: "btop.theme-name", Type: "string", Default: "tinct", Description: "Theme name (filename: <name>.theme)"},
+		{Name: "btop.reload", Type: "bool", Default: "true", Description: "Reload running btop instances after generation (sends SIGUSR2)"},
 	}
 }
 
@@ -86,18 +89,29 @@ func (p *Plugin) DefaultOutputDir() string {
 		filepath.Join(paths.XDGConfigDir(), "btop", "themes"))
 }
 
-// Hooks declares btop's pre/post-execute behaviour. btop reloads themes
-// only when the user picks one from its menu, so we just print the
-// follow-up steps.
+// Hooks declares btop's pre/post-execute behaviour.
+//
+// btop traps SIGUSR2 to re-read its config file (btop.cpp _signal_handler
+// → init_config + Theme::updateThemes + Theme::setTheme), so a running
+// instance picks up the freshly-written theme automatically — but only
+// once `color_theme = "<themeName>"` is set in btop.conf. The Instructions
+// hook explains both halves.
 func (p *Plugin) Hooks() hooks.Spec {
 	themeName := p.themeName
-	return hooks.Spec{
+	spec := hooks.Spec{
 		RequiredBinaries: []string{"btop"},
 		AutoCreateDir:    true,
 		InstructionsFn: func(_ hooks.Context) string {
-			return fmt.Sprintf("   Set 'color_theme = %q' in ~/.config/btop/btop.conf, or pick %s from btop's options menu (press 'p').", themeName, themeName)
+			return fmt.Sprintf("   Set 'color_theme = %q' in ~/.config/btop/btop.conf (or pick %s from btop's menu, press 'p'). Running instances reload automatically via SIGUSR2.", themeName, themeName)
 		},
 	}
+	if p.reloadConfig {
+		spec.Reload = &hooks.ReloadSpec{
+			Verb: hooks.VerbSignal,
+			Args: []string{"btop", "SIGUSR2"},
+		}
+	}
+	return spec
 }
 
 // Generate creates the theme file.

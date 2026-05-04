@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"maps"
 	"os"
 	"os/exec"
@@ -22,6 +23,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/openrouter"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/palettebuilder"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/alacritty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/awww"
@@ -58,6 +60,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 	"github.com/jmylchreest/tinct/pkg/plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 const (
@@ -363,6 +366,7 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 	protocolOpts := plugin.InputOptions{
 		Verbose:         opts.Verbose,
 		DryRun:          opts.DryRun || p.dryRun,
+		Backend:         opts.Backend,
 		ColourOverrides: opts.ColourOverrides,
 		PluginArgs:      mergedArgs,
 	}
@@ -380,7 +384,48 @@ func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateO
 		return nil, fmt.Errorf("plugin execution failed: %w", err)
 	}
 
-	return colour.NewPalette(colors), nil
+	// Map any role-name → index hints supplied by the plugin onto colour.Role
+	// values, dropping unknown role names with a verbose warning.
+	rawHints := pluginExec.GetLastRoleHints()
+	if len(rawHints) == 0 {
+		return colour.NewPalette(colors), nil
+	}
+
+	roleHints := make(map[colour.Role]int, len(rawHints))
+	for name, idx := range rawHints {
+		role, perr := palettebuilder.ParseColourRole(name)
+		if perr != nil {
+			if opts.Verbose {
+				fmt.Fprintf(os.Stderr, "   Skipping unknown role hint %q from plugin: %v\n", name, perr)
+			}
+			continue
+		}
+		if idx < 0 || idx >= len(colors) {
+			if opts.Verbose {
+				fmt.Fprintf(os.Stderr, "   Skipping role hint %q: index %d out of range (palette has %d colours)\n", name, idx, len(colors))
+			}
+			continue
+		}
+		roleHints[role] = idx
+	}
+
+	if len(roleHints) == 0 {
+		return colour.NewPalette(colors), nil
+	}
+
+	colourColors := make([]color.Color, len(colors))
+	copy(colourColors, colors)
+	return colour.NewPaletteWithRoleHints(colourColors, roleHints), nil
+}
+
+// ThemeHint returns the theme hint reported by the most recent Generate call
+// (protocol >= 0.3.0). Implements the input.ThemeHinter interface for
+// external plugins; returns "" when no hint was provided.
+func (p *ExternalInputPlugin) ThemeHint() string {
+	if p.lastExecutor == nil {
+		return ""
+	}
+	return p.lastExecutor.GetLastThemeHint()
 }
 
 // RegisterFlags is a no-op for external plugins (they don't have flags).
@@ -389,11 +434,19 @@ func (p *ExternalInputPlugin) RegisterFlags(_ *cobra.Command) {
 	// They handle their own arguments if needed.
 }
 
-// Validate checks if the plugin is valid.
+// Validate fail-fast checks the plugin's own configuration via the
+// optional Validator RPC. The plugin's persistent args (set via
+// `tinct plugins config`) are forwarded so it can validate keys it
+// cares about. Plugins that don't implement Validator (or run on JSON
+// stdio) report success and surface their errors at Generate time as
+// before.
 func (p *ExternalInputPlugin) Validate() error {
-	// Check if plugin file exists and is executable.
-	// This is a basic check - the plugin might fail at runtime.
-	return nil
+	pluginExec, err := executor.NewWithVerbose(p.path, false)
+	if err != nil {
+		return fmt.Errorf("failed to create plugin executor: %w", err)
+	}
+	defer pluginExec.Close()
+	return pluginExec.Validate(context.Background(), "input", p.args)
 }
 
 // GetFlagHelp returns help information for plugin flags.
@@ -489,11 +542,34 @@ func (p *ExternalOutputPlugin) RegisterFlags(_ *cobra.Command) {
 	// They handle their own arguments if needed.
 }
 
-// Validate checks if the plugin is valid.
+// Validate fail-fast checks the plugin's own configuration via the
+// optional Validator RPC. The plugin's persistent args (set via
+// `tinct plugins config`) are forwarded so it can validate keys it
+// cares about. Plugins that don't implement Validator (or run on JSON
+// stdio) report success and surface their errors at Generate time as
+// before.
 func (p *ExternalOutputPlugin) Validate() error {
-	// Check if plugin file exists and is executable.
-	// This is a basic check - the plugin might fail at runtime.
-	return nil
+	pluginExec, err := executor.NewWithVerbose(p.path, false)
+	if err != nil {
+		return fmt.Errorf("failed to create plugin executor: %w", err)
+	}
+	defer pluginExec.Close()
+	return pluginExec.Validate(context.Background(), "output", p.args)
+}
+
+// Hooks fetches the plugin's static hooks.Spec via the optional
+// HooksProvider RPC. Plugins that don't implement HooksProvider return
+// an empty Spec, which the runner treats as a no-op. Implements the
+// hooks.Provider interface so the existing CLI hook runner picks up
+// external plugin specs without any extra wiring.
+func (p *ExternalOutputPlugin) Hooks() hooks.Spec {
+	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
+	if err != nil {
+		return hooks.Spec{}
+	}
+	defer pluginExec.Close()
+	spec, _ := pluginExec.GetHooks(context.Background())
+	return spec
 }
 
 // DefaultOutputDir returns the default output directory (not used for external plugins).

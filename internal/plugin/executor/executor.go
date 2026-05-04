@@ -23,6 +23,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 	"github.com/jmylchreest/tinct/pkg/plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 // PluginExecutor provides a unified interface for executing plugins.
@@ -35,6 +36,8 @@ type PluginExecutor struct {
 	verbose               bool
 	lastWallpaperPath     string        // Stores canonical wallpaper path from JSON stdio plugins
 	lastWallpaperRawPath  string        // Stores raw wallpaper path from JSON stdio plugins
+	lastRoleHints         map[string]int
+	lastThemeHint         string
 	processRunner         ProcessRunner // Abstraction for running external processes
 }
 
@@ -50,6 +53,20 @@ func NewWithVerboseAndRunner(pluginPath string, verbose bool, runner ProcessRunn
 	result, err := protocol.DetectProtocol(pluginPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to detect plugin protocol: %w", err)
+	}
+
+	// Fail-fast on protocol-version mismatch before we hand the plugin
+	// off to the RPC handshake — a mismatched go-plugin can otherwise
+	// hang on the magic-cookie exchange with no actionable error.
+	// Empty versions are tolerated for backward compatibility with
+	// pre-versioning plugins.
+	if pv := result.PluginInfo.ProtocolVersion; pv != "" {
+		if compatible, cerr := protocol.IsCompatible(pv); !compatible {
+			return nil, fmt.Errorf(
+				"plugin %s reports protocol version %s which is incompatible with tinct (host %s, min %s): %w",
+				pluginPath, pv, protocol.ProtocolVersion, protocol.MinCompatibleVersion, cerr,
+			)
+		}
 	}
 
 	executor := &PluginExecutor{
@@ -136,6 +153,53 @@ func (e *PluginExecutor) GetFlagHelp(ctx context.Context) ([]input.FlagHelp, err
 	}
 }
 
+// Validate calls the optional Validate RPC on the underlying plugin.
+// Plugins built against pre-0.3.0 SDKs don't expose the method; the
+// client detects the resulting "can't find method" RPC error and
+// reports success so older plugins remain compatible.
+//
+// pluginRole selects which RPC client to dispense ("input" or "output");
+// callers know this from the registry that owns the plugin. args is the
+// plugin's persistent argument map (set via `tinct plugins config`),
+// passed through to the plugin so it can validate keys it cares about.
+func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args map[string]any) error {
+	if e.protocolType != protocol.PluginTypeGoPlugin {
+		return nil
+	}
+	switch pluginRole {
+	case "input":
+		client, err := e.getInputRPCClient(ctx)
+		if err != nil {
+			return err
+		}
+		return client.Validate(args)
+	case "output":
+		client, err := e.getOutputRPCClient(ctx)
+		if err != nil {
+			return err
+		}
+		return client.Validate(args)
+	default:
+		return nil
+	}
+}
+
+// GetHooks fetches the static hooks.Spec from an output plugin that
+// implements HooksProvider (protocol >= 0.3.0). Plugins built against
+// pre-0.3.0 SDKs don't expose the method; the client returns ok=false
+// in that case (and on JSON stdio plugins or transport errors), and
+// callers fall back to the imperative PreExecute / PostExecute path.
+func (e *PluginExecutor) GetHooks(ctx context.Context) (hooks.Spec, bool) {
+	if e.protocolType != protocol.PluginTypeGoPlugin {
+		return hooks.Spec{}, false
+	}
+	client, err := e.getOutputRPCClient(ctx)
+	if err != nil {
+		return hooks.Spec{}, false
+	}
+	return client.GetHooks()
+}
+
 // wallpaperFromInput returns a wallpaper path from the input plugin, dispatching
 // on the active protocol. For RPC plugins it calls rpcGetter on the dispensed
 // InputPluginRPCClient (returning "" if no client is connected); for JSON stdio
@@ -174,6 +238,21 @@ func (e *PluginExecutor) GetWallpaperRawPath() string {
 		(*plugin.InputPluginRPCClient).WallpaperRawPath,
 		e.lastWallpaperRawPath,
 	)
+}
+
+// GetLastRoleHints returns role hints captured from the most recent input
+// plugin Generate call (protocol >= 0.3.0), or nil if the plugin did not
+// supply any. Keys are role-name strings (e.g. "background", "danger");
+// values are indices into the colour slice returned by Generate.
+func (e *PluginExecutor) GetLastRoleHints() map[string]int {
+	return e.lastRoleHints
+}
+
+// GetLastThemeHint returns the theme hint captured from the most recent input
+// plugin Generate call ("dark", "light", "auto", or ""). Empty when the
+// plugin did not provide a hint.
+func (e *PluginExecutor) GetLastThemeHint() string {
+	return e.lastThemeHint
 }
 
 // --- Go-Plugin RPC implementations ---
@@ -267,7 +346,16 @@ func (e *PluginExecutor) executeInputGoPlugin(ctx context.Context, opts plugin.I
 		return nil, err
 	}
 
-	return client.Generate(ctx, opts)
+	e.lastRoleHints = nil
+	e.lastThemeHint = ""
+
+	colours, err := client.Generate(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	e.lastRoleHints = client.LastRoleHints()
+	e.lastThemeHint = client.LastThemeHint()
+	return colours, nil
 }
 
 func (e *PluginExecutor) executeOutputGoPlugin(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
@@ -326,6 +414,9 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 		return nil, fmt.Errorf("plugin execution failed: %w\nStderr: %s", err, string(stderrBytes))
 	}
 
+	e.lastRoleHints = nil
+	e.lastThemeHint = ""
+
 	// Parse output - try new format with wallpaper path first
 	var response struct {
 		Colors []struct {
@@ -333,8 +424,10 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 			G uint8 `json:"g"`
 			B uint8 `json:"b"`
 		} `json:"colors"`
-		WallpaperPath    string `json:"wallpaper_path,omitempty"`
-		WallpaperRawPath string `json:"wallpaper_raw_path,omitempty"`
+		WallpaperPath    string         `json:"wallpaper_path,omitempty"`
+		WallpaperRawPath string         `json:"wallpaper_raw_path,omitempty"`
+		RoleHints        map[string]int `json:"role_hints,omitempty"`
+		ThemeHint        string         `json:"theme_hint,omitempty"`
 	}
 
 	if err := json.Unmarshal(stdoutBytes, &response); err == nil && len(response.Colors) > 0 {
@@ -349,6 +442,10 @@ func (e *PluginExecutor) executeInputJSON(ctx context.Context, opts plugin.Input
 		if e.lastWallpaperRawPath == "" && e.lastWallpaperPath != "" {
 			e.lastWallpaperRawPath = e.lastWallpaperPath
 		}
+		if len(response.RoleHints) > 0 {
+			e.lastRoleHints = response.RoleHints
+		}
+		e.lastThemeHint = response.ThemeHint
 		return colors, nil
 	}
 
