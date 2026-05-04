@@ -79,11 +79,12 @@ func (c *pluginCollector) buildPluginInfo(pluginType, name, version, description
 
 // isExternalPlugin checks if a plugin is an external plugin.
 func (c *pluginCollector) isExternalPlugin(name, pluginType string) bool {
-	if c.lock == nil || c.lock.ExternalPlugins == nil {
+	live := c.lock.LivePlugins()
+	if len(live) == 0 {
 		return false
 	}
 
-	for _, meta := range c.lock.ExternalPlugins {
+	for _, meta := range live {
 		if meta.Name == name && meta.Type == pluginType {
 			return true
 		}
@@ -93,13 +94,8 @@ func (c *pluginCollector) isExternalPlugin(name, pluginType string) bool {
 
 // getPluginPath retrieves the actual path for an external plugin.
 func (c *pluginCollector) getPluginPath(name, pluginType string) string {
-	if c.lock == nil || c.lock.ExternalPlugins == nil {
-		return ""
-	}
-
-	for _, meta := range c.lock.ExternalPlugins {
+	for _, meta := range c.lock.LivePlugins() {
 		if meta.Name == name && meta.Type == pluginType {
-			// Return the actual plugin path being used, not the original source
 			return meta.Path
 		}
 	}
@@ -107,34 +103,34 @@ func (c *pluginCollector) getPluginPath(name, pluginType string) string {
 }
 
 // getPluginProtocolVersion retrieves the protocol version for a plugin.
+// Reads only from live (non-stale) manifest entries — a binary that's
+// no longer on disk is treated as built-in / unknown rather than
+// triggering a noisy warning on every list.
 func (c *pluginCollector) getPluginProtocolVersion(name, pluginType string) string {
-	// Check if it's an external plugin and query it directly
-	if c.lock != nil && c.lock.ExternalPlugins != nil {
-		for _, meta := range c.lock.ExternalPlugins {
-			if meta.Name == name && meta.Type == pluginType {
-				// Query the plugin directly for its protocol version
-				_, _, _, _, protocolVersion := queryPluginMetadata(meta.Path)
-				if protocolVersion != "" {
-					return protocolVersion
-				}
-				// If query failed, print warning and return unknown
-				fmt.Printf("Warning: Failed to query protocol version from external plugin '%s' (%s) at %s\n", name, pluginType, meta.Path)
-				return unknownValue
+	for _, meta := range c.lock.LivePlugins() {
+		if meta.Name == name && meta.Type == pluginType {
+			_, _, _, _, protocolVersion := queryPluginMetadata(meta.Path)
+			if protocolVersion != "" {
+				return protocolVersion
 			}
+			fmt.Printf("Warning: Failed to query protocol version from external plugin '%s' (%s) at %s\n", name, pluginType, meta.Path)
+			return unknownValue
 		}
 	}
 
-	// For built-in plugins, they all use the current protocol version
 	return protocol.ProtocolVersion
 }
 
-// addExternalOnlyPlugins adds plugins that are only in the manifest (not in manager).
+// addExternalOnlyPlugins adds plugins that are only in the manifest
+// (not in manager). Iterates live plugins so dangling manifest entries
+// don't show up as ghost rows in `tinct plugins list`.
 func (c *pluginCollector) addExternalOnlyPlugins() {
-	if c.lock == nil || c.lock.ExternalPlugins == nil {
+	live := c.lock.LivePlugins()
+	if len(live) == 0 {
 		return
 	}
 
-	for lockKey, meta := range c.lock.ExternalPlugins {
+	for lockKey, meta := range live {
 		pluginName := meta.Name
 		if pluginName == "" {
 			pluginName = lockKey

@@ -44,6 +44,32 @@ type PluginManifest struct {
 	ExternalPlugins map[string]*ExternalPluginMeta `json:"external_plugins,omitempty"`
 }
 
+// LivePlugins returns the subset of ExternalPlugins whose recorded
+// binary still exists on disk. It's the right view for any read-only
+// runtime path (auto-register on CLI invocation, `tinct plugins list`,
+// generate / extract pipelines) so dangling entries don't trigger
+// noisy warnings on every run.
+//
+// CRUD callers (add / delete / update / sync) should use the raw
+// ExternalPlugins map instead — they need to see the dangling entry
+// in order to clean it up.
+//
+// LivePlugins does not mutate the receiver or the on-disk file; it
+// returns a fresh map each call.
+func (m *PluginManifest) LivePlugins() map[string]*ExternalPluginMeta {
+	if m == nil || m.ExternalPlugins == nil {
+		return nil
+	}
+	live := make(map[string]*ExternalPluginMeta, len(m.ExternalPlugins))
+	for k, meta := range m.ExternalPlugins {
+		if missing, _ := isManifestEntryMissing(meta); missing {
+			continue
+		}
+		live[k] = meta
+	}
+	return live
+}
+
 // ExternalPluginMeta contains metadata about an external plugin.
 type ExternalPluginMeta struct {
 	// Name is the plugin's actual name (from --plugin-info).
@@ -828,21 +854,66 @@ func loadAndApplyPluginManifest() error {
 	return nil
 }
 
-// registerExternalPluginsFromManifest registers all external plugins from the manifest
-// into the shared plugin manager. Optionally resolves relative paths to absolute.
-func registerExternalPluginsFromManifest(lock *PluginManifest, resolveAbsolutePaths, verbose bool) {
-	if lock == nil || lock.ExternalPlugins == nil {
+// registerExternalPluginsFromManifest registers all external plugins from
+// the manifest into the shared plugin manager. Optionally resolves
+// relative paths to absolute.
+//
+// Manifest entries whose binary no longer exists on disk (typical when
+// a user `rm`'d the binary without `tinct plugins delete`) are silently
+// skipped at runtime — the dangling entry is not registered, so it
+// doesn't pollute `tinct plugins list` and doesn't trigger noisy
+// "Failed to register external plugin 'X'" warnings on every CLI
+// invocation. The manifest file on disk is not rewritten here: explicit
+// removal is `tinct plugins delete <name>`. Pass verbose=true to log
+// what was pruned.
+func registerExternalPluginsFromManifest(manifest *PluginManifest, resolveAbsolutePaths, verbose bool) {
+	if manifest == nil || manifest.ExternalPlugins == nil {
 		return
 	}
 
-	for _, meta := range lock.ExternalPlugins {
+	for _, meta := range manifest.ExternalPlugins {
+		if missing, why := isManifestEntryMissing(meta); missing {
+			if verbose {
+				fmt.Fprintf(os.Stderr, "Skipping stale manifest entry '%s': %s\n", meta.Name, why)
+			}
+			continue
+		}
 		if err := registerExternalPlugin(meta, resolveAbsolutePaths, verbose); err != nil {
 			if verbose {
 				fmt.Fprintf(os.Stderr, " Failed to register external plugin '%s': %v\n", meta.Name, err)
 			}
-			// Continue with other plugins on error
 		}
 	}
+}
+
+// isManifestEntryMissing reports whether the binary a manifest entry
+// points at no longer exists on disk (or has an empty path). Used to
+// auto-prune dangling entries from the runtime registration path.
+//
+// Returns (true, reason) when the entry should be skipped. URL-based
+// paths (http://, https://) are trusted at registration time and not
+// stat'd — a non-existent URL surfaces later when the plugin is
+// actually invoked.
+func isManifestEntryMissing(meta *ExternalPluginMeta) (bool, string) {
+	if meta == nil || meta.Path == "" {
+		return true, "empty path"
+	}
+	if strings.HasPrefix(meta.Path, "http://") || strings.HasPrefix(meta.Path, "https://") {
+		return false, ""
+	}
+	resolved := meta.Path
+	if !filepath.IsAbs(resolved) {
+		if abs, err := filepath.Abs(resolved); err == nil {
+			resolved = abs
+		}
+	}
+	if _, err := os.Stat(resolved); err != nil {
+		if os.IsNotExist(err) {
+			return true, fmt.Sprintf("binary not found at %s", resolved)
+		}
+		return true, fmt.Sprintf("cannot stat %s: %v", resolved, err)
+	}
+	return false, ""
 }
 
 // registerExternalPlugin registers a single external plugin into the shared manager.
