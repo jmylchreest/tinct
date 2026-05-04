@@ -22,8 +22,8 @@ tinct plugins <subcommand> [flags]
 | `add` | Add an external plugin from a local file, HTTP URL, or Git repo |
 | `delete` | Remove an external plugin |
 | `update` | Update all external plugins from their sources |
-| `sync` | Install missing plugins from the lock file |
-| `clean` | Remove plugins not in the lock file |
+| `sync` | Install missing plugins from the manifest |
+| `clean` | Remove plugins not in the manifest |
 | `repo add` | Add a plugin repository |
 | `repo list` | List configured repositories |
 | `repo delete` | Remove a repository |
@@ -116,7 +116,7 @@ The plugin is:
 1. Downloaded from the repository
 2. Verified (checksum)
 3. Installed to `~/.local/share/tinct/plugins/`
-4. Registered in `~/.config/tinct/plugins.lock.json`
+4. Registered in `~/.config/tinct/plugins.manifest.json`
 
 ## tinct plugins update
 
@@ -130,7 +130,7 @@ This checks each external plugin for newer versions and downloads updates. Plugi
 
 ## tinct plugins sync
 
-Install missing plugins from the lock file:
+Install missing plugins from the manifest:
 
 ```bash
 tinct plugins sync [flags]
@@ -142,11 +142,11 @@ tinct plugins sync [flags]
 | `--verify` | Verify checksums of existing plugins |
 | `--skip-missing` | Continue on errors instead of stopping |
 
-Useful for restoring plugins on a new machine from a shared `plugins.lock.json`.
+Useful for restoring plugins on a new machine from a shared `plugins.manifest.json`.
 
-## Lock file
+## Manifest
 
-Plugin installation data is stored in `~/.config/tinct/plugins.lock.json`:
+Plugin installation data is stored in `~/.config/tinct/plugins.manifest.json`:
 
 ```json
 {
@@ -167,7 +167,11 @@ Plugin installation data is stored in `~/.config/tinct/plugins.lock.json`:
 }
 ```
 
-Use the `--lock-file` flag to specify an alternative lock file path.
+Use the `--manifest-file` flag to specify an alternative manifest
+path. The legacy `--lock-file` flag still works as a hidden alias.
+
+A pre-rename `plugins.lock.json` is migrated to the new path
+automatically on first read.
 
 ## Plugin paths
 

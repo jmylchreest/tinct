@@ -18,16 +18,28 @@ import (
 )
 
 const (
-	// PluginLockFile is the name of the plugin lock file in the config directory.
-	PluginLockFile = "plugins.lock.json"
+	// PluginManifestFile is the name of the plugin manifest file in the
+	// config directory. The manifest tracks installed external plugins so
+	// they auto-register on every CLI invocation.
+	PluginManifestFile = "plugins.manifest.json"
 
-	// legacyLockFileName is the old lock file name used before migration.
-	legacyLockFileName = ".tinct-plugins.json"
+	// legacyManifestFileNames holds prior names for the same file; loadPluginManifest
+	// migrates from the first one that exists. Keep newest-to-oldest so a
+	// stale legacy copy doesn't override a present new file.
+	legacyManifestFileV1 = "plugins.lock.json"   // 0.2.x — pre-rename to "manifest"
+	legacyManifestFileV0 = ".tinct-plugins.json" // pre-XDG hidden file in $HOME / CWD
 )
 
-// PluginLock represents the plugin lock file structure.
-// This file tracks installed external plugins and their sources.
-type PluginLock struct {
+// PluginManifest tracks the external plugins installed for tinct on this
+// machine. Stored at ~/.config/tinct/plugins.manifest.json (or wherever
+// --manifest-file points).
+//
+// This is a registry, not a versioned lock file: it records what's
+// installed and where each entry originated, so commands like `tinct
+// plugins list`, `tinct plugins update`, and `tinct plugins sync` work
+// across shell sessions and machines. There is no checksum or version
+// pin — that's why we call it a manifest, not a lock.
+type PluginManifest struct {
 	// ExternalPlugins maps plugin names to their metadata.
 	ExternalPlugins map[string]*ExternalPluginMeta `json:"external_plugins,omitempty"`
 }
@@ -58,7 +70,7 @@ type ExternalPluginMeta struct {
 
 var (
 	// Plugin command flags.
-	pluginLockPath   string
+	pluginManifestPath   string
 	pluginType       string
 	pluginForce      bool
 	pluginYes        bool
@@ -73,14 +85,18 @@ var pluginsCmd = &cobra.Command{
 	Short: "Manage plugins",
 	Long: `Manage Tinct plugins including listing and managing external plugins.
 
-The plugin lock file (~/.config/tinct/plugins.lock.json) tracks installed
-external plugins and their sources. Use 'tinct plugins sync' to reproduce
-your plugin setup on another machine.
+The plugin manifest (~/.config/tinct/plugins.manifest.json) tracks
+installed external plugins and their sources. Use 'tinct plugins sync'
+to reproduce your plugin setup on another machine.
 
-Commands that modify the lock file:
-  - add: Adds external plugin and updates lock file
-  - delete: Removes external plugin and updates lock file
-  - update: Updates external plugins from their sources`,
+Commands that modify the manifest:
+  - add: Adds external plugin and updates the manifest
+  - delete: Removes external plugin and updates the manifest
+  - update: Updates external plugins from their sources
+
+A manifest from an earlier version (named plugins.lock.json) is
+migrated automatically on first read. The legacy --lock-file flag is
+still accepted as an alias for --manifest-file.`,
 }
 
 // pluginListCmd lists all available plugins.
@@ -99,8 +115,8 @@ var pluginAddCmd = &cobra.Command{
 	Short: "Add an external plugin",
 	Long: `Add an external plugin from a local file, HTTP URL, or Git repository.
 
-The plugin will be copied to the plugin directory and registered
-in the plugin lock file. The plugin name is automatically detected from
+The plugin will be copied to the plugin directory and registered in
+the plugin manifest. The plugin name is automatically detected from
 the plugin's --plugin-info output.
 
 WARNING: Only install plugins from trusted sources. Plugins execute with your
@@ -113,7 +129,7 @@ The command will:
   3. Check protocol compatibility
   4. Check for version conflicts (upgrades proceed automatically)
   5. Copy plugin to ~/.local/share/tinct/plugins/ (unless --no-copy is used)
-  6. Register plugin in lock file
+  6. Register plugin in the manifest
 
 Plugin upgrades (newer versions) proceed automatically.
 Use --force to downgrade, reinstall same version, or overwrite.
@@ -135,7 +151,7 @@ Examples:
 var pluginDeleteCmd = &cobra.Command{
 	Use:   "delete <plugin-name>",
 	Short: "Delete an external plugin",
-	Long: `Delete an external plugin from the plugin directory and remove it from the lock file.
+	Long: `Delete an external plugin from the plugin directory and remove it from the manifest.
 
 Built-in plugins cannot be deleted.
 
@@ -146,25 +162,34 @@ Examples:
 	RunE: runPluginDelete,
 }
 
-// pluginUpdateCmd updates external plugins from lock file.
+// pluginUpdateCmd updates external plugins from manifest sources.
 var pluginUpdateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Update external plugins from lock file sources",
+	Short: "Update external plugins from manifest sources",
 	Long: `Update external plugins by re-downloading/copying from their source locations.
 
-This reads the plugin lock file and updates all external plugins based on their
-source field. Useful for keeping plugins in sync across machines or after pulling
-changes to the lock file.
+This reads the plugin manifest and updates all external plugins based on their
+source field. Useful for keeping plugins in sync across machines or after
+pulling manifest changes from a shared dotfiles repo.
 
 Examples:
   tinct plugins update
-  tinct plugins update --lock-file /path/to/plugins.lock.json`,
+  tinct plugins update --manifest-file /path/to/plugins.manifest.json`,
 	RunE: runPluginUpdate,
 }
 
 func init() {
 	// Add plugins command flags.
-	pluginsCmd.PersistentFlags().StringVar(&pluginLockPath, "lock-file", "", "path to plugin lock file (default: ~/.config/tinct/plugins.lock.json)")
+	pluginsCmd.PersistentFlags().StringVar(&pluginManifestPath, "manifest-file", "",
+		"path to plugin manifest file (default: ~/.config/tinct/plugins.manifest.json)")
+	// Backward-compat alias for the pre-rename name; hidden to keep --help tidy
+	// but still recognised so existing scripts/aliases keep working.
+	pluginsCmd.PersistentFlags().StringVar(&pluginManifestPath, "lock-file", "",
+		"deprecated: alias for --manifest-file")
+	if f := pluginsCmd.PersistentFlags().Lookup("lock-file"); f != nil {
+		f.Hidden = true
+		f.Deprecated = "use --manifest-file"
+	}
 
 	// Plugin list flags.
 	pluginListCmd.Flags().BoolVar(&pluginShowPath, "show-path", false, "show the actual file path used when loading each plugin")
@@ -193,15 +218,15 @@ func runPluginList(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Load plugin lock and create manager.
-	lock, lockPath, err := loadPluginLock()
+	lock, manifestPath, err := loadPluginManifest()
 	if err != nil && verbose {
 		fmt.Fprintf(os.Stderr, "Note: %v\n", err)
 	}
 
-	mgr := createManagerFromLock(lock)
+	mgr := createManagerFromManifest(lock)
 
-	if verbose && lockPath != "" {
-		fmt.Fprintf(os.Stderr, "Using lock file: %s\n\n", lockPath)
+	if verbose && manifestPath != "" {
+		fmt.Fprintf(os.Stderr, "Using manifest: %s\n\n", manifestPath)
 	}
 
 	// Collect all plugins.
@@ -222,10 +247,10 @@ func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocyclo,go
 	}
 
 	// Load or create plugin lock.
-	lock, lockPath := loadOrCreatePluginLock()
+	lock, manifestPath := loadOrCreatePluginManifest()
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
+		fmt.Fprintf(os.Stderr, "Using manifest: %s\n", manifestPath)
 	}
 
 	// Initialize external plugins map if needed.
@@ -311,7 +336,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocyclo,go
 		}
 	}
 
-	// Stage 6: Update lock file
+	// Stage 6: Update manifest
 	// Build structured source metadata.
 	pluginSource := buildPluginSource(source, pluginSourceType, finalPath)
 
@@ -325,7 +350,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocyclo,go
 		Description:  pluginInfo.Description,
 	}
 
-	if err := savePluginLock(lockPath, lock); err != nil {
+	if err := savePluginManifest(manifestPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
 
@@ -343,7 +368,7 @@ func runPluginDelete(cmd *cobra.Command, args []string) error { //nolint:gocyclo
 	}
 
 	// Load plugin lock.
-	lock, lockPath, err := loadPluginLock()
+	lock, manifestPath, err := loadPluginManifest()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
 	}
@@ -396,11 +421,11 @@ func runPluginDelete(cmd *cobra.Command, args []string) error { //nolint:gocyclo
 		}
 	}
 
-	// Remove from lock file.
+	// Remove from manifest.
 	delete(lock.ExternalPlugins, pluginName)
 
-	// Save lock file.
-	if err := savePluginLock(lockPath, lock); err != nil {
+	// Save manifest.
+	if err := savePluginManifest(manifestPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
 
@@ -474,7 +499,7 @@ func updatePluginFromRepository(meta *ExternalPluginMeta, pluginDir string, verb
 	return pluginPath, nil
 }
 
-// runPluginUpdate updates external plugins from lock file sources.
+// runPluginUpdate updates external plugins from manifest sources.
 func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // batch plugin update with per-plugin error handling
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
@@ -482,18 +507,18 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,go
 	}
 
 	// Load plugin lock.
-	lock, lockPath, err := loadPluginLock()
+	lock, manifestPath, err := loadPluginManifest()
 	if err != nil {
 		return fmt.Errorf("failed to load plugin lock: %w", err)
 	}
 
 	if lock == nil || lock.ExternalPlugins == nil || len(lock.ExternalPlugins) == 0 {
-		fmt.Println("No external plugins found in lock file")
+		fmt.Println("No external plugins found in manifest")
 		return nil
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
+		fmt.Fprintf(os.Stderr, "Using manifest: %s\n", manifestPath)
 	}
 
 	// Get plugin directory.
@@ -586,14 +611,14 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,go
 		if actualName == "" {
 			actualName = meta.Name // Keep existing name if query fails
 			if actualName == "" {
-				actualName = name // Fallback to lock file key
+				actualName = name // Fallback to manifest key
 			}
 		}
 		if pluginType == "" {
 			pluginType = meta.Type // Keep existing type if query fails
 		}
 
-		// Update metadata in lock file.
+		// Update metadata in manifest.
 		lock.ExternalPlugins[name] = &ExternalPluginMeta{
 			Name:        actualName,
 			Path:        pluginPath,
@@ -619,9 +644,9 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,go
 
 	table.Finish()
 
-	// Save updated lock file.
+	// Save updated manifest.
 	if successCount > 0 {
-		if err := savePluginLock(lockPath, lock); err != nil {
+		if err := savePluginManifest(manifestPath, lock); err != nil {
 			return fmt.Errorf("failed to save plugin lock: %w", err)
 		}
 	}
@@ -633,124 +658,129 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,go
 	return nil
 }
 
-// getDefaultLockFilePath returns the default lock file path at
-// ~/.config/tinct/plugins.lock.json on Linux/macOS, %AppData%/tinct/...
+// getDefaultManifestFilePath returns the default manifest path at
+// ~/.config/tinct/plugins.manifest.json on Linux/macOS, %AppData%/tinct/...
 // on Windows. Uses paths.XDGConfigDir so macOS lands on ~/.config/tinct
 // rather than ~/Library/Application Support/tinct (matching docs).
-func getDefaultLockFilePath() string {
-	return filepath.Join(paths.XDGConfigDir(), "tinct", PluginLockFile)
+func getDefaultManifestFilePath() string {
+	return filepath.Join(paths.XDGConfigDir(), "tinct", PluginManifestFile)
 }
 
-// migrateLegacyLockFile checks for lock files at legacy locations and migrates
-// them to the new default path. Returns the path if found and migrated, or empty string.
-func migrateLegacyLockFile(newPath string) string {
+// migrateLegacyManifestFile checks for the manifest at legacy locations
+// and migrates them to the new default path. Returns the new path if a
+// legacy file was found and migrated, or empty string. Searched in
+// priority order — newer locations first so a stale older copy doesn't
+// override a more recent state.
+func migrateLegacyManifestFile(newPath string) string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ""
+		home = ""
 	}
 
-	// Check legacy locations in order of priority.
+	configDir := filepath.Dir(newPath) // ~/.config/tinct
+
 	legacyPaths := []string{
-		filepath.Join(home, legacyLockFileName), // ~/.tinct-plugins.json
-		legacyLockFileName,                      // ./.tinct-plugins.json (CWD)
+		filepath.Join(configDir, legacyManifestFileV1),    // ~/.config/tinct/plugins.manifest.json (0.2.x)
+		filepath.Join(home, legacyManifestFileV0),         // ~/.tinct-plugins.json (pre-XDG)
+		legacyManifestFileV0,                              // ./.tinct-plugins.json (CWD fallback)
 	}
 
 	for _, legacyPath := range legacyPaths {
-		data, err := os.ReadFile(legacyPath) // #nosec G304 - Legacy lock file path
+		if legacyPath == "" || legacyPath == newPath {
+			continue
+		}
+		data, err := os.ReadFile(legacyPath) // #nosec G304 - Legacy manifest path under user-controlled config dir
 		if err != nil {
 			continue
 		}
 
-		// Ensure the new directory exists.
 		if err := os.MkdirAll(filepath.Dir(newPath), 0o750); err != nil {
 			return ""
 		}
 
-		// Write to new location.
-		if err := os.WriteFile(newPath, data, 0o600); err != nil { // #nosec G703 -- newPath is derived from os.UserConfigDir(), not user-controlled input
+		if err := os.WriteFile(newPath, data, 0o600); err != nil { // #nosec G703 -- newPath derives from XDGConfigDir
 			return ""
 		}
 
-		// Remove the old file (best effort).
 		_ = os.Remove(legacyPath)
 
-		fmt.Fprintf(os.Stderr, "Migrated plugin lock file: %s → %s\n", legacyPath, newPath)
+		fmt.Fprintf(os.Stderr, "Migrated plugin manifest: %s → %s\n", legacyPath, newPath)
 		return newPath
 	}
 
 	return ""
 }
 
-// loadPluginLock loads the plugin lock file.
-func loadPluginLock() (*PluginLock, string, error) {
-	lockPath := pluginLockPath
+// loadPluginManifest loads the plugin manifest.
+func loadPluginManifest() (*PluginManifest, string, error) {
+	manifestPath := pluginManifestPath
 
-	if lockPath == "" {
-		defaultPath := getDefaultLockFilePath()
+	if manifestPath == "" {
+		defaultPath := getDefaultManifestFilePath()
 
 		if _, err := os.Stat(defaultPath); err == nil {
-			lockPath = defaultPath
+			manifestPath = defaultPath
 		} else {
 			// Try migrating from legacy locations.
-			migratedPath := migrateLegacyLockFile(defaultPath)
+			migratedPath := migrateLegacyManifestFile(defaultPath)
 			if migratedPath != "" {
-				lockPath = migratedPath
+				manifestPath = migratedPath
 			} else {
-				return nil, "", fmt.Errorf("no plugin lock file found")
+				return nil, "", fmt.Errorf("no plugin manifest found")
 			}
 		}
 	}
 
-	data, err := os.ReadFile(lockPath) // #nosec G304 - Lock file path controlled by application
+	data, err := os.ReadFile(manifestPath) // #nosec G304 - Manifest path controlled by application
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to read plugin lock file: %w", err)
+		return nil, "", fmt.Errorf("failed to read plugin manifest: %w", err)
 	}
 
-	var lock PluginLock
+	var lock PluginManifest
 	if err := json.Unmarshal(data, &lock); err != nil {
-		return nil, "", fmt.Errorf("failed to parse plugin lock file: %w", err)
+		return nil, "", fmt.Errorf("failed to parse plugin manifest: %w", err)
 	}
 
-	return &lock, lockPath, nil
+	return &lock, manifestPath, nil
 }
 
-// loadOrCreatePluginLock loads or creates a plugin lock file.
+// loadOrCreatePluginManifest loads or creates a plugin manifest.
 // Always succeeds by creating a new lock if one doesn't exist.
-func loadOrCreatePluginLock() (lock *PluginLock, lockPath string) {
-	lock, lockPath, err := loadPluginLock()
+func loadOrCreatePluginManifest() (lock *PluginManifest, manifestPath string) {
+	lock, manifestPath, err := loadPluginManifest()
 	if err == nil {
-		return lock, lockPath
+		return lock, manifestPath
 	}
 
-	// Create new lock file at the default path.
-	lockPath = pluginLockPath
-	if lockPath == "" {
-		lockPath = getDefaultLockFilePath()
+	// Create new manifest at the default path.
+	manifestPath = pluginManifestPath
+	if manifestPath == "" {
+		manifestPath = getDefaultManifestFilePath()
 	}
 
-	lock = &PluginLock{
+	lock = &PluginManifest{
 		ExternalPlugins: make(map[string]*ExternalPluginMeta),
 	}
 
-	return lock, lockPath
+	return lock, manifestPath
 }
 
-// savePluginLock saves the plugin lock file.
-func savePluginLock(path string, lock *PluginLock) error {
+// savePluginManifest saves the plugin manifest.
+func savePluginManifest(path string, lock *PluginManifest) error {
 	data, err := json.MarshalIndent(lock, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal plugin lock: %w", err)
 	}
 
 	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return fmt.Errorf("failed to update lock file: %w", err)
+		return fmt.Errorf("failed to update manifest: %w", err)
 	}
 
 	return nil
 }
 
-// createManagerFromLock creates a plugin manager from a lock file.
-func createManagerFromLock(lock *PluginLock) *manager.Manager {
+// createManagerFromManifest creates a plugin manager from a manifest.
+func createManagerFromManifest(lock *PluginManifest) *manager.Manager {
 	mgr := manager.NewBuilder().Build()
 
 	if lock == nil {
@@ -760,7 +790,7 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 	// Register external plugins using their actual names.
 	if lock.ExternalPlugins != nil {
 		for _, meta := range lock.ExternalPlugins {
-			// Use the plugin's actual name (from metadata) not the lock file key.
+			// Use the plugin's actual name (from metadata) not the manifest key.
 			pluginName := meta.Name
 			if pluginName == "" {
 				// Fallback: query the plugin if name is missing.
@@ -783,24 +813,24 @@ func createManagerFromLock(lock *PluginLock) *manager.Manager {
 	return mgr
 }
 
-// loadAndApplyPluginLock loads the plugin lock file and registers any external
+// loadAndApplyPluginManifest loads the plugin manifest and registers any external
 // plugins into the shared plugin manager.
-func loadAndApplyPluginLock() error {
-	lock, _, err := loadPluginLock()
+func loadAndApplyPluginManifest() error {
+	lock, _, err := loadPluginManifest()
 	if err != nil {
 		return err
 	}
 
 	if lock != nil {
-		registerExternalPluginsFromLock(lock, true, false)
+		registerExternalPluginsFromManifest(lock, true, false)
 	}
 
 	return nil
 }
 
-// registerExternalPluginsFromLock registers all external plugins from the lock file
+// registerExternalPluginsFromManifest registers all external plugins from the manifest
 // into the shared plugin manager. Optionally resolves relative paths to absolute.
-func registerExternalPluginsFromLock(lock *PluginLock, resolveAbsolutePaths, verbose bool) {
+func registerExternalPluginsFromManifest(lock *PluginManifest, resolveAbsolutePaths, verbose bool) {
 	if lock == nil || lock.ExternalPlugins == nil {
 		return
 	}

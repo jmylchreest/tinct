@@ -25,12 +25,12 @@ var (
 	syncUpdate      bool
 )
 
-// pluginSyncCmd syncs plugins from lock file.
+// pluginSyncCmd syncs plugins from manifest.
 var pluginSyncCmd = &cobra.Command{
 	Use:     "sync",
 	Aliases: []string{"restore"},
-	Short:   "Install plugins from lock file",
-	Long: `Install plugins listed in the lock file that are not currently installed.
+	Short:   "Install plugins from manifest",
+	Long: `Install plugins listed in the manifest that are not currently installed.
 
 This is useful for:
   - Setting up plugins on a new machine
@@ -38,7 +38,7 @@ This is useful for:
   - Syncing team configurations
   - CI/CD pipelines
 
-The lock file is located at ~/.config/tinct/plugins.lock.json
+The manifest is located at ~/.config/tinct/plugins.manifest.json
 
 Plugins are reinstalled from their original source:
   - Repository plugins: Downloaded from configured repository
@@ -53,14 +53,14 @@ Examples:
 	RunE: runPluginSync,
 }
 
-// pluginCleanCmd removes plugins not in lock file.
+// pluginCleanCmd removes plugins not in manifest.
 var pluginCleanCmd = &cobra.Command{
 	Use:   "clean",
-	Short: "Remove plugins not in lock file",
-	Long: `Remove plugins that are installed but not listed in the lock file.
+	Short: "Remove plugins not in manifest",
+	Long: `Remove plugins that are installed but not listed in the manifest.
 
 This helps keep your plugin directory clean and ensures consistency
-with the lock file.`,
+with the manifest.`,
 	RunE: runPluginClean,
 }
 
@@ -79,29 +79,29 @@ func init() {
 	pluginCleanCmd.Flags().BoolVarP(&pluginYes, "yes", "y", false, "Auto-confirm removal")
 }
 
-func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // sync lock file with installed plugins, multiple sources
+func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // sync manifest with installed plugins, multiple sources
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
 	}
 
-	// Read lock file.
-	lock, lockPath, err := loadPluginLock()
+	// Read manifest.
+	lock, manifestPath, err := loadPluginManifest()
 	if err != nil {
-		defaultPath := pluginLockPath
+		defaultPath := pluginManifestPath
 		if defaultPath == "" {
-			defaultPath = getDefaultLockFilePath()
+			defaultPath = getDefaultManifestFilePath()
 		}
-		return fmt.Errorf("lock file not found at %s\n\nCreate one by installing plugins with 'tinct plugins add'", defaultPath)
+		return fmt.Errorf("manifest not found at %s\n\nCreate one by installing plugins with 'tinct plugins add'", defaultPath)
 	}
 
 	if len(lock.ExternalPlugins) == 0 {
-		fmt.Println("No external plugins in lock file.")
+		fmt.Println("No external plugins in manifest.")
 		return nil
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Reading lock file: %s\n", lockPath)
+		fmt.Fprintf(os.Stderr, "Reading manifest: %s\n", manifestPath)
 	}
 
 	// Create live table for sync
@@ -226,10 +226,10 @@ func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,goco
 }
 
 func runPluginClean(_ *cobra.Command, _ []string) error { //nolint:gocyclo
-	// Read lock file.
-	lock, _, err := loadPluginLock()
+	// Read manifest.
+	lock, _, err := loadPluginManifest()
 	if err != nil {
-		return fmt.Errorf("failed to read lock file: %w", err)
+		return fmt.Errorf("failed to read manifest: %w", err)
 	}
 
 	// Get plugin directory.
@@ -247,14 +247,14 @@ func runPluginClean(_ *cobra.Command, _ []string) error { //nolint:gocyclo
 		return fmt.Errorf("failed to read plugin directory: %w", err)
 	}
 
-	// Find plugins not in lock file.
+	// Find plugins not in manifest.
 	toRemove := []string{}
 
 	for _, entry := range entries {
 		name := entry.Name()
 		path := filepath.Join(pluginDir, name)
 
-		// Check if in lock file.
+		// Check if in manifest.
 		inLockFile := false
 		for _, meta := range lock.ExternalPlugins {
 			if meta.Path == path || filepath.Base(meta.Path) == name {
@@ -274,7 +274,7 @@ func runPluginClean(_ *cobra.Command, _ []string) error { //nolint:gocyclo
 	}
 
 	// Show plugins to remove.
-	fmt.Printf("Plugins not in lock file:\n")
+	fmt.Printf("Plugins not in manifest:\n")
 	for _, path := range toRemove {
 		fmt.Printf("  - %s\n", filepath.Base(path))
 	}

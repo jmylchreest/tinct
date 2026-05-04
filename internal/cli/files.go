@@ -731,15 +731,15 @@ func runFilesClean(_ *cobra.Command, _ []string) error {
 }
 
 // getAvailablePluginNames returns the names of all available plugins.
-// This includes both built-in and external plugins loaded from the lock file.
+// This includes both built-in and external plugins loaded from the manifest.
 func getAvailablePluginNames() []string {
 	// Load plugin lock to get external plugins.
 	// Errors are ignored as we fall back to built-in plugins only.
-	lock, _, err := loadPluginLock()
+	lock, _, err := loadPluginManifest()
 	if err != nil {
 		lock = nil
 	}
-	mgr := createManagerFromLock(lock)
+	mgr := createManagerFromManifest(lock)
 
 	inputPlugins := mgr.AllInputPlugins()
 	outputPlugins := mgr.AllOutputPlugins()

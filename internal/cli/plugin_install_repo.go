@@ -28,7 +28,7 @@ The command will:
   1. Search for the plugin in configured repositories
   2. Select the appropriate version and platform download
   3. Download and install the plugin
-  4. Register it in the lock file with repository source tracking
+  4. Register it in the manifest with repository source tracking
 
 Repository source tracking enables:
   - Version pinning and updates via 'tinct plugins update'
@@ -128,10 +128,10 @@ func runPluginInstall(cmd *cobra.Command, args []string) error { //nolint:gocycl
 	}
 
 	// Load or create plugin lock.
-	lock, lockPath := loadOrCreatePluginLock()
+	lock, manifestPath := loadOrCreatePluginManifest()
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "Using lock file: %s\n", lockPath)
+		fmt.Fprintf(os.Stderr, "Using manifest: %s\n", manifestPath)
 	}
 
 	// Initialize external plugins map if needed.
@@ -196,7 +196,7 @@ func runPluginInstall(cmd *cobra.Command, args []string) error { //nolint:gocycl
 		pinnedVersion = installVersion
 	}
 
-	// Update lock file with repository source tracking.
+	// Update manifest with repository source tracking.
 	lock.ExternalPlugins[metadata.Name] = &ExternalPluginMeta{
 		Name:        metadata.Name,
 		Path:        pluginPath,
@@ -212,7 +212,7 @@ func runPluginInstall(cmd *cobra.Command, args []string) error { //nolint:gocycl
 		},
 	}
 
-	if err := savePluginLock(lockPath, lock); err != nil {
+	if err := savePluginManifest(manifestPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
 	}
 

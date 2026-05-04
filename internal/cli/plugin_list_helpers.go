@@ -23,13 +23,13 @@ type pluginInfo struct {
 // pluginCollector collects and organizes plugin information.
 type pluginCollector struct {
 	mgr         *manager.Manager
-	lock        *PluginLock
+	lock        *PluginManifest
 	plugins     []pluginInfo
 	seenPlugins map[string]bool
 }
 
 // newPluginCollector creates a new plugin collector.
-func newPluginCollector(mgr *manager.Manager, lock *PluginLock) *pluginCollector {
+func newPluginCollector(mgr *manager.Manager, lock *PluginManifest) *pluginCollector {
 	inputCount := len(mgr.AllInputPlugins())
 	outputCount := len(mgr.AllOutputPlugins())
 
@@ -128,7 +128,7 @@ func (c *pluginCollector) getPluginProtocolVersion(name, pluginType string) stri
 	return protocol.ProtocolVersion
 }
 
-// addExternalOnlyPlugins adds plugins that are only in the lock file (not in manager).
+// addExternalOnlyPlugins adds plugins that are only in the manifest (not in manager).
 func (c *pluginCollector) addExternalOnlyPlugins() {
 	if c.lock == nil || c.lock.ExternalPlugins == nil {
 		return
@@ -203,7 +203,7 @@ func (c *pluginCollector) getSortedPlugins() []pluginInfo {
 }
 
 // collectAllPlugins collects all plugin information.
-func collectAllPlugins(mgr *manager.Manager, lock *PluginLock) []pluginInfo {
+func collectAllPlugins(mgr *manager.Manager, lock *PluginManifest) []pluginInfo {
 	collector := newPluginCollector(mgr, lock)
 
 	collector.addInputPlugins()

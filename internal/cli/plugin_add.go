@@ -140,7 +140,7 @@ func checkProtocolCompatibility(protocolVersion string, verbose bool) error {
 }
 
 // determinePluginAction determines what action to take based on existing plugin state.
-func determinePluginAction(lock *PluginLock, pluginInfo *pluginMetadata, force bool) (pluginAction, *ExternalPluginMeta, error) {
+func determinePluginAction(lock *PluginManifest, pluginInfo *pluginMetadata, force bool) (pluginAction, *ExternalPluginMeta, error) {
 	existingMeta, exists := lock.ExternalPlugins[pluginInfo.Name]
 	if !exists {
 		return pluginActionAdd, nil, nil

@@ -91,11 +91,11 @@ func runExtract(cmd *cobra.Command, _ []string) error { //nolint:gocyclo
 		return fmt.Errorf("failed to get verbose flag: %w", err)
 	}
 
-	// Reload plugin manager config from lock file if available (overrides env).
+	// Reload plugin manager config from manifest if available (overrides env).
 	// Load plugin lock and apply configuration to shared manager.
-	if err := loadAndApplyPluginLock(); err != nil && verbose {
-		// Log informational message if verbose - no lock file is acceptable
-		fmt.Fprintf(os.Stderr, "Note: No plugin lock file found (continuing with defaults)\n")
+	if err := loadAndApplyPluginManifest(); err != nil && verbose {
+		// Log informational message if verbose - no manifest is acceptable
+		fmt.Fprintf(os.Stderr, "Note: No plugin manifest found (continuing with defaults)\n")
 	}
 
 	// Get input plugin from shared manager.

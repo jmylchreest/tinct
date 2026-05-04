@@ -18,15 +18,15 @@ import (
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
-// loadAndConfigurePlugins loads the plugin lock file and configures plugins.
+// loadAndConfigurePlugins loads the plugin manifest and configures plugins.
 func loadAndConfigurePlugins() error {
-	lock, _, err := loadPluginLock()
+	lock, _, err := loadPluginManifest()
 	if err != nil || lock == nil {
-		return nil // No lock file is OK
+		return nil // No manifest is OK
 	}
 
 	// Register external plugins with absolute path resolution.
-	registerExternalPluginsFromLock(lock, true, generateVerbose)
+	registerExternalPluginsFromManifest(lock, true, generateVerbose)
 
 	// Configure external plugins with dry-run and args.
 	if lock.ExternalPlugins != nil {
