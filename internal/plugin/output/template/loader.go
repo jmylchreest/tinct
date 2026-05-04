@@ -15,3 +15,8 @@ type Info = pkgtemplate.Info
 
 // New creates a new template loader. Delegates to pkg/template.New.
 var New = pkgtemplate.New
+
+// NewFromFS creates a new template loader from an arbitrary fs.FS,
+// used by the external-plugin path where the template tree is
+// reconstructed from RPC bytes. Delegates to pkg/template.NewFromFS.
+var NewFromFS = pkgtemplate.NewFromFS

@@ -386,6 +386,27 @@ func (s *OutputPluginRPCServer) GetHooks(_ struct{}, resp *HookSpecPayload) erro
 	return nil
 }
 
+// GetTemplates implements the optional TemplateLister RPC method.
+// Returns the plugin's bundled templates so `tinct plugins templates
+// list` / `templates dump` can introspect them across the RPC boundary.
+//
+// Plugins that don't implement TemplateLister return an empty map; the
+// host treats that as "no templates" and skips the plugin in template
+// commands. As with GetHooks, the first arg is concrete `struct{}` to
+// keep the missing-method path safe on older clients.
+func (s *OutputPluginRPCServer) GetTemplates(_ struct{}, resp *map[string][]byte) error {
+	out := map[string][]byte{}
+	if t, ok := s.Impl.(TemplateLister); ok {
+		if listed := t.Templates(); len(listed) > 0 {
+			for k, v := range listed {
+				out[k] = v
+			}
+		}
+	}
+	*resp = out
+	return nil
+}
+
 // OutputPluginRPCClient is the RPC client implementation for output plugins.
 type OutputPluginRPCClient struct {
 	client *rpc.Client
@@ -475,6 +496,21 @@ func (c *OutputPluginRPCClient) GetHooks() (hooks.Spec, bool) {
 		return hooks.Spec{}, false
 	}
 	return HookSpecToSpec(payload), true
+}
+
+// GetTemplates calls the remote optional GetTemplates method,
+// returning the plugin's bundled templates. Plugins built against
+// pre-0.3.0 SDKs (or 0.3.0 plugins that don't implement
+// TemplateLister) cause a "can't find method" or empty map; in either
+// case ok=false and the caller treats the plugin as having no
+// templates exposed.
+func (c *OutputPluginRPCClient) GetTemplates() (map[string][]byte, bool) {
+	var payload map[string][]byte
+	err := c.client.Call("Plugin.GetTemplates", noArgs, &payload)
+	if err != nil || len(payload) == 0 {
+		return nil, false
+	}
+	return payload, true
 }
 
 // GetFlagHelp calls the remote GetFlagHelp method.

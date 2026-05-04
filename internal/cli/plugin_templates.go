@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"testing/fstest"
 
 	"github.com/spf13/cobra"
 
@@ -89,7 +90,11 @@ func runPluginTemplatesList(_ *cobra.Command, _ []string) (err error) {
 	items := 0
 	defer func() { sendPluginSubcommandResult("templates", "list", items, err) }()
 
-	// Get all registered output plugins from the manager.
+	// Auto-register external plugins from the manifest so this command
+	// also reports templates from contrib plugins (paletty, awob, …),
+	// not just the built-in set.
+	_ = loadAndApplyPluginManifest()
+
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
 		fmt.Println("No output plugins available")
@@ -160,7 +165,10 @@ func runPluginTemplatesDump(_ *cobra.Command, _ []string) (err error) { //nolint
 	items := 0
 	defer func() { sendPluginSubcommandResult("templates", "dump", items, err) }()
 
-	// Get all registered output plugins from the manager.
+	// Auto-register external plugins so dump also reaches contrib
+	// plugins (paletty, awob, …), not just the built-in set.
+	_ = loadAndApplyPluginManifest()
+
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
 		return fmt.Errorf("no output plugins available")
@@ -286,34 +294,54 @@ func getPluginTemplateLoader(pluginName string, plugin output.Plugin) *template.
 	return getPluginTemplateLoaderWithBase(pluginName, plugin, "")
 }
 
-// getPluginTemplateLoaderWithBase returns a template loader for the given plugin with an optional custom base directory.
-// Returns nil if the plugin doesn't support templates (i.e., doesn't implement TemplateProvider).
+// getPluginTemplateLoaderWithBase returns a template loader for the
+// given plugin with an optional custom base directory. Returns nil
+// when the plugin doesn't expose any templates.
+//
+// Resolution:
+//  1. In-tree plugins satisfy output.TemplateProvider → loader uses
+//     the plugin's embed.FS directly.
+//  2. External plugins satisfy externalTemplateLister (Templates()
+//     returns map[string][]byte) → loader is built over a synthetic
+//     fstest.MapFS populated from the RPC response.
+//  3. Plugins that satisfy neither return nil and the templates
+//     commands silently skip them.
 func getPluginTemplateLoaderWithBase(pluginName string, plugin output.Plugin, customBase string) *template.Loader {
-	// Check if the plugin implements the TemplateProvider interface.
-	templateProvider, ok := plugin.(output.TemplateProvider)
-	if !ok {
+	var loader *template.Loader
+
+	if tp, ok := plugin.(output.TemplateProvider); ok {
+		if embedFS, ok := tp.GetEmbeddedFS().(embed.FS); ok {
+			loader = template.New(pluginName, embedFS)
+		}
+	}
+
+	if loader == nil {
+		if etl, ok := plugin.(externalTemplateLister); ok {
+			if tmpls := etl.Templates(); len(tmpls) > 0 {
+				mapFS := fstest.MapFS{}
+				for name, content := range tmpls {
+					mapFS[name] = &fstest.MapFile{Data: content}
+				}
+				loader = template.NewFromFS(pluginName, mapFS)
+			}
+		}
+	}
+
+	if loader == nil {
 		return nil
 	}
 
-	// Get the embedded filesystem.
-	embeddedFS := templateProvider.GetEmbeddedFS()
-	if embeddedFS == nil {
-		return nil
-	}
-
-	// Type assert to embed.FS.
-	embedFS, ok := embeddedFS.(embed.FS)
-	if !ok {
-		return nil
-	}
-
-	// Create the loader.
-	loader := template.New(pluginName, embedFS)
-
-	// Apply custom base if provided.
 	if customBase != "" {
 		loader = loader.WithCustomBase(customBase)
 	}
 
 	return loader
+}
+
+// externalTemplateLister mirrors the SDK's TemplateLister contract on
+// the host side without dragging the SDK package into this CLI file.
+// ExternalOutputPlugin in the manager satisfies this shape; in-tree
+// plugins use TemplateProvider above and never hit this path.
+type externalTemplateLister interface {
+	Templates() map[string][]byte
 }

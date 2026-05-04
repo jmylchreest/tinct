@@ -77,6 +77,37 @@ type ThemeHinter interface {
 	ThemeHint() string
 }
 
+// TemplateLister is an optional interface output plugins may implement
+// to expose their bundled templates so `tinct plugins templates list`
+// and `tinct plugins templates dump <plugin>` work for external
+// plugins. Without it those commands skip the plugin (the legacy
+// embed.FS introspection only worked for in-tree plugins).
+//
+// Templates returns a map from template name → contents. Names should
+// be relative paths within the plugin's template tree (e.g.
+// "theme.conf.tmpl", "templates/0.53/theme.conf.tmpl") so the host can
+// reproduce the same structure under
+// ~/.config/tinct/templates/<plugin>/ when the user dumps for editing.
+//
+// Implementations typically read directly from their embed.FS:
+//
+//	//go:embed templates/*.tmpl
+//	var templatesFS embed.FS
+//
+//	func (p *Plugin) Templates() map[string][]byte {
+//	    out := map[string][]byte{}
+//	    fs.WalkDir(templatesFS, ".", func(path string, d fs.DirEntry, err error) error {
+//	        if err != nil || d.IsDir() { return err }
+//	        b, _ := templatesFS.ReadFile(path)
+//	        out[path] = b
+//	        return nil
+//	    })
+//	    return out
+//	}
+type TemplateLister interface {
+	Templates() map[string][]byte
+}
+
 // HooksProvider is an optional interface output plugins may implement to
 // declare routine pre/post-execute behaviour (binary checks, dir
 // auto-creation, reload commands, instructions text). The host runs the

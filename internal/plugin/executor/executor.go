@@ -200,6 +200,22 @@ func (e *PluginExecutor) GetHooks(ctx context.Context) (hooks.Spec, bool) {
 	return client.GetHooks()
 }
 
+// GetTemplates fetches the bundled templates from an output plugin
+// that implements TemplateLister (protocol >= 0.3.0). Returns ok=false
+// when the plugin doesn't expose templates (older SDK, doesn't
+// implement TemplateLister, or transport error), so the caller can
+// silently skip the plugin in template-listing flows.
+func (e *PluginExecutor) GetTemplates(ctx context.Context) (map[string][]byte, bool) {
+	if e.protocolType != protocol.PluginTypeGoPlugin {
+		return nil, false
+	}
+	client, err := e.getOutputRPCClient(ctx)
+	if err != nil {
+		return nil, false
+	}
+	return client.GetTemplates()
+}
+
 // wallpaperFromInput returns a wallpaper path from the input plugin, dispatching
 // on the active protocol. For RPC plugins it calls rpcGetter on the dispensed
 // InputPluginRPCClient (returning "" if no client is connected); for JSON stdio

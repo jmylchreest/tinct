@@ -5,6 +5,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -217,6 +218,26 @@ func (p *Plugin) Hooks() hooks.Spec {
 	return hooks.Spec{
 		Instructions: "   Themes can also adopt the palette via `import` (no daemon needed): add `import \"../_palettes/tinct.kdl\"` to scene.kdl and reference $bg / $fg / $track / $accent / $low / $normal / $warn / $crit / $muted / $overflow_bg / $overflow_accent.",
 	}
+}
+
+// Templates exposes awob's bundled templates so `tinct plugins
+// templates list` and `tinct plugins templates dump -o awob` work
+// across the RPC boundary. Implements tinctplugin.TemplateLister
+// (protocol 0.3.0+).
+func (p *Plugin) Templates() map[string][]byte {
+	out := map[string][]byte{}
+	_ = fs.WalkDir(templatesFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, rerr := templatesFS.ReadFile(path)
+		if rerr != nil {
+			return nil
+		}
+		out[path] = b
+		return nil
+	})
+	return out
 }
 
 // findPalettePath returns the path of the palette file from a list of

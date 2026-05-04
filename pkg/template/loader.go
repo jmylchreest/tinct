@@ -20,9 +20,14 @@ import (
 // Versioned templates allow plugins to support multiple versions of target applications.
 // Templates can be organized in version subdirectories (e.g., templates/0.53/).
 // The loader selects the highest version that doesn't exceed the target version.
+//
+// templateFS is stored as fs.FS rather than embed.FS so external plugins
+// can drive the same loader by passing a synthetic FS (e.g. a fstest.MapFS
+// constructed from RPC-fetched bytes). embed.FS satisfies fs.FS, so the
+// conventional `New(pluginName, embedFS)` call site keeps working.
 type Loader struct {
 	pluginName    string
-	embedFS       embed.FS
+	templateFS    fs.FS
 	customBase    string // Base directory for custom templates
 	verbose       bool   // Enable verbose logging
 	logger        Logger // Logger for verbose output
@@ -34,10 +39,19 @@ type Logger interface {
 	Printf(format string, v ...any)
 }
 
-// New creates a new template loader for the specified plugin.
-// embedFS should be the embedded filesystem containing the plugin's default templates.
-// pluginName is used to locate custom templates in ~/.config/tinct/templates/{pluginName}/.
+// New creates a new template loader for the specified plugin from an
+// embed.FS. This is the conventional constructor used by all in-tree
+// plugins; external plugins should use NewFromFS to pass a synthetic
+// filesystem populated from the wire bytes.
 func New(pluginName string, embedFS embed.FS) *Loader {
+	return NewFromFS(pluginName, embedFS)
+}
+
+// NewFromFS creates a new template loader backed by an arbitrary
+// fs.FS. Used by the host shim for external plugins, where the
+// "embedded" templates actually live in the plugin process and travel
+// over the GetTemplates RPC.
+func NewFromFS(pluginName string, sysFS fs.FS) *Loader {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		home = "" // Fallback to empty if home dir unavailable
@@ -46,7 +60,7 @@ func New(pluginName string, embedFS embed.FS) *Loader {
 
 	return &Loader{
 		pluginName: pluginName,
-		embedFS:    embedFS,
+		templateFS: sysFS,
 		customBase: customBase,
 		verbose:    false,
 		logger:     nil,
@@ -111,7 +125,7 @@ func (l *Loader) Load(filename string) (content []byte, fromCustom bool, err err
 		l.logger.Printf("   Using default embedded template: %s", filename)
 	}
 
-	content, err = l.embedFS.ReadFile(filename)
+	content, err = fs.ReadFile(l.templateFS, filename)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to load template %q: %w", filename, err)
 	}
@@ -135,7 +149,7 @@ func (l *Loader) loadVersionedTemplate(filename string) (content []byte, version
 	}
 
 	versionedPath := filepath.Join("templates", bestVersion, filename)
-	content, err := l.embedFS.ReadFile(versionedPath)
+	content, err := fs.ReadFile(l.templateFS, versionedPath)
 	if err != nil {
 		return nil, "" // Template doesn't exist in this version directory
 	}
@@ -148,7 +162,7 @@ func (l *Loader) loadVersionedTemplate(filename string) (content []byte, version
 func (l *Loader) findVersionDirectories() []string {
 	var versions []string
 
-	entries, err := fs.ReadDir(l.embedFS, "templates")
+	entries, err := fs.ReadDir(l.templateFS, "templates")
 	if err != nil {
 		return nil // templates directory doesn't exist — that's fine
 	}
@@ -190,7 +204,7 @@ func (l *Loader) HasCustomTemplate(filename string) bool {
 func (l *Loader) ListEmbeddedTemplates() ([]string, error) {
 	var templates []string
 
-	err := fs.WalkDir(l.embedFS, ".", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(l.templateFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -211,7 +225,7 @@ func (l *Loader) ListEmbeddedTemplates() ([]string, error) {
 // If force is false, it will not overwrite existing custom templates.
 func (l *Loader) DumpTemplate(filename string, force bool) error {
 	// Read embedded template.
-	content, err := l.embedFS.ReadFile(filename)
+	content, err := fs.ReadFile(l.templateFS, filename)
 	if err != nil {
 		return fmt.Errorf("failed to read embedded template %q: %w", filename, err)
 	}
@@ -285,7 +299,7 @@ type Info struct {
 
 // GetInfo returns information about a specific template.
 func (l *Loader) GetInfo(filename string) Info {
-	_, embeddedErr := l.embedFS.ReadFile(filename)
+	_, embeddedErr := fs.ReadFile(l.templateFS, filename)
 	customExists := l.HasCustomTemplate(filename)
 
 	return Info{

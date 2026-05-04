@@ -18,7 +18,7 @@ func TestLoader_Load(t *testing.T) {
 
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: tmpDir,
 	}
 
@@ -128,7 +128,7 @@ func TestLoader_HasCustomTemplate(t *testing.T) {
 func TestLoader_ListEmbeddedTemplates(t *testing.T) {
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 	}
 
 	templates, err := loader.ListEmbeddedTemplates()
@@ -152,7 +152,7 @@ func TestLoader_DumpTemplate(t *testing.T) {
 
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: tmpDir,
 	}
 
@@ -195,7 +195,7 @@ func TestLoader_DumpAllTemplates(t *testing.T) {
 
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: tmpDir,
 	}
 
@@ -220,7 +220,7 @@ func TestLoader_DumpAllTemplates_WithExisting(t *testing.T) {
 
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: tmpDir,
 	}
 
@@ -266,7 +266,7 @@ func TestLoader_DumpAllTemplates_PartialExisting(t *testing.T) {
 
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: tmpDir,
 	}
 
@@ -310,7 +310,7 @@ func TestLoader_GetInfo(t *testing.T) {
 
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: tmpDir,
 	}
 
@@ -354,7 +354,7 @@ func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehe
 
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: tmpDir,
 	}
 
@@ -445,7 +445,7 @@ func TestLoader_VersionedTemplates(t *testing.T) { //nolint:gocognit // comprehe
 func TestLoader_FindVersionDirectories(t *testing.T) {
 	loader := &Loader{
 		pluginName: "testplugin",
-		embedFS:    testEmbedFS,
+		templateFS: testEmbedFS,
 		customBase: t.TempDir(),
 	}
 

@@ -572,6 +572,24 @@ func (p *ExternalOutputPlugin) Hooks() hooks.Spec {
 	return spec
 }
 
+// Templates fetches the plugin's bundled templates via the optional
+// TemplateLister RPC. Plugins that don't implement it return nil so
+// `tinct plugins templates list/dump` can silently skip them.
+//
+// Each call spawns a fresh executor — this is invoked from the
+// templates CLI which only ever runs once per session, so the cost
+// of process startup is acceptable in exchange for not having to
+// thread template state through the long-lived plugin manager.
+func (p *ExternalOutputPlugin) Templates() map[string][]byte {
+	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
+	if err != nil {
+		return nil
+	}
+	defer pluginExec.Close()
+	tmpls, _ := pluginExec.GetTemplates(context.Background())
+	return tmpls
+}
+
 // DefaultOutputDir returns the default output directory (not used for external plugins).
 func (p *ExternalOutputPlugin) DefaultOutputDir() string {
 	return "" // External plugins handle their own output
