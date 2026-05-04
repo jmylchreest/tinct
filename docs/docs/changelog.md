@@ -13,6 +13,52 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.2.4]
+*2026-05-04*
+
+### Added
+
+- New external plugin **awob** for the [animated Wayland Overlay Bar](https://github.com/jmylchreest/awob).
+  Writes `~/.config/awob/themes/_palettes/tinct.kdl` (a shared palette +
+  named-style block) plus a `tinct/` theme directory containing
+  `scene.kdl` and `manifest.toml`. Other awob themes can adopt the
+  tinct palette by adding `import "../_palettes/tinct.kdl"` to their
+  scene; the palette refreshes in place on every `tinct generate` and
+  awob-daemon hot-reloads. Install with `tinct plugin install awob`.
+
+### Removed
+
+- **BREAKING**: AUR per-plugin packages (`tinct-plugin-random-bin`,
+  `tinct-plugin-wob-bin`, `tinct-plugin-templater-bin`,
+  `tinct-plugin-dunstify-bin`, `tinct-plugin-zed-bin`,
+  `tinct-plugin-opencode-bin`, `tinct-plugin-keylightd-tray-bin`) are no
+  longer built. Plugins should be installed via the plugin manager:
+
+      tinct plugin install <name>
+
+  This is the canonical install path — it pins versions, sandboxes
+  installs to `~/.local/share/tinct/plugins/`, and uninstalls cleanly.
+  The `tinct-bin` AUR package for tinct itself remains supported. The
+  goreleaser config keeps a commented-out `tinct-plugin-templater-bin`
+  block as a copy-paste reference for anyone re-enabling AUR
+  distribution for a specific plugin.
+
+### Changed
+
+- **BREAKING**: `ptyxis` is no longer a built-in output plugin. It has
+  been migrated to an external plugin so its bespoke Flatpak detection,
+  dual-mode `[Light]`/`[Dark]` palette generation, and live-reload
+  install hint can iterate independently of tinct releases. Users who
+  previously relied on the built-in plugin can install the external
+  one with:
+
+      tinct plugin install ptyxis
+
+  Behaviour and output paths are unchanged once installed. The
+  `--ptyxis.output-dir` flag becomes `--ptyxis.output-dir` on the
+  external plugin (same name, same semantics) and continues to honour
+  the `TINCT_PLUGIN_PTYXIS_OUTPUT_DIR` environment variable.
+
 ## [0.2.3]
 *2026-05-03*
 
