@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"context"
+	"time"
+
 	"github.com/jmylchreest/tinct/internal/telemetry"
 )
 
@@ -26,6 +29,15 @@ func sendPluginCommandTelemetry(p telemetry.PluginCommandEventParams) {
 	}
 
 	client.Send(telemetry.NewPluginCommandEvent(p))
+
+	// Most plugin subcommands return to the shell immediately after
+	// this call, so the statsfactory background worker would otherwise
+	// be torn down before it drains the queue. Block on Flush with a
+	// short timeout — telemetry is best-effort, but it's pointless to
+	// emit events that never reach the wire.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	client.Flush(ctx)
 }
 
 // globalVerbose returns the value of the persistent --verbose flag on

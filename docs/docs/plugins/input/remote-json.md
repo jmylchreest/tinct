@@ -184,12 +184,12 @@ tinct generate -i remote-json \
   -o ghostty
 ```
 
-For the same source there's a dedicated [paletty](/docs/plugins/input/paletty)
+For the same source there's a dedicated [paletty](./paletty.md)
 plugin that takes a URL or ID directly and supplies the default mapping for
 free — prefer it unless you need to override the URL or behaviour by hand.
 
 ## See also
 
-- [paletty](/docs/plugins/input/paletty) - Dedicated paletty.dev fetcher
+- [paletty](./paletty.md) - Dedicated paletty.dev fetcher
 - [remote-css](/docs/plugins/input/remote-css) - Parse CSS variables
 - [file](/docs/plugins/input/file) - Local colour specification

@@ -139,6 +139,46 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  # Plugin: paletty (Go)
+  - id: tinct-plugin-paletty
+    main: .
+    binary: tinct-plugin-paletty
+    dir: ./contrib/plugins/input/paletty
+
+    goos:
+      - linux
+      - darwin
+      - freebsd
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: freebsd
+        goarch: arm
+
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
   # --------------------------------------------------------------------------
   # OUTPUT PLUGINS
   # --------------------------------------------------------------------------
@@ -488,6 +528,29 @@ archives:
 
     files:
       - src: contrib/plugins/input/random/README.md
+        dst: README.md
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-paletty-archive
+    ids:
+      - tinct-plugin-paletty
+    name_template: >-
+      tinct-plugin-paletty_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    files:
+      - src: contrib/plugins/input/paletty/README.md
         dst: README.md
       - src: LICENSE
         dst: LICENSE
