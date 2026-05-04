@@ -56,8 +56,39 @@ var (
 	Date = "unknown"
 )
 
-// RandomPlugin implements the tinctplugin.InputPlugin interface.
+// RandomPlugin implements the tinctplugin.InputPlugin interface plus the
+// optional Validator (protocol 0.3.0+) for fail-fast on bad plugin-args.
 type RandomPlugin struct{}
+
+// Validate checks that the persistent count/seed plugin-args (set via
+// `tinct plugins config`) are well-typed before the host spawns the
+// plugin to actually run. JSON unmarshal turns numbers into float64,
+// so we accept that and just sanity-check the value range.
+//
+// Implements tinctplugin.Validator.
+func (p *RandomPlugin) Validate(args map[string]any) error {
+	if raw, ok := args["count"]; ok {
+		switch v := raw.(type) {
+		case float64:
+			if v < 0 || v > 4096 {
+				return fmt.Errorf("plugin-arg 'count' out of range: %v (expected 0..4096)", v)
+			}
+		case nil:
+			// absent — fine
+		default:
+			return fmt.Errorf("plugin-arg 'count' must be a number, got %T", raw)
+		}
+	}
+	if raw, ok := args["seed"]; ok {
+		switch raw.(type) {
+		case float64, nil:
+			// JSON numbers decode as float64; absent is fine
+		default:
+			return fmt.Errorf("plugin-arg 'seed' must be a number, got %T", raw)
+		}
+	}
+	return nil
+}
 
 // Generate creates a random color palette.
 func (p *RandomPlugin) Generate(_ context.Context, opts tinctplugin.InputOptions) ([]color.Color, error) {
