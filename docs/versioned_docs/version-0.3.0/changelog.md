@@ -35,8 +35,9 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
   `tinct-plugin-wob-bin`, `tinct-plugin-templater-bin`,
   `tinct-plugin-dunstify-bin`, `tinct-plugin-zed-bin`,
   `tinct-plugin-opencode-bin`, `tinct-plugin-keylightd-tray-bin`) are no
-  longer built. Plugins should be installed via the plugin manager
-  (`tinct plugin install <name>`).
+  longer built. Plugins should be installed via the plugin manager:
+
+      tinct plugin install <name>
 
   This is the canonical install path — it pins versions, sandboxes
   installs to `~/.local/share/tinct/plugins/`, and uninstalls cleanly.
