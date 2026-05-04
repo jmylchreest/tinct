@@ -12,6 +12,7 @@ import (
 	"github.com/jmylchreest/tinct/pkg/colour"
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 	"github.com/jmylchreest/tinct/pkg/plugin/config"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 	tincttemplate "github.com/jmylchreest/tinct/pkg/template"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
@@ -233,25 +234,23 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	return false, "", nil
 }
 
-// PostExecute prints installation guidance after writing the palette.
-// Because the file is written directly into Ptyxis's watched palette dir,
-// PtyxisUserPalettes picks it up live via GFileMonitor — no import step.
-func (p *Plugin) PostExecute(_ context.Context, files []string) error {
-	if len(files) == 0 {
-		return nil
-	}
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Fprintf(os.Stderr, "  Ptyxis Palette Installation\n")
-	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Wrote palette to: %s\n", files[0])
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Ptyxis watches its palette directory and picks up new\n")
-	fmt.Fprintf(os.Stderr, "palettes immediately. Select 'Tinct' in:\n")
-	fmt.Fprintf(os.Stderr, "  Preferences → Appearance → Palette → Tinct\n")
-	fmt.Fprintf(os.Stderr, "\n")
+// PostExecute is a no-op — the post-write activation guide is now
+// supplied declaratively via Hooks() so the host's shared runner emits
+// it (and it's omitted cleanly when no files were written, e.g. dry
+// runs). Ptyxis's PtyxisUserPalettes watches its palette dir via
+// GFileMonitor and picks up new files live, so there's no signal or
+// command to send.
+func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
 	return nil
+}
+
+// Hooks declares ptyxis's static post-execute behaviour: a single
+// Instructions block telling the user where to select the palette.
+// Implements tinctplugin.HooksProvider (protocol 0.3.0+).
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		Instructions: "   Ptyxis watches its palette dir and picks up new palettes live. Select it in: Preferences → Appearance → Palette → Tinct",
+	}
 }
 
 // stdLogger implements the Logger interface for template loading.

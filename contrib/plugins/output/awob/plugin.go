@@ -14,6 +14,7 @@ import (
 	"github.com/jmylchreest/tinct/pkg/colour"
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
 	"github.com/jmylchreest/tinct/pkg/plugin/config"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 	tincttemplate "github.com/jmylchreest/tinct/pkg/template"
 )
@@ -204,13 +205,18 @@ func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
 		fmt.Fprintf(os.Stderr, "Or activate the bundled theme outright:\n")
 		fmt.Fprintf(os.Stderr, "  awob theme set tinct\n")
 	}
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Themes can also adopt the palette via `import` (no daemon\n")
-	fmt.Fprintf(os.Stderr, "needed): add `import \"../_palettes/tinct.kdl\"` to scene.kdl\n")
-	fmt.Fprintf(os.Stderr, "and reference $bg / $fg / $track / $accent / $low / $normal\n")
-	fmt.Fprintf(os.Stderr, "/ $warn / $crit / $muted / $overflow_bg / $overflow_accent.\n")
-	fmt.Fprintf(os.Stderr, "\n")
 	return nil
+}
+
+// Hooks declares the static post-execute guidance — the daemon-free
+// `import` instructions are the same every run, so they live here
+// rather than being re-printed by PostExecute. The dynamic banner
+// (force-palette success vs manual fallback) stays in PostExecute.
+// Implements tinctplugin.HooksProvider (protocol 0.3.0+).
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		Instructions: "   Themes can also adopt the palette via `import` (no daemon needed): add `import \"../_palettes/tinct.kdl\"` to scene.kdl and reference $bg / $fg / $track / $accent / $low / $normal / $warn / $crit / $muted / $overflow_bg / $overflow_accent.",
+	}
 }
 
 // findPalettePath returns the path of the palette file from a list of
