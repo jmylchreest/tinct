@@ -172,7 +172,24 @@ For permanent caching, download and use `file` plugin.
 - Verify colour format in source JSON
 - Use `--preview` to inspect results
 
+### paletty.dev
+
+paletty.dev exposes a clean JSON API — fetch any palette by ID:
+
+```bash
+tinct generate -i remote-json \
+  --remote-json.url "https://paletty.dev/api/palettes/MDRHC0lqRj" \
+  --remote-json.query "$.colors" \
+  --remote-json.map "core.background=background,core.foreground=foreground,ansi.normal.1=danger,ansi.normal.2=success,ansi.normal.3=warning,ansi.normal.4=info,ansi.normal.5=notification" \
+  -o ghostty
+```
+
+For the same source there's a dedicated [paletty](/docs/plugins/input/paletty)
+plugin that takes a URL or ID directly and supplies the default mapping for
+free — prefer it unless you need to override the URL or behaviour by hand.
+
 ## See also
 
+- [paletty](/docs/plugins/input/paletty) - Dedicated paletty.dev fetcher
 - [remote-css](/docs/plugins/input/remote-css) - Parse CSS variables
 - [file](/docs/plugins/input/file) - Local colour specification
