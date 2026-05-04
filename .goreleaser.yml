@@ -815,12 +815,19 @@ release:
 
   name_template: "{{.ProjectName}} {{.Tag}}"
 
+  # The release-feed preview on GitHub truncates at "Read more" after the
+  # first ~5 lines. Keep the header tight so what users see at-a-glance
+  # is the version + diff link; goreleaser inserts the conventional-
+  # commits changelog right after this block. Installation, plugin
+  # bootstrapping and links live in the footer where they're still
+  # discoverable but don't crowd out "what changed".
   header: |
-    ## Tinct {{.Version}}
+    Released {{.Date}} — [compare {{.PreviousTag}}...{{.Tag}}](https://github.com/jmylchreest/tinct/compare/{{.PreviousTag}}...{{.Tag}})
 
-    **Release Date**: {{.Date}}
+  footer: |
+    ---
 
-    ### Installation
+    ## Installation
 
     #### Homebrew (macOS/Linux)
     ```bash
@@ -829,11 +836,6 @@ release:
 
     #### Download Binary
     Download the appropriate binary for your system from the assets below.
-
-  footer: |
-    ---
-
-    **Full Changelog**: https://github.com/jmylchreest/tinct/compare/{{.PreviousTag}}...{{.Tag}}
 
     ## Plugin Installation
 
