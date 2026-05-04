@@ -120,6 +120,60 @@ func NewPluginUsedEvent(pluginName, pluginVersion string, isExternal bool, statu
 	return e
 }
 
+// PluginCommandEventParams describes one invocation of a `tinct plugins
+// <subcommand>` (or sub-subcommand) handler. It powers the
+// "plugins_command" telemetry event, which we use to learn which
+// subcommands actually have a real audience — driving keep / simplify /
+// remove decisions for the curated-index machinery.
+type PluginCommandEventParams struct {
+	// Subcommand is the top-level subcommand name as the user typed it
+	// (e.g. "list", "add", "install", "sync", "repo", "templates").
+	Subcommand string
+
+	// Action is the leaf-level verb when the top-level subcommand has
+	// further sub-subcommands. For "plugins repo add foo" this is "add";
+	// for plain top-level subcommands it stays empty.
+	Action string
+
+	// Status is "ok", "failed", or "skipped" (or empty for handlers that
+	// don't have a meaningful binary outcome).
+	Status string
+
+	// Items counts the number of entities the command operated on
+	// (repos listed, plugins synced, search results returned, …).
+	Items int
+
+	// ReposConfigured is the number of plugin repositories the user has
+	// configured at the time of the call. Recorded for every subcommand
+	// so we can correlate "is this user a curated-repo user?" with their
+	// other behaviour.
+	ReposConfigured int
+}
+
+// NewPluginCommandEvent creates a "plugins_command" telemetry event.
+//
+// Dimensions use dot-notation grouping for statsfactory:
+//   - app.version          — application version
+//   - plugins.subcommand   — top-level plugins subcommand
+//   - plugins.action       — leaf verb for nested subcommands (omitted if empty)
+//   - plugins.status       — "ok" | "failed" | "skipped" (omitted if empty)
+//   - plugins.items        — count of items the command operated on
+//   - plugins.repos_configured — count of configured plugin repositories
+func NewPluginCommandEvent(p PluginCommandEventParams) Event {
+	e := NewEvent("plugins_command")
+	e.Props["app.version"] = version.Version
+	e.Props["plugins.subcommand"] = p.Subcommand
+	if p.Action != "" {
+		e.Props["plugins.action"] = p.Action
+	}
+	if p.Status != "" {
+		e.Props["plugins.status"] = p.Status
+	}
+	e.Props["plugins.items"] = p.Items
+	e.Props["plugins.repos_configured"] = p.ReposConfigured
+	return e
+}
+
 // isAIInput returns true if the input plugin is AI-powered.
 func isAIInput(inputPlugin string) bool {
 	switch inputPlugin {

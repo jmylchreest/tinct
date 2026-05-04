@@ -237,7 +237,10 @@ func init() {
 }
 
 // runPluginList lists all available plugins.
-func runPluginList(cmd *cobra.Command, _ []string) error {
+func runPluginList(cmd *cobra.Command, _ []string) (err error) {
+	items := 0
+	defer func() { sendPluginSubcommandResult("list", "", items, err) }()
+
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
@@ -255,17 +258,18 @@ func runPluginList(cmd *cobra.Command, _ []string) error {
 		fmt.Fprintf(os.Stderr, "Using manifest: %s\n\n", manifestPath)
 	}
 
-	// Collect all plugins.
 	allPlugins := collectAllPlugins(mgr, lock)
+	items = len(allPlugins)
 
-	// Display plugins.
 	displayPluginTable(allPlugins, pluginShowPath)
 
 	return nil
 }
 
 // runPluginAdd adds an external plugin with comprehensive safety checks.
-func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocyclo,gocognit // multi-source plugin installation with validation
+func runPluginAdd(cmd *cobra.Command, args []string) (err error) { //nolint:gocyclo,gocognit // multi-source plugin installation with validation
+	defer func() { sendPluginSubcommandResult("add", "", 1, err) }()
+
 	source := args[0]
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
@@ -386,7 +390,9 @@ func runPluginAdd(cmd *cobra.Command, args []string) error { //nolint:gocyclo,go
 }
 
 // runPluginDelete removes an external plugin.
-func runPluginDelete(cmd *cobra.Command, args []string) error { //nolint:gocyclo
+func runPluginDelete(cmd *cobra.Command, args []string) (err error) { //nolint:gocyclo
+	defer func() { sendPluginSubcommandResult("delete", "", 1, err) }()
+
 	pluginName := args[0]
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
@@ -526,7 +532,10 @@ func updatePluginFromRepository(meta *ExternalPluginMeta, pluginDir string, verb
 }
 
 // runPluginUpdate updates external plugins from manifest sources.
-func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // batch plugin update with per-plugin error handling
+func runPluginUpdate(cmd *cobra.Command, _ []string) (err error) { //nolint:gocyclo,gocognit // batch plugin update with per-plugin error handling
+	items := 0
+	defer func() { sendPluginSubcommandResult("update", "", items, err) }()
+
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
@@ -535,13 +544,14 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,go
 	// Load plugin lock.
 	lock, manifestPath, err := loadPluginManifest()
 	if err != nil {
-		return fmt.Errorf("failed to load plugin lock: %w", err)
+		return fmt.Errorf("failed to load plugin manifest: %w", err)
 	}
 
 	if lock == nil || lock.ExternalPlugins == nil || len(lock.ExternalPlugins) == 0 {
 		fmt.Println("No external plugins found in manifest")
 		return nil
 	}
+	items = len(lock.ExternalPlugins)
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Using manifest: %s\n", manifestPath)

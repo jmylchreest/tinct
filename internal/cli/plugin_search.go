@@ -45,7 +45,10 @@ func init() {
 	pluginSearchCmd.Flags().StringVar(&searchRepo, "repo", "", "Search only in specific repository")
 }
 
-func runPluginSearch(_ *cobra.Command, args []string) error {
+func runPluginSearch(_ *cobra.Command, args []string) (err error) {
+	items := 0
+	defer func() { sendPluginSubcommandResult("search", "", items, err) }()
+
 	mgr, err := getRepoManager()
 	if err != nil {
 		return err
@@ -77,6 +80,7 @@ func runPluginSearch(_ *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("search failed: %w", err)
 	}
+	items = len(results)
 
 	if len(results) == 0 {
 		fmt.Println("No plugins found matching your criteria.")

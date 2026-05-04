@@ -79,7 +79,10 @@ func init() {
 	pluginCleanCmd.Flags().BoolVarP(&pluginYes, "yes", "y", false, "Auto-confirm removal")
 }
 
-func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // sync manifest with installed plugins, multiple sources
+func runPluginSync(cmd *cobra.Command, _ []string) (err error) { //nolint:gocyclo,gocognit // sync manifest with installed plugins, multiple sources
+	items := 0
+	defer func() { sendPluginSubcommandResult("sync", "", items, err) }()
+
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return fmt.Errorf("failed to get verbose flag: %w", err)
@@ -99,6 +102,7 @@ func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,goco
 		fmt.Println("No external plugins in manifest.")
 		return nil
 	}
+	items = len(lock.ExternalPlugins)
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Reading manifest: %s\n", manifestPath)
@@ -225,7 +229,10 @@ func runPluginSync(cmd *cobra.Command, _ []string) error { //nolint:gocyclo,goco
 	return nil
 }
 
-func runPluginClean(_ *cobra.Command, _ []string) error { //nolint:gocyclo
+func runPluginClean(_ *cobra.Command, _ []string) (err error) { //nolint:gocyclo
+	items := 0
+	defer func() { sendPluginSubcommandResult("clean", "", items, err) }()
+
 	// Read manifest.
 	lock, _, err := loadPluginManifest()
 	if err != nil {
@@ -309,6 +316,7 @@ func runPluginClean(_ *cobra.Command, _ []string) error { //nolint:gocyclo
 	} else {
 		fmt.Printf("Removed %d plugin(s), %d failed.\n", removed, failed)
 	}
+	items = removed
 	return nil
 }
 

@@ -85,13 +85,17 @@ func init() {
 	pluginTemplatesListCmd.Flags().StringSliceVarP(&templateOutputPlugins, "output-plugins", "o", []string{}, "comma-separated list of output plugins to list (default: all)")
 }
 
-func runPluginTemplatesList(_ *cobra.Command, _ []string) error {
+func runPluginTemplatesList(_ *cobra.Command, _ []string) (err error) {
+	items := 0
+	defer func() { sendPluginSubcommandResult("templates", "list", items, err) }()
+
 	// Get all registered output plugins from the manager.
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
 		fmt.Println("No output plugins available")
 		return nil
 	}
+	items = len(plugins)
 
 	// Filter plugins if specified.
 	if len(templateOutputPlugins) > 0 {
@@ -152,12 +156,16 @@ func runPluginTemplatesList(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func runPluginTemplatesDump(_ *cobra.Command, _ []string) error { //nolint:gocyclo,gocognit // template extraction for multiple plugins with filtering
+func runPluginTemplatesDump(_ *cobra.Command, _ []string) (err error) { //nolint:gocyclo,gocognit // template extraction for multiple plugins with filtering
+	items := 0
+	defer func() { sendPluginSubcommandResult("templates", "dump", items, err) }()
+
 	// Get all registered output plugins from the manager.
 	plugins := sharedPluginManager.AllOutputPlugins()
 	if len(plugins) == 0 {
 		return fmt.Errorf("no output plugins available")
 	}
+	items = len(plugins)
 
 	// Filter plugins if specified.
 	if len(templateOutputPlugins) > 0 {

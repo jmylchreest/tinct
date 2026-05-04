@@ -127,7 +127,9 @@ func getRepoManager() (*repository.Manager, error) {
 	return repoManager, nil
 }
 
-func runPluginRepoAdd(_ *cobra.Command, args []string) error {
+func runPluginRepoAdd(_ *cobra.Command, args []string) (err error) {
+	defer func() { sendPluginSubcommandResult("repo", "add", 1, err) }()
+
 	name := args[0]
 	url := args[1]
 
@@ -149,13 +151,17 @@ func runPluginRepoAdd(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginRepoList(_ *cobra.Command, _ []string) error {
+func runPluginRepoList(_ *cobra.Command, _ []string) (err error) {
+	items := 0
+	defer func() { sendPluginSubcommandResult("repo", "list", items, err) }()
+
 	mgr, err := getRepoManager()
 	if err != nil {
 		return err
 	}
 
 	repos := mgr.ListRepositories()
+	items = len(repos)
 
 	if len(repos) == 0 {
 		fmt.Println("No repositories configured.")
@@ -180,7 +186,9 @@ func runPluginRepoList(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func runPluginRepoDelete(_ *cobra.Command, args []string) error {
+func runPluginRepoDelete(_ *cobra.Command, args []string) (err error) {
+	defer func() { sendPluginSubcommandResult("repo", "delete", 1, err) }()
+
 	name := args[0]
 
 	mgr, err := getRepoManager()
@@ -196,7 +204,10 @@ func runPluginRepoDelete(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
+func runPluginRepoUpdate(_ *cobra.Command, args []string) (err error) {
+	items := 0
+	defer func() { sendPluginSubcommandResult("repo", "update", items, err) }()
+
 	mgr, err := getRepoManager()
 	if err != nil {
 		return err
@@ -214,6 +225,7 @@ func runPluginRepoUpdate(_ *cobra.Command, args []string) error {
 		fmt.Println("No repositories configured.")
 		return nil
 	}
+	items = len(repos)
 
 	for _, repo := range repos {
 		// Intentionally continue on error to update all repos
@@ -246,7 +258,9 @@ func updateAndPrintRepo(mgr *repository.Manager, name string) error {
 	return nil
 }
 
-func runPluginRepoInfo(_ *cobra.Command, args []string) error {
+func runPluginRepoInfo(_ *cobra.Command, args []string) (err error) {
+	defer func() { sendPluginSubcommandResult("repo", "info", 1, err) }()
+
 	name := args[0]
 
 	mgr, err := getRepoManager()
