@@ -160,52 +160,39 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 // force-palette overlay so the new colours apply immediately,
 // regardless of which theme the daemon currently has active.
 //
-// `awob force-palette set <path>` is exactly the right hook here:
-// the daemon overlays the palette + styles after the active theme's
-// own palette resolution, so tinct's colours win on every theme
-// without editing anyone's scene.kdl. The daemon also adds the
-// overlay to its hot-reload watch list, so future tinct runs that
-// rewrite the same file refresh in place.
+// `awob force-palette set <path>` is exactly the right hook here: the
+// daemon overlays the palette + styles after the active theme's own
+// palette resolution, so tinct's colours win on every theme without
+// editing anyone's scene.kdl. The daemon also adds the overlay to its
+// hot-reload watch list, so future tinct runs that rewrite the same
+// file refresh in place.
 //
-// If the awob CLI isn't on PATH (user installed via cargo to a custom
-// prefix, or the daemon isn't running yet) the call is a no-op and
-// the user sees the print-only fallback instead.
+// PostExecute runs silently. The activation guide (when the user wants
+// to wire the palette via `import` instead of force-palette) lives in
+// Hooks().Instructions, which the host runner gates behind --verbose.
+// We can't gate per-run reporting from this method directly: external
+// plugins re-spawn between Generate and PostExecute, so any verbose
+// flag captured during Generate is gone here. If the awob CLI is
+// missing or the daemon isn't running, force-palette is a silent no-op
+// and the host's verbose-mode Instructions tell the user what to do.
 func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
 	if len(files) == 0 {
 		return nil
 	}
 
 	palettePath := findPalettePath(files)
-	overlayInstalled := false
-	if palettePath != "" {
-		if _, err := exec.LookPath("awob"); err == nil {
-			cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			cmd := exec.CommandContext(cctx, "awob", "force-palette", "set", palettePath)
-			if err := cmd.Run(); err == nil {
-				overlayInstalled = true
-			}
-			// Failure is non-fatal — the daemon may simply not be
-			// running yet. Fall through to the activation guide so
-			// the user knows how to apply the palette manually.
-		}
+	if palettePath == "" {
+		return nil
 	}
 
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Fprintf(os.Stderr, "  awob theme installed\n")
-	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Fprintf(os.Stderr, "\n")
-	if overlayInstalled {
-		fmt.Fprintf(os.Stderr, "Force-palette overlay applied: %s\n", palettePath)
-		fmt.Fprintf(os.Stderr, "Tinct colours are now active over whichever theme is\n")
-		fmt.Fprintf(os.Stderr, "selected. Run `awob force-palette clear` to remove.\n")
-	} else {
-		fmt.Fprintf(os.Stderr, "Wrote %d files. To apply the tinct palette to the active theme:\n", len(files))
-		fmt.Fprintf(os.Stderr, "  awob force-palette set %s\n", palettePath)
-		fmt.Fprintf(os.Stderr, "Or activate the bundled theme outright:\n")
-		fmt.Fprintf(os.Stderr, "  awob theme set tinct\n")
+	if _, err := exec.LookPath("awob"); err != nil {
+		return nil
 	}
+
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	_ = exec.CommandContext(cctx, "awob", "force-palette", "set", palettePath).Run()
+	// Failure is non-fatal — the daemon may simply not be running yet.
 	return nil
 }
 
