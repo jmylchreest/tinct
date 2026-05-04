@@ -216,19 +216,66 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build conventional-commits changelog
+        id: changelog
+        run: |
+          # Find the previous proper version tag (vX.Y.Z) so the diff is
+          # against the last shipped release rather than the previous
+          # snapshot, which would be empty.
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+
+          if [ -z "$PREV_TAG" ]; then
+            RANGE=""
+            echo "No previous tag — building changelog from full history."
+          else
+            RANGE="${PREV_TAG}..HEAD"
+            echo "Building changelog for ${RANGE}"
+          fi
+
+          mkdir -p dist
+          NOTES_FILE=dist/release-notes.md
+
+          # Group commits by conventional type. Sections with no entries
+          # are omitted to keep the body tight.
+          {
+            echo "Automated preview build from \`main\`."
+            echo
+            echo "**Commit**: ${GITHUB_SHA}  "
+            echo "**Version**: ${{ steps.version.outputs.version }}"
+            echo
+            if [ -n "$PREV_TAG" ]; then
+              echo "**Diff**: [${PREV_TAG} → ${{ steps.version.outputs.tag }}](https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ github.sha }})"
+              echo
+            fi
+
+            for section in "feat:Features:^.*?feat(\\([^)]+\\))?!?:" \
+                           "fix:Bug Fixes:^.*?fix(\\([^)]+\\))?!?:" \
+                           "perf:Performance:^.*?perf(\\([^)]+\\))?!?:" \
+                           "refactor:Refactoring:^.*?refactor(\\([^)]+\\))?!?:"; do
+              IFS=: read -r _ title pattern <<< "$section"
+              entries=$(git log $RANGE --no-merges --pretty=format:'- %s (%h)' | grep -E "$pattern" || true)
+              if [ -n "$entries" ]; then
+                echo "## ${title}"
+                echo
+                echo "$entries"
+                echo
+              fi
+            done
+
+            echo "---"
+            echo
+            echo "Download the appropriate binary for your system from the assets below."
+          } > "$NOTES_FILE"
+
+          echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
+          echo "----- notes preview -----"
+          cat "$NOTES_FILE"
+
       - name: Create preview release
         run: |
           gh release create ${{ steps.version.outputs.tag }} \
             --title "Preview Release ${{ steps.version.outputs.version }}" \
-            --notes "Automated preview release from commit ${{ github.sha }}
-
-          This is a pre-release build from the main branch for testing purposes.
-
-          **Commit**: ${{ github.sha }}
-          **Version**: ${{ steps.version.outputs.version }}
-          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-
-          Download the appropriate binary for your system from the assets below." \
+            --notes-file "${{ steps.changelog.outputs.notes_file }}" \
             --prerelease \
             --target main \
             dist/*.tar.gz \
