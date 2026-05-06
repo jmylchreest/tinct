@@ -63,14 +63,8 @@ func NewRootCmd() *cobra.Command {
 }
 
 func init() {
-	// Close any external plugin processes the manager is still holding
-	// open at the end of every CLI invocation. ExternalInputPlugin
-	// caches the most recent executor on lastExecutor so post-Generate
-	// getters (WallpaperPath, ThemeHint) can read from it; without this
-	// finalize hook the underlying plugin subprocess outlives the CLI
-	// run and accumulates over time, eventually blocking
-	// `tinct plugins install` with ETXTBSY because the kernel won't
-	// overwrite a running binary.
+	// Tear down cached external-plugin executors at the end of every
+	// CLI invocation; otherwise plugin subprocesses leak across runs.
 	cobra.OnFinalize(func() {
 		if sharedPluginManager != nil {
 			sharedPluginManager.CloseAllExternalPlugins()

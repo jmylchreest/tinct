@@ -188,17 +188,10 @@ func (m *Manager) AllOutputPlugins() map[string]output.Plugin {
 	return m.outputRegistry.All()
 }
 
-// CloseAllExternalPlugins terminates any external plugin processes the
-// manager is still holding open via cached executors. ExternalInputPlugin
-// keeps the most recent executor live (so post-Generate getters like
-// WallpaperPath can reach back into it) — without an explicit Close at
-// host shutdown that executor's plugin subprocess outlives the CLI run
-// and accumulates over time, eventually blocking `tinct plugins install`
-// with ETXTBSY because Linux refuses to overwrite a running binary.
-//
-// The CLI wires this into cobra.OnFinalize so it fires after every
-// Execute, including error paths. Built-in input plugins and external
-// output plugins use defer-Close per-call and don't need this.
+// CloseAllExternalPlugins releases any plugin subprocess still held by
+// cached executors. ExternalInputPlugin keeps lastExecutor live so
+// post-Generate getters (WallpaperPath, ThemeHint) can read from it;
+// the CLI calls this from cobra.OnFinalize at exit.
 func (m *Manager) CloseAllExternalPlugins() {
 	for _, p := range m.inputRegistry.All() {
 		if c, ok := p.(interface{ Close() }); ok {
@@ -495,13 +488,8 @@ func (p *ExternalInputPlugin) WallpaperRawPath() string {
 	return p.lastExecutor.GetWallpaperRawPath()
 }
 
-// Close releases any plugin process this input wrapper still holds open.
-// ExternalInputPlugin caches the most recent executor on lastExecutor so
-// post-Generate getters like WallpaperPath / ThemeHint can reach back
-// into it; without an explicit Close at host shutdown that executor (and
-// the plugin process behind it) would survive the CLI invocation. The
-// Manager wires Close into a single CloseAllExternalPlugins entry that
-// the CLI calls from cobra.OnFinalize.
+// Close releases the cached executor (and its plugin subprocess) held
+// for post-Generate getters. Idempotent.
 func (p *ExternalInputPlugin) Close() {
 	if p.lastExecutor != nil {
 		p.lastExecutor.Close()
