@@ -213,7 +213,7 @@ func main() {
 	}
 
 	// Serve the plugin using go-plugin
-	plugin.Serve(&plugin.ServeConfig{
+	tinctplugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: tinctplugin.Handshake,
 		Plugins: map[string]plugin.Plugin{
 			"input": &tinctplugin.InputPluginRPC{

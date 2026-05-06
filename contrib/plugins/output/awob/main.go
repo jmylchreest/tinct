@@ -46,7 +46,7 @@ func main() {
 		"output": &tinctplugin.OutputPluginRPC{Impl: outputPlugin},
 	}
 
-	plugin.Serve(&plugin.ServeConfig{
+	tinctplugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: tinctplugin.Handshake,
 		Plugins:         pluginMap,
 		Logger:          logger,

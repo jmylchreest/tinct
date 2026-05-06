@@ -58,7 +58,7 @@ func main() {
 	}
 
 	// Serve the plugin.
-	plugin.Serve(&plugin.ServeConfig{
+	tinctplugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: tinctplugin.Handshake,
 		Plugins:         pluginMap,
 		Logger:          logger,

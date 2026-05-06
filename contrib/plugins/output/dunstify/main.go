@@ -185,7 +185,7 @@ func main() {
 	// Serve the plugin using go-plugin
 	// This starts the RPC server that Tinct will communicate with.
 	// The process stays alive for multiple invocations (6.5x faster than JSON-stdio).
-	plugin.Serve(&plugin.ServeConfig{
+	tinctplugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: tinctplugin.Handshake,
 		Plugins: map[string]plugin.Plugin{
 			"output": &tinctplugin.OutputPluginRPC{

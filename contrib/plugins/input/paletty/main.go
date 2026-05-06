@@ -332,7 +332,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	plugin.Serve(&plugin.ServeConfig{
+	tinctplugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: tinctplugin.Handshake,
 		Plugins: map[string]plugin.Plugin{
 			"input": &tinctplugin.InputPluginRPC{Impl: &PalettyPlugin{}},
