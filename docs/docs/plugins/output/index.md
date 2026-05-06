@@ -17,6 +17,7 @@ Terminal emulators with colour palette support:
 | [kitty](/docs/plugins/output/terminals/kitty) | Kitty terminal | Config file |
 | [konsole](/docs/plugins/output/terminals/konsole) | KDE Konsole | .colorscheme |
 | [ptyxis](/docs/plugins/output/terminals/ptyxis) | GNOME Ptyxis | .palette |
+| [warp](./terminals/warp.md) | Warp terminal | YAML |
 
 ## Desktop environments
 

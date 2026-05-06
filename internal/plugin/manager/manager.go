@@ -52,6 +52,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/tmux"
 	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
+	"github.com/jmylchreest/tinct/internal/plugin/output/warp"
 	"github.com/jmylchreest/tinct/internal/plugin/output/waybar"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wbg"
 	"github.com/jmylchreest/tinct/internal/plugin/output/wezterm"
@@ -146,6 +147,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(swayosd.New())
 	m.outputRegistry.Register(tmux.New())
 	m.outputRegistry.Register(walker.New())
+	m.outputRegistry.Register(warp.New())
 	m.outputRegistry.Register(waybar.New())
 	m.outputRegistry.Register(wbg.New())
 	m.outputRegistry.Register(wezterm.New())
