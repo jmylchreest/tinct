@@ -146,5 +146,5 @@ Or use `file` plugin with extracted values.
 
 ## See also
 
-- [remote-json](/docs/plugins/input/remote-json) - Parse JSON themes
-- [file](/docs/plugins/input/file) - Manual colour specification
+- [remote-json](./remote-json.md) - Parse JSON themes
+- [file](./file.md) - Manual colour specification

@@ -201,5 +201,5 @@ tinct plugins list
 
 ## See also
 
-- [Plugin development](/docs/plugin-development) - Creating custom plugins
-- [Publishing plugins](/docs/plugin-development/publishing) - Repository system
+- [Plugin development](../plugin-development/index.md) - Creating custom plugins
+- [Publishing plugins](../plugin-development/publishing.md) - Repository system

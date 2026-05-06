@@ -79,5 +79,5 @@ frame_color = "#f38ba8"
 ## See also
 
 - [Dunst documentation](https://dunst-project.org/documentation/)
-- [histui](/docs/plugins/output/special/histui)
-- [waybar](/docs/plugins/output/bars-launchers/waybar)
+- [histui](../special/histui.md)
+- [waybar](./waybar.md)

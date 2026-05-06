@@ -101,5 +101,5 @@ The theme affects:
 ## See also
 
 - [histui documentation](https://jmylchreest.github.io/histui/)
-- [dunst](/docs/plugins/output/bars-launchers/dunst)
-- [libadwaita](/docs/plugins/output/desktop/libadwaita)
+- [dunst](../bars-launchers/dunst.md)
+- [libadwaita](../desktop/libadwaita.md)

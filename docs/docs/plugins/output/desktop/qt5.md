@@ -84,5 +84,5 @@ The Qt5 colour scheme affects:
 ## See also
 
 - [qt5ct documentation](https://github.com/desktop-app/qt5ct)
-- [qt6](/docs/plugins/output/desktop/qt6)
-- [kde-plasma](/docs/plugins/output/desktop/kde-plasma)
+- [qt6](./qt6.md)
+- [kde-plasma](./kde-plasma.md)

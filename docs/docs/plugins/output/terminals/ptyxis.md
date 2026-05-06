@@ -74,4 +74,4 @@ Color2=#a6e3a1
 ## See also
 
 - [Ptyxis repository](https://gitlab.gnome.org/chergert/ptyxis)
-- [libadwaita](/docs/plugins/output/desktop/libadwaita)
+- [libadwaita](../desktop/libadwaita.md)

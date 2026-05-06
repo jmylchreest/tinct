@@ -135,4 +135,4 @@ end
 ## See also
 
 - [Neovim documentation](https://neovim.io/doc/)
-- [zellij](/docs/plugins/output/editors/zellij)
+- [zellij](./zellij.md)

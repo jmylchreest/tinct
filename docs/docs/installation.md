@@ -101,5 +101,5 @@ Tinct stores its files across two directories:
 
 ## Next steps
 
-- [Quick start](/docs/quickstart) - Generate your first theme
-- [Plugin management](/docs/commands/plugins) - Configure and install plugins
+- [Quick start](./quickstart/index.md) - Generate your first theme
+- [Plugin management](./commands/plugins.md) - Configure and install plugins

@@ -184,5 +184,5 @@ OpenRouter uses a credit system. Different models have different costs. Monitor 
 
 ## See also
 
-- [google-genai](/docs/plugins/input/google-genai) - Google Gemini generation
-- [image](/docs/plugins/input/image) - Extract from existing images
+- [google-genai](./google-genai.md) - Google Gemini generation
+- [image](./image.md) - Extract from existing images

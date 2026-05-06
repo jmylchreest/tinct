@@ -157,5 +157,5 @@ tinct generate -i file --file.colors "..." -o all -t light
 
 ## See also
 
-- [remote-json](/docs/plugins/input/remote-json) - Fetch from URL
-- [Colour roles](/docs/concepts/color-roles) - All available roles
+- [remote-json](./remote-json.md) - Fetch from URL
+- [Colour roles](../../concepts/color-roles.md) - All available roles

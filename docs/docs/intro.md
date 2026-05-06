@@ -53,6 +53,6 @@ This single command:
 
 ## Next steps
 
-- [Installation](/docs/installation) - Get tinct installed on your system
-- [Quick start](/docs/quickstart) - Generate your first theme
-- [Concepts](/docs/concepts/color-extraction) - Understand how colour extraction works
+- [Installation](./installation.md) - Get tinct installed on your system
+- [Quick start](./quickstart/index.md) - Generate your first theme
+- [Concepts](./concepts/color-extraction.md) - Understand how colour extraction works

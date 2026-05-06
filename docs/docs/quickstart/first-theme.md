@@ -118,6 +118,6 @@ tinct generate -i image -p ~/Pictures/wallpaper.jpg -o all -v
 
 ## Next steps
 
-- [Common workflows](/docs/quickstart/workflows) - Popular theme recipes
-- [Colour extraction](/docs/concepts/color-extraction) - How palette extraction works
-- [Output plugins](/docs/plugins/output) - All supported applications
+- [Common workflows](./workflows.md) - Popular theme recipes
+- [Colour extraction](../concepts/color-extraction.md) - How palette extraction works
+- [Output plugins](../plugins/output/index.md) - All supported applications

@@ -18,22 +18,22 @@ Plugins can be written in any language using the JSON-stdio protocol, or in Go u
 ## Getting started
 
 1. **Choose a protocol**
-   - [JSON-stdio](/docs/plugin-development/protocols#json-stdio-protocol) - Any language, simple to implement
-   - [Go-plugin RPC](/docs/plugin-development/protocols#go-plugin-protocol) - Go only, better performance
+   - [JSON-stdio](./protocols.md#json-stdio-protocol) - Any language, simple to implement
+   - [Go-plugin RPC](./protocols.md#go-plugin-protocol) - Go only, better performance
 
 2. **Create your plugin**
-   - [Shell script example](/docs/plugin-development/creating#shell-script-plugin)
-   - [Python example](/docs/plugin-development/creating#python-plugin)
-   - [Go example (JSON-stdio)](/docs/plugin-development/creating#go-plugin-json-stdio)
-   - [Go example (RPC)](/docs/plugin-development/creating#go-plugin-go-plugin-rpc)
+   - [Shell script example](./creating.md#shell-script-plugin)
+   - [Python example](./creating.md#python-plugin)
+   - [Go example (JSON-stdio)](./creating.md#go-plugin-json-stdio)
+   - [Go example (RPC)](./creating.md#go-plugin-go-plugin-rpc)
 
 3. **Add lifecycle hooks** (optional)
-   - [PreExecute](/docs/plugin-development/hooks#preexecutehook-interface) - Validate environment
-   - [PostExecute](/docs/plugin-development/hooks#postexecutehook-interface) - Reload configs
+   - [PreExecute](./hooks.md#preexecutehook-interface) - Validate environment
+   - [PostExecute](./hooks.md#postexecutehook-interface) - Reload configs
 
 4. **Publish your plugin**
-   - [Repository format](/docs/plugin-development/publishing#repository-structure)
-   - [Release workflow](/docs/plugin-development/publishing#creating-releases)
+   - [Repository format](./publishing.md#repository-structure)
+   - [Release workflow](./publishing.md#creating-releases)
 
 ## Plugin types
 
@@ -101,6 +101,6 @@ jq -r '"background=\(.colours.background.hex)"' > ~/.config/myapp/theme.conf
 
 ## Next steps
 
-- [Protocol details](/docs/plugin-development/protocols) - Understand communication
-- [Creating plugins](/docs/plugin-development/creating) - Full examples
-- [Lifecycle hooks](/docs/plugin-development/hooks) - Advanced control
+- [Protocol details](./protocols.md) - Understand communication
+- [Creating plugins](./creating.md) - Full examples
+- [Lifecycle hooks](./hooks.md) - Advanced control

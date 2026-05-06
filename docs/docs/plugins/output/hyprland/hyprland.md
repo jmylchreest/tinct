@@ -114,5 +114,5 @@ group {
 ## See also
 
 - [Hyprland documentation](https://wiki.hyprland.org/)
-- [hyprlock](/docs/plugins/output/hyprland/hyprlock)
-- [hyprpaper](/docs/plugins/output/hyprland/hyprpaper)
+- [hyprlock](./hyprlock.md)
+- [hyprpaper](./hyprpaper.md)

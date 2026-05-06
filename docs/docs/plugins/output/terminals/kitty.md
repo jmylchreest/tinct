@@ -106,5 +106,5 @@ ctrl+shift+f5
 ## See also
 
 - [Kitty documentation](https://sw.kovidgoyal.net/kitty/)
-- [alacritty](/docs/plugins/output/terminals/alacritty)
-- [ghostty](/docs/plugins/output/terminals/ghostty)
+- [alacritty](./alacritty.md)
+- [ghostty](./ghostty.md)

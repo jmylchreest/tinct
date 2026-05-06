@@ -149,6 +149,6 @@ tinct extract -i image -p ~/wallpaper.jpg -o palette.json --format json
 
 ## See also
 
-- [generate](/docs/commands/generate) - Generate full configurations
-- [Colour extraction](/docs/concepts/color-extraction) - How extraction works
-- [Input plugins](/docs/plugins/input) - Available input sources
+- [generate](./generate.md) - Generate full configurations
+- [Colour extraction](../concepts/color-extraction.md) - How extraction works
+- [Input plugins](../plugins/input/index.md) - Available input sources

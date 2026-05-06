@@ -92,5 +92,5 @@ tinct generate -i image -p ~/wallpaper.jpg -o qt5 -o qt6
 ## See also
 
 - [qt6ct documentation](https://github.com/trialuser02/qt6ct)
-- [qt5](/docs/plugins/output/desktop/qt5)
-- [kde-plasma](/docs/plugins/output/desktop/kde-plasma)
+- [qt5](./qt5.md)
+- [kde-plasma](./kde-plasma.md)

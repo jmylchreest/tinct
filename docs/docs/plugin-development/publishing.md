@@ -306,5 +306,5 @@ include ~/.config/myapp/tinct.conf
 
 ## See also
 
-- [Creating plugins](/docs/plugin-development/creating) - Plugin development
-- [tinct plugins command](/docs/commands/plugins) - Plugin management
+- [Creating plugins](./creating.md) - Plugin development
+- [tinct plugins command](../commands/plugins.md) - Plugin management

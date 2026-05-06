@@ -74,4 +74,4 @@ Wallpaper=
 ## See also
 
 - [Konsole documentation](https://docs.kde.org/stable5/en/konsole/konsole/)
-- [kde-plasma](/docs/plugins/output/desktop/kde-plasma)
+- [kde-plasma](../desktop/kde-plasma.md)

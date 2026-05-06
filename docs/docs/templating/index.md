@@ -107,7 +107,7 @@ rm -rf ~/.config/tinct/templates/hyprland
 
 ## Next steps
 
-- [Functions reference](/docs/templating/functions) - All available template functions
-- [Colour access](/docs/templating/color-access) - Patterns for accessing colours
-- [Format conversion](/docs/templating/format-conversion) - Output format options
-- [Versioned templates](/docs/templating/versioned) - Version-specific templates
+- [Functions reference](./functions.md) - All available template functions
+- [Colour access](./color-access.md) - Patterns for accessing colours
+- [Format conversion](./format-conversion.md) - Output format options
+- [Versioned templates](./versioned.md) - Version-specific templates

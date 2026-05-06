@@ -151,5 +151,5 @@ selection {{ $accent | withAlpha 0.3 | rgba }}
 
 ## See also
 
-- [Functions reference](/docs/templating/functions)
-- [Colour access](/docs/templating/color-access)
+- [Functions reference](./functions.md)
+- [Colour access](./color-access.md)

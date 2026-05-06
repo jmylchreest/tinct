@@ -76,5 +76,5 @@ The GTK3 theme affects:
 ## See also
 
 - [GTK3 CSS reference](https://docs.gtk.org/gtk3/css-overview.html)
-- [gtk4](/docs/plugins/output/desktop/gtk4)
-- [libadwaita](/docs/plugins/output/desktop/libadwaita)
+- [gtk4](./gtk4.md)
+- [libadwaita](./libadwaita.md)

@@ -10,7 +10,7 @@ Generate colour themes for [GTK4](https://docs.gtk.org/gtk4/) applications.
 
 GTK4 is the current version of the GTK toolkit, used by traditional (non-libadwaita) GTK4 applications. The plugin generates a CSS file that overrides application colours.
 
-For modern GNOME applications that use libadwaita, see the [libadwaita](/docs/plugins/output/desktop/libadwaita) plugin instead.
+For modern GNOME applications that use libadwaita, see the [libadwaita](./libadwaita.md) plugin instead.
 
 ## Output path
 
@@ -67,5 +67,5 @@ Most modern GNOME applications use libadwaita rather than plain GTK4. If you're 
 ## See also
 
 - [GTK4 documentation](https://docs.gtk.org/gtk4/)
-- [libadwaita](/docs/plugins/output/desktop/libadwaita)
-- [gtk3](/docs/plugins/output/desktop/gtk3)
+- [libadwaita](./libadwaita.md)
+- [gtk3](./gtk3.md)

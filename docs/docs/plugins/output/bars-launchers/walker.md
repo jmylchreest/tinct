@@ -100,5 +100,5 @@ window {
 ## See also
 
 - [Walker documentation](https://github.com/abenz1267/walker)
-- [fuzzel](/docs/plugins/output/bars-launchers/fuzzel)
-- [wofi](/docs/plugins/output/bars-launchers/wofi)
+- [fuzzel](./fuzzel.md)
+- [wofi](./wofi.md)

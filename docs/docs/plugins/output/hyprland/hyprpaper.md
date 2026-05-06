@@ -96,4 +96,4 @@ The plugin detects your current monitor configuration and applies wallpapers to 
 
 - [Hyprpaper documentation](https://wiki.hyprland.org/Hypr-Ecosystem/hyprpaper/)
 - [hyprland](/docs/plugins/output/hyprland)
-- [hyprlock](/docs/plugins/output/hyprland/hyprlock)
+- [hyprlock](./hyprlock.md)

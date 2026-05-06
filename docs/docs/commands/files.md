@@ -153,5 +153,5 @@ tinct generate -i image -p ~/wallpaper.jpg -o all --force
 
 ## See also
 
-- [generate](/docs/commands/generate) - Generate theme files
-- [Output plugins](/docs/plugins/output) - Output file locations
+- [generate](./generate.md) - Generate theme files
+- [Output plugins](../plugins/output/index.md) - Output file locations

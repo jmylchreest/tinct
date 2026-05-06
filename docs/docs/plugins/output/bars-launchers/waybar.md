@@ -99,5 +99,5 @@ The generated `tinct.css` defines:
 ## See also
 
 - [Waybar documentation](https://github.com/Alexays/Waybar/wiki)
-- [dunst](/docs/plugins/output/bars-launchers/dunst)
+- [dunst](./dunst.md)
 - [hyprland](/docs/plugins/output/hyprland)

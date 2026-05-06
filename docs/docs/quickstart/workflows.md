@@ -67,7 +67,7 @@ tinct generate -i google-genai \
   -o all
 ```
 
-Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). See the [google-genai plugin docs](/docs/plugins/input/google-genai) for storing your key in a secret manager.
+Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). See the [google-genai plugin docs](../plugins/input/google-genai.md) for storing your key in a secret manager.
 
 ### OpenRouter
 
@@ -176,6 +176,6 @@ tinct extract -i image -p ~/Pictures/wallpaper.jpg -o palette.json --format json
 
 ## Next steps
 
-- [Concepts](/docs/concepts/color-extraction) - Understand colour extraction
-- [Commands](/docs/commands) - Full command reference
-- [Plugins](/docs/plugins/overview) - All plugin documentation
+- [Concepts](../concepts/color-extraction.md) - Understand colour extraction
+- [Commands](../commands/index.md) - Full command reference
+- [Plugins](../plugins/overview.md) - All plugin documentation

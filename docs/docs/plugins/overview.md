@@ -14,24 +14,24 @@ Extract or generate colour palettes from various sources:
 
 | Plugin | Description |
 |--------|-------------|
-| [image](/docs/plugins/input/image) | Extract from JPEG, PNG, GIF, WebP images |
-| [google-genai](/docs/plugins/input/google-genai) | Generate with Google Gemini AI |
-| [openrouter](/docs/plugins/input/openrouter) | Generate via OpenRouter API |
-| [remote-json](/docs/plugins/input/remote-json) | Fetch from JSON URLs |
-| [remote-css](/docs/plugins/input/remote-css) | Parse CSS variables |
-| [file](/docs/plugins/input/file) | Manual colour specification |
-| [markdown](/docs/plugins/input/markdown) | Load saved theme files |
+| [image](./input/image.md) | Extract from JPEG, PNG, GIF, WebP images |
+| [google-genai](./input/google-genai.md) | Generate with Google Gemini AI |
+| [openrouter](./input/openrouter.md) | Generate via OpenRouter API |
+| [remote-json](./input/remote-json.md) | Fetch from JSON URLs |
+| [remote-css](./input/remote-css.md) | Parse CSS variables |
+| [file](./input/file.md) | Manual colour specification |
+| [markdown](./input/markdown.md) | Load saved theme files |
 
 ### Output plugins
 
 Generate configuration files for applications:
 
-- [Terminals](/docs/plugins/output#terminals) - Alacritty, Ghostty, Kitty, Konsole, Ptyxis
-- [Desktop environments](/docs/plugins/output#desktop-environments) - GNOME, KDE, GTK, Qt
-- [Window managers](/docs/plugins/output#hyprland-ecosystem) - Hyprland, Hyprlock, Hyprpaper
-- [Bars and launchers](/docs/plugins/output#bars-and-launchers) - Waybar, Dunst, Fuzzel, etc.
-- [Editors](/docs/plugins/output#editors-and-multiplexers) - Neovim, Zellij
-- [Special](/docs/plugins/output#special-purpose) - Markdown export, custom templates
+- [Terminals](./output/index.md#terminals) - Alacritty, Ghostty, Kitty, Konsole, Ptyxis
+- [Desktop environments](./output/index.md#desktop-environments) - GNOME, KDE, GTK, Qt
+- [Window managers](./output/index.md#hyprland-ecosystem) - Hyprland, Hyprlock, Hyprpaper
+- [Bars and launchers](./output/index.md#bars-and-launchers) - Waybar, Dunst, Fuzzel, etc.
+- [Editors](./output/index.md#editors-and-multiplexers) - Neovim, Zellij
+- [Special](./output/index.md#special-purpose) - Markdown export, custom templates
 
 ## Built-in vs external
 
@@ -49,7 +49,7 @@ Generate configuration files for applications:
 - Two protocols: JSON-stdio and go-plugin
 - Loaded on demand
 
-See [Plugin development](/docs/plugin-development) for details.
+See [Plugin development](../plugin-development/index.md) for details.
 
 ## Plugin lifecycle
 
@@ -101,6 +101,6 @@ tinct plugins list
 
 ## Next steps
 
-- [Input plugins](/docs/plugins/input) - Colour source plugins
-- [Output plugins](/docs/plugins/output) - Application plugins
-- [Plugin development](/docs/plugin-development) - Creating custom plugins
+- [Input plugins](./input/index.md) - Colour source plugins
+- [Output plugins](./output/index.md) - Application plugins
+- [Plugin development](../plugin-development/index.md) - Creating custom plugins

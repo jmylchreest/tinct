@@ -10,14 +10,14 @@ Input plugins extract or generate colour palettes from various sources.
 
 | Plugin | Description | Use case |
 |--------|-------------|----------|
-| [image](/docs/plugins/input/image) | Extract from images | Local wallpapers, photos |
-| [google-genai](/docs/plugins/input/google-genai) | AI generation | Create unique themes |
-| [openrouter](/docs/plugins/input/openrouter) | Multi-model AI | Alternative AI generation |
-| [remote-json](/docs/plugins/input/remote-json) | JSON URL fetching | Theme repositories, Catppuccin |
-| [remote-css](/docs/plugins/input/remote-css) | CSS parsing | CSS variable themes |
+| [image](./image.md) | Extract from images | Local wallpapers, photos |
+| [google-genai](./google-genai.md) | AI generation | Create unique themes |
+| [openrouter](./openrouter.md) | Multi-model AI | Alternative AI generation |
+| [remote-json](./remote-json.md) | JSON URL fetching | Theme repositories, Catppuccin |
+| [remote-css](./remote-css.md) | CSS parsing | CSS variable themes |
 | [paletty](./paletty.md) | paletty.dev fetcher (external) | Curated terminal palettes |
-| [file](/docs/plugins/input/file) | Manual specification | Custom colour lists |
-| [markdown](/docs/plugins/input/markdown) | Saved themes | Restore exported themes |
+| [file](./file.md) | Manual specification | Custom colour lists |
+| [markdown](./markdown.md) | Saved themes | Restore exported themes |
 
 ## Usage
 
@@ -71,7 +71,7 @@ Two template fields are available:
 
 Output plugins like `hyprpaper` use `.WallpaperPath` to set the wallpaper automatically.
 
-See [Template functions: Context fields](/docs/templating/functions#context-fields) for details.
+See [Template functions: Context fields](../../templating/functions.md#context-fields) for details.
 
 ## Choosing an input
 

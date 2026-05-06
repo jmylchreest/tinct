@@ -147,7 +147,7 @@ With `--verbose`:
 
 ## See also
 
-- [extract](/docs/commands/extract) - Extract without generating
-- [plugins](/docs/commands/plugins) - Manage plugins
-- [Input plugins](/docs/plugins/input) - Available input sources
-- [Output plugins](/docs/plugins/output) - Available outputs
+- [extract](./extract.md) - Extract without generating
+- [plugins](./plugins.md) - Manage plugins
+- [Input plugins](../plugins/input/index.md) - Available input sources
+- [Output plugins](../plugins/output/index.md) - Available outputs

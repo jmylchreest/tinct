@@ -92,5 +92,5 @@ This themes:
 
 - [libadwaita documentation](https://gnome.pages.gitlab.gnome.org/libadwaita/)
 - [GNOME Human Interface Guidelines](https://developer.gnome.org/hig/)
-- [gnome-shell](/docs/plugins/output/desktop/gnome-shell)
-- [gtk4](/docs/plugins/output/desktop/gtk4)
+- [gnome-shell](./gnome-shell.md)
+- [gtk4](./gtk4.md)

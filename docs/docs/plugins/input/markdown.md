@@ -171,5 +171,5 @@ git commit -m "Add my themes"
 
 ## See also
 
-- [markdown output](/docs/plugins/output/special/markdown) - Save themes
-- [image](/docs/plugins/input/image) - Extract from images
+- [markdown output](../output/special/markdown.md) - Save themes
+- [image](./image.md) - Extract from images

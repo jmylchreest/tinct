@@ -232,5 +232,5 @@ Monitor your API usage at [Google AI Studio](https://aistudio.google.com/).
 
 ## See also
 
-- [image](/docs/plugins/input/image) - Extract from existing images
-- [openrouter](/docs/plugins/input/openrouter) - Alternative AI generation via OpenRouter
+- [image](./image.md) - Extract from existing images
+- [openrouter](./openrouter.md) - Alternative AI generation via OpenRouter

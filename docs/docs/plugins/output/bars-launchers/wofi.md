@@ -103,5 +103,5 @@ window {
 ## See also
 
 - [Wofi documentation](https://hg.sr.ht/~scoopta/wofi)
-- [fuzzel](/docs/plugins/output/bars-launchers/fuzzel)
-- [walker](/docs/plugins/output/bars-launchers/walker)
+- [fuzzel](./fuzzel.md)
+- [walker](./walker.md)

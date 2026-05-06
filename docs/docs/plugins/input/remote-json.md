@@ -191,5 +191,5 @@ free — prefer it unless you need to override the URL or behaviour by hand.
 ## See also
 
 - [paletty](./paletty.md) - Dedicated paletty.dev fetcher
-- [remote-css](/docs/plugins/input/remote-css) - Parse CSS variables
-- [file](/docs/plugins/input/file) - Local colour specification
+- [remote-css](./remote-css.md) - Parse CSS variables
+- [file](./file.md) - Local colour specification

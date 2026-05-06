@@ -186,6 +186,6 @@ tinct generate -i file \
 
 ## Next steps
 
-- [Theme detection](/docs/concepts/theme-detection) - Light/dark detection
-- [Templating](/docs/templating) - Use roles in custom templates
-- [Format conversion](/docs/templating/format-conversion) - Output formats
+- [Theme detection](./theme-detection.md) - Light/dark detection
+- [Templating](../templating/index.md) - Use roles in custom templates
+- [Format conversion](../templating/format-conversion.md) - Output formats

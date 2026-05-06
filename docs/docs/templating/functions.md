@@ -297,5 +297,5 @@ theme {{ .ThemeName }}
 
 ## See also
 
-- [Colour access](/docs/templating/color-access)
-- [Format conversion](/docs/templating/format-conversion)
+- [Colour access](./color-access.md)
+- [Format conversion](./format-conversion.md)

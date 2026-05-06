@@ -12,11 +12,11 @@ Terminal emulators with colour palette support:
 
 | Plugin | Description | Config format |
 |--------|-------------|---------------|
-| [alacritty](/docs/plugins/output/terminals/alacritty) | Alacritty terminal | TOML |
-| [ghostty](/docs/plugins/output/terminals/ghostty) | Ghostty terminal | Config file |
-| [kitty](/docs/plugins/output/terminals/kitty) | Kitty terminal | Config file |
-| [konsole](/docs/plugins/output/terminals/konsole) | KDE Konsole | .colorscheme |
-| [ptyxis](/docs/plugins/output/terminals/ptyxis) | GNOME Ptyxis | .palette |
+| [alacritty](./terminals/alacritty.md) | Alacritty terminal | TOML |
+| [ghostty](./terminals/ghostty.md) | Ghostty terminal | Config file |
+| [kitty](./terminals/kitty.md) | Kitty terminal | Config file |
+| [konsole](./terminals/konsole.md) | KDE Konsole | .colorscheme |
+| [ptyxis](./terminals/ptyxis.md) | GNOME Ptyxis | .palette |
 | [warp](./terminals/warp.md) | Warp terminal | YAML |
 
 ## Desktop environments
@@ -25,13 +25,13 @@ Desktop theming for GNOME, KDE, and toolkits:
 
 | Plugin | Description | Requirements |
 |--------|-------------|--------------|
-| [gnome-shell](/docs/plugins/output/desktop/gnome-shell) | GNOME Shell theme | User Themes extension |
-| [kde-plasma](/docs/plugins/output/desktop/kde-plasma) | KDE Plasma colours | Plasma desktop |
-| [gtk3](/docs/plugins/output/desktop/gtk3) | GTK3 applications | adw-gtk3-theme |
-| [gtk4](/docs/plugins/output/desktop/gtk4) | GTK4 applications | - |
-| [libadwaita](/docs/plugins/output/desktop/libadwaita) | Libadwaita apps | - |
-| [qt5](/docs/plugins/output/desktop/qt5) | Qt5 applications | qt5ct |
-| [qt6](/docs/plugins/output/desktop/qt6) | Qt6 applications | qt6ct |
+| [gnome-shell](./desktop/gnome-shell.md) | GNOME Shell theme | User Themes extension |
+| [kde-plasma](./desktop/kde-plasma.md) | KDE Plasma colours | Plasma desktop |
+| [gtk3](./desktop/gtk3.md) | GTK3 applications | adw-gtk3-theme |
+| [gtk4](./desktop/gtk4.md) | GTK4 applications | - |
+| [libadwaita](./desktop/libadwaita.md) | Libadwaita apps | - |
+| [qt5](./desktop/qt5.md) | Qt5 applications | qt5ct |
+| [qt6](./desktop/qt6.md) | Qt6 applications | qt6ct |
 
 ## Hyprland ecosystem
 
@@ -40,8 +40,8 @@ Window manager and related tools:
 | Plugin | Description | Features |
 |--------|-------------|----------|
 | [hyprland](/docs/plugins/output/hyprland) | Hyprland compositor | Colour variables |
-| [hyprlock](/docs/plugins/output/hyprland/hyprlock) | Screen locker | Wallpaper support |
-| [hyprpaper](/docs/plugins/output/hyprland/hyprpaper) | Wallpaper manager | Auto-apply |
+| [hyprlock](./hyprland/hyprlock.md) | Screen locker | Wallpaper support |
+| [hyprpaper](./hyprland/hyprpaper.md) | Wallpaper manager | Auto-apply |
 
 ## Bars and launchers
 
@@ -49,12 +49,12 @@ Status bars, notification daemons, and application launchers:
 
 | Plugin | Description | Config format |
 |--------|-------------|---------------|
-| [waybar](/docs/plugins/output/bars-launchers/waybar) | Wayland bar | CSS |
-| [dunst](/docs/plugins/output/bars-launchers/dunst) | Notifications | dunstrc |
-| [swayosd](/docs/plugins/output/bars-launchers/swayosd) | On-screen display | SCSS |
-| [fuzzel](/docs/plugins/output/bars-launchers/fuzzel) | App launcher | INI |
-| [walker](/docs/plugins/output/bars-launchers/walker) | App launcher | JSON |
-| [wofi](/docs/plugins/output/bars-launchers/wofi) | App launcher | CSS |
+| [waybar](./bars-launchers/waybar.md) | Wayland bar | CSS |
+| [dunst](./bars-launchers/dunst.md) | Notifications | dunstrc |
+| [swayosd](./bars-launchers/swayosd.md) | On-screen display | SCSS |
+| [fuzzel](./bars-launchers/fuzzel.md) | App launcher | INI |
+| [walker](./bars-launchers/walker.md) | App launcher | JSON |
+| [wofi](./bars-launchers/wofi.md) | App launcher | CSS |
 
 ## Editors and multiplexers
 
@@ -62,8 +62,8 @@ Text editors and terminal multiplexers:
 
 | Plugin | Description | Config format |
 |--------|-------------|---------------|
-| [neovim](/docs/plugins/output/editors/neovim) | Neovim editor | Lua |
-| [zellij](/docs/plugins/output/editors/zellij) | Terminal multiplexer | KDL |
+| [neovim](./editors/neovim.md) | Neovim editor | Lua |
+| [zellij](./editors/zellij.md) | Terminal multiplexer | KDL |
 
 ## Special purpose
 
@@ -71,9 +71,9 @@ Export and utility plugins:
 
 | Plugin | Description | Purpose |
 |--------|-------------|---------|
-| [markdown](/docs/plugins/output/special/markdown) | Theme export | Save portable themes |
-| [template](/docs/plugins/output/special/template) | Custom templates | User-defined output |
-| [histui](/docs/plugins/output/special/histui) | Notification daemon | histui theming |
+| [markdown](./special/markdown.md) | Theme export | Save portable themes |
+| [template](./special/template.md) | Custom templates | User-defined output |
+| [histui](./special/histui.md) | Notification daemon | histui theming |
 
 ## Using output plugins
 
@@ -126,5 +126,5 @@ Generated files are tracked in `~/.config/tinct/.tinct-manifest.json`.
 
 ## See also
 
-- [Plugin overview](/docs/plugins/overview) - Architecture
-- [Plugin development](/docs/plugin-development) - Creating custom plugins
+- [Plugin overview](../overview.md) - Architecture
+- [Plugin development](../../plugin-development/index.md) - Creating custom plugins

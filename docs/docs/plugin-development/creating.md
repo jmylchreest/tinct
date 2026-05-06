@@ -410,6 +410,6 @@ tinct generate -i image -p wallpaper.jpg -o my-plugin --dry-run
 
 ## See also
 
-- [Protocols](/docs/plugin-development/protocols) - Communication details
-- [Lifecycle hooks](/docs/plugin-development/hooks) - Pre/post execution
-- [Publishing](/docs/plugin-development/publishing) - Share your plugin
+- [Protocols](./protocols.md) - Communication details
+- [Lifecycle hooks](./hooks.md) - Pre/post execution
+- [Publishing](./publishing.md) - Share your plugin

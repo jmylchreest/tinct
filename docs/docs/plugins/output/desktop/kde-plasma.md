@@ -83,6 +83,6 @@ plasma-apply-colorscheme TinctLight1
 ## See also
 
 - [KDE Plasma documentation](https://docs.kde.org/stable5/en/)
-- [konsole](/docs/plugins/output/terminals/konsole)
-- [qt5](/docs/plugins/output/desktop/qt5)
-- [qt6](/docs/plugins/output/desktop/qt6)
+- [konsole](../terminals/konsole.md)
+- [qt5](./qt5.md)
+- [qt6](./qt6.md)

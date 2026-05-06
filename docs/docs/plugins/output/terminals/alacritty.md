@@ -77,5 +77,5 @@ Tinct maps semantic colours to ANSI positions:
 ## See also
 
 - [Alacritty documentation](https://alacritty.org/config-alacritty.html)
-- [ghostty](/docs/plugins/output/terminals/ghostty)
-- [kitty](/docs/plugins/output/terminals/kitty)
+- [ghostty](./ghostty.md)
+- [kitty](./kitty.md)

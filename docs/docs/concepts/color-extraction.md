@@ -117,6 +117,6 @@ Extracted colours include weights representing their prominence in the source:
 
 ## Next steps
 
-- [Material Design 3](/docs/concepts/material-design) - How colours are categorised
-- [Colour roles](/docs/concepts/color-roles) - All 49+ semantic roles
-- [Theme detection](/docs/concepts/theme-detection) - Light/dark auto-detection
+- [Material Design 3](./material-design.md) - How colours are categorised
+- [Colour roles](./color-roles.md) - All 49+ semantic roles
+- [Theme detection](./theme-detection.md) - Light/dark auto-detection

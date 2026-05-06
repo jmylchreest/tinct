@@ -129,6 +129,6 @@ Some input plugins provide theme hints:
 
 ## Next steps
 
-- [Colour roles](/docs/concepts/color-roles) - Role-based colour system
-- [Material Design 3](/docs/concepts/material-design) - Design system compliance
-- [Generate command](/docs/commands/generate) - Full command options
+- [Colour roles](./color-roles.md) - Role-based colour system
+- [Material Design 3](./material-design.md) - Design system compliance
+- [Generate command](../commands/generate.md) - Full command options

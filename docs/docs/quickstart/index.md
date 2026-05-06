@@ -8,7 +8,7 @@ Get started with tinct in minutes. This section covers the basics of generating 
 
 ## Prerequisites
 
-- Tinct [installed](/docs/installation)
+- Tinct [installed](../installation.md)
 - An image to extract colours from (wallpaper recommended)
 
 ## Your first theme
@@ -57,9 +57,9 @@ After generation, tinct:
 2. Tracks all generated files in `.tinct-manifest.json`
 3. Optionally triggers reload hooks (e.g., reloading Kitty, applying Hyprpaper)
 
-See the individual [plugin documentation](/docs/plugins/overview) for reload behaviour and output paths.
+See the individual [plugin documentation](../plugins/overview.md) for reload behaviour and output paths.
 
 ## Quick start guides
 
-- [Create your first theme](/docs/quickstart/first-theme) - Step-by-step walkthrough
-- [Common workflows](/docs/quickstart/workflows) - Popular theme recipes
+- [Create your first theme](./first-theme.md) - Step-by-step walkthrough
+- [Common workflows](./workflows.md) - Popular theme recipes

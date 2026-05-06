@@ -63,5 +63,5 @@ palette = 15=#a6adc8
 ## See also
 
 - [Ghostty documentation](https://ghostty.org/docs)
-- [alacritty](/docs/plugins/output/terminals/alacritty)
-- [kitty](/docs/plugins/output/terminals/kitty)
+- [alacritty](./alacritty.md)
+- [kitty](./kitty.md)

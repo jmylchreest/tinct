@@ -111,6 +111,6 @@ rm -rf ~/.config/tinct/templates/hyprland
 
 ## See also
 
-- [Templating overview](/docs/templating/)
-- [Template functions reference](/docs/templating/functions)
-- [Colour access patterns](/docs/templating/color-access)
+- [Templating overview](../../../templating/index.md)
+- [Template functions reference](../../../templating/functions.md)
+- [Colour access patterns](../../../templating/color-access.md)

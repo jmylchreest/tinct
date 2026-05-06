@@ -91,5 +91,5 @@ themes {
 ## See also
 
 - [Zellij documentation](https://zellij.dev/documentation/)
-- [neovim](/docs/plugins/output/editors/neovim)
-- [kitty](/docs/plugins/output/terminals/kitty)
+- [neovim](./neovim.md)
+- [kitty](../terminals/kitty.md)

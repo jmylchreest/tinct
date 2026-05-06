@@ -91,4 +91,4 @@ tinct generate -i image -p ~/wallpaper.jpg \
 
 - [Hyprlock documentation](https://wiki.hyprland.org/Hypr-Ecosystem/hyprlock/)
 - [hyprland](/docs/plugins/output/hyprland)
-- [hyprpaper](/docs/plugins/output/hyprland/hyprpaper)
+- [hyprpaper](./hyprpaper.md)

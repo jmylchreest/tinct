@@ -333,6 +333,6 @@ Tinct checks version compatibility and warns if a plugin uses an incompatible ve
 
 ## See also
 
-- [Creating plugins](/docs/plugin-development/creating) - Implementation examples
-- [Lifecycle hooks](/docs/plugin-development/hooks) - Pre/post execution
+- [Creating plugins](./creating.md) - Implementation examples
+- [Lifecycle hooks](./hooks.md) - Pre/post execution
 - [HashiCorp go-plugin](https://github.com/hashicorp/go-plugin) - RPC framework

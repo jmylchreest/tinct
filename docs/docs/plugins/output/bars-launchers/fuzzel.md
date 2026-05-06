@@ -66,5 +66,5 @@ border=89b4faff
 ## See also
 
 - [Fuzzel documentation](https://codeberg.org/dnkl/fuzzel)
-- [wofi](/docs/plugins/output/bars-launchers/wofi)
-- [walker](/docs/plugins/output/bars-launchers/walker)
+- [wofi](./wofi.md)
+- [walker](./walker.md)

@@ -189,5 +189,5 @@ selection_bg {{ $accent | withAlpha 0.3 | rgba }}
 
 ## See also
 
-- [Functions reference](/docs/templating/functions)
-- [Format conversion](/docs/templating/format-conversion)
+- [Functions reference](./functions.md)
+- [Format conversion](./format-conversion.md)

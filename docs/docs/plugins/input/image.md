@@ -185,5 +185,5 @@ Output plugins like `hyprpaper` use `.WallpaperPath` to:
 
 ## See also
 
-- [Colour extraction](/docs/concepts/color-extraction)
-- [google-genai](/docs/plugins/input/google-genai) - AI image generation
+- [Colour extraction](../../concepts/color-extraction.md)
+- [google-genai](./google-genai.md) - AI image generation

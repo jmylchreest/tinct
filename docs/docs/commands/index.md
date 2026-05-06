@@ -10,10 +10,10 @@ Tinct provides several commands for generating themes, extracting palettes, and 
 
 | Command | Description |
 |---------|-------------|
-| [`generate`](/docs/commands/generate) | Generate theme configurations from a colour source |
-| [`extract`](/docs/commands/extract) | Extract colours without generating configurations |
-| [`plugins`](/docs/commands/plugins) | Manage input and output plugins |
-| [`files`](/docs/commands/files) | Track and manage generated files |
+| [`generate`](./generate.md) | Generate theme configurations from a colour source |
+| [`extract`](./extract.md) | Extract colours without generating configurations |
+| [`plugins`](./plugins.md) | Manage input and output plugins |
+| [`files`](./files.md) | Track and manage generated files |
 
 ## Global flags
 

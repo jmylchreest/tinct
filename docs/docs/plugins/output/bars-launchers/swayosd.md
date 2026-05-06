@@ -72,5 +72,5 @@ image {
 ## See also
 
 - [SwayOSD repository](https://github.com/ErikReider/SwayOSD)
-- [waybar](/docs/plugins/output/bars-launchers/waybar)
+- [waybar](./waybar.md)
 - [hyprland](/docs/plugins/output/hyprland)

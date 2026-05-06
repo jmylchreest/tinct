@@ -8,7 +8,7 @@ Export themes to portable markdown format.
 
 ## Description
 
-The markdown plugin exports your colour palette to a markdown file with embedded colours and optional wallpaper. This format allows you to save, share, and reload themes later using the [markdown input plugin](/docs/plugins/input/markdown).
+The markdown plugin exports your colour palette to a markdown file with embedded colours and optional wallpaper. This format allows you to save, share, and reload themes later using the [markdown input plugin](../../input/markdown.md).
 
 ## Output path
 
@@ -124,5 +124,5 @@ The markdown format enables:
 
 ## See also
 
-- [markdown input plugin](/docs/plugins/input/markdown)
-- [Theme portability](/docs/concepts/theme-detection)
+- [markdown input plugin](../../input/markdown.md)
+- [Theme portability](../../../concepts/theme-detection.md)

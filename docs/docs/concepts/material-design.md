@@ -123,6 +123,6 @@ tinct generate -i file \
 
 ## Next steps
 
-- [Colour roles](/docs/concepts/color-roles) - Full list of all roles
-- [Theme detection](/docs/concepts/theme-detection) - Light/dark detection
-- [Templating](/docs/templating) - Access colours in templates
+- [Colour roles](./color-roles.md) - Full list of all roles
+- [Theme detection](./theme-detection.md) - Light/dark detection
+- [Templating](../templating/index.md) - Access colours in templates

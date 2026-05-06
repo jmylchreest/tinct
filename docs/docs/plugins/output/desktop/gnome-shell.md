@@ -81,5 +81,5 @@ The GNOME Shell theme styles:
 ## See also
 
 - [GNOME Shell extensions](https://extensions.gnome.org/)
-- [libadwaita](/docs/plugins/output/desktop/libadwaita)
-- [gtk4](/docs/plugins/output/desktop/gtk4)
+- [libadwaita](./libadwaita.md)
+- [gtk4](./gtk4.md)
