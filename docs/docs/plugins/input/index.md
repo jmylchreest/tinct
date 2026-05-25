@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 0
 ---
 
 # Input plugins
@@ -15,7 +15,6 @@ Input plugins extract or generate colour palettes from various sources.
 | [openrouter](./openrouter.md) | Multi-model AI | Alternative AI generation |
 | [remote-json](./remote-json.md) | JSON URL fetching | Theme repositories, Catppuccin |
 | [remote-css](./remote-css.md) | CSS parsing | CSS variable themes |
-| [paletty](./paletty.md) | paletty.dev fetcher (external) | Curated terminal palettes |
 | [file](./file.md) | Manual specification | Custom colour lists |
 | [markdown](./markdown.md) | Saved themes | Restore exported themes |
 
@@ -78,7 +77,7 @@ See [Template functions: Context fields](../../templating/functions.md#context-f
 | Scenario | Recommended input |
 |----------|-------------------|
 | Match your wallpaper | `image` |
-| Use a known theme | `remote-json`, `paletty`, or `file` |
+| Use a known theme | `remote-json` or `file` |
 | Want something unique | `google-genai` or `openrouter` |
 | Restore saved theme | `markdown` |
 | Quick custom colours | `file` |
