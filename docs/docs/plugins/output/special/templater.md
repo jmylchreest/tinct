@@ -252,4 +252,4 @@ The plugin only creates parent directories if `settings.create_dirs: true`. Set 
 
 ## Related plugins
 
-- Use templater alongside any dedicated tinct output plugin — it's complementary, not a replacement. If a built-in or contrib plugin already targets your app (see the [output plugins index](../../../../docs/docs/plugins/output)), prefer that — you'll get reload handling, drift detection, and a tested template for free.
+- Use templater alongside any dedicated tinct output plugin — it's complementary, not a replacement. If a built-in or contrib plugin already targets your app, prefer that — you'll get reload handling, drift detection, and a tested template for free. See the output plugins index in the tinct docs site for what's available.

@@ -27,11 +27,11 @@ Extract or generate colour palettes from various sources:
 Generate configuration files for applications:
 
 - [Terminals](./output/index.md#terminals) - Alacritty, Ghostty, Kitty, Konsole, Ptyxis
-- [Desktop environments](./output/index.md#desktop-environments) - GNOME, KDE, GTK, Qt
-- [Window managers](./output/index.md#hyprland-ecosystem) - Hyprland, Hyprlock, Hyprpaper
-- [Bars and launchers](./output/index.md#bars-and-launchers) - Waybar, Dunst, Fuzzel, etc.
-- [Editors](./output/index.md#editors-and-multiplexers) - Neovim, Zellij
-- [Special](./output/index.md#special-purpose) - Markdown export, custom templates
+- [Desktop Environments](./output/index.md#desktop-environments) - GNOME, KDE, GTK, Qt
+- [Hyprland Ecosystem](./output/index.md#hyprland-ecosystem) - Hyprland, Hyprlock, Hyprpaper
+- [Bars & Launchers](./output/index.md#bars--launchers) - Waybar, Dunst, Fuzzel, etc.
+- [Editors & Multiplexers](./output/index.md#editors--multiplexers) - Neovim, Zellij
+- [Special Purpose](./output/index.md#special-purpose) - Markdown export, custom templates
 
 ## Built-in vs external
 

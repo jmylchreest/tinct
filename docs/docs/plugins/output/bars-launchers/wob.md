@@ -209,7 +209,9 @@ tinct-plugin-wob send 0
 
 5. **External state**: the wrapper creates runtime files under `$XDG_RUNTIME_DIR/wob/` (FIFO at `wob.fifo`, merged config cache, PID file). These are cleaned by `tinct-plugin-wob stop`. To purge any stragglers:
 
-       rm -rf "${XDG_RUNTIME_DIR:-/run/user/$UID}/wob"
+   ```bash
+   rm -rf "${XDG_RUNTIME_DIR:-/run/user/$UID}/wob"
+   ```
 
    To remove the plugin binary:
 
