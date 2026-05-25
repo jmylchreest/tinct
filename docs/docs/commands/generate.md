@@ -44,7 +44,9 @@ The `generate` command is the primary way to create and apply themes. It:
 
 ## Plugin-specific flags
 
-Each plugin may register additional flags with the format `--<plugin>.<flag>`:
+### Built-in plugins
+
+Each built-in plugin registers its own cobra flags in the `--<plugin>.<flag>` namespace. They appear in `tinct generate --help` and have full type checking / completion:
 
 ```bash
 # Image plugin
@@ -57,7 +59,39 @@ Each plugin may register additional flags with the format `--<plugin>.<flag>`:
 --markdown.include-thumbnail
 ```
 
-See individual plugin documentation for available flags.
+See each plugin's docs page for the available flags.
+
+### External plugins
+
+External plugins (anything installed via `tinct plugins install`, e.g. `paletty`, `awob`, `opencode`) don't have their flags compiled into the tinct binary, so they pass arguments through a different mechanism: the `--plugin-args` flag, with a JSON-encoded value per plugin:
+
+```bash
+# Paletty (input plugin, external) — fetch a specific palette
+tinct generate -i paletty \
+  --plugin-args 'paletty={"palette":"https://paletty.dev/p/MDRHC0lqRj/midnight-a"}' \
+  -o all
+
+# Spicetify (output plugin, external) with custom output dir
+tinct generate -i image -p ~/wallpaper.jpg \
+  -o spicetify \
+  --plugin-args 'spicetify={"output-dir":"~/.config/spicetify/Themes/custom"}'
+```
+
+The key in `key=value` is the plugin name; the value is a JSON object whose keys are the args the plugin documents (see `tinct plugins list` or run the plugin's binary with `--plugin-info` to discover them).
+
+`--plugin-args` is repeatable, one per plugin:
+
+```bash
+tinct generate -i paletty -o spicetify \
+  --plugin-args 'paletty={"palette":"<url>"}' \
+  --plugin-args 'spicetify={"output-dir":"<path>"}'
+```
+
+:::note Why two syntaxes?
+
+Built-in plugins are linked into the tinct binary at compile time, so their flags can be registered with cobra and surfaced in `--help`. External plugins are separate executables discovered at runtime — tinct can't statically know their flag names, so it passes a generic key=value map through the plugin protocol. The dot-prefix flag namespace and the `--plugin-args` JSON are functionally equivalent; the difference is purely about what's knowable at compile time vs. runtime.
+
+:::
 
 ## Examples
 
