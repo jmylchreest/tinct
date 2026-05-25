@@ -6,72 +6,83 @@ sidebar_position: 1
 
 Output plugins generate configuration files for applications and devices.
 
+{/* AUTO-GENERATED PLUGIN TABLES — DO NOT EDIT BETWEEN THE MARKERS.
+    Regenerated from in-tree READMEs by docs/scripts/sync-plugin-readmes.mjs.
+    Plugins are grouped by `plugin.category` frontmatter; section
+    headings and ordering live in the script's `renderOutputTables`
+    function. To add curated copy beneath a category, do it after the
+    closing marker. */}
+{/* BEGIN AUTO-PLUGIN-TABLE */}
+
 ## Terminals
 
-Terminal emulators with colour palette support:
-
-| Plugin | Description | Config format |
-|--------|-------------|---------------|
-| [alacritty](./terminals/alacritty.md) | Alacritty terminal | TOML |
-| [ghostty](./terminals/ghostty.md) | Ghostty terminal | Config file |
-| [kitty](./terminals/kitty.md) | Kitty terminal | Config file |
-| [konsole](./terminals/konsole.md) | KDE Konsole | .colorscheme |
-| [warp](./terminals/warp.md) | Warp terminal | YAML |
+| Plugin | App | Source |
+|--------|-----|--------|
+| [alacritty](./terminals/alacritty.md) | Alacritty | builtin |
+| [ghostty](./terminals/ghostty.md) | Ghostty | builtin |
+| [foot](./terminals/foot.md) | foot | builtin |
+| [kitty](./terminals/kitty.md) | kitty | builtin |
+| [konsole](./terminals/konsole.md) | Konsole | builtin |
+| [warp](./terminals/warp.md) | Warp | builtin |
+| [wezterm](./terminals/wezterm.md) | WezTerm | builtin |
 
 ## Desktop environments
 
-Desktop theming for GNOME, KDE, and toolkits:
-
-| Plugin | Description | Requirements |
-|--------|-------------|--------------|
-| [gnome-shell](./desktop/gnome-shell.md) | GNOME Shell theme | User Themes extension |
-| [kde-plasma](./desktop/kde-plasma.md) | KDE Plasma colours | Plasma desktop |
-| [gtk3](./desktop/gtk3.md) | GTK3 applications | adw-gtk3-theme |
-| [gtk4](./desktop/gtk4.md) | GTK4 applications | - |
-| [libadwaita](./desktop/libadwaita.md) | Libadwaita apps | - |
-| [qt5](./desktop/qt5.md) | Qt5 applications | qt5ct |
-| [qt6](./desktop/qt6.md) | Qt6 applications | qt6ct |
+| Plugin | App | Source |
+|--------|-----|--------|
+| [gnome-shell](./desktop/gnome-shell.md) | GNOME Shell | builtin |
+| [gtk3](./desktop/gtk3.md) | GTK 3 | builtin |
+| [gtk4](./desktop/gtk4.md) | GTK 4 | builtin |
+| [libadwaita](./desktop/libadwaita.md) | Libadwaita | builtin |
+| [kde-plasma](./desktop/kde-plasma.md) | KDE Plasma | builtin |
+| [qt5](./desktop/qt5.md) | Qt 5 | builtin |
+| [qt6](./desktop/qt6.md) | Qt 6 | builtin |
 
 ## Hyprland ecosystem
 
-Window manager and related tools:
-
-| Plugin | Description | Features |
-|--------|-------------|----------|
-| [hyprland](/docs/plugins/output/hyprland) | Hyprland compositor | Colour variables |
-| [hyprlock](./hyprland/hyprlock.md) | Screen locker | Wallpaper support |
-| [hyprpaper](./hyprland/hyprpaper.md) | Wallpaper manager | Auto-apply |
+| Plugin | App | Source |
+|--------|-----|--------|
+| [hyprland](./hyprland/hyprland.md) | Hyprland | builtin |
+| [hyprlock](./hyprland/hyprlock.md) | Hyprlock | builtin |
+| [hyprpaper](./hyprland/hyprpaper.md) | Hyprpaper | builtin |
 
 ## Bars and launchers
 
-Status bars, notification daemons, and application launchers:
-
-| Plugin | Description | Config format |
-|--------|-------------|---------------|
-| [waybar](./bars-launchers/waybar.md) | Wayland bar | CSS |
-| [dunst](./bars-launchers/dunst.md) | Notifications | dunstrc |
-| [swayosd](./bars-launchers/swayosd.md) | On-screen display | SCSS |
-| [fuzzel](./bars-launchers/fuzzel.md) | App launcher | INI |
-| [walker](./bars-launchers/walker.md) | App launcher | JSON |
-| [wofi](./bars-launchers/wofi.md) | App launcher | CSS |
+| Plugin | App | Source |
+|--------|-----|--------|
+| [wofi](./bars-launchers/wofi.md) | Wofi | builtin |
+| [waybar](./bars-launchers/waybar.md) | Waybar | builtin |
+| [walker](./bars-launchers/walker.md) | Walker | builtin |
+| [dunst](./bars-launchers/dunst.md) | Dunst | builtin |
+| [fuzzel](./bars-launchers/fuzzel.md) | Fuzzel | builtin |
+| [rofi](./bars-launchers/rofi.md) | rofi | builtin |
+| [swayosd](./bars-launchers/swayosd.md) | SwayOSD | builtin |
 
 ## Editors and multiplexers
 
-Text editors and terminal multiplexers:
-
-| Plugin | Description | Config format |
-|--------|-------------|---------------|
-| [neovim](./editors/neovim.md) | Neovim editor | Lua |
-| [zellij](./editors/zellij.md) | Terminal multiplexer | KDL |
+| Plugin | App | Source |
+|--------|-----|--------|
+| [neovim](./editors/neovim.md) | Neovim | builtin |
+| [zellij](./editors/zellij.md) | Zellij | builtin |
+| [helix](./editors/helix.md) | Helix | builtin |
+| [opencode](./editors/opencode.md) | OpenCode | external |
 
 ## Special purpose
 
-Export and utility plugins:
+| Plugin | App | Source |
+|--------|-----|--------|
+| [yazi](./special/yazi.md) | Yazi | builtin |
+| [wbg](./special/wbg.md) | wbg | builtin |
+| [tmux](./special/tmux.md) | tmux | builtin |
+| [rosec](./special/rosec.md) | ROsec | builtin |
+| [mc](./special/mc.md) | Midnight Commander | builtin |
+| [markdown](./special/markdown.md) | Tinct Markdown theme export | builtin |
+| [histui](./special/histui.md) | histui | builtin |
+| [btop](./special/btop.md) | btop | builtin |
+| [awww](./special/awww.md) | awww wallpaper daemon | builtin |
+| [spicetify](./special/spicetify.md) | Spicetify | external |
 
-| Plugin | Description | Purpose |
-|--------|-------------|---------|
-| [markdown](./special/markdown.md) | Theme export | Save portable themes |
-| [histui](./special/histui.md) | Notification daemon | histui theming |
+{/* END AUTO-PLUGIN-TABLE */}
 
 ## Using output plugins
 

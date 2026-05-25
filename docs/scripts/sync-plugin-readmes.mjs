@@ -60,9 +60,10 @@ async function main() {
   const nameIndex = buildNameIndex(readmes);
   await cleanGeneratedDirs();
   const written = await writeAll(readmes, nameIndex);
+  const landings = await regenerateLandingTables(readmes);
 
   console.error(
-    `\ntinct-sync-plugin-readmes: ${written} pages written, ${warningCount} warning(s)`
+    `\ntinct-sync-plugin-readmes: ${written} pages written, ${landings} landing table(s) refreshed, ${warningCount} warning(s)`
   );
 }
 
@@ -259,6 +260,110 @@ function rewriteCrossLinks(content, selfRaw, nameIndex) {
       /\]\((\.\.?(?:\/[^/)]+)*\/)([\w-]+)\/?\)/g,
       (full, prefix, key) => replacer(full, prefix, key, '')
     );
+}
+
+// regenerateLandingTables rewrites the plugin tables in
+// docs/plugins/{input,output}/index.md between the AUTO-PLUGIN-TABLE
+// markers. Curated content above and below the markers is preserved.
+async function regenerateLandingTables(readmes) {
+  const outputIndex = path.join(OUTPUT_BASE, 'output', 'index.md');
+  const inputIndex = path.join(OUTPUT_BASE, 'input', 'index.md');
+  let count = 0;
+  if (await replaceMarkerBlock(outputIndex, renderOutputTables(readmes))) count++;
+  if (await replaceMarkerBlock(inputIndex, renderInputTable(readmes))) count++;
+  return count;
+}
+
+// replaceMarkerBlock rewrites the content between the `{/* BEGIN
+// AUTO-PLUGIN-TABLE */}` and `{/* END AUTO-PLUGIN-TABLE */}` markers.
+// Returns true if the file was updated, false if the markers are
+// missing (in which case we leave the file alone and warn).
+async function replaceMarkerBlock(file, body) {
+  let content;
+  try {
+    content = await fs.readFile(file, 'utf8');
+  } catch (e) {
+    warn(`${file}: cannot read for landing-table regen: ${e.message}`);
+    return false;
+  }
+  const beginMarker = '{/* BEGIN AUTO-PLUGIN-TABLE */}';
+  const endMarker = '{/* END AUTO-PLUGIN-TABLE */}';
+  const beginIdx = content.indexOf(beginMarker);
+  const endIdx = content.indexOf(endMarker);
+  if (beginIdx === -1 || endIdx === -1 || endIdx < beginIdx) {
+    warn(`${file}: AUTO-PLUGIN-TABLE markers missing or out of order; skipping`);
+    return false;
+  }
+  const before = content.slice(0, beginIdx + beginMarker.length);
+  const after = content.slice(endIdx);
+  const rewritten = `${before}\n\n${body.trimEnd()}\n\n${after}`;
+  if (rewritten === content) return false;
+  await fs.writeFile(file, rewritten);
+  return true;
+}
+
+// Output landing: tables grouped by plugin.category. Category order
+// and labels are explicit (not alphabetical) so the rendering reads
+// the way humans expect.
+const OUTPUT_CATEGORIES = [
+  ['terminals', 'Terminals'],
+  ['desktop', 'Desktop environments'],
+  ['hyprland', 'Hyprland ecosystem'],
+  ['bars-launchers', 'Bars and launchers'],
+  ['editors', 'Editors and multiplexers'],
+  ['special', 'Special purpose'],
+];
+
+function renderOutputTables(readmes) {
+  const outputs = readmes
+    .filter((r) => r.frontmatter.plugin?.type === 'output')
+    .sort(byFrontmatterPosition);
+  const sections = [];
+  for (const [cat, label] of OUTPUT_CATEGORIES) {
+    const items = outputs.filter((r) => r.frontmatter.plugin.category === cat);
+    if (items.length === 0) continue;
+    const rows = items
+      .map((r) => {
+        const p = r.frontmatter.plugin;
+        const link = `./${cat}/${p.name}.md`;
+        const desc = p.app ? `${p.app}` : '';
+        const source = p.source === 'external' ? 'external' : 'builtin';
+        return `| [${p.name}](${link}) | ${desc} | ${source} |`;
+      })
+      .join('\n');
+    sections.push(
+      `## ${label}\n\n| Plugin | App | Source |\n|--------|-----|--------|\n${rows}`
+    );
+  }
+  return sections.join('\n\n');
+}
+
+function renderInputTable(readmes) {
+  const inputs = readmes
+    .filter((r) => r.frontmatter.plugin?.type === 'input')
+    .sort(byFrontmatterPosition);
+  const rows = inputs
+    .map((r) => {
+      const p = r.frontmatter.plugin;
+      const link = `./${p.name}.md`;
+      const desc = p.description ?? '';
+      const sourceType = p.source_type ?? '';
+      const reqs = [];
+      if (p.requires_network) reqs.push('network');
+      if (Array.isArray(p.requires_credentials) && p.requires_credentials.length > 0) {
+        reqs.push(`creds: ${p.requires_credentials.join(', ')}`);
+      }
+      const notes = reqs.join('; ');
+      return `| [${p.name}](${link}) | ${desc} | ${sourceType} | ${notes} |`;
+    })
+    .join('\n');
+  return `| Plugin | Description | Source type | Requires |\n|--------|-------------|-------------|----------|\n${rows}`;
+}
+
+function byFrontmatterPosition(a, b) {
+  const pa = a.frontmatter.sidebar_position ?? 99;
+  const pb = b.frontmatter.sidebar_position ?? 99;
+  return pa - pb;
 }
 
 main().catch((e) => {
