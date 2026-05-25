@@ -26,7 +26,7 @@ Output plugins generate configuration files for applications and devices.
 | [warp](./terminals/warp.md) | YAML custom-theme file for Warp, the Rust-based AI-first terminal. |
 | [wezterm](./terminals/wezterm.md) | TOML colour scheme for WezTerm, Wez Furlong's GPU-accelerated, Lua-configurable terminal. |
 
-## Desktop environments
+## Desktop Environments
 
 | Plugin | Description |
 |--------|-------------|
@@ -38,7 +38,7 @@ Output plugins generate configuration files for applications and devices.
 | [qt5](./desktop/qt5.md) | Qt5ct custom colour scheme for Qt 5 applications on non-Plasma desktops. qt5ct is Qt 5's "configuration tool" — it provides a… |
 | [qt6](./desktop/qt6.md) | Qt6ct custom colour scheme for Qt 6 applications on non-Plasma desktops. qt6ct is the Qt 6 successor to qt5ct — a QPlatformTh… |
 
-## Hyprland ecosystem
+## Hyprland Ecosystem
 
 | Plugin | Description |
 |--------|-------------|
@@ -46,7 +46,7 @@ Output plugins generate configuration files for applications and devices.
 | [hyprlock](./hyprland/hyprlock.md) | Colour palette for Hyprlock, the screen locker for Hyprland. |
 | [hyprpaper](./hyprland/hyprpaper.md) | Hyprpaper wallpaper configuration that wires the wallpaper image picked up by tinct into Hyprpaper's preload / wallpaper dire… |
 
-## Bars and launchers
+## Bars & Launchers
 
 | Plugin | Description |
 |--------|-------------|
@@ -58,7 +58,7 @@ Output plugins generate configuration files for applications and devices.
 | [rofi](./bars-launchers/rofi.md) | Rofi theme as two .rasi files: a palette (tinct-colours.rasi) declaring every tinct role as a named rasi colour, and a main t… |
 | [swayosd](./bars-launchers/swayosd.md) | GTK CSS stylesheet for SwayOSD, the on-screen-display server for Sway and other wlroots compositors. |
 
-## Editors and multiplexers
+## Editors & Multiplexers
 
 | Plugin | Description |
 |--------|-------------|
@@ -67,7 +67,7 @@ Output plugins generate configuration files for applications and devices.
 | [helix](./editors/helix.md) | TOML theme for Helix, the modal post-modern text editor written in Rust. |
 | [opencode](./editors/opencode.md) | Complete theme file for OpenCode, the AI-assisted coding agent. |
 
-## Special purpose
+## Special Purpose
 
 | Plugin | Description |
 |--------|-------------|
