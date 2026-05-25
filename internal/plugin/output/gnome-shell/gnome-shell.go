@@ -65,7 +65,7 @@ func (p *Plugin) Version() string {
 // RegisterFlags registers command-line flags for this plugin.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&p.outputDir, "gnome-shell.output-dir", "",
-		"Output directory for GNOME Shell theme (default: ~/.local/share/themes/tinct/gnome-shell)")
+		"Output directory for GNOME Shell theme (default: ~/.local/share/themes)")
 }
 
 // SetVerbose enables verbose output.
@@ -84,7 +84,7 @@ func (p *Plugin) GetFlagHelp() []output.FlagHelp {
 		{
 			Name:        "gnome-shell.output-dir",
 			Type:        "string",
-			Default:     "~/.local/share/themes/tinct/gnome-shell",
+			Default:     "~/.local/share/themes",
 			Description: "Output directory for GNOME Shell theme",
 			Required:    false,
 		},

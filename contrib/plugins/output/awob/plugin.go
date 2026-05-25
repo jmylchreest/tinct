@@ -247,6 +247,11 @@ func (l *stdLogger) Printf(format string, args ...any) {
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The optional Metadata block lets tinct-check-readmes diff the README
+// frontmatter against runtime reality. Keep these fields in sync with
+// what the plugin actually does — they're the machine-checkable
+// counterpart to the README's `plugin:` block.
 func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "awob",
@@ -255,6 +260,28 @@ func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate awob (animated Wayland Overlay Bar) palette + theme",
 		PluginProtocol:  string(tinctplugin.PluginTypeGoPlugin),
+		Metadata: &tinctplugin.Metadata{
+			// awob detection accepts any of: awob-daemon on PATH, awob
+			// CLI on PATH, or ~/.config/awob present. None is strictly
+			// required at install time — declare the CLI as optional so
+			// users see what enables the automatic force-palette reload.
+			OptionalBinaries: []string{"awob", "awob-daemon"},
+			DefaultOutputDir: "~/.config/awob/themes",
+			GeneratedFiles: []string{
+				"_palettes/tinct.kdl",
+				"tinct/scene.kdl",
+				"tinct/manifest.toml",
+			},
+			Pattern: "two-file",
+			Reload: &tinctplugin.ReloadMetadata{
+				// PostExecute runs `awob force-palette set <palette>`
+				// when the awob CLI is on PATH. The daemon hot-reloads
+				// the overlay, so no user action is required.
+				Method:             "ipc",
+				Command:            "awob force-palette set <palette>",
+				UserActionRequired: false,
+			},
+		},
 	}
 }
 

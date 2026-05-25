@@ -134,6 +134,12 @@ func (p *RandomPlugin) Generate(_ context.Context, opts tinctplugin.InputOptions
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The optional Metadata block lets tinct-check-readmes diff the README
+// frontmatter against runtime reality. Input plugins don't write config
+// files, so the output-only fields (DefaultOutputDir, GeneratedFiles,
+// Pattern, Reload) stay zero. random is self-contained — no external
+// binaries or network dependencies to declare.
 func (p *RandomPlugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "random",
@@ -142,6 +148,7 @@ func (p *RandomPlugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate random colour palettes with configurable seed and colour count",
 		PluginProtocol:  "go-plugin",
+		Metadata:        &tinctplugin.Metadata{},
 	}
 }
 

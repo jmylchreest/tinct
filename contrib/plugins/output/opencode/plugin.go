@@ -233,6 +233,11 @@ func (l *stdLogger) Printf(format string, args ...any) {
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The optional Metadata block lets tinct-check-readmes diff the README
+// frontmatter against runtime reality. Keep these fields in sync with
+// what the plugin actually does — they're the machine-checkable
+// counterpart to the README's `plugin:` block.
 func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "opencode",
@@ -241,6 +246,17 @@ func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate OpenCode theme files",
 		PluginProtocol:  string(tinctplugin.PluginTypeGoPlugin),
+		Metadata: &tinctplugin.Metadata{
+			// OpenCode detection is by config-directory presence, not
+			// by a binary on PATH; no required_binaries to declare.
+			DefaultOutputDir: "~/.config/opencode/themes",
+			GeneratedFiles:   []string{"tinct.json"},
+			Pattern:          "single-file",
+			Reload: &tinctplugin.ReloadMetadata{
+				Method:             "none",
+				UserActionRequired: true,
+			},
+		},
 	}
 }
 

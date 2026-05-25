@@ -84,11 +84,20 @@ func init() {
 
 	// Override Help method to generate dynamic help text with filtered flags.
 	generateCmd.SetHelpFunc(customGenerateHelp)
+
+	// Register --<plugin>.<arg> flags for installed external plugins,
+	// so users can use the same dot-prefix syntax as built-ins instead
+	// of the awkward --plugin-args JSON form.
+	registerExternalPluginFlags(generateCmd)
 }
 
 // runGenerate executes the generate command.
 func runGenerate(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	// Merge values from dynamic --<plugin>.<arg> flags into the
+	// shared --plugin-args map before the executor reads it.
+	generatePluginArgs = collectExternalPluginFlags(cmd, generatePluginArgs)
 
 	var err error
 	generateManifestManager, err = manifest.NewManager("")

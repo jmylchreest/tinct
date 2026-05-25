@@ -38,11 +38,16 @@ type Plugin struct {
 	verbose      bool
 }
 
-// New creates a new Waybar output plugin with default settings.
+// New creates a new Waybar output plugin with default settings. The
+// reloadConfig default matches the --waybar.reload flag default so that
+// constructing the plugin without flag parsing (e.g. from the
+// check-readmes tool) sees the same reload behaviour users get on the
+// CLI.
 func New() *Plugin {
 	return &Plugin{
 		outputDir:    "",
 		generateStub: true,
+		reloadConfig: true,
 		verbose:      false,
 	}
 }

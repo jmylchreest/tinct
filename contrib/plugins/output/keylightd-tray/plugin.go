@@ -243,6 +243,10 @@ func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The Metadata block lets tinct-check-readmes diff the README frontmatter
+// against runtime reality. Keep these fields in sync with what the plugin
+// actually does.
 func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "keylightd-tray",
@@ -251,6 +255,20 @@ func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate keylightd-tray custom CSS theme",
 		PluginProtocol:  string(tinctplugin.PluginTypeGoPlugin),
+		Metadata: &tinctplugin.Metadata{
+			// keylightd-tray detection is by config-directory presence,
+			// not by a binary on PATH; no required_binaries to declare.
+			DefaultOutputDir: "~/.config/keylightd/keylightd-tray",
+			GeneratedFiles:   []string{"tinct-colours.css", "tinct-custom.css"},
+			Pattern:          "two-file",
+			Reload: &tinctplugin.ReloadMetadata{
+				// keylightd-tray watches custom.css and reloads
+				// automatically when the imported tinct-custom.css
+				// changes; no signal/IPC from the plugin needed.
+				Method:             "watch",
+				UserActionRequired: false,
+			},
+		},
 	}
 }
 

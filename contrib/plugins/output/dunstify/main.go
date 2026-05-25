@@ -108,6 +108,11 @@ func (p *DunstifyPlugin) PostExecute(ctx context.Context, writtenFiles []string)
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The optional Metadata block lets tinct-check-readmes diff the README
+// frontmatter against runtime reality. Keep these fields in sync with
+// what the plugin actually does — they're the machine-checkable
+// counterpart to the README's `plugin:` block.
 func (p *DunstifyPlugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "dunstify",
@@ -116,6 +121,23 @@ func (p *DunstifyPlugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Send desktop notifications via dunstify or notify-send",
 		PluginProtocol:  "go-plugin",
+		Metadata: &tinctplugin.Metadata{
+			// Either binary satisfies the plugin. Both are optional —
+			// PreExecute skips cleanly if neither is on PATH.
+			OptionalBinaries: []string{"dunstify", "notify-send"},
+			// This plugin doesn't write any files; the notification is
+			// the side-effect. Pattern intentionally omitted — none of
+			// the standard patterns (single-file, two-file, drop-in,
+			// flavor-pack) describe a notification-only plugin.
+			GeneratedFiles: []string{},
+			Reload: &tinctplugin.ReloadMetadata{
+				// "Reload" doesn't apply — the plugin's side-effect IS
+				// the user-visible action (a desktop notification),
+				// dispatched in PostExecute. No app state to reload.
+				Method:             "none",
+				UserActionRequired: false,
+			},
+		},
 	}
 }
 

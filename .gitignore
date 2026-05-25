@@ -13,6 +13,10 @@
 contrib/**/tinct-plugin-*
 # Also ignore non-standard named binaries
 contrib/plugins/input/random/random
+contrib/plugins/output/dunstify/dunstify
+contrib/plugins/output/templater/templater
+# Python cache from any contrib plugin that has a __pycache__/
+contrib/**/__pycache__/
 
 # Test binary, built with `go test -c`
 *.test
@@ -31,6 +35,7 @@ go.work
 # Build artifacts
 /tinct
 /tinct-repo-manager
+/tinct-check-readmes
 *.tar.gz
 *.zip
 

@@ -4,15 +4,16 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "build": "docusaurus build",
+    "start": "npm run sync-plugin-readmes && docusaurus start",
+    "build": "npm run sync-plugin-readmes && docusaurus build",
     "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
+    "deploy": "npm run sync-plugin-readmes && docusaurus deploy",
     "clear": "docusaurus clear",
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "sync-plugin-readmes": "node scripts/sync-plugin-readmes.mjs"
   },
   "dependencies": {
     "@cmfcmf/docusaurus-search-local": "^2.0.1",
@@ -20,6 +21,8 @@
     "@docusaurus/preset-classic": "3.10.1",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
+    "glob": "^11.0.0",
+    "gray-matter": "^4.0.3",
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -1,34 +1,50 @@
 ---
-sidebar_position: 3
+title: google-genai
+sidebar_position: 6
+plugin:
+  type: input
+  name: google-genai
+  source: builtin
+  source_type: api
+  description: Generate images with Google Imagen and extract colours
+  service: Google Gemini
+  service_url: 'https://ai.google.dev/'
+  requires: []
+  optional: []
+  requires_network: true
+  requires_credentials:
+    - GOOGLE_API_KEY
+  produces_wallpaper: true
 ---
 
 # google-genai
 
-Generate images and extract colours using Google Gemini AI.
+Generates an image with Google's Gemini and Imagen models, then extracts a colour palette from the result via k-means. The generated image is cached locally and exported as a wallpaper, so the same `tinct generate …` invocation produces both the palette and the wallpaper for output plugins like `hyprpaper`, `awww`, and `wbg`.
 
-## Description
+## Installation
 
-The `google-genai` plugin uses Google's Gemini model with Imagen to:
+Built into tinct — nothing to install separately.
 
-1. Generate an image from a text prompt
-2. Extract colours from the generated image
-3. Provide the image as wallpaper
-
-## Requirements
-
-- Google API key from [Google AI Studio](https://aistudio.google.com/apikey)
-- Set `GOOGLE_API_KEY` environment variable
-
-## Usage
+## Quick start
 
 ```bash
-export GOOGLE_API_KEY="your-api-key"
-tinct generate -i google-genai --ai.prompt "<description>" [flags]
+export GOOGLE_API_KEY="…"
+tinct generate -i google-genai \
+  --ai.prompt "sunset over rolling tuscan hills" \
+  -o hyprland,hyprpaper,kitty
 ```
 
-### Storing your API key
+The first run generates and caches the image; subsequent runs with the same prompt + model reuse the cached file unless you pass `--cache-overwrite`.
 
-Rather than pasting your key into every shell session, retrieve it from a secret manager:
+## Configuration / credentials
+
+A Google API key is required. The free tier of [Google AI Studio](https://aistudio.google.com/apikey) is usually sufficient for personal use — sign in with a Google account, create an API key, and export it:
+
+```bash
+export GOOGLE_API_KEY="…"
+```
+
+Rather than pasting the key into every shell session, pull it from a secret manager:
 
 ```bash
 # GNOME Keyring / libsecret
@@ -37,200 +53,103 @@ export GOOGLE_API_KEY=$(secret-tool lookup service google-genai)
 # Bitwarden CLI
 export GOOGLE_API_KEY=$(bw get password google-genai)
 
-# KDE Wallet (via kwallet-query)
+# KDE Wallet
 export GOOGLE_API_KEY=$(kwallet-query -r google-genai kdewallet)
 
 # pass (password-store)
 export GOOGLE_API_KEY=$(pass show google-genai)
 ```
 
+Generated images are cached under `~/.cache/tinct/generated/google-genai/`. Each file is keyed by a hash of the prompt and model, so re-running the same prompt is free.
+
+### Available models
+
+| Model | Notes |
+|-------|-------|
+| `gemini-2.5-flash-image` | Default. Gemini with native image output, fast and cheap |
+| `imagen-3.0-generate-002` | Imagen 3 |
+| `imagen-4.0-fast-generate-001` | Imagen 4 Fast |
+| `imagen-4.0-generate-001` | Imagen 4 |
+| `imagen-4.0-ultra-generate-001` | Imagen 4 Ultra (highest quality, slowest) |
+
+Run `tinct generate -i google-genai --ai.list-models` to see the full live list.
+
 ## Flags
 
-### AI flags (shared with openrouter)
+### Shared AI flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--ai.prompt` | | Image description prompt (required) |
-| `--ai.model` | `auto` | AI model to use for image generation |
+| `--ai.prompt` | _(required)_ | Text description of the image to generate |
+| `--ai.model` | `auto` | Model ID; `auto` resolves to `gemini-2.5-flash-image` |
 | `--ai.list-models` | `false` | List available models and exit |
-| `--ai.no-extended-prompt` | `false` | Disable automatic wallpaper prompt enhancement |
-| `--ai.no-negative-prompt` | `false` | Disable default negative prompt |
-| `--ai.negative-prompt` | | Custom negative prompt to discourage certain elements |
+| `--ai.no-extended-prompt` | `false` | Disable tinct's automatic wallpaper-orientation prompt enhancement |
+| `--ai.no-negative-prompt` | `false` | Disable the default negative prompt |
+| `--ai.negative-prompt` | _(none)_ | Custom negative prompt |
 
 ### Plugin-specific flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--googlegenai.backend` | `gemini-api` | Backend: `gemini-api` or `vertex-ai` |
-| `--googlegenai.image-size` | `2K` | Image size: `1K` or `2K` (Imagen models only) |
+| `--googlegenai.image-size` | `2K` | `1K` or `2K` — applies only to Imagen Standard/Ultra |
 
-### Common flags
+### Shared image flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--aspect-ratio` | `16:9` | Image aspect ratio (`1:1`, `3:4`, `4:3`, `9:16`, `16:9`, `21:9`) |
 | `--count` | `32` | Number of colours to extract |
-| `--seed-mode` | `content` | Seed mode: `content`, `manual`, `random` |
+| `--aspect-ratio` | `16:9` | `1:1`, `3:4`, `4:3`, `9:16`, `16:9`, `21:9` |
+| `--cache` | `true` | Cache generated images |
+| `--cache-dir` | `~/.cache/tinct/generated` | Override cache root |
+| `--cache-filename` | _(prompt hash)_ | Override cached filename |
+| `--cache-overwrite` | `false` | Re-generate even if a cache hit exists |
+| `--extract-ambience` | `false` | Also sample edge/corner colours for ambient lighting |
+| `--regions` | `8` | Edge region count (4, 8, 12, 16) |
+| `--sample-percent` | `10` | Percent of each edge to sample |
+| `--sample-method` | `average` | `average` or `dominant` |
+| `--seed-mode` | `content` | Seed mode for k-means extraction |
+| `--seed-value` | `0` | Seed value when `--seed-mode=manual` |
 
-## Available models
+## Output
 
-| Model | Description |
-|-------|-------------|
-| `gemini-2.5-flash-image` | Default. Gemini with native image output |
-| `imagen-3.0-generate-002` | Imagen 3 |
-| `imagen-4.0-fast-generate-001` | Imagen 4 Fast |
-| `imagen-4.0-generate-001` | Imagen 4 |
-| `imagen-4.0-ultra-generate-001` | Imagen 4 Ultra |
+A raw palette of `--count` colours (default 32) extracted from the generated image via k-means. Theme type is inferred from average luminance.
 
-List models with live pricing:
+This plugin **provides a wallpaper**: the cached generated image is exported as `.WallpaperPath`, so wallpaper-aware output plugins install it automatically. With `--cache=false` a temporary file is used and `.WallpaperPath` still points at it for the duration of the run.
 
-```bash
-tinct generate -i google-genai --ai.list-models
-```
+## Costs & rate limits
 
-## Examples
+Pricing depends on the model and changes regularly; the canonical source is the [Google AI pricing page](https://ai.google.dev/gemini-api/docs/pricing).
 
-### Basic generation
+- The Gemini API has a free tier that covers Gemini 2.5 Flash Image generation at modest volumes — sufficient for personal wallpaper experimentation.
+- Imagen 4 Standard and Ultra are billed per image and are not part of the free tier.
+- Rate limits are per-API-key. If you hit a quota error, wait, switch models, or add a billing account.
 
-```bash
-export GOOGLE_API_KEY="your-api-key"
-
-# Nature scene
-tinct generate -i google-genai \
-  --ai.prompt "sunset over rolling hills of tuscany" \
-  -o all
-
-# Abstract
-tinct generate -i google-genai \
-  --ai.prompt "abstract geometric patterns in blue and purple" \
-  -o all
-
-# Cityscape
-tinct generate -i google-genai \
-  --ai.prompt "neon-lit city street at night in the rain" \
-  -o all
-```
-
-### With specific model and aspect ratio
-
-```bash
-tinct generate -i google-genai \
-  --ai.prompt "cyberpunk city at night" \
-  --ai.model "imagen-4.0-ultra-generate-001" \
-  --aspect-ratio "21:9" \
-  -o all
-```
-
-### With specific outputs
-
-```bash
-tinct generate -i google-genai \
-  --ai.prompt "misty forest at dawn" \
-  -o hyprland,kitty,waybar
-```
-
-### Force theme type
-
-```bash
-# Ensure dark theme
-tinct generate -i google-genai \
-  --ai.prompt "northern lights over snowy mountains" \
-  -o all -t dark
-
-# Ensure light theme
-tinct generate -i google-genai \
-  --ai.prompt "bright sunny beach with white sand" \
-  -o all -t light
-```
-
-### Dry run
-
-```bash
-tinct generate -i google-genai \
-  --ai.prompt "autumn forest" \
-  --dry-run -o kitty
-```
-
-## How it works
-
-1. **Prompt submission**: Send description to Gemini (prompt is automatically enhanced with wallpaper-optimised instructions unless `--ai.no-extended-prompt` is set)
-2. **Image generation**: Gemini generates image using Imagen
-3. **Caching**: Image saved locally
-4. **Extraction**: K-means clustering on generated image
-5. **Categorisation**: Standard colour role assignment
-6. **Wallpaper**: Image provided to output plugins
-
-## Generated image location
-
-Generated images are cached in:
-
-```
-~/.cache/tinct/generated/google-genai/
-```
-
-The most recent generation is used as the wallpaper.
-
-## Prompt tips
-
-### For specific moods
-
-| Mood | Prompt elements |
-|------|-----------------|
-| Calm | "serene", "peaceful", "misty", "soft" |
-| Energetic | "vibrant", "dynamic", "bold", "neon" |
-| Warm | "sunset", "golden hour", "amber", "autumn" |
-| Cool | "twilight", "moonlit", "blue hour", "winter" |
-
-### For better extraction
-
-- Be specific about dominant colours you want
-- Include lighting conditions (dawn, dusk, noon)
-- Mention textures and materials
-- Avoid overly complex scenes
-
-### Example prompts
-
-```bash
-# Rich warm tones
---ai.prompt "golden hour over lavender fields in provence"
-
-# Cool blue palette
---ai.prompt "icebergs floating in arctic waters under aurora"
-
-# Earthy natural tones
---ai.prompt "ancient redwood forest with morning mist"
-
-# Cyberpunk
---ai.prompt "rainy tokyo street with neon signs at night"
-```
-
-## API usage
-
-Each generation makes one API call. Generation time varies (typically 5-15 seconds).
-
-Monitor your API usage at [Google AI Studio](https://aistudio.google.com/).
+Generation latency is typically 5–15 seconds; Imagen Ultra is noticeably slower.
 
 ## Troubleshooting
 
-### API key not working
+### `GOOGLE_API_KEY environment variable is required`
 
-- Verify key at AI Studio
-- Check GOOGLE_API_KEY is exported
-- Ensure key has Gemini API access
+Export the variable in the same shell where you run `tinct`. Get a key at https://aistudio.google.com/apikey.
 
-### Poor colour extraction
+### `--ai.prompt is required`
 
-- Try more specific prompts
-- Include colour keywords
-- Specify lighting conditions
+Validation requires a prompt unless `--ai.list-models` is set. Even one word works; richer prompts produce richer palettes.
 
-### Generation fails
+### `failed to generate image: …`
 
-- Check internet connection
-- Verify API quota
-- Try simpler prompt
+Common causes: API key lacks Gemini API access, quota exceeded, model name typo, or the prompt triggered Responsible AI filtering. Try `--ai.list-models` to confirm the model ID, then a simpler prompt to rule out filtering.
 
-## See also
+### Same prompt always returns the same image
 
-- [image](./image.md) - Extract from existing images
-- [openrouter](./openrouter.md) - Alternative AI generation via OpenRouter
+Cache hits are intentional. Pass `--cache-overwrite` to force a fresh generation, or change the prompt/model so the cache key changes.
+
+### Wallpaper-aware output plugins didn't install the image
+
+Confirm `--cache` is enabled (default) so the file persists past the run. If you ran with `--cache=false`, the temp file is gone by the time a downstream tool tries to use it; re-run without that flag.
+
+## Related plugins
+
+- [`openrouter`](./openrouter.md) — same idea, but multi-provider via OpenRouter (often includes free image models)
+- [`image`](./image.md) — use an existing image instead of generating one

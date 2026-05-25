@@ -1,4 +1,4 @@
-.PHONY: bump-patch bump-minor bump-major bump help get-version get-latest-release
+.PHONY: bump-patch bump-minor bump-major bump help get-version get-latest-release check-readmes
 
 help:
 	@echo "Usage:"
@@ -8,6 +8,13 @@ help:
 	@echo "  make bump-major         - Bump major version (e.g., 0.1.0 -> 1.0.0)"
 	@echo "  make get-version        - Get current version (like goreleaser)"
 	@echo "  make get-latest-release - Get latest release tag"
+	@echo "  make check-readmes      - Diff plugin README frontmatter against runtime (warn-only)"
+
+# check-readmes runs the doc drift detector. Always exits 0 — the goal
+# is to surface stale READMEs without gating merges. Suitable for CI as
+# an informational job.
+check-readmes:
+	@go run ./cmd/tinct-check-readmes builtin --root internal/plugin/output
 
 # Get the latest tag
 CURRENT_VERSION := $(shell git tag --sort=-v:refname | head -1)

@@ -1,469 +1,182 @@
-# Dunst Output Plugin
+---
+title: dunst
+sidebar_position: 2
 
-Generate colour themes for [Dunst](https://dunst-project.org/), a lightweight and customizable notification daemon for Linux.
+plugin:
+  type: output
+  name: dunst
+  category: bars-launchers
+  source: builtin
+  app: Dunst
+  app_url: https://dunst-project.org/
+  requires: [dunst]
+  optional: [dunstctl]
+  pattern: drop-in
+  default_output_dir: ~/.config/dunst/dunstrc.d
+  generated_files: [60-tinct.conf]
+  reload:
+    method: ipc
+    command: dunstctl reload
+    user_action_required: false
+---
 
-## Overview
+# dunst
 
-The Dunst plugin generates a colour configuration file (`tinct.dunstrc`) with urgency-based colour schemes that can be included in your main Dunst configuration.
+Generates an urgency-based colour theme for [Dunst](https://dunst-project.org/), the lightweight notification daemon for X11 and Wayland. The output is a single drop-in config file that dunst loads automatically; no manual config changes are required.
 
-## Features
+## Installation
 
-- Single configuration file generation
-- Three urgency levels (low, normal, critical)
-- Semantic colour mapping per urgency
-- Alpha channel support for transparency
-- Configurable timeouts per urgency
-- Include-based configuration support
-- Optional rules for specific notification types
+Built into tinct — nothing to install separately. `tinct generate -o dunst` works out of the box.
 
-## Generated Files
-
-- `tinct.dunstrc` - Complete urgency-based colour configuration
-
-## Default Output Location
-
-```
-~/.config/dunst/tinct.dunstrc
-```
-
-## Configuration
-
-### Enable the Plugin
-
-In your `~/.config/tinct/config.toml`:
-
-```toml
-[[output.dunst]]
-enabled = true
-```
-
-### Custom Output Directory
-
-```toml
-[[output.dunst]]
-enabled = true
-output_dir = "/custom/path"
-```
-
-### Command Line Options
+## Quick start
 
 ```bash
-# Specify output directory
-tinct generate --dunst.output-dir ~/.config/dunst
-
-# Enable dunst only
-tinct generate --output dunst
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o dunst
 ```
 
-## Usage
+## Generated files
 
-### Method 1: Include in dunstrc
+| File | Path | Role |
+|------|------|------|
+| `60-tinct.conf` | `~/.config/dunst/dunstrc.d/60-tinct.conf` | Drop-in conf with `[global]` frame styling plus `[urgency_low]`, `[urgency_normal]`, `[urgency_critical]` sections. |
 
-Edit `~/.config/dunst/dunstrc`:
+The `60-` prefix orders the file after most other drop-ins (00–50) so colour settings override them, but before any high-priority overrides (70–99) the user maintains by hand.
+
+## Generated format
 
 ```ini
-# Include tinct colours
-.include ~/.config/dunst/tinct.dunstrc
-
-# Your other dunst settings
 [global]
-    font = Monospace 10
-    
-    # Geometry
-    width = 300
-    height = 300
-    origin = top-right
-    offset = 10x50
-    
-    # Other settings...
-```
-
-### Method 2: Copy Sections
-
-Alternatively, copy the urgency sections directly into your `dunstrc`.
-
-## Urgency Levels
-
-Dunst uses three urgency levels for notifications:
-
-### urgency_low
-
-Used for informational notifications that are not time-sensitive.
-
-**Colour Mapping:**
-- Background: Standard background
-- Foreground: Muted foreground (subtle)
-- Frame: Info colour (semi-transparent)
-- Highlight: Info colour
-- Timeout: 10 seconds
-
-**Example notifications:**
-- System information
-- Calendar reminders
-- Non-critical updates
-
-### urgency_normal
-
-Used for standard notifications that require attention.
-
-**Colour Mapping:**
-- Background: Standard background
-- Foreground: Standard foreground
-- Frame: Accent1 colour
-- Highlight: Accent1 colour
-- Timeout: 10 seconds
-
-**Example notifications:**
-- Email notifications
-- Chat messages
-- Download complete
-
-### urgency_critical
-
-Used for important notifications that require immediate attention.
-
-**Colour Mapping:**
-- Background: Danger colour (semi-transparent)
-- Foreground: Background colour (inverted for contrast)
-- Frame: Danger colour
-- Highlight: Warning colour
-- Timeout: 0 (never timeout)
-
-**Example notifications:**
-- Low battery warnings
-- System errors
-- Security alerts
-
-## Colour Properties
-
-Each urgency section supports these colour properties:
-
-| Property | Description |
-|----------|-------------|
-| `background` | Background colour of the notification |
-| `foreground` | Text colour |
-| `frame_color` | Border/frame colour |
-| `highlight` | Progress bar and highlight colour |
-| `timeout` | Display timeout in seconds (0 = never) |
-
-## Colour Format
-
-Dunst uses hex colours in the format `#RRGGBB` or `#RRGGBBAA` (with alpha):
-
-```ini
-background = "#1a1b26"      # Solid colour
-frame_color = "#7aa2f7cc"   # Semi-transparent (80% opacity)
-```
-
-### Alpha Channel Values
-
-- `ff` = 100% opacity (fully opaque)
-- `ee` = 93% opacity
-- `cc` = 80% opacity
-- `99` = 60% opacity
-- `00` = 0% opacity (fully transparent)
-
-## Example Output
-
-```ini
-# Dunst colour theme generated by Tinct
-# Detected theme: dark
+frame_color = "#89b4fa"
+separator_color = "#313244"
 
 [urgency_low]
-    background = "#1a1b26"
-    foreground = "#a9b1d6"
-    frame_color = "#7aa2f7cc"
-    highlight = "#7aa2f7"
-    timeout = 10
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+frame_color = "#89b4fa"
 
 [urgency_normal]
-    background = "#1a1b26"
-    foreground = "#c0caf5"
-    frame_color = "#7aa2f7"
-    highlight = "#7aa2f7"
-    timeout = 10
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+frame_color = "#89b4fa"
 
 [urgency_critical]
-    background = "#f7768eee"
-    foreground = "#1a1b26"
-    frame_color = "#f7768e"
-    highlight = "#e0af68"
-    timeout = 0
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+frame_color = "#f38ba8"
 ```
 
-## Customization
+## Integration
 
-### Custom Templates
+**No manual configuration required.** Dunst auto-loads every `.conf` file in `~/.config/dunst/dunstrc.d/` after reading the main `dunstrc`. The plugin writes directly into that directory; the file becomes active on the next dunst reload.
 
-Extract the default template for customization:
+If you don't already have a `dunstrc.d/` directory, the plugin creates it.
+
+## Reload behaviour
+
+### Automatic
+
+After writing the file, the plugin runs:
+
+```
+dunstctl reload
+```
+
+This is dunst's IPC reload — it re-reads all config files in-place without restarting the daemon. Notifications already on screen are preserved.
+
+If `dunstctl` isn't on `$PATH`, the auto-reload is skipped silently. Generation still succeeds; the theme just won't appear until dunst restarts.
+
+### Manual fallback
+
+If `dunstctl` is unavailable or the IPC reload fails for any reason:
 
 ```bash
-tinct plugins templates dump -o dunst -l ~/.config/tinct/templates/dunst
+killall dunst && dunst &
 ```
 
-This creates `~/.config/tinct/templates/dunst/tinct.dunstrc.tmpl` which you can modify.
-
-### Template Variables
-
-Available in the template:
-
-```go
-{{ .SourceTheme }}        // "dark" or "light"
-{{ .Background }}         // "#1a1b26"
-{{ .BackgroundMuted }}    // "#16161e"
-{{ .Foreground }}         // "#c0caf5"
-{{ .ForegroundMuted }}    // "#a9b1d6"
-{{ .Accent1 }}            // "#7aa2f7"
-{{ .Accent2 }}            // "#bb9af7"
-{{ .Accent3 }}            // "#7dcfff"
-{{ .Accent4 }}            // "#9ece6a"
-{{ .Danger }}             // "#f7768e"
-{{ .Warning }}            // "#e0af68"
-{{ .Success }}            // "#9ece6a"
-{{ .Info }}               // "#7aa2f7"
-```
-
-### Helper Methods
-
-Add alpha channel to colours:
-
-```go
-{{ .BackgroundWithAlpha "ee" }}    // Background with 93% opacity
-{{ .DangerWithAlpha "ee" }}        // Danger with 93% opacity
-{{ .InfoWithAlpha "cc" }}          // Info with 80% opacity
-{{ .Accent1WithAlpha "ff" }}       // Accent1 with 100% opacity
-```
-
-## Advanced Usage
-
-### Custom Rules for Specific Notifications
-
-You can add custom rules for specific notification types. The template includes commented examples:
-
-```ini
-# Volume notifications
-[volume]
-    summary = "Volume*"
-    background = "#1a1b26"
-    foreground = "#c0caf5"
-    frame_color = "#7dcfff"
-    highlight = "#7dcfff"
-    timeout = 2
-
-# Brightness notifications
-[brightness]
-    summary = "Brightness*"
-    background = "#1a1b26"
-    foreground = "#c0caf5"
-    frame_color = "#e0af68"
-    highlight = "#e0af68"
-    timeout = 2
-
-# Battery warnings
-[battery_low]
-    summary = "*Battery*"
-    urgency = critical
-    background = "#f7768e"
-    foreground = "#1a1b26"
-    frame_color = "#f7768e"
-    timeout = 0
-```
-
-### Matching Rules
-
-Dunst supports various matching criteria:
-
-```ini
-[rule_name]
-    # Match by application name
-    appname = "Firefox"
-    
-    # Match by summary (title)
-    summary = "Download*"
-    
-    # Match by body text
-    body = "*error*"
-    
-    # Match by category
-    category = "email"
-    
-    # Then apply custom colours
-    background = "#1a1b26"
-    foreground = "#7aa2f7"
-```
-
-## Integration with Desktop Environment
-
-### Restart Dunst
-
-After generating new colours:
-
-```bash
-# Restart dunst to apply changes
-killall dunst
-dunst &
-```
-
-Or use systemd (if dunst is a service):
+Or, if dunst is managed by systemd:
 
 ```bash
 systemctl --user restart dunst
 ```
 
-### Auto-restart with Post-hook
+## Uninstall / revert
 
-Create a post-hook script to automatically restart dunst:
+1. **Remove the config line**: none added. The plugin uses dunst's drop-in directory, so no edits to `dunstrc` or any other file ever happened.
 
-`~/.config/tinct/hooks/dunst-reload.sh`:
+2. **Delete the generated file**:
+
+   ```bash
+   rm ~/.config/dunst/dunstrc.d/60-tinct.conf
+   ```
+
+3. **Reload to drop the theme**:
+
+   ```bash
+   dunstctl reload
+   ```
+
+4. **External state**: this plugin only writes to `~/.config/dunst/dunstrc.d/`. No further cleanup is required.
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dunst.output-dir` | `~/.config/dunst/dunstrc.d` | Override the output directory |
+
+## Colour role mapping
+
+| Dunst section | Property | Tinct role | Notes |
+|---|---|---|---|
+| `[global]` | `frame_color` | `backgroundMuted` | Default frame for all urgencies that don't override it |
+| `[global]` | `separator_color` | `frame` | Matches `frame_color` (dunst keyword) |
+| `[urgency_low]` | `background` | `background` | |
+| `[urgency_low]` | `foreground` | `foregroundMuted` | Lower-priority text |
+| `[urgency_low]` | `frame_color` | `info` @ 80% alpha | |
+| `[urgency_low]` | `highlight` | `info` | Progress bars |
+| `[urgency_normal]` | `background` | `background` | |
+| `[urgency_normal]` | `foreground` | `foreground` | |
+| `[urgency_normal]` | `frame_color` | `accent1` | |
+| `[urgency_normal]` | `highlight` | `accent1` | |
+| `[urgency_critical]` | `background` | `danger` @ 93% alpha | Bright background to grab attention |
+| `[urgency_critical]` | `foreground` | `background` | Inverted for contrast against red |
+| `[urgency_critical]` | `frame_color` | `danger` | |
+| `[urgency_critical]` | `highlight` | `warning` | |
+
+## Customising the template
+
+Extract the default template to override it:
 
 ```bash
-#!/bin/bash
-killall dunst 2>/dev/null
-dunst &
-disown
+tinct plugins templates dump -o dunst -l ~/.config/tinct/templates/dunst
 ```
 
-Then in your tinct config:
+This creates `~/.config/tinct/templates/dunst/tinct.dunstrc.tmpl`. Tinct uses your version in preference to the embedded default.
 
-```toml
-[[output.dunst]]
-enabled = true
-post_hook = "~/.config/tinct/hooks/dunst-reload.sh"
-```
-
-### Test Notifications
-
-Send test notifications for each urgency level:
-
-```bash
-# Low urgency
-notify-send -u low "Test Low" "This is a low urgency notification"
-
-# Normal urgency (default)
-notify-send "Test Normal" "This is a normal urgency notification"
-
-# Critical urgency
-notify-send -u critical "Test Critical" "This is a critical urgency notification"
-```
-
-## Pre-Execute Check
-
-The plugin performs the following checks before generating:
-
-1. Verifies `dunst` is installed and on `$PATH`
-2. Creates config directory if it doesn't exist
-
-If `dunst` is not found, the plugin will be skipped with a message.
+See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for the available functions and palette accessors.
 
 ## Troubleshooting
 
-### Colours Not Applied
+### Theme not visible after generation
 
-Ensure the include path is correct:
-
-```bash
-# Check if file exists
-ls -l ~/.config/dunst/tinct.dunstrc
-
-# Verify dunst config includes it
-grep -r "\.include.*tinct" ~/.config/dunst/
-```
-
-### Dunst Not Found
-
-If pre-execute check fails:
+Check that dunst loaded the drop-in:
 
 ```bash
-# Check if dunst is installed
-which dunst
-
-# Install dunst
-# Arch: pacman -S dunst
-# Debian: apt install dunst
-# Fedora: dnf install dunst
+ls -l ~/.config/dunst/dunstrc.d/60-tinct.conf
+dunstctl reload
+notify-send "Test" "Should now be themed"
 ```
 
-### Include Not Working
+If the file exists but the theme isn't applied, your `dunstrc` may have settings that take precedence. Drop-ins layer on top of `dunstrc`, so explicit colour values in `dunstrc` override what dunst loads from `dunstrc.d/`. Remove the conflicting lines from `dunstrc`.
 
-Dunst's `.include` directive requires a path:
+### `dunstctl: command not found`
 
-```ini
-# Correct
-.include ~/.config/dunst/tinct.dunstrc
-.include /home/username/.config/dunst/tinct.dunstrc
+`dunstctl` ships in the same package as `dunst` on most distros, but some minimal installs split it out. The plugin treats it as optional — generation still succeeds, but you'll need to restart dunst manually for changes to apply.
 
-# Incorrect (use source instead)
-source = tinct.dunstrc
-```
+### Critical notifications time out
 
-### Colours Look Wrong
+By default the template sets `timeout = 0` (never timeout) for `urgency_critical`. If yours expire anyway, your `dunstrc` is overriding the drop-in. Either remove the `timeout` line from `dunstrc`'s `[urgency_critical]` section, or move your settings into a higher-numbered drop-in (e.g. `~/.config/dunst/dunstrc.d/70-overrides.conf`).
 
-Ensure you're using the correct format:
+## Related plugins
 
-```ini
-# Correct - quoted hex colours
-background = "#1a1b26"
-frame_color = "#7aa2f7cc"
-
-# Incorrect - unquoted (may work but not recommended)
-background = #1a1b26
-```
-
-### Critical Notifications Timeout
-
-If critical notifications are timing out:
-
-```ini
-[urgency_critical]
-    timeout = 0  # 0 = never timeout
-```
-
-## Notification Examples
-
-### Volume Control
-
-```ini
-[volume]
-    summary = "Volume"
-    background = "#1a1b26"
-    foreground = "#c0caf5"
-    frame_color = "#7dcfff"
-    highlight = "#7dcfff"
-    timeout = 2
-    progress_bar = true
-```
-
-### Network Notifications
-
-```ini
-[network]
-    appname = "NetworkManager"
-    background = "#1a1b26"
-    foreground = "#c0caf5"
-    frame_color = "#bb9af7"
-    highlight = "#bb9af7"
-```
-
-### Media Player
-
-```ini
-[media]
-    category = "music"
-    background = "#1a1b26"
-    foreground = "#c0caf5"
-    frame_color = "#9ece6a"
-    highlight = "#9ece6a"
-    timeout = 5
-```
-
-## Resources
-
-- [Dunst Documentation](https://dunst-project.org/documentation/)
-- [Dunst GitHub](https://github.com/dunst-project/dunst)
-- [dunstrc Man Page](https://man.archlinux.org/man/dunst.5)
-- [Notification Specification](https://specifications.freedesktop.org/notification-spec/latest/)
-
-## See Also
-
-- [SwayNC Plugin](../swaync/README.md) - Alternative notification center (when implemented)
-- [Plugin Development Guide](../../../../docs/PLUGIN-STANDARD.md)
+- [waybar](../waybar/README.md) — status bar styling, often configured alongside dunst.
+- [hyprlock](../hyprlock/README.md) — lock screen styling for Hyprland users.

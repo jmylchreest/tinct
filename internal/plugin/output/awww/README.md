@@ -1,229 +1,169 @@
-# awww Output Plugin
+---
+title: awww
+sidebar_position: 1
 
-Generate wallpaper configuration for [awww](https://codeberg.org/LGFae/awww) (An Answer to your Wayland Wallpaper Woes), an efficient animated wallpaper daemon for Wayland compositors implementing the wlr-layer-shell protocol.
+plugin:
+  type: output
+  name: awww
+  category: special
+  source: builtin
+  app: awww wallpaper daemon
+  app_url: https://codeberg.org/LGFae/awww
+  requires: []
+  optional: [awww]
+  pattern: single-file
+  default_output_dir: ~/.config/awww
+  generated_files: [tinct-awww.sh]
+  reload:
+    method: wallpaper-apply
+    command: awww img <wallpaper>
+    user_action_required: false
+---
 
-## Overview
+# awww
 
-The awww plugin generates a wallpaper configuration reference file and automatically applies the wallpaper (with configurable transitions) when an image source is provided. awww is particularly well-suited for animated GIF wallpapers and supports smooth transition effects when switching images.
+Wallpaper integration for [awww](https://codeberg.org/LGFae/awww) (An Answer to your Wayland Wallpaper Woes), an animated wallpaper daemon for Wayland compositors implementing the wlr-layer-shell protocol. The plugin generates a persistence shell script and, if awww-daemon is running, applies the wallpaper directly using the configured transition.
 
-## Features
+## Installation
 
-- Automatic wallpaper application via `awww img` command
-- Configurable transition effects (simple, wipe, grow, center, outer, etc.)
-- Transition speed and FPS control
-- Animated GIF wallpaper support
-- Per-output wallpaper targeting
-- Colour-matched clear screen using theme background colour
-- Resize mode support (crop, fit, no)
-- Fill colour support for fit mode
-- Graceful handling when awww-daemon is not running
+Built into tinct — nothing to install separately. `tinct generate -o awww` works out of the box.
 
-## Generated Files
-
-- `tinct-awww.conf` - Wallpaper configuration reference with awww commands
-
-## Default Output Location
-
-```
-~/.config/awww/tinct-awww.conf
-```
-
-## Usage
-
-### With Image Input (Automatic Wallpaper)
-
-When using the `image` input plugin, awww automatically:
-1. Generates config with wallpaper path and transition settings
-2. Applies wallpaper immediately with transition (if awww-daemon is running)
+## Quick start
 
 ```bash
-# Extract colours and set wallpaper with default transition
-tinct generate -i image -p ~/Pictures/wallpaper.jpg -o awww,hyprland,waybar
-
-# With custom transition effect
-tinct generate -i image -p ~/Pictures/wallpaper.jpg -o awww \
-  --awww.transition-type center \
-  --awww.transition-step 90 \
-  --awww.transition-fps 60
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o awww
 ```
 
-### Animated GIF Wallpapers
+If awww-daemon is already running the wallpaper is applied immediately with the default fade transition. The generated `tinct-awww.sh` is also made executable so you can re-run it from your compositor autostart to restore the wallpaper after a daemon restart or fresh login.
 
-awww excels at displaying animated GIF wallpapers:
+## Generated files
+
+| File | Path | Role |
+|------|------|------|
+| `tinct-awww.sh` | `~/.config/awww/tinct-awww.sh` | POSIX shell script that waits for `awww-daemon` and calls `awww img` with the wallpaper path and the transition options chosen at generate time. Marked executable. |
+
+When no wallpaper source is available (e.g. you used a non-image input plugin) the script falls back to `awww clear <hex>` using the theme background colour.
+
+## Integration
+
+awww is unusual: there is no central config file. Tinct's role is to write a self-contained shell script that drives `awww` on demand. Wire it into your compositor autostart so it re-runs on login:
+
+- **Hyprland**: `exec-once = ~/.config/awww/tinct-awww.sh`
+- **Sway**: `exec ~/.config/awww/tinct-awww.sh`
+- **Generic Wayland session**: `~/.config/awww/tinct-awww.sh &`
+
+The script polls `awww query` for up to ~5 s, so it tolerates being launched before the daemon is fully up.
+
+## Reload behaviour
+
+### Automatic
+
+After writing the script the plugin probes `awww query`. If the daemon answers, it runs the equivalent of:
+
+```
+awww img --transition-type <type> --transition-step <step> --transition-fps <fps> [--resize <mode>] [--fill-color <rrggbb>] [-o <outputs>] <wallpaper>
+```
+
+This is awww's IPC interface — the new wallpaper is swapped in using the configured transition without restarting the daemon. If `awww query` fails (daemon not running, binary missing) the wallpaper step is skipped silently; the script on disk still works on the next login.
+
+### Manual fallback
+
+If you need to re-apply the wallpaper without regenerating the theme:
 
 ```bash
-# Set an animated wallpaper
-tinct generate -i image -p ~/Pictures/animated-bg.gif -o awww,hyprland
-
-# AI-generated palette with animated wallpaper
-tinct generate -i google-genai --ai.prompt "cyberpunk cityscape" -o awww
+~/.config/awww/tinct-awww.sh
 ```
 
-### Without Image Input
-
-When using non-image sources, the config is generated with helpful commands:
+Or invoke `awww` directly:
 
 ```bash
-# Generate from remote theme
-tinct generate -i remote-json \
-  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  -o awww,hyprland
-
-# Config generated with clear screen command using theme colours
+awww img --transition-type simple ~/Pictures/wallpaper.jpg
 ```
 
-## Command Line Options
+## Uninstall / revert
+
+1. **Remove the autostart entry**: delete the `exec`/`exec-once` line that points at `~/.config/awww/tinct-awww.sh` from your compositor config.
+
+2. **Delete the generated script**:
+
+   ```bash
+   rm ~/.config/awww/tinct-awww.sh
+   ```
+
+3. **Drop the current wallpaper**: awww keeps the last image in memory until the daemon exits. To clear it:
+
+   ```bash
+   awww clear 000000   # or any hex colour
+   ```
+
+   To pick a different image, run `awww img <new-image>` directly. The plugin does not track the previous wallpaper, so reverting to whatever you had before tinct must be done by hand.
+
+4. **External state**: this plugin only writes to `~/.config/awww/`. No further cleanup is required.
+
+## Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--awww.output-dir` | `~/.config/awww` | Output directory |
-| `--awww.transition-type` | `simple` | Transition effect type |
-| `--awww.transition-step` | `2` | Transition step (1-255, smaller = smoother) |
-| `--awww.transition-fps` | `30` | Transition FPS (1-65535) |
-| `--awww.resize` | | Resize mode (crop, fit, no) |
-| `--awww.fill-color` | | Fill colour for fit mode (rrggbb) |
-| `--awww.outputs` | | Comma-separated output names |
+| `--awww.output-dir` | `~/.config/awww` | Override the output directory |
+| `--awww.transition-type` | `simple` | Transition effect (`simple`, `left`, `right`, `top`, `bottom`, `wipe`, `grow`, `center`, `outer`, `any`, `random`) |
+| `--awww.transition-step` | `2` | Transition step (1–255; smaller = smoother) |
+| `--awww.transition-fps` | `30` | Transition FPS (1–65535) |
+| `--awww.resize` | `` | Resize mode (`crop`, `fit`, `no`) |
+| `--awww.fill-color` | `` | Fill colour for `fit` mode as `rrggbb`; empty uses awww's default |
+| `--awww.outputs` | `` | Comma-separated list of output names to target (default: all) |
 
-## Transition Types
+## Colour role mapping
 
-| Type | Description |
-|------|-------------|
-| `simple` | Fade into the new image (default) |
-| `left` | Slide from the left |
-| `right` | Slide from the right |
-| `top` | Slide from the top |
-| `bottom` | Slide from the bottom |
-| `wipe` | Wipe transition (supports angle) |
-| `grow` | Grow from a point |
-| `center` | Expand from center to edges |
-| `outer` | Contract from edges to center |
-| `any` | Random point with center or outer |
-| `random` | Random transition effect |
+awww is a wallpaper daemon, not a theming target — it does not consume tinct's palette. The single point of integration is the fallback `awww clear <hex>` invocation, which uses:
 
-## Pre-Execute Check
+| awww command | Tinct role | Notes |
+|---|---|---|
+| `awww clear <hex>` | `background` | Used only when no wallpaper image is supplied |
 
-The plugin performs these checks:
+## Customising the template
 
-1. Warns if `awww` binary is not found on PATH (non-fatal)
-2. Creates config directory if it doesn't exist
-
-The plugin will still generate configuration files even if awww is not running - wallpaper application is simply skipped.
-
-## Behavior Matrix
-
-| Input Plugin | awww-daemon Running | Result |
-|--------------|---------------------|--------|
-| `image` | Yes | Config generated + wallpaper applied with transition |
-| `image` | No | Config generated, wallpaper skipped (warning in verbose) |
-| `remote-json` | Yes | Config generated with clear screen command |
-| `remote-json` | No | Config generated with clear screen command |
-
-## AI-Generated Animated Backgrounds
-
-awww's animated GIF support makes it an ideal target for AI-generated animated wallpapers. While current AI image generation APIs produce static images, the concept of AI-generated animated backgrounds is an area of active development:
-
-### Current Workflow
+Dump the default template to make it your own:
 
 ```bash
-# Generate a static AI wallpaper and apply with awww
-tinct generate -i google-genai --ai.prompt "serene forest at sunset" -o awww
-
-# The AI generates a static image, extracts colours, and awww displays it
+tinct plugins templates dump -o awww -l ~/.config/tinct/templates/awww
 ```
 
-### Future Possibilities
+This writes `~/.config/tinct/templates/awww/tinct-awww.sh.tmpl`. Tinct prefers your version over the embedded default.
 
-As AI video/animation generation APIs mature (Google Veo, Runway, Luma, etc.), a dedicated input plugin could:
-1. Generate short animated clips from text prompts
-2. Convert them to GIF/animated WebP format
-3. Pass the animated file to awww for display
-4. Extract colours from representative frames for consistent theming
-
-This would enable fully AI-generated animated desktop wallpapers with matching colour themes across all applications.
-
-## Example Workflows
-
-### Daily Wallpaper Theme Update
-
-```bash
-#!/bin/bash
-# Update theme from wallpaper with smooth transition
-
-WALLPAPER="$HOME/.wallpaper"
-
-tinct generate -i image -p "$WALLPAPER" \
-  -o awww,hyprland,hyprlock,waybar \
-  --awww.transition-type grow \
-  --awww.transition-fps 60
-
-# awww automatically applies wallpaper with grow transition
-```
-
-### Wallpaper Slideshow
-
-```bash
-#!/bin/bash
-# Cycle through wallpapers with matching themes
-for img in ~/Pictures/Wallpapers/*.{jpg,png,gif}; do
-    tinct generate -i image -p "$img" \
-      -o awww,hyprland,waybar \
-      --awww.transition-type random
-    sleep 300
-done
-```
-
-### Clear Screen with Theme Colour
-
-```bash
-# Set a solid colour background matching your theme
-tinct generate -i remote-json \
-  --remote-json.url "https://..." -o awww
-
-# Then manually run the clear command from the generated config
-```
+See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for available functions.
 
 ## Troubleshooting
 
-### Wallpaper Not Applied
+### Wallpaper not applied at generate time
 
-Check if awww-daemon is running:
+`awww-daemon` must be running for the IPC call to succeed. Start it (typically from your compositor autostart) and re-run:
 
 ```bash
-# Start the daemon
 awww-daemon &
-
-# Check if it's running
-awww query
-
-# Then apply your theme
+awww query                                  # should respond
 tinct generate -i image -p wallpaper.jpg -o awww
 ```
 
-### High CPU During GIF Caching
+If verbose mode shows `Skipping wallpaper application (awww-daemon not running)`, the daemon was unreachable; the script on disk is still correct and will work on next login.
 
-awww caches GIF frames on first display. For large GIFs, consider resizing before sending to awww:
+### Wallpaper not restored after reboot
+
+awww has no built-in persistence — it forgets the wallpaper when the daemon exits. Wire `~/.config/awww/tinct-awww.sh` into your compositor autostart (see Integration).
+
+### High CPU when displaying a large GIF
+
+awww caches GIF frames on first display. For very large GIFs, downscale them first:
 
 ```bash
-# Resize GIF with gifsicle
-gifsicle --resize-fit 1920x1080 large-animation.gif > optimised.gif
+gifsicle --resize-fit 1920x1080 large.gif > optimised.gif
 tinct generate -i image -p optimised.gif -o awww
 ```
 
-### Verbose Mode
+### Wrong output targeted
 
-See detailed wallpaper application process:
+Use `--awww.outputs` with the output names reported by `awww query` (or `wlr-randr`). For example: `--awww.outputs=DP-1,HDMI-A-1`.
 
-```bash
-tinct generate -i image -p wallpaper.jpg -o awww --verbose
-```
+## Related plugins
 
-## Resources
-
-- [awww Repository](https://codeberg.org/LGFae/awww)
-- [awww Documentation](https://codeberg.org/LGFae/awww/src/branch/main/README.md)
-
-## See Also
-
-- [Hyprpaper Plugin](../hyprpaper/README.md) - Alternative wallpaper daemon for Hyprland
-- [wbg Plugin](../wbg/README.md) - Simple static wallpaper application
-- [Image Input Plugin](../../input/image/README.md) - Extract colours from images
+- [wbg](../wbg/README.md) — simpler single-shot Wayland wallpaper setter, no transitions.
+- [hyprpaper](../hyprpaper/README.md) — Hyprland's native wallpaper daemon.

@@ -1,138 +1,107 @@
-# Random Colour Palette Generator
+---
+title: random
+sidebar_position: 9
 
-A Tinct input plugin that generates random colour palettes with configurable seed and colour count.
+plugin:
+  type: input
+  name: random
+  source: external
+  source_type: generated
+  description: Generate random colour palettes with configurable seed and colour count
+  version: 0.1.0
+  protocol_version: 0.3.0
+  repository: https://github.com/jmylchreest/tinct
+  install: tinct plugins install random
+  requires: []
+  optional: []
+  requires_network: false
+  requires_credentials: []
+  produces_wallpaper: false
+---
 
-## Features
+# random
 
-- Generate random colour palettes with configurable colour counts
-- Deterministic generation with seed support for reproducibility
-- Uses go-plugin RPC protocol for better performance and process isolation
-- Process reuse across multiple invocations
-- Dry-run mode support
-- Verbose output option
+Generates a colour palette algorithmically — no image, no file, no network. Each colour is drawn from a deterministic PRNG (ChaCha8) seeded either explicitly via `--plugin-arg seed=…` or, by default, from `crypto/rand`. The same seed always produces the same palette, which makes this plugin useful for reproducible experimentation, stress-testing the categoriser with hostile inputs, and bootstrapping a theme when you have no image or palette in mind.
 
 ## Installation
 
-### From Release
-
-Download the latest release for your platform:
+### Via the official plugin repository
 
 ```bash
-# Linux x86_64
-tinct plugins add https://github.com/jmylchreest/tinct/releases/latest/download/tinct-plugin-random_VERSION_Linux_x86_64.tar.gz:random
-
-# macOS (Darwin) x86_64
-tinct plugins add https://github.com/jmylchreest/tinct/releases/latest/download/tinct-plugin-random_VERSION_Darwin_x86_64.tar.gz:random
-
-# macOS (Darwin) ARM64
-tinct plugins add https://github.com/jmylchreest/tinct/releases/latest/download/tinct-plugin-random_VERSION_Darwin_arm64.tar.gz:random
+tinct plugins install random
 ```
 
-Replace `VERSION` with the actual version number.
-
-### From Source
+### Build from source
 
 ```bash
 cd contrib/plugins/input/random
-go build -o tinct-plugin-random
-tinct plugins add ./random --type input
+go build -ldflags "-X main.Version=0.1.0" -o tinct-plugin-random
+install -m 0755 tinct-plugin-random ~/.local/bin/
 ```
 
-## Usage
-
-### Basic Usage
-
-Generate a palette with 32 random colours (default):
+### Verify
 
 ```bash
+which tinct-plugin-random
+tinct-plugin-random --plugin-info | jq .
+```
+
+The plugin uses tinct's go-plugin RPC protocol and is discovered automatically once it's on `$PATH`.
+
+## Quick start
+
+```bash
+# Default — 32 random colours from a fresh crypto/rand seed
 tinct generate -i random -o tailwind
-```
 
-### Custom Colour Count
+# Reproducible — same seed, same palette every run
+tinct generate -i random -o tailwind --plugin-arg seed=12345
 
-Generate a palette with a specific number of colours:
-
-```bash
+# Smaller palette
 tinct generate -i random -o tailwind --plugin-arg count=16
 ```
 
-### Reproducible Generation
+## Configuration / credentials
 
-Use a seed for deterministic colour generation:
+No credentials, no network access, no files. The only inputs are the two plugin-args (`count` and `seed`). Both can be persisted via `tinct plugins config random` so subsequent `tinct generate -i random …` invocations don't need to repeat them.
 
-```bash
-# Generate with specific seed
-tinct generate -i random -o tailwind --plugin-arg seed=12345
+If `seed` is omitted, the plugin reads 8 bytes from `crypto/rand` and uses them as the ChaCha8 seed — so every run produces a different palette. Pass `seed` (any unsigned 64-bit integer) to lock generation to a known result.
 
-# Running again with the same seed produces identical colours
-tinct generate -i random -o tailwind --plugin-arg seed=12345
-```
+## Flags
 
-### Combined Options
-
-```bash
-tinct generate -i random -o tailwind \
-  --plugin-arg count=24 \
-  --plugin-arg seed=42
-```
-
-## Plugin Arguments
+This plugin uses `--plugin-arg key=value` rather than dedicated CLI flags:
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `count` | integer | 32 | Number of colours to generate |
-| `seed` | integer | random | Random seed for reproducible generation. If not provided, a cryptographically random seed is used |
+| `count` | integer | `32` | Number of colours to generate (0–4096) |
+| `seed` | integer | _(crypto/rand)_ | ChaCha8 seed for reproducible generation |
 
-## Configuration Example
+## Output
 
-Add to your `tinct.yaml`:
+A palette of `count` colours (default 32), each drawn uniformly at random from the full RGB cube. No role hints are emitted — tinct's categoriser is responsible for picking `background`, `foreground`, accents, etc., from the generated set. No theme hint is emitted either, so light/dark is inferred from the average luminance of the result.
 
-```yaml
-inputs:
-  - name: random
-    type: external
-    path: /path/to/random
-    args:
-      count: 32
-      seed: 12345  # Optional: remove for random generation
-```
+This plugin **does not provide a wallpaper**.
 
-## Dry Run
+## Troubleshooting
 
-Test the plugin without generating actual output:
+### `plugin-arg 'count' out of range`
 
-```bash
-tinct generate -i random -o tailwind --dry-run --verbose
-```
+`count` is capped at 4096 to prevent accidental misuse (a million colours doesn't yield a more interesting palette than a hundred). Pass a value in `0..4096`.
 
-Output:
-```
-DRY-RUN MODE: Would generate 32 random colours
-Random seed: 1234567890
-```
+### `plugin-arg 'count' must be a number`
 
-## Technical Details
+Plugin-args arrive as JSON, where numbers decode as `float64`. Pass the value bare (`count=32`) — quotes turn it into a string and the validator will reject it.
 
-- **Protocol**: go-plugin RPC (HashiCorp's plugin system)
-- **Plugin Type**: Input
-- **Protocol Version**: 1
-- **Language**: Go 1.21+
+### Same seed produces a different palette than last time
 
-## Building
+A change to the colour-generation function (e.g. tinct upgraded the PRNG, or this plugin's version changed) will produce different output for the same seed. Pin both the tinct version and the `tinct-plugin-random` version if exact reproducibility across machines matters.
 
-Requirements:
-- Go 1.21 or higher
-- Access to Tinct's internal packages
+### Palette looks washed-out / cluttered
 
-Build command:
-```bash
-go build -o tinct-plugin-random
-```
+Uniform random sampling of RGB doesn't produce aesthetically grouped palettes — that's the point. If you wanted a palette with semantic structure, use `image`, `paletty`, or one of the AI-generation inputs instead.
 
-## License
+## Related plugins
 
-MIT License - See LICENSE file for details
-
-## Contributing
-
-Contributions are welcome! Please submit issues and pull requests to the main Tinct repository.
+- [`image`](../../../../internal/plugin/input/image/README.md) — extract a coherent palette from a real image.
+- [`paletty`](../paletty/README.md) — fetch a curated palette from paletty.dev.
+- [`google-genai`](../../../../internal/plugin/input/googlegenai/README.md), [`openrouter`](../../../../internal/plugin/input/openrouter/README.md) — generate a source image with an AI model.

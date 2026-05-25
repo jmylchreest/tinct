@@ -1,52 +1,44 @@
 ---
-sidebar_position: 4
+title: fuzzel
+sidebar_position: 3
+plugin:
+  type: output
+  name: fuzzel
+  category: bars-launchers
+  source: builtin
+  app: Fuzzel
+  app_url: 'https://codeberg.org/dnkl/fuzzel'
+  requires:
+    - fuzzel
+  optional: []
+  pattern: single-file
+  default_output_dir: ~/.config/fuzzel/themes
+  generated_files:
+    - tinct.ini
+  reload:
+    method: none
+    user_action_required: true
 ---
 
 # fuzzel
 
-Generate colour themes for [Fuzzel](https://codeberg.org/dnkl/fuzzel) application launcher.
+Generates a colour-only INI theme for [Fuzzel](https://codeberg.org/dnkl/fuzzel), the lightweight Wayland application launcher. The output is a single `[colors]` section using fuzzel's `RRGGBBAA` (hex without `#`) format, suitable for `include=` from your main `fuzzel.ini` or for use standalone with `fuzzel --config`.
 
-## Description
+## Installation
 
-Fuzzel is a fast, lightweight application launcher for wlroots-based compositors. The plugin generates an INI-format theme file that styles the launcher window.
+Built into tinct — nothing to install separately. `tinct generate -o fuzzel` works out of the box.
 
-## Output path
-
-```
-~/.config/fuzzel/themes/tinct.ini
-```
-
-## Usage
+## Quick start
 
 ```bash
-tinct generate -i image -p ~/wallpaper.jpg -o fuzzel
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o fuzzel
 ```
 
-## Flags
+## Generated files
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--fuzzel.output-dir` | `~/.config/fuzzel/themes` | Output directory for theme files |
-
-## Configuration
-
-Include the generated theme in your fuzzel configuration.
-
-Add to your `~/.config/fuzzel/fuzzel.ini`:
-
-```ini
-include=~/.config/fuzzel/themes/tinct.ini
-```
-
-## Themed elements
-
-The theme affects:
-
-- Window background
-- Input field styling
-- List item colours
-- Selection highlighting
-- Border colours
+| File | Path | Role |
+|------|------|------|
+| `tinct.ini` | `~/.config/fuzzel/themes/tinct.ini` | A `[colors]` section with every fuzzel colour key in `RRGGBBAA` hex format. Drop it in via `include=` or pass it to `fuzzel --config`. |
 
 ## Generated format
 
@@ -63,8 +55,104 @@ selection-match=89b4faff
 border=89b4faff
 ```
 
-## See also
+## Integration
 
-- [Fuzzel documentation](https://codeberg.org/dnkl/fuzzel)
-- [wofi](./wofi.md)
-- [walker](./walker.md)
+Fuzzel supports `include=` directives. Add one line to your `~/.config/fuzzel/fuzzel.ini`:
+
+```ini
+include=~/.config/fuzzel/themes/tinct.ini
+```
+
+Keep your structural settings (font, layout, prompt, terminal) in `fuzzel.ini` and let the included file own the `[colors]` block.
+
+Alternatively, run fuzzel with the file as a standalone config:
+
+```bash
+fuzzel --config ~/.config/fuzzel/themes/tinct.ini
+```
+
+This is useful for one-off use or for binding a themed launcher to a specific keybind without touching your global `fuzzel.ini`.
+
+## Reload behaviour
+
+### Automatic
+
+None. Fuzzel reads its config on every launch — there's no daemon to reload.
+
+### Manual fallback
+
+Close any open fuzzel window and launch a new one. The next invocation picks up the new colours automatically.
+
+## Uninstall / revert
+
+1. **Remove the include line** from your `~/.config/fuzzel/fuzzel.ini`:
+
+   ```bash
+   sed -i '/themes\/tinct\.ini/d' ~/.config/fuzzel/fuzzel.ini
+   ```
+
+2. **Delete the generated file**:
+
+   ```bash
+   rm ~/.config/fuzzel/themes/tinct.ini
+   ```
+
+3. **Reload to drop the theme**: no action needed. The next fuzzel invocation uses your previous styling.
+
+4. **External state**: this plugin only writes to `~/.config/fuzzel/themes/`. No further cleanup is required.
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--fuzzel.output-dir` | `~/.config/fuzzel/themes` | Override the output directory |
+
+## Colour role mapping
+
+All values are emitted in fuzzel's `RRGGBBAA` (hex without `#`) format.
+
+| Fuzzel key (`[colors]`) | Tinct role | Notes |
+|---|---|---|
+| `background` | `background` | 85% opacity to let the compositor blur the wallpaper through. |
+| `text` | `foreground` | Unselected entry text. |
+| `prompt` | `accent1` | Prompt character(s). |
+| `placeholder` | `foregroundMuted` | 80% opacity. |
+| `input` | `foreground` | Current input text. |
+| `match` | `accent2` | Matched substring within an entry. |
+| `selection` | `accent1` | Selected entry background. |
+| `selection-text` | `onAccent1` | Selected entry text. |
+| `selection-match` | `accent2` | Matched substring within the selected entry. |
+| `counter` | `info` | "N/M results" counter. |
+| `border` | `accent1` | Launcher window border. |
+
+## Customising the template
+
+Extract the default template to override it:
+
+```bash
+tinct plugins templates dump -o fuzzel -l ~/.config/tinct/templates/fuzzel
+```
+
+This creates `~/.config/tinct/templates/fuzzel/tinct.ini.tmpl`. Tinct uses your version in preference to the embedded default.
+
+See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for the available functions and palette accessors.
+
+## Troubleshooting
+
+### Colours didn't change
+
+Fuzzel reads its config when it launches; if you have a session open it's still using the old config. Close it and re-invoke. If the new launch is still old colours, your `fuzzel.ini` has explicit `[colors]` entries that override the included file — fuzzel processes the main file last, so its values win. Move those overrides out of `fuzzel.ini`, or after the `include=` line.
+
+### `fuzzel: command not found`
+
+The plugin lists `fuzzel` as a required binary. Install it via your distro's package manager (`pacman -S fuzzel`, `apt install fuzzel`, etc.) or build from the [upstream repository](https://codeberg.org/dnkl/fuzzel).
+
+### `unknown key: selection-match`
+
+Older fuzzel versions don't recognise every key the template emits. Upgrade to fuzzel 1.10+ for full coverage, or extract the template and drop the unsupported lines.
+
+## Related plugins
+
+- [rofi](./rofi.md) — X11/Wayland launcher alternative.
+- [wofi](./wofi.md) — another Wayland-native launcher.
+- [walker](./walker.md) — modern modular launcher.

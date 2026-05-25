@@ -1,182 +1,67 @@
 ---
-sidebar_position: 5
+title: remote-json
+sidebar_position: 4
+plugin:
+  type: input
+  name: remote-json
+  source: builtin
+  source_type: url
+  description: Fetch colours from remote JSON with JSONPath queries
+  service: remote JSON
+  requires: []
+  optional: []
+  requires_network: true
+  requires_credentials: []
+  produces_wallpaper: false
 ---
 
 # remote-json
 
-Fetch colour palettes from remote JSON URLs.
+Fetches a JSON document from an HTTPS URL and extracts a colour palette from it. An optional JSONPath query selects a subtree before colour parsing, and an optional `name=role` mapping rebinds source keys to tinct's semantic roles. This is the right plugin for theme repositories (Catppuccin, Dracula, Tokyo Night) and palette services that expose a JSON endpoint.
 
-## Description
+## Installation
 
-The `remote-json` plugin fetches JSON data from URLs and extracts colours. Use it for:
+Built into tinct — nothing to install separately.
 
-- Theme repositories (Catppuccin, Dracula, etc.)
-- Custom theme APIs
-- Shared colour configurations
-
-## Usage
+## Quick start
 
 ```bash
-tinct generate -i remote-json --remote-json.url "<url>" [flags]
-```
-
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--remote-json.url` | | JSON URL (required) |
-| `--remote-json.query` | | JSONPath query for nested data |
-| `--remote-json.timeout` | `10s` | Request timeout |
-
-## Examples
-
-### Catppuccin themes
-
-```bash
-# Catppuccin Mocha (dark)
+# Catppuccin Mocha from the upstream palette JSON
 tinct generate -i remote-json \
   --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
   --remote-json.query "colors.mocha" \
-  -o all
-
-# Catppuccin Latte (light)
-tinct generate -i remote-json \
-  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "colors.latte" \
-  -o all -t light
-
-# Catppuccin Frappe
-tinct generate -i remote-json \
-  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  --remote-json.query "colors.frappe" \
-  -o all
+  -o kitty,waybar
 ```
 
-### Custom JSON
+## Configuration
 
-```bash
-# Simple colour array
-tinct generate -i remote-json \
-  --remote-json.url "https://example.com/theme.json" \
-  -o all
+No credentials. URLs must be HTTPS by default; tinct blocks plain HTTP and link-local / private addresses to avoid SSRF surprises. To allow plain `http://` URLs (useful for local development), set `TINCT_ALLOW_INSECURE_HTTP=1`.
 
-# Nested structure
-tinct generate -i remote-json \
-  --remote-json.url "https://example.com/themes.json" \
-  --remote-json.query "themes.dark.colors" \
-  -o all
-```
-
-## JSON format
-
-### Simple array
+Responses are parsed as a single document. The plugin recognises three shapes:
 
 ```json
-["#1e1e2e", "#cdd6f4", "#89b4fa", "#f5c2e7"]
-```
+// 1. Flat array of hex strings
+["#1e1e2e", "#cdd6f4", "#89b4fa"]
 
-### Object with hex values
-
-```json
+// 2. Object with hex values
 {
   "background": "#1e1e2e",
   "foreground": "#cdd6f4",
-  "accent": "#89b4fa"
+  "accent":     "#89b4fa"
 }
-```
 
-### Nested structure
-
-```json
+// 3. Nested object — use --remote-json.query to dive in
 {
   "colors": {
-    "mocha": {
-      "base": "#1e1e2e",
-      "text": "#cdd6f4",
-      "blue": "#89b4fa"
-    }
+    "mocha": { "base": "#1e1e2e", "text": "#cdd6f4", "blue": "#89b4fa" }
   }
 }
 ```
 
-Use `--remote-json.query` to navigate: `colors.mocha`
-
-## JSONPath queries
-
-Access nested data with dot notation:
-
-| Query | Result |
-|-------|--------|
-| `colors` | Top-level colours object |
-| `colors.mocha` | Mocha variant |
-| `themes[0]` | First theme in array |
-| `dark.palette` | Nested palette |
-
-## Colour parsing
-
-The plugin recognises various colour formats:
-
-| Format | Example |
-|--------|---------|
-| Hex 6 | `#1e1e2e` |
-| Hex 3 | `#1e2` |
-| RGB | `rgb(30, 30, 46)` |
-| Named | `red`, `blue` |
-
-## Role mapping
-
-Colours are mapped to roles based on:
-
-1. **Key names**: `background`, `foreground`, `accent`
-2. **Position**: First colour as background, second as foreground
-3. **Luminance**: Dark colours to background roles
-
-### Key name mapping
-
-| JSON key | Tinct role |
-|----------|------------|
-| `background`, `bg`, `base` | background |
-| `foreground`, `fg`, `text` | foreground |
-| `accent`, `primary`, `blue` | accent1 |
-| `secondary`, `pink` | accent2 |
-| `red`, `error` | danger |
-| `green`, `success` | success |
-| `yellow`, `warning` | warning |
-
-## Caching
-
-Responses are cached briefly to avoid repeated requests:
-
-- Cache duration: 15 minutes
-- Location: In-memory
-
-For permanent caching, download and use `file` plugin.
-
-## Troubleshooting
-
-### JSON parse error
-
-- Verify URL returns valid JSON
-- Check JSONPath query syntax
-- Ensure colours are in recognised format
-
-### Timeout
-
-- Increase timeout: `--remote-json.timeout 30s`
-- Check network connectivity
-- Verify URL is accessible
-
-### Wrong colours
-
-- Check JSONPath navigates to correct location
-- Verify colour format in source JSON
-- Use `--preview` to inspect results
-
-### paletty.dev
-
-paletty.dev exposes a clean JSON API — fetch any palette by ID:
+Colour values may be `#RRGGBB`, `#RGB`, `rgb(r,g,b)`, or named CSS colours. Use `--remote-json.map source=role` to rebind keys when the source schema doesn't line up with tinct's role names:
 
 ```bash
+# Map a paletty.dev palette into tinct roles
 tinct generate -i remote-json \
   --remote-json.url "https://paletty.dev/api/palettes/MDRHC0lqRj" \
   --remote-json.query "$.colors" \
@@ -184,12 +69,40 @@ tinct generate -i remote-json \
   -o ghostty
 ```
 
-For the same source there's a dedicated [paletty](./paletty.md)
-plugin that takes a URL or ID directly and supplies the default mapping for
-free — prefer it unless you need to override the URL or behaviour by hand.
+## Flags
 
-## See also
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--remote-json.url` | _(required)_ | HTTPS URL of the JSON document |
+| `--remote-json.query` | _(none)_ | JSONPath query to extract a subtree (e.g. `$.colors`, `colors.mocha`) |
+| `--remote-json.timeout` | `10s` | HTTP timeout |
+| `--remote-json.map` | `{}` | Map source keys to tinct roles (`name=role,name2=role2`) |
 
-- [paletty](./paletty.md) - Dedicated paletty.dev fetcher
-- [remote-css](./remote-css.md) - Parse CSS variables
-- [file](./file.md) - Local colour specification
+## Output
+
+A raw palette of however many colours the source document exposes. Role hints are populated when keys can be matched (either directly to tinct role names or through `--remote-json.map`). Unmapped colours fall through to the auto-categoriser.
+
+This plugin does **not** produce a wallpaper.
+
+## Troubleshooting
+
+### `invalid URL: …`
+
+URLs must use HTTPS and resolve to a public address by default. Either switch to HTTPS, point at a public host, or opt out with `TINCT_ALLOW_INSECURE_HTTP=1` (use sparingly).
+
+### `failed to parse JSON`
+
+The response isn't JSON, or the JSONPath query selected something that isn't an array of strings or an object of hex values. Try the URL with `curl | jq` first and refine the `--remote-json.query` accordingly.
+
+### Timeout
+
+Increase `--remote-json.timeout` (e.g. `30s`) for slow endpoints, or check whether the host is reachable from this machine.
+
+### Wrong roles after extraction
+
+The plugin auto-maps common key names (`background`, `bg`, `base` → background; `accent`, `primary` → accent1; `red`/`error` → danger; etc.), but every theme repo uses its own vocabulary. When in doubt, dump the source via `curl`, then build an explicit `--remote-json.map` for the exact keys you care about.
+
+## Related plugins
+
+- [`remote-css`](./remote-css.md) — same idea, but parses CSS custom properties from a remote stylesheet
+- [`file`](./file.md) — load colours from a local file or specify them inline

@@ -1,324 +1,181 @@
-# Dunstify Plugin
+---
+title: dunstify
+sidebar_position: 8
 
-**Type:** Output Plugin  
-**Protocol:** go-plugin (RPC)  
-**Language:** Go  
-**Purpose:** Send desktop notifications when themes are generated
+plugin:
+  type: output
+  name: dunstify
+  category: bars-launchers
+  source: external
+  app: dunstify / notify-send
+  app_url: https://github.com/dunst-project/dunst
+  version: 0.0.0
+  protocol_version: 0.3.0
+  repository: https://github.com/jmylchreest/tinct
+  install: tinct plugins install dunstify
+  requires: []
+  optional: [dunstify, notify-send]
+  default_output_dir: ""
+  generated_files: []
+  reload:
+    method: none
+    user_action_required: false
+---
 
-## Overview
+# dunstify
 
-The `dunstify` plugin sends desktop notifications via `dunstify` or `notify-send` when Tinct generates themes. This is a **demonstration plugin** showcasing the go-plugin protocol, which provides better performance than JSON-stdio through process reuse (~8ms vs ~52ms per call).
-
-This plugin demonstrates:
-- ✅ **go-plugin RPC protocol** - Process reuse for faster execution
-- ✅ **PreExecute hook** - Check prerequisites before execution
-- ✅ **PostExecute hook** - Act after theme files are written
-- ✅ **Graceful fallback** - Works with both `dunstify` and `notify-send`
-- ✅ **No file generation** - Notification-only plugin pattern
-
-## Features
-
-- Sends desktop notification when themes are generated
-- Shows count of generated theme files
-- Automatically detects available notification command
-- Falls back from `dunstify` → `notify-send` → graceful skip
-- Uses low urgency with 5-second timeout
-- Includes themed icon (`preferences-desktop-theme`)
-
-## Requirements
-
-One of the following notification commands must be installed:
-
-- **dunstify** (recommended) - Dunst notification utility with extended features
-- **notify-send** - Standard freedesktop notification utility
-
-### Installation
-
-**Arch Linux:**
-```bash
-sudo pacman -S dunst  # Includes dunstify
-# or
-sudo pacman -S libnotify  # Provides notify-send
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt install dunst
-# or
-sudo apt install libnotify-bin
-```
-
-**Fedora:**
-```bash
-sudo dnf install dunst
-# or
-sudo dnf install libnotify
-```
-
-## Building
-
-```bash
-cd contrib/plugins/output/dunstify
-go build -o tinct-plugin-dunstify main.go
-```
-
-Or use GoReleaser (builds for multiple platforms):
-```bash
-goreleaser build --single-target --id plugin-dunstify
-```
+Pops a desktop notification via [`dunstify`](https://github.com/dunst-project/dunst) (or [`notify-send`](https://gitlab.gnome.org/GNOME/libnotify)) every time `tinct generate` finishes. It writes no files of its own — it consumes the list of files written by the other output plugins in the run and shows a one-line summary. The original purpose is as a **reference implementation** of tinct's go-plugin RPC protocol, demonstrating that a plugin doesn't have to produce theme files to be useful.
 
 ## Installation
 
-### From GitHub Releases (Recommended)
+### Via the official plugin repository
 
 ```bash
-# Download and install for your platform
-tinct plugins add https://github.com/jmylchreest/tinct/releases/download/v1.0.0/tinct-plugin-dunstify_v1.0.0_Linux_x86_64.tar.gz:dunstify
+tinct plugins install dunstify
 ```
 
-### From Source
+### Build from source
 
 ```bash
-# Build the plugin
 cd contrib/plugins/output/dunstify
-go build -o tinct-plugin-dunstify main.go
-
-# Add to Tinct
-tinct plugins add ./dunstify
+go build -ldflags "-X main.Version=0.0.0" -o tinct-plugin-dunstify
+install -m 0755 tinct-plugin-dunstify ~/.local/bin/
 ```
 
-## Usage
-
-### Basic Usage
+### Verify
 
 ```bash
-# Generate theme with notification
-tinct generate -i image -p wallpaper.jpg -o hyprland,kitty,dunstify
-
-# The notification appears when generation completes
+which tinct-plugin-dunstify
+tinct-plugin-dunstify --plugin-info | jq .
 ```
 
-### Enable by Default
+### Install a notification helper
+
+One of `dunstify` or `notify-send` must be on `$PATH`:
+
+| Distro | dunst (includes `dunstify`) | libnotify (provides `notify-send`) |
+|---|---|---|
+| Arch | `sudo pacman -S dunst` | `sudo pacman -S libnotify` |
+| Debian/Ubuntu | `sudo apt install dunst` | `sudo apt install libnotify-bin` |
+| Fedora | `sudo dnf install dunst` | `sudo dnf install libnotify` |
+
+If neither is present the plugin skips cleanly — no error, no notification.
+
+## Quick start
 
 ```bash
-# Enable the plugin
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland,kitty,dunstify
+```
+
+The desktop notification appears once `tinct generate` finishes:
+
+```
+Theme Generated
+Generated 8 theme files
+```
+
+The icon (`preferences-desktop-theme`), urgency (`low`), and timeout (5 s) are baked into the plugin — override them by editing `main.go` and rebuilding from source.
+
+## Generated files
+
+None. This plugin's effect is the notification itself — there is nothing to write to disk and nothing to clean up later.
+
+## Integration
+
+No configuration required. Add `dunstify` to the `-o` plugin list whenever you want a notification when generation finishes:
+
+```bash
+tinct generate -i image -p ~/wallpaper.jpg -o ghostty,waybar,dunstify
+```
+
+Or enable it permanently so it runs alongside every generate:
+
+```bash
 tinct plugins enable output:dunstify
-
-# Now it runs automatically with any output plugins
-tinct generate -i image -p wallpaper.jpg -o hyprland,kitty
 ```
 
-### Notification Example
+## Reload behaviour
 
-When themes are generated, you'll see a desktop notification:
+### Automatic
 
-```
-┌─────────────────────────────────────┐
-│  🎨  Theme Generated                │
-│                                     │
-│  Generated 8 theme files            │
-└─────────────────────────────────────┘
-```
+Not applicable — the plugin's *only* side-effect is the notification, dispatched in `PostExecute` after the other plugins have finished writing. There is no separate "reload" step.
 
-## How It Works
+### Manual fallback
 
-### Plugin Lifecycle
+If the notification didn't appear:
 
-1. **PreExecute Hook** - Checks if `dunstify` or `notify-send` is available
-   - If neither found → Skip gracefully (no error)
-   - If found → Continue to Generate
+1. Confirm the notification daemon is actually running — `pgrep -x dunst` for dunst, otherwise check whichever daemon your DE provides.
+2. Confirm one of the helper binaries is on `$PATH` — `command -v dunstify || command -v notify-send`.
+3. Re-run `tinct generate ... -o dunstify --verbose` and check the daemon's log.
 
-2. **Generate** - No-op (notification plugins don't generate files)
-   - Returns empty file map
+## Uninstall / revert
 
-3. **PostExecute Hook** - Sends desktop notification
-   - Receives list of files written by other plugins
-   - Counts files and sends notification
-   - Tries `dunstify` first, falls back to `notify-send`
+1. **Remove the config line**: this plugin has no config to remove. If you opted in permanently with `tinct plugins enable output:dunstify`, disable it:
 
-### go-plugin Protocol
+       tinct plugins disable output:dunstify
 
-This plugin uses the **go-plugin RPC protocol** instead of JSON-stdio:
+2. **Delete the generated files**: none — this plugin writes nothing to disk. Nothing to remove.
 
-**Benefits:**
-- **6.5x faster** - Process reuse vs spawning new process each time
-- **Automatic crash recovery** - If plugin crashes, it's restarted
-- **Health monitoring** - Tinct can detect if plugin becomes unresponsive
-- **Bidirectional streaming** - Can stream data if needed
+3. **Reload to drop the styling**: not applicable. Once disabled, the plugin stops dispatching notifications immediately.
 
-**Trade-offs:**
-- Must be written in Go
-- Slightly more complex than JSON-stdio
-- Requires hashicorp/go-plugin dependency
+4. **External state**: this plugin only fires desktop notifications via the system notification daemon. No files outside `tinct generate`'s working set are touched. To remove the plugin binary:
 
-## Code Structure
+       tinct plugins uninstall dunstify
+       # or, for a source build:
+       rm ~/.local/bin/tinct-plugin-dunstify
 
-```go
-// PreExecute - Check if notification command is available
-func (p *DunstifyPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-    if _, err := exec.LookPath("dunstify"); err == nil {
-        return false, "", nil  // Found, continue
-    }
-    if _, err := exec.LookPath("notify-send"); err == nil {
-        return false, "", nil  // Fallback, continue
-    }
-    return true, "Neither dunstify nor notify-send found", nil  // Skip gracefully
-}
+## Flags
 
-// Generate - No files to generate
-func (p *DunstifyPlugin) Generate(ctx context.Context, palette protocol.PaletteData) (map[string][]byte, error) {
-    return map[string][]byte{}, nil  // Empty map, no files
-}
+This plugin has no configurable flags. To tune the notification (urgency, timeout, icon, body text), edit `main.go` and rebuild from source. See [Customising](#customising) below.
 
-// PostExecute - Send notification after files are written
-func (p *DunstifyPlugin) PostExecute(ctx context.Context, writtenFiles []string) error {
-    summary := "Theme Generated"
-    body := fmt.Sprintf("Generated %d theme files", len(writtenFiles))
-    // Send notification via dunstify or notify-send
-    return sendNotification(ctx, summary, body)
-}
-```
+## Colour role mapping
 
-## Customization
+Not applicable. This plugin does not consume any colour values from the palette — it ignores `palette.colours` entirely and reports only the count of files written by other plugins in the run.
 
-To customise the notification, edit `main.go`:
+## Customising
 
-### Change Urgency
-```go
-cmd := exec.CommandContext(ctx, dunstifyPath,
-    "-u", "normal",  // low, normal, critical
-    // ...
-)
-```
+The dispatched notification is hard-coded. To change it:
 
-### Change Timeout
-```go
-cmd := exec.CommandContext(ctx, dunstifyPath,
-    "-t", "10000",  // 10 seconds (in milliseconds)
-    // ...
-)
-```
+1. Edit `contrib/plugins/output/dunstify/main.go`.
+2. Rebuild: `go build -o tinct-plugin-dunstify`.
+3. Reinstall: `install -m 0755 tinct-plugin-dunstify ~/.local/bin/`.
 
-### Change Icon
-```go
-icon := "preferences-desktop-wallpaper"  // Use wallpaper icon instead
-```
+Common knobs:
 
-### Add More Details
-```go
-// Show first few generated files
-if len(writtenFiles) > 0 {
-    body = fmt.Sprintf("Generated:\n%s", strings.Join(writtenFiles[:3], "\n"))
-}
-```
-
-## Testing
-
-### Test Plugin Info
-```bash
-./dunstify --plugin-info
-```
-
-Expected output:
-```json
-{
-  "name": "dunstify",
-  "type": "output",
-  "version": "0.0.1",
-  "protocol_version": "0.0.1",
-  "description": "Send desktop notifications via dunstify or notify-send",
-  "plugin_protocol": "go-plugin"
-}
-```
-
-### Test with Tinct
-```bash
-# Dry run (no files written, but notification sent)
-tinct generate -i image -p wallpaper.jpg -o dunstify --dry-run
-
-# Real run
-tinct generate -i image -p wallpaper.jpg -o hyprland,dunstify
-```
-
-### Debug Mode
-```bash
-# Enable verbose output
-tinct generate -i image -p wallpaper.jpg -o dunstify --verbose
-
-# Check plugin detection
-tinct plugins list | grep dunstify
-```
+| Knob | Where | Default |
+|---|---|---|
+| Urgency | `-u low` arg to `exec.CommandContext` | `low` |
+| Timeout | `-t 5000` arg (ms) | `5000` (5 s) |
+| Icon | `icon` constant in `PostExecute` | `preferences-desktop-theme` |
+| Body text | `body` formatted in `PostExecute` | `Generated N theme file(s)` |
 
 ## Troubleshooting
 
-### "Neither dunstify nor notify-send found"
+### Plugin skips: "Neither dunstify nor notify-send found on $PATH"
 
-**Problem:** No notification command available.
+Install one of them:
 
-**Solution:**
 ```bash
-# Install dunst (includes dunstify)
-sudo pacman -S dunst  # Arch
-sudo apt install dunst  # Ubuntu/Debian
-
-# Or install libnotify (includes notify-send)
-sudo pacman -S libnotify
+sudo pacman -S dunst       # Arch (provides dunstify)
+sudo apt install dunst     # Debian/Ubuntu
+sudo pacman -S libnotify   # Arch (provides notify-send)
 ```
 
-### "Plugin not found"
+### Plugin runs but no notification appears
 
-**Problem:** Plugin not registered with Tinct.
+Your notification daemon may not be running. For dunst:
 
-**Solution:**
 ```bash
-# Add the plugin
-tinct plugins add ./dunstify
-
-# Verify it's registered
-tinct plugins list
+pgrep -x dunst || dunst &
 ```
 
-### Notification doesn't appear
+For GNOME, KDE, sway-notification-center, etc., check the relevant daemon. `notify-send` honours whatever DBus notification service is currently registered.
 
-**Problem:** Notification daemon not running.
+### Plugin runs but `--plugin-info` returns the wrong name
 
-**Solution:**
-```bash
-# Check if dunst is running
-pgrep dunst
+If you built from source without setting `-ldflags "-X main.Version=…"`, the binary reports `version: 0.0.0`. That's cosmetic and doesn't affect operation — set the ldflag if you care.
 
-# Start dunst
-dunst &
+## Related plugins
 
-# Or use your system notification daemon
-```
+- [dunst](../../../../internal/plugin/output/dunst/README.md) — the built-in dunst theming plugin (writes `~/.config/dunst/dunstrc.d/`). Pair `dunst` (style the daemon) with `dunstify` (announce regenerations) if you want both.
 
-## Related Plugins
-
-### Similar Output Plugins
-- **notify-send.py** (contrib/plugins/output/) - Python script version, JSON-stdio protocol
-- **hyprpaper** (internal) - Sets wallpaper, also uses PostExecute hook
-
-### Plugin Development Resources
-- [External Plugin Guide](../../README.md) - How to create plugins
-- [go-plugin Documentation](https://github.com/hashicorp/go-plugin) - RPC protocol library
-- [Plugin Protocol](../../../../internal/plugin/protocol/) - Tinct's plugin interfaces
-
-## License
-
-MIT License - Same as Tinct
-
-## Contributing
-
-To improve this plugin:
-1. Fork the repository
-2. Make changes to `contrib/plugins/output/dunstify/main.go`
-3. Test with `go build && tinct plugins add ./dunstify`
-4. Submit a pull request
-
-Ideas for improvements:
-- [ ] Show palette colours in notification
-- [ ] Add notification action buttons (view files, revert, etc.)
-- [ ] Support custom notification templates
-- [ ] Add notification history/log
-- [ ] Support notification urgency based on file count

@@ -8,16 +8,24 @@ Input plugins extract or generate colour palettes from various sources.
 
 ## Available plugins
 
-| Plugin | Description | Use case |
-|--------|-------------|----------|
-| [image](./image.md) | Extract from images | Local wallpapers, photos |
-| [google-genai](./google-genai.md) | AI generation | Create unique themes |
-| [openrouter](./openrouter.md) | Multi-model AI | Alternative AI generation |
-| [remote-json](./remote-json.md) | JSON URL fetching | Theme repositories, Catppuccin |
-| [remote-css](./remote-css.md) | CSS parsing | CSS variable themes |
-| [paletty](./paletty.md) | paletty.dev fetcher (external) | Curated terminal palettes |
-| [file](./file.md) | Manual specification | Custom colour lists |
-| [markdown](./markdown.md) | Saved themes | Restore exported themes |
+{/* AUTO-GENERATED PLUGIN TABLE — DO NOT EDIT BETWEEN THE MARKERS.
+    Regenerated from in-tree READMEs by docs/scripts/sync-plugin-readmes.mjs.
+    To change the table format, edit the script's `renderInputTable` function. */}
+{/* BEGIN AUTO-PLUGIN-TABLE */}
+
+| Plugin | Description | Source type | Requires |
+|--------|-------------|-------------|----------|
+| [image](./image.md) | Extract colours from images (files, directories, URLs) with optional ambient lighting | image |  |
+| [file](./file.md) | Load palette from file or colour overrides | file |  |
+| [markdown](./markdown.md) | Load theme from tinct markdown theme file | file |  |
+| [remote-json](./remote-json.md) | Fetch colours from remote JSON with JSONPath queries | url | network |
+| [remote-css](./remote-css.md) | Fetch colours from remote CSS variables | url | network |
+| [google-genai](./google-genai.md) | Generate images with Google Imagen and extract colours | api | network; creds: GOOGLE_API_KEY |
+| [openrouter](./openrouter.md) | Generate images with OpenRouter.ai models and extract colours | api | network; creds: OPENROUTER_API_KEY |
+| [paletty](./paletty.md) | Fetch curated terminal palettes from paletty.dev | api | network |
+| [random](./random.md) | Generate random colour palettes with configurable seed and colour count | generated |  |
+
+{/* END AUTO-PLUGIN-TABLE */}
 
 ## Usage
 
@@ -78,7 +86,6 @@ See [Template functions: Context fields](../../templating/functions.md#context-f
 | Scenario | Recommended input |
 |----------|-------------------|
 | Match your wallpaper | `image` |
-| Use a known theme | `remote-json`, `paletty`, or `file` |
 | Want something unique | `google-genai` or `openrouter` |
 | Restore saved theme | `markdown` |
 | Quick custom colours | `file` |
