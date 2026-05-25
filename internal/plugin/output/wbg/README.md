@@ -1,151 +1,154 @@
-# wbg Output Plugin
+---
+title: wbg
+sidebar_position: 1
 
-Generate wallpaper configuration for [wbg](https://codeberg.org/dnkl/wbg), a super simple wallpaper application for Wayland compositors implementing the layer-shell protocol.
+plugin:
+  type: output
+  name: wbg
+  category: special
+  source: builtin
+  app: wbg
+  app_url: https://codeberg.org/dnkl/wbg
+  requires: []
+  optional: [wbg]
+  pattern: single-file
+  default_output_dir: ~/.config/wbg
+  generated_files: [tinct-wbg.sh]
+  reload:
+    method: wallpaper-apply
+    command: pkill wbg; wbg <wallpaper>
+    user_action_required: false
+---
 
-## Overview
+# wbg
 
-The wbg plugin generates a wallpaper configuration reference file and automatically applies the wallpaper when an image source is provided. wbg is the simplest wallpaper tool available -- it takes a single image path and displays it scaled-to-fit on all monitors.
+Wallpaper integration for [wbg](https://codeberg.org/dnkl/wbg), the minimal Wayland wallpaper application from the dnkl/foot ecosystem. wbg is a single-shot foreground process — it displays one image scaled-to-fit on all monitors until killed. The plugin writes a small shell script that captures the current wallpaper and, when wbg is available, restarts the process so the new image takes effect immediately.
 
-## Features
+## Installation
 
-- Automatic wallpaper application via `wbg` process management
-- Kill-and-restart pattern for seamless wallpaper changes
-- Compositor integration examples (Hyprland, Sway)
-- Graceful handling when wbg is not installed
+Built into tinct — nothing to install separately. `tinct generate -o wbg` works out of the box.
 
-## Generated Files
-
-- `tinct-wbg.conf` - Wallpaper configuration reference with wbg commands
-
-## Default Output Location
-
-```
-~/.config/wbg/tinct-wbg.conf
-```
-
-## Usage
-
-### With Image Input (Automatic Wallpaper)
-
-When using the `image` input plugin, the wbg plugin automatically:
-1. Generates config with wallpaper path
-2. Kills any existing wbg process
-3. Starts a new wbg instance with the wallpaper
+## Quick start
 
 ```bash
-# Extract colours and set wallpaper
-tinct generate -i image -p ~/Pictures/wallpaper.jpg -o wbg,hyprland,waybar
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o wbg
 ```
 
-### Without Image Input
+If `wbg` is on `$PATH` the wallpaper switches immediately. The generated `tinct-wbg.sh` is made executable so you can re-run it from your compositor autostart to restore the wallpaper after a fresh login.
 
-When using non-image sources, a config is generated with usage instructions:
+## Generated files
+
+| File | Path | Role |
+|------|------|------|
+| `tinct-wbg.sh` | `~/.config/wbg/tinct-wbg.sh` | POSIX shell script that kills any existing `wbg` and `exec`s a fresh one with the wallpaper path. Marked executable. |
+
+When no wallpaper source is available (e.g. you used a non-image input plugin) the script is generated with usage hints rather than a working `exec` line — wbg can't display a solid colour, so there's nothing to do.
+
+## Integration
+
+wbg has no config file — it's a CLI argument. Tinct's role is to write a self-contained shell script that re-launches wbg with the chosen image. Wire it into your compositor autostart so the wallpaper survives a reboot:
+
+- **Hyprland**: `exec-once = ~/.config/wbg/tinct-wbg.sh`
+- **Sway**: `exec ~/.config/wbg/tinct-wbg.sh`
+- **Generic Wayland session**: `~/.config/wbg/tinct-wbg.sh &`
+
+## Reload behaviour
+
+### Automatic
+
+After writing the script the plugin's `Wallpaper` hook runs:
+
+```
+killall wbg
+wbg /absolute/path/to/wallpaper       # detached, released
+```
+
+wbg is a foreground process with no IPC, so the only way to change the image is to kill and restart it. The replacement process is detached from tinct so it continues running after the command exits.
+
+If `wbg` isn't on `$PATH` the wallpaper step is skipped silently; the script on disk still works the first time wbg becomes available.
+
+### Manual fallback
+
+Re-run the generated script:
 
 ```bash
-# Generate from remote theme
-tinct generate -i remote-json \
-  --remote-json.url "https://raw.githubusercontent.com/catppuccin/palette/main/palette.json" \
-  -o wbg,hyprland
+~/.config/wbg/tinct-wbg.sh
 ```
 
-## Command Line Options
+Or do the kill-and-restart by hand:
+
+```bash
+killall wbg 2>/dev/null
+wbg ~/Pictures/wallpaper.jpg &
+```
+
+## Uninstall / revert
+
+1. **Remove the autostart entry**: delete the `exec`/`exec-once` line that points at `~/.config/wbg/tinct-wbg.sh` from your compositor config.
+
+2. **Delete the generated script**:
+
+   ```bash
+   rm ~/.config/wbg/tinct-wbg.sh
+   ```
+
+3. **Drop the current wallpaper**:
+
+   ```bash
+   killall wbg
+   ```
+
+   wbg exits and the compositor falls back to whatever the compositor's own background is (typically the default colour for empty space). The plugin does not track the previous wallpaper, so restoring a specific earlier image must be done by hand.
+
+4. **External state**: this plugin only writes to `~/.config/wbg/`. No further cleanup is required.
+
+## Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--wbg.output-dir` | `~/.config/wbg` | Output directory |
+| `--wbg.output-dir` | `~/.config/wbg` | Override the output directory |
 
-## Pre-Execute Check
+## Colour role mapping
 
-The plugin performs these checks:
+wbg displays an image. It does not consume tinct's palette. There is no colour role mapping.
 
-1. Warns if `wbg` binary is not found on PATH (non-fatal)
-2. Creates config directory if it doesn't exist
+## Customising the template
 
-## Behavior Matrix
-
-| Input Plugin | wbg Installed | Result |
-|--------------|---------------|--------|
-| `image` | Yes | Config generated + wallpaper applied |
-| `image` | No | Config generated, wallpaper skipped |
-| `remote-json` | Any | Config generated with usage instructions |
-
-## How Wallpaper Application Works
-
-When a wallpaper source is provided and wbg is installed:
-
-1. **Kill existing**: Runs `killall wbg` to stop any running instance
-2. **Start new**: Launches `wbg /path/to/wallpaper` as a background process
-3. **Detach**: Releases the process so it continues after tinct exits
-
-This ensures seamless wallpaper changes without manual intervention.
-
-## Integration Examples
-
-### Hyprland
-
-```conf
-# ~/.config/hypr/hyprland.conf
-exec-once = wbg ~/Pictures/wallpaper.jpg
-```
-
-### Sway
-
-```conf
-# ~/.config/sway/config
-exec wbg ~/Pictures/wallpaper.jpg
-```
-
-### Script-Based Wallpaper Rotation
+Dump the default template to override it:
 
 ```bash
-#!/bin/bash
-# Rotate wallpapers every 5 minutes
-while true; do
-    img=$(find ~/Pictures/Wallpapers -type f | shuf -n 1)
-    tinct generate -i image -p "$img" -o wbg,hyprland,waybar
-    sleep 300
-done
+tinct plugins templates dump -o wbg -l ~/.config/tinct/templates/wbg
 ```
 
-## Supported Image Formats
+This writes `~/.config/tinct/templates/wbg/tinct-wbg.sh.tmpl`. Tinct uses your version in preference to the embedded default. Common reasons to override: change the `killall` invocation (e.g. `pkill -x wbg`), add `--stretch`, or hard-code a specific output.
 
-wbg supports the following formats (depending on compile-time options):
-
-- PNG
-- JPEG
-- JPEG XL
-- WebP
-- SVG
+See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for available functions.
 
 ## Troubleshooting
 
-### Wallpaper Not Applied
+### Wallpaper didn't change
 
-Check if wbg is installed:
+`wbg` must be installed for the kill-and-restart to do anything. Check:
 
 ```bash
 which wbg
 ```
 
-### Multiple wbg Instances
+If it's missing, install wbg from your distro (often `extra/wbg` or build from source). The generated script will start working the next time you run it.
 
-The plugin automatically kills existing wbg processes before starting a new one. If you see multiple instances, check for other scripts or autostart entries that launch wbg.
+### Multiple wbg instances
 
-### Verbose Mode
+The plugin runs `killall wbg` before starting the new one. If you still end up with multiple processes, another autostart entry (e.g. your compositor's built-in background, or a leftover from a previous wallpaper tool) is racing tinct. Remove the duplicate launcher.
 
-See detailed process:
+### Image format unsupported
 
-```bash
-tinct generate -i image -p wallpaper.jpg -o wbg --verbose
-```
+wbg supports PNG, JPEG, JPEG XL, WebP, and SVG (subject to compile-time options). For GIFs or unsupported formats, convert first (`magick`, `cwebp`, `gifsicle`) or switch to the [awww](../awww/README.md) plugin, which handles animated wallpapers.
 
-## Resources
+### Script exits immediately
 
-- [wbg Repository](https://codeberg.org/dnkl/wbg)
-- [wbg Releases](https://codeberg.org/dnkl/wbg/releases)
+The script ends with `exec wbg ...`, which replaces the shell process. When run from a terminal you'll see wbg take over the terminal foreground; ctrl-C kills wbg. Run with `&` (or via autostart) for normal daemon-style use.
 
-## See Also
+## Related plugins
 
-- [awww Plugin](../awww/README.md) - Animated wallpaper daemon with transitions
-- [Hyprpaper Plugin](../hyprpaper/README.md) - Wallpaper daemon for Hyprland
-- [Image Input Plugin](../../input/image/README.md) - Extract colours from images
+- [awww](../awww/README.md) — animated wallpaper daemon with IPC and transitions; richer alternative to wbg.
+- [hyprpaper](../hyprpaper/README.md) — Hyprland's native wallpaper daemon.
