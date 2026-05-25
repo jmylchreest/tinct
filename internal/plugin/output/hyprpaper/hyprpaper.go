@@ -22,6 +22,7 @@ import (
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 	"github.com/jmylchreest/tinct/pkg/util/semver"
 )
@@ -115,6 +116,19 @@ func (p *Plugin) SetVerbose(verbose bool) {
 // Implements the output.TemplateProvider interface.
 func (p *Plugin) GetEmbeddedFS() any {
 	return templates
+}
+
+// Hooks declares hyprpaper's pre/post-execute behaviour declaratively
+// so tinct-check-readmes can verify the README against runtime reality.
+// The imperative PreExecute / PostExecute below still drive the
+// version-specific config management and wallpaper application — the
+// declarative spec only covers the parts that fit cleanly.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		OptionalBinaries:  []string{"hyprctl"},
+		AutoCreateDir:     true,
+		SupportsWallpaper: true,
+	}
 }
 
 // GetTargetVersion returns the installed hyprpaper version.
