@@ -64,6 +64,46 @@ Returns:
 }
 ```
 
+### Optional metadata block
+
+Plugins may include an optional `metadata` object describing routine behaviour. This lets the documentation pipeline diff a plugin's README frontmatter against its real runtime behaviour, catching drift.
+
+```json
+{
+  "name": "my-plugin",
+  "type": "output",
+  "version": "1.0.0",
+  "protocol_version": "0.2.0",
+  "description": "My plugin",
+  "plugin_protocol": "json-stdio",
+  "metadata": {
+    "required_binaries": ["myapp"],
+    "optional_binaries": [],
+    "default_output_dir": "~/.config/myapp",
+    "generated_files": ["tinct.conf"],
+    "pattern": "single-file",
+    "reload": {
+      "method": "signal",
+      "command": "pkill -USR1 -x myapp",
+      "user_action_required": false
+    }
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `required_binaries` | string[] | Binaries that must exist on PATH for the plugin to run |
+| `optional_binaries` | string[] | Binaries used opportunistically (e.g. reload helpers) |
+| `default_output_dir` | string | Path the plugin writes to by default (`~` left unexpanded) |
+| `generated_files` | string[] | Filenames the plugin produces inside `default_output_dir` |
+| `pattern` | string | `two-file`, `single-file`, `drop-in`, or `flavor-pack` |
+| `reload.method` | string | `ipc`, `signal`, `watch`, `wallpaper-apply`, or `none` |
+| `reload.command` | string | Descriptive — the exact reload action the plugin performs |
+| `reload.user_action_required` | bool | True if the user must manually reload (no automatic reload available) |
+
+The entire `metadata` object is optional and additive — clients ignore it if absent. Internal plugins don't need to populate it because the manager uses `hooks.Spec` directly.
+
 **2. Execution flow**
 
 ```
