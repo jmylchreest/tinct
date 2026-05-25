@@ -71,7 +71,7 @@ Export and utility plugins:
 | Plugin | Description | Purpose |
 |--------|-------------|---------|
 | [markdown](/docs/plugins/output/special/markdown) | Theme export | Save portable themes |
-| [template](/docs/plugins/output/special/template) | Custom templates | User-defined output |
+| [template](./special/template.md) | Custom templates | User-defined output |
 | [histui](/docs/plugins/output/special/histui) | Notification daemon | histui theming |
 
 ## Using output plugins

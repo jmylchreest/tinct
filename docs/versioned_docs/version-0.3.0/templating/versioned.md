@@ -148,4 +148,4 @@ var templates embed.FS
 ## See also
 
 - [Functions reference](/docs/templating/functions)
-- [template output plugin](/docs/plugins/output/special/template)
+- [template output plugin](../plugins/output/special/template.md)
