@@ -1,70 +1,48 @@
 ---
+title: zellij
 sidebar_position: 2
+plugin:
+  type: output
+  name: zellij
+  category: editors
+  source: builtin
+  app: Zellij
+  app_url: 'https://zellij.dev/'
+  requires:
+    - zellij
+  optional: []
+  pattern: single-file
+  default_output_dir: ~/.config/zellij/themes
+  generated_files:
+    - tinct.kdl
+  reload:
+    method: none
+    user_action_required: true
 ---
 
 # zellij
 
-Generate colour themes for [Zellij](https://zellij.dev/) terminal multiplexer.
+Generates a [KDL](https://kdl.dev/)-format theme file for [Zellij](https://zellij.dev/), the Rust terminal workspace. The output is a single, atomic theme file dropped into Zellij's themes directory; Zellij picks themes up by filename, so a single `theme "tinct"` directive in your config is all that's needed.
 
-## Description
+## Installation
 
-Zellij is a terminal workspace (multiplexer) with a focus on usability. The plugin generates a KDL-format theme file that styles Zellij's UI elements.
+Built into tinct — nothing to install separately. `tinct generate -o zellij` works out of the box.
 
-## Output path
-
-```
-~/.config/zellij/themes/tinct.kdl
-```
-
-## Usage
+## Quick start
 
 ```bash
-tinct generate -i image -p ~/wallpaper.jpg -o zellij
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o zellij
 ```
 
-### With custom theme name
+## Generated files
 
-```bash
-tinct generate -i image -p ~/wallpaper.jpg -o zellij --zellij.theme-name=my-theme
-```
+| File | Path | Role |
+|------|------|------|
+| `tinct.kdl` | `~/.config/zellij/themes/tinct.kdl` | **Theme.** A `themes { tinct { … } }` KDL block defining every UI element Zellij themes — text, ribbon (tab bar), table cells, list rows, frame borders, exit-code colours, multiplayer user palette. |
 
-This generates `~/.config/zellij/themes/my-theme.kdl`.
+The filename tracks the `--zellij.theme-name` flag: `--zellij.theme-name=foo` writes `themes/foo.kdl` and the post-execute message updates to suggest `theme "foo"`.
 
-## Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--zellij.output-dir` | `~/.config/zellij/themes` | Output directory for theme files |
-| `--zellij.theme-name` | `tinct` | Theme name (used in filename) |
-
-## Configuration
-
-After generation, enable the theme in Zellij.
-
-### In config.kdl
-
-Add to your `~/.config/zellij/config.kdl`:
-
-```kdl
-theme "tinct"
-```
-
-### Temporarily via CLI
-
-```bash
-zellij options --theme tinct
-```
-
-## Themed elements
-
-The theme affects:
-
-- Tab bar colours
-- Pane borders
-- Status bar
-- Menu colours
-- Text colours
-- Selection highlighting
+On macOS without `XDG_CONFIG_HOME` set, the default output directory is `~/Library/Application Support/org.Zellij-Contributors.Zellij/themes` instead of `~/.config/zellij/themes`.
 
 ## Generated format
 
@@ -88,8 +66,128 @@ themes {
 }
 ```
 
-## See also
+## Integration
 
-- [Zellij documentation](https://zellij.dev/documentation/)
-- [neovim](./neovim.md)
-- [kitty](../terminals/kitty.md)
+Zellij themes are selected by name in `~/.config/zellij/config.kdl`:
+
+```kdl
+theme "tinct"
+```
+
+Or transiently for a single session:
+
+```bash
+zellij options --theme tinct
+```
+
+Zellij discovers themes by scanning every `.kdl` file in `~/.config/zellij/themes/`, so simply dropping `tinct.kdl` there is enough — no `include` directives, no symlinks.
+
+## Reload behaviour
+
+### Automatic
+
+None. Zellij does not expose a hot-reload mechanism for themes; the active theme is bound to the session at startup.
+
+### Manual fallback
+
+For new sessions, no action is needed — Zellij reads the theme file when the session is created. For an already-running session:
+
+```bash
+zellij options --theme tinct
+```
+
+…re-applies the theme in-place via Zellij's runtime options command. Alternatively, detach and reattach (`Ctrl-O d`, then `zellij attach`).
+
+## Uninstall / revert
+
+1. **Remove the config line** from `~/.config/zellij/config.kdl`:
+
+   ```bash
+   sed -i '/theme "tinct"/d' ~/.config/zellij/config.kdl
+   ```
+
+2. **Delete the generated file**:
+
+   ```bash
+   rm ~/.config/zellij/themes/tinct.kdl
+   ```
+
+3. **Reload to drop the theme**: start a new Zellij session, or for a live session apply a different theme:
+
+   ```bash
+   zellij options --theme default
+   ```
+
+4. **External state**: this plugin only writes to `~/.config/zellij/themes/` (or the macOS equivalent). No further cleanup is required.
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--zellij.output-dir` | `~/.config/zellij/themes` | Override the output directory |
+| `--zellij.theme-name` | `tinct` | Theme name — drives the filename and the suggested `theme "..."` line |
+
+## Colour role mapping
+
+Zellij themes are organised by UI element. Each element exposes `base`, `background`, and `emphasis_0`..`emphasis_3` slots.
+
+| Zellij element | Slot | Tinct role |
+|---|---|---|
+| `text_unselected` / `text_selected` | `base` / `background` | `foreground` / `background` (selected uses `surfaceContainerLow`) |
+| `text_*` | `emphasis_0`..`3` | `accent4`, `info`, `success`, `accent3` |
+| `ribbon_selected` | `base` / `background` | `background` / `accent1` |
+| `ribbon_unselected` | `base` / `background` | `foreground` / `backgroundMuted` |
+| `ribbon_*` | `emphasis_0`..`3` | `danger`, `accent2`, `accent3`, `accent4` |
+| `table_title` | `base` | `accent1` |
+| `table_cell_selected` | `background` | `surfaceContainerLow` |
+| `list_selected` | `background` | `surfaceContainerLow` |
+| `frame_selected` | `base` | `border` (falls back to `accent1`) |
+| `frame_highlight` | `base` | `outline` (falls back to `accent1`) |
+| `exit_code_success` | `base` | `success` |
+| `exit_code_error` | `base` | `danger` |
+| `multiplayer_user_colors` | `player_1`..`10` | `accent1`..`accent4`, their `Muted` variants, `success`, `info` |
+
+When a Material-style role (`surfaceContainerLow`, `border`, `outline`, `accent1Muted`, …) is absent from the active palette the template falls back to `backgroundMuted` / `accent1` / `foregroundMuted` so the theme always renders.
+
+## Customising the template
+
+Extract the default template to override it:
+
+```bash
+tinct plugins templates dump -o zellij -l ~/.config/tinct/templates/zellij
+```
+
+This creates `~/.config/tinct/templates/zellij/theme.kdl.tmpl`. Tinct uses your version in preference to the embedded default.
+
+See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for the available functions and palette accessors.
+
+## Troubleshooting
+
+### Zellij doesn't see the theme
+
+Confirm the file is at the right path and that `theme "tinct"` matches its name (without `.kdl`):
+
+```bash
+ls -l ~/.config/zellij/themes/tinct.kdl
+grep '^theme' ~/.config/zellij/config.kdl
+```
+
+A typo in either side causes Zellij to silently fall back to its built-in theme.
+
+### Theme didn't update in an existing session
+
+Zellij reads the theme once per session. Run `zellij options --theme tinct` to re-apply, or detach (`Ctrl-O d`) and reattach.
+
+### KDL parse error after regeneration
+
+Tinct's template emits valid KDL; if Zellij reports a parse error, you probably have a stale `tinct.kdl` from a much older tinct version mixed with newer Zellij config. Regenerate (`tinct generate -o zellij`) and Zellij will load the fresh file on the next session.
+
+### macOS: theme file disappears after a reinstall
+
+On macOS without `XDG_CONFIG_HOME`, themes land under `~/Library/Application Support/org.Zellij-Contributors.Zellij/themes`. Some installers reset that directory; either set `XDG_CONFIG_HOME=~/.config` in your shell profile, or re-run tinct after reinstalling Zellij.
+
+## Related plugins
+
+- [tmux](../special/tmux.md) — alternative multiplexer for users who prefer tmux's status line.
+- [neovim](./neovim.md) — editor colourscheme often configured alongside Zellij.
+- [ghostty](../terminals/ghostty.md) / [kitty](../terminals/kitty.md) / [alacritty](../terminals/alacritty.md) — terminal emulator themes for the host terminal.

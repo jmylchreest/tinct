@@ -1,161 +1,109 @@
 ---
-sidebar_position: 7
+title: file
+sidebar_position: 2
+plugin:
+  type: input
+  name: file
+  source: builtin
+  source_type: file
+  description: Load palette from file or colour overrides
+  requires: []
+  optional: []
+  requires_network: false
+  requires_credentials: []
+  produces_wallpaper: false
 ---
 
 # file
 
-Manually specify colours and role assignments.
+Loads a colour palette from a file on disk, or builds one inline from `--colour role=hex` overrides. The plugin accepts two on-disk formats: JSON (the canonical categorised-palette format tinct itself writes) and a simple text format (one hex per line, optionally `role=hex`). Use this plugin to replay a previously generated palette, hand-roll a custom palette, or pin specific roles when iterating on another input.
 
-## Description
+## Installation
 
-The `file` plugin accepts explicit colour specifications with optional role hints. Use it for:
+Built into tinct — nothing to install separately.
 
-- Known colour palettes (Dracula, Nord, etc.)
-- Custom colour schemes
-- Precise role assignment
-
-## Usage
+## Quick start
 
 ```bash
-tinct generate -i file --file.colors "<colors>" [flags]
+# Load a saved categorised JSON palette
+tinct generate -i file --file.path ~/.config/tinct/palettes/dracula.json -o kitty,dunst
+
+# Build a palette inline from role overrides
+tinct generate -i file \
+  --colour background=#282a36 \
+  --colour foreground=#f8f8f2 \
+  --colour accent1=#bd93f9 \
+  --colour danger=#ff5555 \
+  -o kitty
 ```
+
+## Configuration
+
+No credentials, no network, no external prerequisites. You provide either `--file.path`, one or more `--colour role=hex` flags, or both (overrides take precedence over file values for the same role).
+
+### File formats
+
+**JSON** — a tinct `CategorisedPalette` (the format `tinct extract --json` and the `markdown` output plugin produce). Roles and the `allColours` array are preserved.
+
+**Text** — one entry per line. Blank lines and `#` comments are ignored. Each line is either a bare hex value or `role=hex`:
+
+```
+# my-theme.txt
+background = #1e1e2e
+foreground = #cdd6f4
+accent1    = #89b4fa
+accent2    = #f5c2e7
+danger     = #f38ba8
+success    = #a6e3a1
+warning    = #f9e2af
+info       = #89dceb
+
+# bare hex values are added to the palette without a role hint
+#fab387
+#94e2d5
+```
+
+Both `colour=` and `color=` spellings are accepted. `colourN`/`colorN` keys add an indexed colour without a role hint. Hex values may be `#RRGGBB`, `RRGGBB`, `#RGB`, or `RGB`.
+
+### Recognised role names
+
+Core semantics: `background`, `backgroundMuted`, `foreground`, `foregroundMuted`, `accent1`…`accent4`, `accent1Muted`…`accent4Muted`, `danger`, `warning`, `success`, `info`, `notification`.
+
+Position hints for ambient lighting (used by LED output plugins): `positionTopLeft`, `positionTop`, `positionTopRight`, `positionLeft`, `positionRight`, `positionBottomLeft`, `positionBottom`, `positionBottomRight`, plus the inner/outer/centre variants for 12- and 16-region layouts. Names are case-insensitive and tolerate `_` or `-` separators (`background_muted` is equivalent to `backgroundMuted`).
 
 ## Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--file.colors` | | Comma-separated hex colours (required) |
-| `--file.hints` | | Role assignments: `role=index,role2=index2` |
-| `--file.path` | | Load colours from JSON file |
+| `--file.path` | _(none)_ | Path to JSON or text palette file |
+| `--colour` | `[]` | Inline override (`role=hex`), repeatable; also accepts `colour=` |
 
-## Examples
+At least one of `--file.path` or `--colour` must be supplied.
 
-### Simple colour list
+## Output
 
-```bash
-tinct generate -i file \
-  --file.colors "#1e1e2e,#cdd6f4,#89b4fa,#f5c2e7" \
-  -o all
-```
+A raw palette with whatever colours and role hints the file/overrides specify; if no role hints are present, tinct's categoriser auto-assigns roles using its standard luminance and vibrancy heuristics. This plugin does **not** produce a wallpaper — pair it with an image-based input if you need one.
 
-### With role hints
+## Troubleshooting
 
-```bash
-tinct generate -i file \
-  --file.colors "#1e1e2e,#cdd6f4,#89b4fa,#f38ba8,#a6e3a1,#f9e2af" \
-  --file.hints "background=0,foreground=1,accent1=2,danger=3,success=4,warning=5" \
-  -o all
-```
+### `must provide either --file.path or --colour specifications`
 
-### Popular themes
+Validation requires at least one source. Either point at a file or supply at least one inline override.
 
-#### Dracula
+### `invalid colour format 'xyz': expected 'role=hex'`
 
-```bash
-tinct generate -i file \
-  --file.colors "#282a36,#f8f8f2,#bd93f9,#ff79c6,#50fa7b,#f1fa8c,#8be9fd,#ff5555" \
-  --file.hints "background=0,foreground=1,accent1=2,accent2=3,success=4,warning=5,info=6,danger=7" \
-  -o all -t dark
-```
+Inline `--colour` flags must use `role=hex`. To add untagged colours, use a file instead — bare hex values are valid in the text format but not in `--colour`.
 
-#### Nord
+### `unknown colour role 'foo'`
 
-```bash
-tinct generate -i file \
-  --file.colors "#2e3440,#eceff4,#88c0d0,#81a1c1,#a3be8c,#ebcb8b,#5e81ac,#bf616a" \
-  --file.hints "background=0,foreground=1,accent1=2,accent2=3,success=4,warning=5,info=6,danger=7" \
-  -o all -t dark
-```
+The role name isn't in the recognised set above. Check the spelling against the role list, or use a `colourN=hex` form to add the colour without a role hint.
 
-#### Gruvbox Dark
+### Roles loaded from JSON don't match what was generated
 
-```bash
-tinct generate -i file \
-  --file.colors "#282828,#ebdbb2,#458588,#b16286,#98971a,#d79921,#689d6a,#cc241d" \
-  --file.hints "background=0,foreground=1,info=2,accent2=3,success=4,warning=5,accent1=6,danger=7" \
-  -o all -t dark
-```
+The JSON format expects a tinct `CategorisedPalette`. Hand-edited JSON with a different shape (e.g. a raw `{"colors": [...]}` array) won't carry role hints; it falls through to the auto-categoriser. Use the text format with explicit `role=hex` lines instead, or use [`remote-json`](./remote-json.md) for arbitrary JSON shapes.
 
-#### Solarized Dark
+## Related plugins
 
-```bash
-tinct generate -i file \
-  --file.colors "#002b36,#839496,#268bd2,#d33682,#859900,#b58900,#2aa198,#dc322f" \
-  --file.hints "background=0,foreground=1,accent1=2,accent2=3,success=4,warning=5,info=6,danger=7" \
-  -o all -t dark
-```
-
-### From JSON file
-
-Create `colors.json`:
-
-```json
-{
-  "colors": ["#1e1e2e", "#cdd6f4", "#89b4fa"],
-  "hints": {
-    "background": 0,
-    "foreground": 1,
-    "accent1": 2
-  }
-}
-```
-
-Load it:
-
-```bash
-tinct generate -i file --file.path colors.json -o all
-```
-
-## Role hints
-
-### Format
-
-```
-role=index,role2=index2,...
-```
-
-### Available roles
-
-Core roles:
-- `background`, `foreground`
-- `backgroundMuted`, `foregroundMuted`
-
-Accents:
-- `accent1`, `accent2`, `accent3`, `accent4`
-
-Semantic:
-- `danger`, `warning`, `success`, `info`
-
-### Example
-
-With colours `#000,#fff,#f00,#0f0,#00f`:
-
-```
---file.hints "background=0,foreground=1,danger=2,success=3,accent1=4"
-```
-
-## Auto-categorisation
-
-Colours without hints are auto-assigned:
-
-1. First colour without hint → background
-2. Second → foreground
-3. Remaining → accents by vibrancy
-4. Semantic colours generated if not specified
-
-## Theme type
-
-Specify theme type explicitly:
-
-```bash
-# Force dark
-tinct generate -i file --file.colors "..." -o all -t dark
-
-# Force light
-tinct generate -i file --file.colors "..." -o all -t light
-```
-
-## See also
-
-- [remote-json](./remote-json.md) - Fetch from URL
-- [Colour roles](../../concepts/color-roles.md) - All available roles
+- [`markdown`](./markdown.md) — load a theme exported by the `markdown` output plugin (palette + embedded wallpaper)
+- [`remote-json`](./remote-json.md) — fetch arbitrary JSON from a URL and project it through a JSONPath query
+- [`image`](./image.md) — extract a palette from a wallpaper instead of loading a saved one

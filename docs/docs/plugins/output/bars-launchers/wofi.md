@@ -1,67 +1,50 @@
 ---
-sidebar_position: 6
+title: wofi
+sidebar_position: 1
+plugin:
+  type: output
+  name: wofi
+  category: bars-launchers
+  source: builtin
+  app: Wofi
+  app_url: 'https://hg.sr.ht/~scoopta/wofi'
+  requires:
+    - wofi
+  optional: []
+  pattern: two-file
+  default_output_dir: ~/.config/wofi
+  generated_files:
+    - tinct-colors
+    - style.css
+  reload:
+    method: none
+    user_action_required: true
 ---
 
 # wofi
 
-Generate colour themes for [Wofi](https://hg.sr.ht/~scoopta/wofi) application launcher.
+Generates a colour theme for [Wofi](https://hg.sr.ht/~scoopta/wofi), the GTK-based application launcher / dmenu replacement for Wayland. The output is a numbered colour file (consumed via Wofi's `color=` directive) plus a GTK CSS stylesheet that references the palette by index.
 
-## Description
+## Installation
 
-Wofi is a GTK-based launcher/menu for wlroots-based compositors. The plugin generates CSS files that style the launcher interface.
+Built into tinct — nothing to install separately. `tinct generate -o wofi` works out of the box.
 
-## Output paths
-
-```
-~/.config/wofi/tinct-colors
-~/.config/wofi/style.css
-```
-
-The plugin generates:
-- `tinct-colors` - Colour variable definitions
-- `style.css` - Complete styling
-
-## Usage
+## Quick start
 
 ```bash
-tinct generate -i image -p ~/wallpaper.jpg -o wofi
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o wofi
 ```
 
-## Flags
+## Generated files
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--wofi.output-dir` | `~/.config/wofi` | Output directory for theme files |
-
-## Configuration
-
-Wofi automatically loads `style.css` from its config directory. The generated files will be used on the next Wofi invocation.
-
-If you have custom styling, import just the colours:
-
-```css
-@import "tinct-colors";
-
-/* Your custom styling using the tinct variables */
-window {
-    background-color: @background;
-}
-```
-
-## Themed elements
-
-The theme affects:
-
-- Window background
-- Input field styling
-- Entry list colours
-- Selection highlighting
-- Scrollbar colours
-- Image icons
+| File | Path | Role |
+|------|------|------|
+| `tinct-colors` | `~/.config/wofi/tinct-colors` | **Palette.** Newline-separated list of hex colours. Wofi exposes each entry as `--wofi-color<n>` / `--wofi-rgb-color<n>` (one-based by line index). |
+| `style.css` | `~/.config/wofi/style.css` | **Main stylesheet.** Complete Wofi GTK stylesheet — window, input, entry rows, selection states — referencing the palette via the `--wofi-color*` variables. |
 
 ## Generated format
 
-### tinct-colors
+### `tinct-colors`
 
 ```css
 @define-color background #1e1e2e;
@@ -74,7 +57,7 @@ The theme affects:
 @define-color warning #f9e2af;
 ```
 
-### style.css
+### `style.css`
 
 ```css
 @import "tinct-colors";
@@ -100,8 +83,114 @@ window {
 }
 ```
 
-## See also
+## Integration
 
-- [Wofi documentation](https://hg.sr.ht/~scoopta/wofi)
-- [fuzzel](./fuzzel.md)
-- [walker](./walker.md)
+Wofi loads two paths from your config (`~/.config/wofi/config`) or via command-line flags:
+
+```ini
+style=~/.config/wofi/style.css
+color=~/.config/wofi/tinct-colors
+```
+
+Or invoke Wofi explicitly:
+
+```bash
+wofi --show drun --style ~/.config/wofi/style.css --color ~/.config/wofi/tinct-colors
+```
+
+The plugin writes `style.css` directly to Wofi's default config directory, so most users do not need any additional config — Wofi picks `style.css` up automatically and the `color=` line is the only line you may need to add (or pass via `--color`).
+
+## Reload behaviour
+
+### Automatic
+
+None. Wofi has no daemon and no IPC reload — each invocation is a one-shot process that reads its stylesheet on startup.
+
+### Manual fallback
+
+Re-run Wofi. Any new invocation will read the regenerated files:
+
+```bash
+wofi --show drun
+```
+
+If a Wofi window is already on screen when you regenerate, dismiss it (Escape) and re-launch; the new theme appears on the next launch.
+
+## Uninstall / revert
+
+1. **Remove the config lines** from `~/.config/wofi/config` (only if you added them):
+
+   ```bash
+   sed -i '/tinct-colors\|tinct.*style\.css/d' ~/.config/wofi/config
+   ```
+
+   If you were passing `--style` / `--color` on the command line, drop those flags from your launcher script.
+
+2. **Delete the generated files**:
+
+   ```bash
+   rm ~/.config/wofi/tinct-colors ~/.config/wofi/style.css
+   ```
+
+3. **Reload to drop the theme**: nothing to reload — the next `wofi` invocation will start without a custom stylesheet (or with whatever you point `style=` at).
+
+4. **External state**: this plugin only writes to `~/.config/wofi/`. No further cleanup is required.
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--wofi.output-dir` | `~/.config/wofi` | Override the output directory |
+
+## Colour role mapping
+
+Wofi indexes the palette by line number in `tinct-colors`. The default template emits all 49 semantic roles via `allColors`; the stylesheet uses the first 12 by convention:
+
+| Variable | Tinct role | Role |
+|---|---|---|
+| `--wofi-color0` | `background` | Window background |
+| `--wofi-color1` | `backgroundMuted` | Input / hover backgrounds |
+| `--wofi-color2` | `foreground` | Default text |
+| `--wofi-color3` | `foregroundMuted` | Unselected entry text |
+| `--wofi-color4` | `accent1` | Border, selection indicator |
+| `--wofi-color5` | `accent2` | Reserved for user customisation |
+| `--wofi-color6` | `accent3` | Reserved for user customisation |
+| `--wofi-color7` | `accent4` | Reserved for user customisation |
+| `--wofi-color8` | `danger` | Error states |
+| `--wofi-color9` | `warning` | Warning states |
+| `--wofi-color10` | `success` | Success states |
+| `--wofi-color11` | `info` | Informational states |
+
+Wofi also exposes `--wofi-rgb-color<n>` (comma-separated R,G,B) for use inside `rgba()` so the stylesheet can apply per-state alpha.
+
+## Customising the template
+
+Extract the default templates to override them:
+
+```bash
+tinct plugins templates dump -o wofi -l ~/.config/tinct/templates/wofi
+```
+
+This creates `~/.config/tinct/templates/wofi/tinct-colors` and `~/.config/tinct/templates/wofi/style.css.tmpl`. Tinct uses your version in preference to the embedded default.
+
+See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for the available functions and palette accessors.
+
+## Troubleshooting
+
+### Theme not picked up
+
+Wofi only auto-loads `style.css` from its config dir; the colour file must be referenced explicitly. Add `color=~/.config/wofi/tinct-colors` to `~/.config/wofi/config`, or pass `--color ~/.config/wofi/tinct-colors` on the command line.
+
+### Colours partially applied
+
+If you maintain your own Wofi `style.css`, the plugin's `style.css` write will overwrite it. Back up your custom stylesheet, or point `--wofi.output-dir` somewhere else and `@import` the palette from your own stylesheet.
+
+### `--wofi-color<n>` shows as a literal string
+
+GTK's CSS parser silently emits the literal text when a custom property is undefined. Confirm Wofi is being invoked with `--color` (or `color=` in `~/.config/wofi/config`) pointing at the generated file.
+
+## Related plugins
+
+- [walker](./walker.md) — alternative Wayland launcher with similar GTK CSS theming.
+- [fuzzel](./fuzzel.md) — non-GTK launcher for users who prefer a single-file config.
+- [rofi](./rofi.md) — X11/XWayland launcher with its own colour file format.

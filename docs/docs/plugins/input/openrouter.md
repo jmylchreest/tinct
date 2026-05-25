@@ -1,34 +1,50 @@
 ---
-sidebar_position: 4
+title: openrouter
+sidebar_position: 7
+plugin:
+  type: input
+  name: openrouter
+  source: builtin
+  source_type: api
+  description: Generate images with OpenRouter.ai models and extract colours
+  service: OpenRouter
+  service_url: 'https://openrouter.ai/'
+  requires: []
+  optional: []
+  requires_network: true
+  requires_credentials:
+    - OPENROUTER_API_KEY
+  produces_wallpaper: true
 ---
 
 # openrouter
 
-Generate images and extract colours using OpenRouter's multi-model API.
+Generates an image through [OpenRouter](https://openrouter.ai/) — a multi-provider router that exposes dozens of image-capable models behind one API and one bill — then extracts a palette from the result via k-means. Unless you pin a specific model with `--ai.model`, tinct fetches the live model list at runtime, filters to image-capable models, and picks the cheapest (or, by default, a free one if available).
 
-## Description
+The generated image is cached locally and exported as a wallpaper, so the same `tinct generate …` invocation produces both the palette and the wallpaper for output plugins like `hyprpaper`, `awww`, and `wbg`.
 
-The `openrouter` plugin accesses various image generation models through [OpenRouter](https://openrouter.ai/), providing:
+## Installation
 
-- Access to multiple AI image generation models through a single API
-- Automatic model selection (cheapest or free model with image output support)
-- Image generation with colour extraction
+Built into tinct — nothing to install separately.
 
-## Requirements
-
-- OpenRouter API key from [openrouter.ai/keys](https://openrouter.ai/keys)
-- Set `OPENROUTER_API_KEY` environment variable
-
-## Usage
+## Quick start
 
 ```bash
-export OPENROUTER_API_KEY="your-api-key"
-tinct generate -i openrouter --ai.prompt "<description>" [flags]
+export OPENROUTER_API_KEY="…"
+tinct generate -i openrouter \
+  --ai.prompt "cyberpunk city street with neon signs at night" \
+  -o hyprland,hyprpaper,kitty
 ```
 
-### Storing your API key
+## Configuration / credentials
 
-Rather than pasting your key into every shell session, retrieve it from a secret manager:
+An OpenRouter API key is required. Create one at [openrouter.ai/keys](https://openrouter.ai/keys) and export it:
+
+```bash
+export OPENROUTER_API_KEY="…"
+```
+
+Rather than pasting the key into every shell session, pull it from a secret manager:
 
 ```bash
 # GNOME Keyring / libsecret
@@ -41,148 +57,92 @@ export OPENROUTER_API_KEY=$(bw get password openrouter)
 export OPENROUTER_API_KEY=$(pass show openrouter)
 ```
 
+Generated images are cached under `~/.cache/tinct/generated/openrouter/`. Each file is keyed by a hash of the prompt and model, so re-running the same prompt is free. File extensions are chosen based on the MIME type returned by the API (PNG / JPEG / WebP / GIF).
+
+### Model selection
+
+When `--ai.model` is `auto` (the default):
+
+1. Fetch the current model list from the OpenRouter API.
+2. Filter to models that include image output.
+3. If `--openrouter.prefer-free` is `true` (default), pick a free model when one is available.
+4. Otherwise, pick the cheapest (per-image / per-request / per-token, normalised against typical generation cost).
+
+Use `--ai.list-models` to see what's currently available with live pricing.
+
 ## Flags
 
-### AI flags (shared with google-genai)
+### Shared AI flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--ai.prompt` | | Image description prompt (required) |
-| `--ai.model` | `auto` | AI model to use (auto-selects cheapest image-capable model) |
+| `--ai.prompt` | _(required)_ | Text description of the image to generate |
+| `--ai.model` | `auto` | Specific model ID, or `auto` to let tinct pick the cheapest image-capable model |
 | `--ai.list-models` | `false` | List available models with live pricing and exit |
-| `--ai.no-extended-prompt` | `false` | Disable automatic wallpaper prompt enhancement |
-| `--ai.no-negative-prompt` | `false` | Disable default negative prompt |
-| `--ai.negative-prompt` | | Custom negative prompt to discourage certain elements |
+| `--ai.no-extended-prompt` | `false` | Disable tinct's automatic wallpaper-orientation prompt enhancement |
+| `--ai.no-negative-prompt` | `false` | Disable the default negative prompt |
+| `--ai.negative-prompt` | _(none)_ | Custom negative prompt |
 
 ### Plugin-specific flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--openrouter.prefer-free` | `true` | Prefer free models when using auto selection |
+| `--openrouter.prefer-free` | `true` | When `--ai.model=auto`, prefer a free model over a paid one even when paid is cheaper-per-image (e.g. flat-fee plans) |
 
-### Common flags
+### Shared image flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--aspect-ratio` | `16:9` | Image aspect ratio (`1:1`, `3:4`, `4:3`, `9:16`, `16:9`, `21:9`) |
 | `--count` | `32` | Number of colours to extract |
-| `--seed-mode` | `content` | Seed mode: `content`, `manual`, `random` |
+| `--aspect-ratio` | `16:9` | `1:1`, `3:4`, `4:3`, `9:16`, `16:9`, `21:9` |
+| `--cache` | `true` | Cache generated images |
+| `--cache-dir` | `~/.cache/tinct/generated` | Override cache root |
+| `--cache-filename` | _(prompt hash)_ | Override cached filename |
+| `--cache-overwrite` | `false` | Re-generate even if a cache hit exists |
+| `--extract-ambience` | `false` | Also sample edge/corner colours for ambient lighting |
+| `--regions` | `8` | Edge region count (4, 8, 12, 16) |
+| `--sample-percent` | `10` | Percent of each edge to sample |
+| `--sample-method` | `average` | `average` or `dominant` |
+| `--seed-mode` | `content` | Seed mode for k-means extraction |
+| `--seed-value` | `0` | Seed value when `--seed-mode=manual` |
 
-## Examples
+## Output
 
-### Basic generation
+A raw palette of `--count` colours (default 32) extracted from the generated image via k-means. Theme type is inferred from average luminance.
 
-```bash
-export OPENROUTER_API_KEY="your-api-key"
+This plugin **provides a wallpaper**: the cached generated image is exported as `.WallpaperPath`, so wallpaper-aware output plugins install it automatically. With `--cache=false` a temporary file is used and `.WallpaperPath` still points at it for the duration of the run.
 
-# Auto-selects cheapest image-capable model
-tinct generate -i openrouter \
-  --ai.prompt "cyberpunk city at night with neon lights" \
-  -o all
-```
+## Costs & rate limits
 
-### With specific model
+OpenRouter uses a credit balance. Different models bill differently (per-image, per-request, or per-token), and pricing changes regularly — the live source of truth is `--ai.list-models` and the [OpenRouter models page](https://openrouter.ai/models).
 
-```bash
-tinct generate -i openrouter \
-  --ai.prompt "watercolor painting of a mountain lake" \
-  --ai.model "google/gemini-2.5-flash-image-preview" \
-  --aspect-ratio "16:9" \
-  -o all
-```
-
-### With negative prompt
-
-```bash
-tinct generate -i openrouter \
-  --ai.prompt "serene japanese garden" \
-  --ai.negative-prompt "people, text, watermark" \
-  -o all
-```
-
-### List available models
-
-```bash
-tinct generate -i openrouter --ai.list-models
-```
-
-### Dry run
-
-```bash
-tinct generate -i openrouter \
-  --ai.prompt "autumn forest" \
-  --dry-run -o kitty
-```
-
-## Model selection
-
-When `--ai.model` is `auto` (the default), tinct:
-
-1. Fetches the full model list from the OpenRouter API
-2. Filters to models with image output capability
-3. Sorts by cost (cheapest first)
-4. If `--openrouter.prefer-free` is true (default), selects a free model if available
-
-To see what models are available with current pricing, use `--ai.list-models`.
-
-## How it works
-
-1. **Request**: Send prompt to OpenRouter API
-2. **Model routing**: OpenRouter routes to selected model
-3. **Generation**: Image generated by chosen model
-4. **Response**: Base64 image returned
-5. **Caching**: Image cached locally
-6. **Extraction**: K-means colour extraction
-7. **Wallpaper**: Image provided to output plugins
-
-## Generated image location
-
-Images are cached in:
-
-```
-~/.cache/tinct/generated/openrouter/
-```
-
-## Negative prompts
-
-Use negative prompts to exclude unwanted elements:
-
-```bash
-# Avoid certain styles
---ai.negative-prompt "cartoon, anime, illustration"
-
-# Avoid artifacts
---ai.negative-prompt "blurry, low quality, distorted"
-
-# Avoid elements
---ai.negative-prompt "text, watermark, people"
-```
-
-## API credits
-
-OpenRouter uses a credit system. Different models have different costs. Monitor usage at [OpenRouter dashboard](https://openrouter.ai/activity).
+- Auto-selection with `--openrouter.prefer-free` (default) will pick a free image-capable model when one exists, which is the cheapest possible path.
+- Free models often have stricter rate limits and lower quality than paid ones.
+- Monitor your usage at the [OpenRouter activity dashboard](https://openrouter.ai/activity).
 
 ## Troubleshooting
 
-### API key issues
+### `OPENROUTER_API_KEY environment variable is required`
 
-- Verify key at openrouter.ai
-- Check OPENROUTER_API_KEY is exported
-- Ensure sufficient credits
+Export the variable in the same shell where you run `tinct`. Get a key at https://openrouter.ai/keys.
 
-### Model not available
+### `--ai.prompt is required`
 
-- Use `--ai.list-models` to see currently available models
-- Check model name spelling (use full model ID, e.g. `google/gemini-2.5-flash-image-preview`)
-- Try a different model or use `auto`
+Validation requires a prompt unless `--ai.list-models` is set.
 
-### Poor results
+### `failed to auto-select model`
 
-- Adjust prompt for the model
-- Try different model
-- Use negative prompts
+OpenRouter's model list didn't return any image-capable model that matched the auto-selection filter. Pass `--ai.model` explicitly with a known image model ID (see `--ai.list-models`), or check whether your account has access to image models.
 
-## See also
+### `failed to generate image: …`
 
-- [google-genai](./google-genai.md) - Google Gemini generation
-- [image](./image.md) - Extract from existing images
+Common causes: insufficient credits, model temporarily unavailable, or the prompt was rejected by the underlying provider's safety filters. Try `--ai.list-models` to confirm the model is up, then a simpler prompt to rule out filtering. The wrapped error message usually names the upstream provider.
+
+### Same prompt always returns the same image
+
+Cache hits are intentional. Pass `--cache-overwrite` to force a fresh generation, or change the prompt/model so the cache key changes.
+
+## Related plugins
+
+- [`google-genai`](./google-genai.md) — same idea, but Google Gemini / Imagen directly (no router)
+- [`image`](./image.md) — use an existing image instead of generating one

@@ -67,7 +67,7 @@ tinct generate -i google-genai \
   -o all
 ```
 
-Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). See the [google-genai plugin docs](../plugins/input/google-genai.md) for storing your key in a secret manager.
+Get an API key from [Google AI Studio](https://aistudio.google.com/apikey). See the [google-genai plugin docs](../plugins/input/google-genai) for storing your key in a secret manager.
 
 ### OpenRouter
 

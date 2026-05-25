@@ -15,8 +15,8 @@ Extract or generate colour palettes from various sources:
 | Plugin | Description |
 |--------|-------------|
 | [image](./input/image.md) | Extract from JPEG, PNG, GIF, WebP images |
-| [google-genai](./input/google-genai.md) | Generate with Google Gemini AI |
-| [openrouter](./input/openrouter.md) | Generate via OpenRouter API |
+| [google-genai](./input/google-genai) | Generate with Google Gemini AI |
+| [openrouter](./input/openrouter) | Generate via OpenRouter API |
 | [remote-json](./input/remote-json.md) | Fetch from JSON URLs |
 | [remote-css](./input/remote-css.md) | Parse CSS variables |
 | [file](./input/file.md) | Manual colour specification |

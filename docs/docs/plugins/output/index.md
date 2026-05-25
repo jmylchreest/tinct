@@ -16,7 +16,6 @@ Terminal emulators with colour palette support:
 | [ghostty](./terminals/ghostty.md) | Ghostty terminal | Config file |
 | [kitty](./terminals/kitty.md) | Kitty terminal | Config file |
 | [konsole](./terminals/konsole.md) | KDE Konsole | .colorscheme |
-| [ptyxis](./terminals/ptyxis.md) | GNOME Ptyxis | .palette |
 | [warp](./terminals/warp.md) | Warp terminal | YAML |
 
 ## Desktop environments
@@ -72,7 +71,6 @@ Export and utility plugins:
 | Plugin | Description | Purpose |
 |--------|-------------|---------|
 | [markdown](./special/markdown.md) | Theme export | Save portable themes |
-| [template](./special/template.md) | Custom templates | User-defined output |
 | [histui](./special/histui.md) | Notification daemon | histui theming |
 
 ## Using output plugins
