@@ -503,32 +503,26 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
           DATE=$(date +%Y-%m-%d)
+          PREV_TAG="${{ steps.prev_tag.outputs.prev_tag }}"
 
-          # Check if changelog has [Unreleased] section
-          if grep -q "## \[Unreleased\]" CHANGELOG.md; then
-            echo "Updating changelog: adding [$VERSION] section after [Unreleased]"
-
-            # Use awk to insert new version header after [Unreleased]
-            # Format: version on heading line, date on separate line in italics
-            awk -v ver="$VERSION" -v date="$DATE" '
-              /^## \[Unreleased\]/ {
-                print
-                print ""
-                print "## [" ver "]"
-                print "*" date "*"
-                next
-              }
-              { print }
-            ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
-
-            # Copy to docs
-            cp CHANGELOG.md docs/docs/changelog.md
-
-            echo "updated=true" >> $GITHUB_OUTPUT
-          else
+          if ! grep -q "## \[Unreleased\]" CHANGELOG.md; then
             echo "No [Unreleased] section found, skipping changelog update"
             echo "updated=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+
+          echo "Promoting [Unreleased] → [$VERSION] (previous tag: ${PREV_TAG:-<none>})"
+
+          # Promote the Unreleased section: rename to [VERSION], append
+          # auto-generated conventional-commits entries from PREV_TAG..HEAD
+          # under any human-curated content, and re-seed an empty
+          # [Unreleased] at the top.
+          scripts/promote-unreleased.sh "$VERSION" "$DATE" "$PREV_TAG"
+
+          # Mirror to the docs site source.
+          cp CHANGELOG.md docs/docs/changelog.md
+
+          echo "updated=true" >> $GITHUB_OUTPUT
 
       - name: Check if version already exists
         id: check
