@@ -101,5 +101,9 @@ mv "$TMP" "$CHANGELOG"
 trap - EXIT
 
 echo "Promoted [Unreleased] → [$VERSION] in $CHANGELOG"
-[ -n "$human_body" ] && echo "  (preserved human-curated entries)"
-[ -n "$auto_body" ] && echo "  (added auto-generated sections from $PREV_TAG..HEAD)"
+if [ -n "$human_body" ]; then
+  echo "  (preserved human-curated entries)"
+fi
+if [ -n "$auto_body" ]; then
+  echo "  (added auto-generated sections from $PREV_TAG..HEAD)"
+fi
