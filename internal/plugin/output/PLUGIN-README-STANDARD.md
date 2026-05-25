@@ -68,7 +68,7 @@ plugin:
   app_url: <url>                      # upstream project URL
   requires: [<binary>, ...]           # binaries that MUST be on PATH
   optional: [<binary>, ...]           # binaries used opportunistically (e.g. reload helpers)
-  pattern: <enum>                     # two-file | single-file | drop-in | flavor-pack
+  pattern: <enum>                     # two-file | single-file | drop-in | flavor-pack — optional; omit for plugins that don't write files (e.g. notification-only plugins)
   default_output_dir: <path>          # ~ left unexpanded
   generated_files: [<name>, ...]      # filenames inside default_output_dir
   reload:
@@ -125,7 +125,7 @@ plugin:
   type: input                         # MANDATORY discriminator
   name: <string>                      # MUST match Plugin.Name()
   source: <enum>                      # builtin | external
-  source_type: <enum>                 # image | file | url | api
+  source_type: <enum>                 # image | file | url | api | generated
   description: <string>               # one-line summary of what palette source this produces
 ---
 ```
