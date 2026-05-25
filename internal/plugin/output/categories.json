@@ -1,0 +1,8 @@
+[
+  {"id": "terminals",      "label": "Terminals"},
+  {"id": "desktop",        "label": "Desktop Environments"},
+  {"id": "hyprland",       "label": "Hyprland Ecosystem"},
+  {"id": "bars-launchers", "label": "Bars & Launchers"},
+  {"id": "editors",        "label": "Editors & Multiplexers"},
+  {"id": "special",        "label": "Special Purpose"}
+]

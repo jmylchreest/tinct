@@ -197,9 +197,12 @@ func printUsage() {
 func runBuiltin(args []string) {
 	fs := flag.NewFlagSet("builtin", flag.ExitOnError)
 	root := fs.String("root", "internal/plugin/output", "root directory containing built-in plugin sub-dirs")
+	categoriesFile := fs.String("categories", "internal/plugin/output/categories.json", "path to output category enum (single source of truth)")
 	if err := fs.Parse(args); err != nil {
 		return
 	}
+
+	knownCategories = loadKnownCategories(*categoriesFile)
 
 	plugins := builtinRegistry()
 	sort.Slice(plugins, func(i, j int) bool { return plugins[i].Name() < plugins[j].Name() })
@@ -322,6 +325,10 @@ func compareBuiltin(p output.Plugin, readmePath string, fm readmeFrontmatter) {
 	}
 	if fm.Plugin.Source != "builtin" {
 		warn("%s: frontmatter source=%q expected %q", name, fm.Plugin.Source, "builtin")
+	}
+	if len(knownCategories) > 0 && !knownCategories[fm.Plugin.Category] {
+		warn("%s: frontmatter category=%q not in categories.json; plugin will be invisible on the docs landing table and orphaned in the sidebar until the enum is extended",
+			name, fm.Plugin.Category)
 	}
 
 	actualDir := foldHome(p.DefaultOutputDir())
@@ -517,6 +524,38 @@ func equalSets(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// knownCategories is the set of output plugin category IDs loaded
+// from internal/plugin/output/categories.json. Empty until
+// loadKnownCategories runs; an empty map disables the
+// unknown-category warning (so the external mode, which doesn't
+// require the file, still works).
+var knownCategories map[string]bool
+
+// loadKnownCategories reads the category enum from the given path.
+// Failure is treated as "no enum available" — warned, not fatal —
+// because the check tool's primary job (README ↔ runtime diff) still
+// works without it.
+func loadKnownCategories(path string) map[string]bool {
+	data, err := os.ReadFile(path) //nolint:gosec // path comes from a flag with a safe default
+	if err != nil {
+		warn("could not load %s (%v) — category enum validation disabled", path, err)
+		return nil
+	}
+	var cats []struct {
+		ID    string `json:"id"`
+		Label string `json:"label"`
+	}
+	if err := json.Unmarshal(data, &cats); err != nil {
+		warn("%s: failed to parse: %v — category enum validation disabled", path, err)
+		return nil
+	}
+	known := make(map[string]bool, len(cats))
+	for _, c := range cats {
+		known[c.ID] = true
+	}
+	return known
 }
 
 // warningCount counts every warning emitted so the summary line at the

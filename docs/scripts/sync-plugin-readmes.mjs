@@ -302,22 +302,44 @@ async function replaceMarkerBlock(file, body) {
   return true;
 }
 
-// Output landing: tables grouped by plugin.category. Category order
-// and labels are explicit (not alphabetical) so the rendering reads
-// the way humans expect.
-const OUTPUT_CATEGORIES = [
-  ['terminals', 'Terminals'],
-  ['desktop', 'Desktop environments'],
-  ['hyprland', 'Hyprland ecosystem'],
-  ['bars-launchers', 'Bars and launchers'],
-  ['editors', 'Editors and multiplexers'],
-  ['special', 'Special purpose'],
-];
+// Output category enum + display labels live in
+// internal/plugin/output/categories.json — the single source of truth
+// shared with sidebars.ts and the cmd/tinct-check-readmes Go tool.
+// Adding a new category is one JSON edit.
+const OUTPUT_CATEGORIES = JSON.parse(
+  await fs.readFile(
+    path.join(REPO_ROOT, 'internal', 'plugin', 'output', 'categories.json'),
+    'utf8'
+  )
+).map((c) => [c.id, c.label]);
+
+// Set view of known IDs for the "unknown category" warning in
+// renderOutputTables — silent skips here are precisely the failure
+// mode we want to surface.
+const KNOWN_OUTPUT_CATEGORIES = new Set(OUTPUT_CATEGORIES.map(([id]) => id));
 
 function renderOutputTables(readmes) {
   const outputs = readmes
     .filter((r) => r.frontmatter.plugin?.type === 'output')
     .sort(byFrontmatterPosition);
+
+  // Surface any plugin.category values not in categories.json — those
+  // plugins are silently dropped from the table unless caught here.
+  const seen = new Set(outputs.map((r) => r.frontmatter.plugin.category));
+  for (const cat of seen) {
+    if (!KNOWN_OUTPUT_CATEGORIES.has(cat)) {
+      const owners = outputs
+        .filter((r) => r.frontmatter.plugin.category === cat)
+        .map((r) => r.frontmatter.plugin.name)
+        .join(', ');
+      warn(
+        `unknown plugin.category=${JSON.stringify(cat)} (used by: ${owners}). ` +
+        `Add it to internal/plugin/output/categories.json and to docs/sidebars.ts; ` +
+        `until then these plugins are absent from the landing table.`
+      );
+    }
+  }
+
   const sections = [];
   for (const [cat, label] of OUTPUT_CATEGORIES) {
     const items = outputs.filter((r) => r.frontmatter.plugin.category === cat);
