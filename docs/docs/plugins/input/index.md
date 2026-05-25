@@ -1,0 +1,82 @@
+---
+sidebar_position: 1
+---
+
+# Input plugins
+
+Input plugins extract or generate colour palettes from various sources.
+
+## Available plugins
+
+| Plugin | Description | Use case |
+|--------|-------------|----------|
+| [image](./image.md) | Extract from images | Local wallpapers, photos |
+| [google-genai](./google-genai.md) | AI generation | Create unique themes |
+| [openrouter](./openrouter.md) | Multi-model AI | Alternative AI generation |
+| [remote-json](./remote-json.md) | JSON URL fetching | Theme repositories, Catppuccin |
+| [remote-css](./remote-css.md) | CSS parsing | CSS variable themes |
+| [file](./file.md) | Manual specification | Custom colour lists |
+| [markdown](./markdown.md) | Saved themes | Restore exported themes |
+
+## Usage
+
+Specify input with `-i` flag:
+
+```bash
+tinct generate -i image -p ~/wallpaper.jpg -o all
+tinct generate -i remote-json --remote-json.url "..." -o all
+```
+
+## Common interface
+
+All input plugins:
+
+1. Accept configuration via flags
+2. Validate inputs before processing
+3. Return a categorised colour palette
+4. Optionally provide theme hints (dark/light)
+5. Optionally provide wallpaper path
+
+## Optional features
+
+### Theme hinting
+
+Some plugins can suggest a theme type:
+
+| Plugin | Detection method |
+|--------|------------------|
+| image | Luminance analysis |
+| google-genai | Prompt inference |
+| remote-json | Metadata if available |
+| file | Based on background colour |
+
+### Wallpaper provision
+
+Some plugins provide a wallpaper for output plugins:
+
+| Plugin | Wallpaper source |
+|--------|------------------|
+| image | The input image |
+| google-genai | Generated image |
+| openrouter | Generated image |
+| markdown | Embedded wallpaper |
+
+Two template fields are available:
+
+| Field | Description |
+|-------|-------------|
+| `.WallpaperPath` | Canonical path (resolved relative paths, cached URLs) |
+| `.WallpaperRawPath` | Literal user input (original path/URL) |
+
+Output plugins like `hyprpaper` use `.WallpaperPath` to set the wallpaper automatically.
+
+See [Template functions: Context fields](../../templating/functions.md#context-fields) for details.
+
+## Choosing an input
+
+| Scenario | Recommended input |
+|----------|-------------------|
+| Match your wallpaper | `image` |
+| Want something unique | `google-genai` or `openrouter` |
+| Restore saved theme | `markdown` |
+| Quick custom colours | `file` |
