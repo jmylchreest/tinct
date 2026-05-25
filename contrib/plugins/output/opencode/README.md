@@ -1,90 +1,95 @@
-# Tinct OpenCode Theme Plugin
+---
+title: opencode
+sidebar_position: 5
 
-An external output plugin for [tinct](https://github.com/jmylchreest/tinct) that generates theme files for [OpenCode](https://opencode.ai).
+plugin:
+  type: output
+  name: opencode
+  category: editors
+  source: external
+  app: OpenCode
+  app_url: https://opencode.ai
+  version: 0.1.0
+  protocol_version: 0.3.0
+  repository: https://github.com/jmylchreest/tinct
+  install: tinct plugins install opencode
+  requires: []
+  optional: []
+  pattern: single-file
+  default_output_dir: ~/.config/opencode/themes
+  generated_files: [tinct.json]
+  reload:
+    method: none
+    user_action_required: true
+---
 
-## Features
+# opencode
 
-- **Full OpenCode Theme Support**: Generates complete OpenCode custom theme JSON with all ~50 color tokens
-- **Semantic Color Mapping**: Maps tinct's semantic roles to OpenCode's theme tokens
-- **Color Definitions**: Uses OpenCode's `defs` system for reusable color references
-- **Dual-Theme Support**: Can generate both dark and light theme variants
-- **Template-Based**: Uses tinct's public template API for maintainable theme generation
-- **Auto-Detection**: Automatically detects dark/light theme type
-- **Material Design 3**: Leverages tinct's Material Design 3 surface colors
+Generates a complete theme file for [OpenCode](https://opencode.ai), the AI-assisted coding agent. The output is a single JSON file mapping tinct's semantic palette onto OpenCode's ~50 theme tokens (UI, syntax highlighting, diff colours, markdown rendering). OpenCode auto-detects installed themes by directory, so the file appears in `/theme` as soon as it's written.
 
 ## Installation
 
-### Build from Source
+### Via the official plugin repository
+
+```bash
+tinct plugins install opencode
+```
+
+### Build from source
 
 ```bash
 cd contrib/plugins/output/opencode
-go build -o tinct-plugin-opencode
+go build -ldflags "-X main.Version=0.1.0" -o tinct-plugin-opencode
+install -m 0755 tinct-plugin-opencode ~/.local/bin/
 ```
 
-### Install to PATH
+### Verify
 
 ```bash
-# Build with version information
-go build -ldflags "-X main.Version=0.1.0 -X main.Commit=$(git rev-parse HEAD) -X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o tinct-plugin-opencode
-
-# Install to ~/.local/bin (or any directory in your PATH)
-mkdir -p ~/.local/bin
-mv tinct-plugin-opencode ~/.local/bin/
-chmod +x ~/.local/bin/tinct-plugin-opencode
+which tinct-plugin-opencode
+tinct-plugin-opencode --plugin-info | jq .
 ```
 
-## Usage
+The plugin uses tinct's go-plugin RPC protocol and is discovered automatically once it's on `$PATH`.
 
-The plugin uses tinct's go-plugin protocol and is discovered automatically when in your PATH.
-
-### Generate from Image
+## Quick start
 
 ```bash
-tinct generate -i file --path ~/wallpaper.png -o opencode
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o opencode
 ```
 
-### Generate from Google Gemini
+## Generated files
+
+| File | Path | Role |
+|------|------|------|
+| `tinct.json` | `~/.config/opencode/themes/tinct.json` | Complete OpenCode theme — colour `defs`, UI tokens, syntax highlighting, diff/markdown rendering |
+
+If you're running tinct in dual-theme mode (`--dual-theme`), a second file is generated:
+
+| File | Path | Role |
+|------|------|------|
+| `tinct-dark.json` *or* `tinct-light.json` | same directory | The alternate theme variant matched to the primary |
+
+The plugin auto-detects OpenCode's config directory at both `$XDG_CONFIG_HOME/opencode` and `~/.config/opencode`, writing to whichever exists. If both exist, both get the theme.
+
+## Integration
+
+**No manual configuration required to make the theme available.** OpenCode scans `~/.config/opencode/themes/` on startup and lists installed themes by filename. Generating the theme is enough to make it appear in OpenCode's theme picker.
+
+To activate it, choose one:
+
+### Via OpenCode's command palette (recommended)
+
+```
+/theme
+```
+
+then select **tinct** from the list.
+
+### Via OpenCode's config file
 
 ```bash
-export GOOGLE_API_KEY="your-api-key"
-tinct generate -i google-genai --prompt "sunset over mountains" -o opencode
-```
-
-### Specify Custom Output Directory
-
-```bash
-tinct generate -i file --path ~/wallpaper.png -o opencode --output-dir ~/.config/opencode/themes
-```
-
-## Output
-
-The plugin generates theme files in:
-
-```
-~/.config/opencode/themes/tinct.json
-```
-
-When dual-theme mode is active, an additional file is generated:
-
-```
-~/.config/opencode/themes/tinct-light.json   (or tinct-dark.json)
-```
-
-## Applying the Theme to OpenCode
-
-After generating the theme, activate it in OpenCode:
-
-### Method 1: Command (Recommended)
-
-1. Open OpenCode
-2. Type `/theme` and select **"tinct"** from the list
-
-### Method 2: Config File
-
-Add the theme to your OpenCode config:
-
-```bash
-vim ~/.config/opencode/opencode.json
+$EDITOR ~/.config/opencode/opencode.json
 ```
 
 ```json
@@ -94,200 +99,168 @@ vim ~/.config/opencode/opencode.json
 }
 ```
 
-### Theme Reload
+## Reload behaviour
 
-OpenCode does not currently support hot-reloading themes. After regenerating the theme with tinct, you will need to restart OpenCode or use `/theme` to re-select the theme for changes to take effect.
+### Automatic
 
-There is an [open feature request](https://github.com/anomalyco/opencode/issues/815) for theme hot-reload support.
+None. OpenCode does not currently support theme hot-reload. After regenerating the theme, the file on disk is up to date but a running OpenCode session will keep using the previously loaded copy. See the [upstream feature request](https://github.com/anomalyco/opencode/issues/815).
 
-**Tip:** If you are also using tinct to theme your terminal emulator, you can use OpenCode's built-in `system` theme as an alternative, which adapts to your terminal's ANSI colors in real time.
+### Manual fallback
 
-## Theme Structure
+Re-select the theme in OpenCode to pick up changes:
 
-The generated theme maps tinct's semantic color system to OpenCode's theme tokens:
+```
+/theme
+```
 
-### Color Definitions
+then choose **tinct** again. Or restart OpenCode.
 
-The `defs` section defines reusable colors from tinct's palette that are referenced throughout the theme:
+**Tip:** If you also theme your terminal with tinct, set OpenCode's theme to `system` (built-in) instead — it adapts to your terminal's ANSI colours in real time, so terminal regenerations propagate automatically.
 
-| Definition | Tinct Role | Description |
-|------------|------------|-------------|
-| background | background | Primary background |
-| foreground | foreground | Primary text |
-| surface | surface | Panel/sidebar surfaces |
-| accent1-4 | accent1-4 | Accent colors |
-| danger | danger | Error/danger color |
-| warning | warning | Warning color |
-| success | success | Success color |
-| info | info | Informational color |
+## Uninstall / revert
 
-### Theme Token Mapping
+1. **Remove the config line** from `~/.config/opencode/opencode.json` if you set `"theme": "tinct"`. OpenCode falls back to its default theme.
 
-| OpenCode Token | Tinct Role | Description |
-|----------------|------------|-------------|
-| primary | accent1 | Primary accent |
-| secondary | accent2 | Secondary accent |
-| accent | accent3 | Tertiary accent |
-| error | danger | Error indicators |
-| warning | warning | Warning indicators |
-| success | success | Success indicators |
-| info | info | Info indicators |
-| text | foreground | Primary text |
-| textMuted | foregroundMuted | Muted/secondary text |
-| background | background | Main background |
-| backgroundPanel | surfaceContainerLow | Panel background |
-| backgroundElement | surfaceContainer | Element background |
-| border | outline | Primary border |
-| borderActive | accent1 | Active/focused border |
-| borderSubtle | outlineVariant | Subtle border |
+2. **Delete the generated file(s)**:
 
-### Diff Colors
+   ```bash
+   rm ~/.config/opencode/themes/tinct.json
+   rm -f ~/.config/opencode/themes/tinct-dark.json ~/.config/opencode/themes/tinct-light.json
+   ```
 
-| OpenCode Token | Tinct Role |
-|----------------|------------|
-| diffAdded | success |
-| diffRemoved | danger |
-| diffContext | onSurfaceVariant |
-| diffHunkHeader | accent2 |
-| diffAddedBg | success @ 15% alpha |
-| diffRemovedBg | danger @ 15% alpha |
+3. **Reload to drop the theme**: restart OpenCode, or use `/theme` to select a different theme.
 
-### Markdown Rendering
+4. **External state**: this plugin only writes to `~/.config/opencode/themes/`. To also remove the plugin binary:
 
-| OpenCode Token | Tinct Role |
-|----------------|------------|
-| markdownHeading | accent1 |
-| markdownLink | accent2 |
-| markdownCode | success |
-| markdownEmph | accent4 |
-| markdownStrong | accent1 |
+   ```bash
+   tinct plugins uninstall opencode
+   # or, for a source build:
+   rm ~/.local/bin/tinct-plugin-opencode
+   ```
 
-### Syntax Highlighting
+## Flags
 
-| OpenCode Token | Tinct Role |
-|----------------|------------|
-| syntaxComment | foregroundMuted |
-| syntaxKeyword | accent4 |
-| syntaxFunction | accent1 |
-| syntaxString | success |
-| syntaxNumber | accent3 |
-| syntaxType | accent2 |
-| syntaxVariable | foreground |
-| syntaxOperator | onSurface |
-| syntaxPunctuation | onSurfaceVariant |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--opencode.output-dir` | auto-detected (`~/.config/opencode/themes`) | Override the output directory |
 
-## Template Customization
+## Colour role mapping
 
-The theme template uses tinct's public template API. To customize:
+OpenCode's theme uses a `defs` section for reusable colour references and a `theme` section that maps UI tokens to those defs.
+
+### Colour definitions (`defs`)
+
+| Definition | Tinct role |
+|---|---|
+| `background` | `background` |
+| `foreground` | `foreground` |
+| `surface` | `surface` |
+| `accent1`–`accent4` | `accent1`–`accent4` |
+| `danger` | `danger` |
+| `warning` | `warning` |
+| `success` | `success` |
+| `info` | `info` |
+
+### UI tokens
+
+| OpenCode token | Tinct role |
+|---|---|
+| `primary` | `accent1` |
+| `secondary` | `accent2` |
+| `accent` | `accent3` |
+| `error` | `danger` |
+| `warning` | `warning` |
+| `success` | `success` |
+| `info` | `info` |
+| `text` | `foreground` |
+| `textMuted` | `foregroundMuted` |
+| `background` | `background` |
+| `backgroundPanel` | `surfaceContainerLow` |
+| `backgroundElement` | `surfaceContainer` |
+| `border` | `outline` |
+| `borderActive` | `accent1` |
+| `borderSubtle` | `outlineVariant` |
+
+### Diff colours
+
+| OpenCode token | Tinct role |
+|---|---|
+| `diffAdded` | `success` |
+| `diffRemoved` | `danger` |
+| `diffContext` | `onSurfaceVariant` |
+| `diffHunkHeader` | `accent2` |
+| `diffAddedBg` | `success` @ 15% alpha |
+| `diffRemovedBg` | `danger` @ 15% alpha |
+
+### Markdown rendering
+
+| OpenCode token | Tinct role |
+|---|---|
+| `markdownHeading` | `accent1` |
+| `markdownLink` | `accent2` |
+| `markdownCode` | `success` |
+| `markdownEmph` | `accent4` |
+| `markdownStrong` | `accent1` |
+
+### Syntax highlighting
+
+| OpenCode token | Tinct role |
+|---|---|
+| `syntaxComment` | `foregroundMuted` |
+| `syntaxKeyword` | `accent4` |
+| `syntaxFunction` | `accent1` |
+| `syntaxString` | `success` |
+| `syntaxNumber` | `accent3` |
+| `syntaxType` | `accent2` |
+| `syntaxVariable` | `foreground` |
+| `syntaxOperator` | `onSurface` |
+| `syntaxPunctuation` | `onSurfaceVariant` |
+
+## Customising the template
 
 ```bash
-# Extract the template
 mkdir -p ~/.config/tinct/templates/opencode
 cp templates/theme.json.tmpl ~/.config/tinct/templates/opencode/
-
-# Edit the template
 $EDITOR ~/.config/tinct/templates/opencode/theme.json.tmpl
 ```
 
-### Available Template Functions
-
-- `get . "roleName"` - Get color by semantic role
-- `hex` - Format as #RRGGBB
-- `hexAlpha` - Format as #RRGGBBAA
-- `withAlpha value alpha` - Set alpha (0.0-1.0)
-- `themeType .` - Get "dark" or "light"
-
-Example:
-```json
-"background": "{{ get . \"background\" | hex }}",
-"accent": "{{ get . \"accent1\" | hex }}",
-"transparent": "{{ withAlpha (get . \"surface\") 0.5 | hexAlpha }}"
-```
-
-## Technical Details
-
-### Plugin Protocol
-- **Type**: go-plugin (HashiCorp)
-- **Protocol Version**: 0.1.0
-- **Plugin Type**: output
-
-### Dependencies
-- `github.com/jmylchreest/tinct/pkg/colour` - Color utilities
-- `github.com/jmylchreest/tinct/pkg/template` - Template helpers
-- `github.com/jmylchreest/tinct/pkg/plugin` - Plugin protocol
-- `github.com/hashicorp/go-plugin` - Plugin framework
-
-### Architecture
-
-1. **Receives** PaletteData via go-plugin RPC
-2. **Converts** to colour.ThemeData with PaletteHelper
-3. **Renders** template using template.TemplateFuncs()
-4. **Outputs** JSON to ~/.config/opencode/themes/
+Tinct prefers your version over the embedded default. See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for available functions.
 
 ## Troubleshooting
 
-### Plugin Not Found
+### Plugin not found by tinct
 
-Ensure the binary is in your PATH:
 ```bash
 which tinct-plugin-opencode
+tinct plugins list | grep opencode
 ```
 
-### Theme Not Loading in OpenCode
+If the binary isn't on `$PATH`, either reinstall via `tinct plugins install opencode` or symlink the source build into `~/.local/bin/`.
 
-1. Check the output file exists:
-   ```bash
-   ls -la ~/.config/opencode/themes/tinct.json
-   ```
+### Theme not appearing in OpenCode's `/theme` picker
 
-2. Validate JSON syntax:
-   ```bash
-   jq . ~/.config/opencode/themes/tinct.json
-   ```
-
-3. Restart OpenCode to reload themes
-
-### Template Errors
-
-Check tinct output for template rendering errors:
 ```bash
-tinct generate -i file --path ~/wallpaper.png -o opencode --verbose
+ls -l ~/.config/opencode/themes/tinct.json
+jq . ~/.config/opencode/themes/tinct.json | head
 ```
 
-## Examples
+If the file exists and is valid JSON, restart OpenCode — the theme list is scanned at startup. If the file is missing, the plugin was skipped: this usually means tinct couldn't find an OpenCode config directory. Run with `--verbose` to see the detection log:
 
-### Dark Theme from Image
 ```bash
-tinct generate -i file --path ~/dark-wallpaper.png -o opencode
+tinct generate -i image -p ~/wallpaper.jpg -o opencode --verbose
 ```
 
-### Light Theme with Prompt
+### JSON parse errors in OpenCode
+
+Validate the generated file:
+
 ```bash
-export GOOGLE_API_KEY="your-key"
-tinct generate -i google-genai --prompt "bright sunny beach" -o opencode
+jq . ~/.config/opencode/themes/tinct.json
 ```
 
-### Generate for Multiple Apps
-```bash
-# Generate themes for terminal + OpenCode simultaneously
-tinct generate -i file --path ~/wallpaper.png -o ghostty,opencode,neovim
-```
+A template syntax error from a custom override is the usual cause. Remove or fix the override; if you didn't customise the template, file an issue with the verbose output.
 
-### Preview Generated Theme
-```bash
-cat ~/.config/opencode/themes/tinct.json | jq '.theme'
-```
+## Related plugins
 
-## Contributing
-
-This plugin is part of the tinct project. Contributions welcome!
-
-## License
-
-Same as tinct - check the main repository for license information.
-
-## See Also
-
-- [Tinct Documentation](https://github.com/jmylchreest/tinct)
-- [OpenCode Theme Documentation](https://opencode.ai/docs/themes/)
-- [OpenCode Theme Schema](https://opencode.ai/theme.json)
+- [neovim](../../../../internal/plugin/output/neovim/README.md) — Neovim colourscheme.
+- [ghostty](../../../../internal/plugin/output/ghostty/README.md) — terminal theme that pairs well with OpenCode's `system` theme.
