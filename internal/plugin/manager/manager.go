@@ -29,11 +29,13 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/awww"
 	"github.com/jmylchreest/tinct/internal/plugin/output/btop"
 	"github.com/jmylchreest/tinct/internal/plugin/output/dunst"
+	"github.com/jmylchreest/tinct/internal/plugin/output/foot"
 	"github.com/jmylchreest/tinct/internal/plugin/output/fuzzel"
 	"github.com/jmylchreest/tinct/internal/plugin/output/ghostty"
 	gnomeshell "github.com/jmylchreest/tinct/internal/plugin/output/gnome-shell"
 	"github.com/jmylchreest/tinct/internal/plugin/output/gtk3"
 	"github.com/jmylchreest/tinct/internal/plugin/output/gtk4"
+	"github.com/jmylchreest/tinct/internal/plugin/output/helix"
 	"github.com/jmylchreest/tinct/internal/plugin/output/histui"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprland"
 	"github.com/jmylchreest/tinct/internal/plugin/output/hyprlock"
@@ -124,11 +126,13 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.outputRegistry.Register(awww.New())
 	m.outputRegistry.Register(btop.New())
 	m.outputRegistry.Register(dunst.New())
+	m.outputRegistry.Register(foot.New())
 	m.outputRegistry.Register(fuzzel.New())
 	m.outputRegistry.Register(ghostty.New())
 	m.outputRegistry.Register(gnomeshell.New())
 	m.outputRegistry.Register(gtk3.New())
 	m.outputRegistry.Register(gtk4.New())
+	m.outputRegistry.Register(helix.New())
 	m.outputRegistry.Register(histui.New())
 	m.outputRegistry.Register(hyprland.New())
 	m.outputRegistry.Register(hyprlock.New())
