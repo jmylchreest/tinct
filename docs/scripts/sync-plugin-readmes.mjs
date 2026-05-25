@@ -326,14 +326,11 @@ function renderOutputTables(readmes) {
       .map((r) => {
         const p = r.frontmatter.plugin;
         const link = `./${cat}/${p.name}.md`;
-        const desc = p.app ? `${p.app}` : '';
-        const source = p.source === 'external' ? 'external' : 'builtin';
-        return `| [${p.name}](${link}) | ${desc} | ${source} |`;
+        const desc = firstParagraphSummary(r.content) || p.app || '';
+        return `| [${p.name}](${link}) | ${desc} |`;
       })
       .join('\n');
-    sections.push(
-      `## ${label}\n\n| Plugin | App | Source |\n|--------|-----|--------|\n${rows}`
-    );
+    sections.push(`## ${label}\n\n| Plugin | Description |\n|--------|-------------|\n${rows}`);
   }
   return sections.join('\n\n');
 }
@@ -346,7 +343,7 @@ function renderInputTable(readmes) {
     .map((r) => {
       const p = r.frontmatter.plugin;
       const link = `./${p.name}.md`;
-      const desc = p.description ?? '';
+      const desc = p.description ?? firstParagraphSummary(r.content);
       const sourceType = p.source_type ?? '';
       const reqs = [];
       if (p.requires_network) reqs.push('network');
@@ -358,6 +355,84 @@ function renderInputTable(readmes) {
     })
     .join('\n');
   return `| Plugin | Description | Source type | Requires |\n|--------|-------------|-------------|----------|\n${rows}`;
+}
+
+// firstParagraphSummary extracts the first prose paragraph from a
+// README body and reduces it to one cell-friendly line: markdown
+// links/code stripped, whitespace normalised, truncated at the first
+// sentence-ish boundary (≤140 chars). Falls back to empty string if
+// the body has no usable prose (e.g. all headings + code blocks).
+function firstParagraphSummary(body) {
+  if (!body) return '';
+  const lines = body.split('\n');
+  let inFence = false;
+  const collected = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line.startsWith('```')) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    if (line.startsWith('#') || line.startsWith('---')) continue;
+    if (line === '') {
+      if (collected.length > 0) break;
+      continue;
+    }
+    collected.push(line);
+  }
+  if (collected.length === 0) return '';
+
+  let text = collected.join(' ');
+  // [text](url) → text
+  text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  // **strong** → strong, *em* → em
+  text = text.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
+  // `code` → code (keeps the literal token readable in a table cell)
+  text = text.replace(/`([^`]+)`/g, '$1');
+  // Collapse whitespace.
+  text = text.replace(/\s+/g, ' ').trim();
+
+  // Trim to the first sentence if it's reasonably short; otherwise
+  // hard-truncate at 140. We walk candidate sentence ends in order and
+  // skip ones whose last token is a common abbreviation (`i.e.`,
+  // `e.g.`, `etc.`, etc.) so they don't masquerade as sentence ends
+  // when the abbreviation is followed by a capitalised noun.
+  const firstSentence = extractFirstSentence(text);
+  if (firstSentence && firstSentence.length <= 140) return firstSentence;
+  if (text.length > 140) return text.slice(0, 137).trimEnd() + '…';
+  return text;
+}
+
+// Common abbreviations whose trailing period should NOT count as a
+// sentence end. Match is case-insensitive and bounded by word edges.
+const ABBREVIATIONS = new Set([
+  'i.e.', 'e.g.', 'etc.', 'cf.', 'vs.',
+  'mr.', 'mrs.', 'ms.', 'dr.',
+  'inc.', 'ltd.', 'co.', 'st.', 'no.',
+  'fig.', 'eq.', 'ref.', 'ch.', 'sec.',
+]);
+
+// extractFirstSentence returns the longest leading substring of `text`
+// ending in [.!?] followed by whitespace+uppercase (a real sentence
+// boundary), skipping candidates whose last word is in the
+// abbreviations set. Returns null if no qualifying boundary is found.
+function extractFirstSentence(text) {
+  let offset = 0;
+  while (offset < text.length) {
+    const rest = text.slice(offset);
+    const match = rest.match(/[.!?](?=\s+[A-Z]|\s*$)/);
+    if (!match) return null;
+    const endIdx = offset + match.index + 1;
+    const candidate = text.slice(0, endIdx);
+    const lastWord = candidate.match(/\S+$/)?.[0]?.toLowerCase();
+    if (lastWord && ABBREVIATIONS.has(lastWord)) {
+      offset = endIdx;
+      continue;
+    }
+    return candidate;
+  }
+  return null;
 }
 
 function byFrontmatterPosition(a, b) {
