@@ -13,6 +13,13 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.3.3]
+*2026-05-25*
+
+### Fixed
+
+- fix(scripts): promote-unreleased exits 0 when both bodies are empty (2fcb8fe)
+
 ## [0.3.2]
 *2026-05-06*
 
