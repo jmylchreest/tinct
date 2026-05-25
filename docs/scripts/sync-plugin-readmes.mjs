@@ -326,7 +326,9 @@ function renderOutputTables(readmes) {
       .map((r) => {
         const p = r.frontmatter.plugin;
         const link = `./${cat}/${p.name}.md`;
-        const desc = firstParagraphSummary(r.content) || p.app || '';
+        const desc = stripRedundantLead(
+          firstParagraphSummary(r.content) || p.app || ''
+        );
         return `| [${p.name}](${link}) | ${desc} |`;
       })
       .join('\n');
@@ -402,6 +404,18 @@ function firstParagraphSummary(body) {
   if (firstSentence && firstSentence.length <= 140) return firstSentence;
   if (text.length > 140) return text.slice(0, 137).trimEnd() + '…';
   return text;
+}
+
+// stripRedundantLead removes leading verbs from a description that
+// are visually redundant in a table where "output plugin" is already
+// implied. The PLUGIN-README-STANDARD asks for "What the plugin
+// generates, for which app", so almost every output README opens with
+// "Generates …" — fine in prose, repetitive in a column of 30+ rows.
+function stripRedundantLead(text) {
+  const match = text.match(/^Generates\s+(?:an?\s+)?(.+)/);
+  if (!match) return text;
+  const rest = match[1];
+  return rest.charAt(0).toUpperCase() + rest.slice(1);
 }
 
 // Common abbreviations whose trailing period should NOT count as a

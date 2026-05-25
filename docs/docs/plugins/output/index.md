@@ -18,69 +18,69 @@ Output plugins generate configuration files for applications and devices.
 
 | Plugin | Description |
 |--------|-------------|
-| [alacritty](./terminals/alacritty.md) | Generates a TOML colour theme for Alacritty, the GPU-accelerated cross-platform terminal emulator. |
-| [ghostty](./terminals/ghostty.md) | Generates a single-file colour theme for Ghostty, Mitchell Hashimoto's GPU-accelerated terminal emulator. |
-| [foot](./terminals/foot.md) | Generates a colour theme for foot, the fast, lightweight Wayland terminal emulator from the author of fuzzel. |
-| [kitty](./terminals/kitty.md) | Generates a single-file colour theme for kitty, Kovid Goyal's GPU-accelerated terminal emulator. |
-| [konsole](./terminals/konsole.md) | Generates a .colorscheme file for Konsole, the KDE terminal emulator. |
-| [warp](./terminals/warp.md) | Generates a YAML custom-theme file for Warp, the Rust-based AI-first terminal. |
-| [wezterm](./terminals/wezterm.md) | Generates a TOML colour scheme for WezTerm, Wez Furlong's GPU-accelerated, Lua-configurable terminal. |
+| [alacritty](./terminals/alacritty.md) | TOML colour theme for Alacritty, the GPU-accelerated cross-platform terminal emulator. |
+| [ghostty](./terminals/ghostty.md) | Single-file colour theme for Ghostty, Mitchell Hashimoto's GPU-accelerated terminal emulator. |
+| [foot](./terminals/foot.md) | Colour theme for foot, the fast, lightweight Wayland terminal emulator from the author of fuzzel. |
+| [kitty](./terminals/kitty.md) | Single-file colour theme for kitty, Kovid Goyal's GPU-accelerated terminal emulator. |
+| [konsole](./terminals/konsole.md) | .colorscheme file for Konsole, the KDE terminal emulator. |
+| [warp](./terminals/warp.md) | YAML custom-theme file for Warp, the Rust-based AI-first terminal. |
+| [wezterm](./terminals/wezterm.md) | TOML colour scheme for WezTerm, Wez Furlong's GPU-accelerated, Lua-configurable terminal. |
 
 ## Desktop environments
 
 | Plugin | Description |
 |--------|-------------|
-| [gnome-shell](./desktop/gnome-shell.md) | Generates a CSS theme for GNOME Shell, the compositor and panel of the GNOME desktop. |
-| [gtk3](./desktop/gtk3.md) | Generates a per-user CSS override for GTK 3 applications (GIMP, Inkscape, Pidgin, and most non-libadwaita GNOME 3-era apps). |
-| [gtk4](./desktop/gtk4.md) | Generates a per-user CSS override for traditional GTK 4 applications — i.e. GTK 4 apps that do not use libadwaita. |
-| [libadwaita](./desktop/libadwaita.md) | Generates a per-user CSS override for libadwaita — the design library used by modern GNOME apps (Files, Text Editor, Calculator, Console,… |
-| [kde-plasma](./desktop/kde-plasma.md) | Generates KDE Plasma .colors colour schemes for the Plasma desktop and KDE applications. |
-| [qt5](./desktop/qt5.md) | Generates a qt5ct custom colour scheme for Qt 5 applications on non-Plasma desktops. qt5ct is Qt 5's "configuration tool" — it provides a… |
-| [qt6](./desktop/qt6.md) | Generates a qt6ct custom colour scheme for Qt 6 applications on non-Plasma desktops. qt6ct is the Qt 6 successor to qt5ct — a QPlatformTh… |
+| [gnome-shell](./desktop/gnome-shell.md) | CSS theme for GNOME Shell, the compositor and panel of the GNOME desktop. |
+| [gtk3](./desktop/gtk3.md) | Per-user CSS override for GTK 3 applications (GIMP, Inkscape, Pidgin, and most non-libadwaita GNOME 3-era apps). |
+| [gtk4](./desktop/gtk4.md) | Per-user CSS override for traditional GTK 4 applications — i.e. GTK 4 apps that do not use libadwaita. |
+| [libadwaita](./desktop/libadwaita.md) | Per-user CSS override for libadwaita — the design library used by modern GNOME apps (Files, Text Editor, Calculator, Console,… |
+| [kde-plasma](./desktop/kde-plasma.md) | KDE Plasma .colors colour schemes for the Plasma desktop and KDE applications. |
+| [qt5](./desktop/qt5.md) | Qt5ct custom colour scheme for Qt 5 applications on non-Plasma desktops. qt5ct is Qt 5's "configuration tool" — it provides a… |
+| [qt6](./desktop/qt6.md) | Qt6ct custom colour scheme for Qt 6 applications on non-Plasma desktops. qt6ct is the Qt 6 successor to qt5ct — a QPlatformTh… |
 
 ## Hyprland ecosystem
 
 | Plugin | Description |
 |--------|-------------|
-| [hyprland](./hyprland/hyprland.md) | Generates colour variables for Hyprland, the dynamic tiling Wayland compositor. |
-| [hyprlock](./hyprland/hyprlock.md) | Generates a colour palette for Hyprlock, the screen locker for Hyprland. |
-| [hyprpaper](./hyprland/hyprpaper.md) | Generates a Hyprpaper wallpaper configuration that wires the wallpaper image picked up by tinct into Hyprpaper's preload / wallpaper dire… |
+| [hyprland](./hyprland/hyprland.md) | Colour variables for Hyprland, the dynamic tiling Wayland compositor. |
+| [hyprlock](./hyprland/hyprlock.md) | Colour palette for Hyprlock, the screen locker for Hyprland. |
+| [hyprpaper](./hyprland/hyprpaper.md) | Hyprpaper wallpaper configuration that wires the wallpaper image picked up by tinct into Hyprpaper's preload / wallpaper dire… |
 
 ## Bars and launchers
 
 | Plugin | Description |
 |--------|-------------|
-| [wofi](./bars-launchers/wofi.md) | Generates a colour theme for Wofi, the GTK-based application launcher / dmenu replacement for Wayland. |
-| [waybar](./bars-launchers/waybar.md) | Generates a colour theme for Waybar, the highly customisable status bar for Wayland compositors. |
-| [walker](./bars-launchers/walker.md) | Generates a GTK CSS theme for Walker, a Wayland-native application launcher. |
-| [dunst](./bars-launchers/dunst.md) | Generates an urgency-based colour theme for Dunst, the lightweight notification daemon for X11 and Wayland. |
-| [fuzzel](./bars-launchers/fuzzel.md) | Generates a colour-only INI theme for Fuzzel, the lightweight Wayland application launcher. |
-| [rofi](./bars-launchers/rofi.md) | Generates a rofi theme as two .rasi files: a palette (tinct-colours.rasi) declaring every tinct role as a named rasi colour, and a main t… |
-| [swayosd](./bars-launchers/swayosd.md) | Generates a GTK CSS stylesheet for SwayOSD, the on-screen-display server for Sway and other wlroots compositors. |
+| [wofi](./bars-launchers/wofi.md) | Colour theme for Wofi, the GTK-based application launcher / dmenu replacement for Wayland. |
+| [waybar](./bars-launchers/waybar.md) | Colour theme for Waybar, the highly customisable status bar for Wayland compositors. |
+| [walker](./bars-launchers/walker.md) | GTK CSS theme for Walker, a Wayland-native application launcher. |
+| [dunst](./bars-launchers/dunst.md) | Urgency-based colour theme for Dunst, the lightweight notification daemon for X11 and Wayland. |
+| [fuzzel](./bars-launchers/fuzzel.md) | Colour-only INI theme for Fuzzel, the lightweight Wayland application launcher. |
+| [rofi](./bars-launchers/rofi.md) | Rofi theme as two .rasi files: a palette (tinct-colours.rasi) declaring every tinct role as a named rasi colour, and a main t… |
+| [swayosd](./bars-launchers/swayosd.md) | GTK CSS stylesheet for SwayOSD, the on-screen-display server for Sway and other wlroots compositors. |
 
 ## Editors and multiplexers
 
 | Plugin | Description |
 |--------|-------------|
-| [neovim](./editors/neovim.md) | Generates a Lua colorscheme for Neovim, plus a matching lualine status-line theme. |
-| [zellij](./editors/zellij.md) | Generates a KDL-format theme file for Zellij, the Rust terminal workspace. |
-| [helix](./editors/helix.md) | Generates a TOML theme for Helix, the modal post-modern text editor written in Rust. |
-| [opencode](./editors/opencode.md) | Generates a complete theme file for OpenCode, the AI-assisted coding agent. |
+| [neovim](./editors/neovim.md) | Lua colorscheme for Neovim, plus a matching lualine status-line theme. |
+| [zellij](./editors/zellij.md) | KDL-format theme file for Zellij, the Rust terminal workspace. |
+| [helix](./editors/helix.md) | TOML theme for Helix, the modal post-modern text editor written in Rust. |
+| [opencode](./editors/opencode.md) | Complete theme file for OpenCode, the AI-assisted coding agent. |
 
 ## Special purpose
 
 | Plugin | Description |
 |--------|-------------|
-| [yazi](./special/yazi.md) | Generates a Yazi flavor pack — Yazi's directory-based theme format. |
+| [yazi](./special/yazi.md) | Yazi flavor pack — Yazi's directory-based theme format. |
 | [wbg](./special/wbg.md) | Wallpaper integration for wbg, the minimal Wayland wallpaper application from the dnkl/foot ecosystem. wbg is a single-shot foreground pr… |
-| [tmux](./special/tmux.md) | Generates a colour theme for tmux, the terminal multiplexer. |
-| [rosec](./special/rosec.md) | Generates a ROsec prompt theme — the colours used by the rosec-prompt interactive prompt for backgrounds, borders, labels, inputs, and th… |
-| [mc](./special/mc.md) | Generates a skin for Midnight Commander, the venerable terminal file manager. |
+| [tmux](./special/tmux.md) | Colour theme for tmux, the terminal multiplexer. |
+| [rosec](./special/rosec.md) | ROsec prompt theme — the colours used by the rosec-prompt interactive prompt for backgrounds, borders, labels, inputs, and th… |
+| [mc](./special/mc.md) | Skin for Midnight Commander, the venerable terminal file manager. |
 | [markdown](./special/markdown.md) | Exports the current palette as a portable Markdown theme file with YAML frontmatter. |
-| [histui](./special/histui.md) | Generates a GTK4 / libadwaita stylesheet for histui, a notification daemon. |
-| [btop](./special/btop.md) | Generates a btop theme file — the colours behind the resource monitor's CPU/memory/network/process boxes, gradient meters, temperature sc… |
+| [histui](./special/histui.md) | GTK4 / libadwaita stylesheet for histui, a notification daemon. |
+| [btop](./special/btop.md) | Btop theme file — the colours behind the resource monitor's CPU/memory/network/process boxes, gradient meters, temperature sc… |
 | [awww](./special/awww.md) | Wallpaper integration for awww (An Answer to your Wayland Wallpaper Woes), an animated wallpaper daemon for Wayland compositors implement… |
-| [spicetify](./special/spicetify.md) | Generates a Spicetify color.ini colour scheme so the Spotify desktop client picks up your tinct palette. |
+| [spicetify](./special/spicetify.md) | Spicetify color.ini colour scheme so the Spotify desktop client picks up your tinct palette. |
 
 {/* END AUTO-PLUGIN-TABLE */}
 
