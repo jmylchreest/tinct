@@ -47,15 +47,50 @@ func init() {
 //
 //nolint:gocyclo,gosec // CLI dispatch + JSON-stdio plugin protocol
 func main() {
-	// Handle --plugin-info flag for protocol detection
+	// Handle --plugin-info flag for protocol detection.
+	//
+	// The metadata block lets tinct-check-readmes diff the README
+	// frontmatter against runtime reality. Keep these fields in sync
+	// with what the plugin actually does — they're the machine-checkable
+	// counterpart to the README's `plugin:` block. Schema mirrors
+	// tinctplugin.Metadata / ReloadMetadata; written as a map literal
+	// because this plugin uses JSON-stdio without importing tinctplugin.
 	if len(os.Args) > 1 && os.Args[1] == "--plugin-info" {
-		info := map[string]string{
+		info := map[string]any{
 			"name":             pluginName,
 			"type":             "output",
 			"version":          Version,
 			"protocol_version": "0.2.0",
 			"description":      pluginDescription,
 			"plugin_protocol":  "json-stdio",
+			"metadata": map[string]any{
+				// `wob` is required at runtime — the plugin's wrapper
+				// subcommands spawn it; the JSON-stdio Generate path
+				// only writes the theme file, so wob itself is needed
+				// at use-time (start/send), not generate-time.
+				"required_binaries": []string{"wob"},
+				// `tail` is used by the wrapper's `start` subcommand to
+				// pipe values from the FIFO into wob's stdin. Coreutils
+				// is universally installed, so it's optional rather
+				// than required.
+				"optional_binaries": []string{"tail"},
+				"default_output_dir": "~/.config/wob/themes",
+				"generated_files":    []string{"tinct.ini"},
+				"pattern":            "two-file",
+				"reload": map[string]any{
+					// The plugin's wrapper subcommand `tinct-plugin-wob
+					// send` watches the merged-config mtime and
+					// auto-restarts wob in-process when it detects a
+					// rewritten theme. From the user's perspective the
+					// theme reload is automatic, but it's keyed off the
+					// next `send` invocation rather than fired from
+					// PostExecute (wob is a long-running process driven
+					// by user input).
+					"method":               "watch",
+					"command":              "tinct-plugin-wob send (auto-restart on config change)",
+					"user_action_required": false,
+				},
+			},
 		}
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")

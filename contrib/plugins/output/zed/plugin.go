@@ -245,6 +245,10 @@ func (l *stdLogger) Printf(format string, args ...any) {
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The Metadata block lets tinct-check-readmes diff the README frontmatter
+// against runtime reality. Keep these fields in sync with what the plugin
+// actually does.
 func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "zed",
@@ -253,6 +257,21 @@ func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate Zed editor theme files",
 		PluginProtocol:  string(tinctplugin.PluginTypeGoPlugin),
+		Metadata: &tinctplugin.Metadata{
+			// Zed detection is by config-directory presence (native at
+			// ~/.config/zed and Flatpak at
+			// ~/.var/app/dev.zed.Zed/config/zed); no binary on PATH is
+			// required.
+			DefaultOutputDir: "~/.config/zed/themes",
+			GeneratedFiles:   []string{"tinct.json"},
+			Pattern:          "single-file",
+			Reload: &tinctplugin.ReloadMetadata{
+				// Zed watches its themes directory and reloads the
+				// active theme live when its file changes.
+				Method:             "watch",
+				UserActionRequired: false,
+			},
+		},
 	}
 }
 

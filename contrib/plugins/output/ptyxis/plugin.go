@@ -261,6 +261,10 @@ func (l *stdLogger) Printf(format string, args ...any) {
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The Metadata block lets tinct-check-readmes diff the README frontmatter
+// against runtime reality. Keep these fields in sync with what the plugin
+// actually does.
 func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            "ptyxis",
@@ -269,6 +273,22 @@ func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Generate Ptyxis terminal colour palette",
 		PluginProtocol:  string(tinctplugin.PluginTypeGoPlugin),
+		Metadata: &tinctplugin.Metadata{
+			// Ptyxis detection covers both the native `ptyxis` binary
+			// and the Flatpak install (~/.var/app/app.devsuite.Ptyxis).
+			// Either suffices, so neither is strictly required on PATH.
+			OptionalBinaries: []string{"ptyxis"},
+			DefaultOutputDir: "~/.local/share/org.gnome.Ptyxis/palettes",
+			GeneratedFiles:   []string{"tinct.palette"},
+			Pattern:          "single-file",
+			Reload: &tinctplugin.ReloadMetadata{
+				// PtyxisUserPalettes watches its palette dir via
+				// GFileMonitor; new palettes appear live. The user
+				// still has to switch to the palette in Preferences.
+				Method:             "watch",
+				UserActionRequired: true,
+			},
+		},
 	}
 }
 

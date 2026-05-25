@@ -25,6 +25,7 @@ Output plugins generate configuration files for applications and devices.
 | [konsole](./terminals/konsole.md) | .colorscheme file for Konsole, the KDE terminal emulator. |
 | [warp](./terminals/warp.md) | YAML custom-theme file for Warp, the Rust-based AI-first terminal. |
 | [wezterm](./terminals/wezterm.md) | TOML colour scheme for WezTerm, Wez Furlong's GPU-accelerated, Lua-configurable terminal. |
+| [ptyxis](./terminals/ptyxis.md) | Ptyxis terminal colour palette. |
 
 ## Desktop Environments
 
@@ -57,6 +58,10 @@ Output plugins generate configuration files for applications and devices.
 | [fuzzel](./bars-launchers/fuzzel.md) | Colour-only INI theme for Fuzzel, the lightweight Wayland application launcher. |
 | [rofi](./bars-launchers/rofi.md) | Rofi theme as two .rasi files: a palette (tinct-colours.rasi) declaring every tinct role as a named rasi colour, and a main t… |
 | [swayosd](./bars-launchers/swayosd.md) | GTK CSS stylesheet for SwayOSD, the on-screen-display server for Sway and other wlroots compositors. |
+| [keylightd-tray](./bars-launchers/keylightd-tray.md) | CSS theme for keylightd-tray, the Elgato Key Light system-tray applet that ships with keylightd. |
+| [awob](./bars-launchers/awob.md) | Shared palette plus a worked-example theme for awob, an animated Wayland Overlay Bar. |
+| [dunstify](./bars-launchers/dunstify.md) | Pops a desktop notification via dunstify (or notify-send) every time tinct generate finishes. |
+| [wob](./bars-launchers/wob.md) | Tinct.ini theme overlay for wob, the Wayland Overlay Bar — the bar you see when adjusting volume or brightness. |
 
 ## Editors & Multiplexers
 
@@ -66,6 +71,7 @@ Output plugins generate configuration files for applications and devices.
 | [zellij](./editors/zellij.md) | KDL-format theme file for Zellij, the Rust terminal workspace. |
 | [helix](./editors/helix.md) | TOML theme for Helix, the modal post-modern text editor written in Rust. |
 | [opencode](./editors/opencode.md) | Complete theme file for OpenCode, the AI-assisted coding agent. |
+| [zed](./editors/zed.md) | Complete theme file for the Zed editor — a fast Rust-based collaborative code editor. |
 
 ## Special Purpose
 
@@ -81,6 +87,7 @@ Output plugins generate configuration files for applications and devices.
 | [btop](./special/btop.md) | Btop theme file — the colours behind the resource monitor's CPU/memory/network/process boxes, gradient meters, temperature sc… |
 | [awww](./special/awww.md) | Wallpaper integration for awww (An Answer to your Wayland Wallpaper Woes), an animated wallpaper daemon for Wayland compositors implement… |
 | [spicetify](./special/spicetify.md) | Spicetify color.ini colour scheme so the Spotify desktop client picks up your tinct palette. |
+| [templater](./special/templater.md) | A meta-plugin: rather than targeting one app, templater renders an arbitrary set of user-supplied Go text/template files against the curr… |
 
 {/* END AUTO-PLUGIN-TABLE */}
 

@@ -108,14 +108,39 @@ func (p *TemplaterPlugin) PostExecute(_ context.Context, _ []string) error {
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The Metadata block lets tinct-check-readmes diff the README frontmatter
+// against runtime reality. Templater is a meta-plugin: it renders an
+// arbitrary number of user-supplied Go text/templates to arbitrary
+// destinations defined in ~/.config/tinct/templater.yaml. Concrete
+// outputs are therefore configuration-dependent — the metadata
+// describes the config file (the discoverable "default output"), not
+// the rendered files themselves.
 func (p *TemplaterPlugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            Name,
 		Type:            "output",
 		Version:         Version,
 		ProtocolVersion: tinctplugin.ProtocolVersion,
-		Description:     "Templater for custom configuration files",
+		Description:     "Render arbitrary user-supplied templates from the tinct palette",
 		PluginProtocol:  "go-plugin",
+		Metadata: &tinctplugin.Metadata{
+			// Generated outputs are entirely defined by the user's
+			// config — we surface the config file location instead.
+			DefaultOutputDir: "~/.config/tinct",
+			GeneratedFiles:   []string{"templater.yaml (user-defined output paths)"},
+			// "drop-in" is the closest match: each template renders to
+			// its own configured destination; there's no single
+			// app-target shape.
+			Pattern: "drop-in",
+			Reload: &tinctplugin.ReloadMetadata{
+				// Templater can't know what was rendered — the user's
+				// own templates may target many different apps, so
+				// reload responsibility sits entirely with the user.
+				Method:             "none",
+				UserActionRequired: true,
+			},
+		},
 	}
 }
 

@@ -1,260 +1,227 @@
-# Tinct keylightd-tray Theme Plugin
+---
+title: keylightd-tray
+sidebar_position: 7
 
-An external output plugin for [tinct](https://github.com/jmylchreest/tinct) that generates custom CSS themes for [keylightd-tray](https://github.com/jmylchreest/keylightd/tree/main/contrib/keylightd-tray).
+plugin:
+  type: output
+  name: keylightd-tray
+  category: bars-launchers
+  source: external
+  app: keylightd-tray
+  app_url: https://github.com/jmylchreest/keylightd/tree/main/contrib/keylightd-tray
+  version: 0.1.0
+  protocol_version: 0.3.0
+  repository: https://github.com/jmylchreest/tinct
+  install: tinct plugins install keylightd-tray
+  requires: []
+  optional: []
+  pattern: two-file
+  default_output_dir: ~/.config/keylightd/keylightd-tray
+  generated_files: [tinct-colours.css, tinct-custom.css]
+  reload:
+    method: watch
+    user_action_required: false
+---
 
-## Features
+# keylightd-tray
 
-- **Two-File Architecture**: Separates colour definitions from theme application for easy customization
-- **CSS Variables**: Generates complete CSS files with all keylightd-tray theme variables
-- **Automatic Path Detection**: Uses XDG_CONFIG_HOME or defaults to ~/.config
-- **Live Reload**: keylightd-tray watches for changes and reloads automatically
-- **Semantic Color Mapping**: Maps tinct's semantic roles to keylightd-tray's UI elements
+Generates a CSS theme for [keylightd-tray](https://github.com/jmylchreest/keylightd/tree/main/contrib/keylightd-tray), the Elgato Key Light system-tray applet that ships with [keylightd](https://github.com/jmylchreest/keylightd). The output is a two-file pair — a palette file plus a theme application file — written into keylightd-tray's config directory. keylightd-tray watches its CSS files and re-renders the tray UI live as soon as the imported file changes.
 
 ## Installation
 
-### Build from Source
+### Via the official plugin repository
+
+```bash
+tinct plugins install keylightd-tray
+```
+
+### Build from source
 
 ```bash
 cd contrib/plugins/output/keylightd-tray
-go build -o tinct-plugin-keylightd-tray
+go build -ldflags "-X main.Version=0.1.0" -o tinct-plugin-keylightd-tray
+install -m 0755 tinct-plugin-keylightd-tray ~/.local/bin/
 ```
 
-### Install to PATH
+### Verify
 
 ```bash
-# Build with version information
-go build -ldflags "-X main.Version=0.1.0 -X main.Commit=$(git rev-parse HEAD) -X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o tinct-plugin-keylightd-tray
-
-# Install to ~/.local/bin (or any directory in your PATH)
-mkdir -p ~/.local/bin
-mv tinct-plugin-keylightd-tray ~/.local/bin/
-chmod +x ~/.local/bin/tinct-plugin-keylightd-tray
+which tinct-plugin-keylightd-tray
+tinct-plugin-keylightd-tray --plugin-info | jq .
 ```
 
-## Usage
+The plugin uses tinct's go-plugin RPC protocol and is discovered automatically once it's on `$PATH`.
 
-The plugin uses tinct's go-plugin protocol and is discovered automatically when in your PATH.
-
-### Generate from Image
+## Quick start
 
 ```bash
-tinct generate -i file --path ~/wallpaper.png -o keylightd-tray
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o keylightd-tray
 ```
 
-### Generate from Google Gemini
+## Generated files
+
+| File | Path | Role |
+|------|------|------|
+| `tinct-colours.css` | `~/.config/keylightd/keylightd-tray/tinct-colours.css` | **Palette** — raw colour values exported as `--tinct-*` CSS custom properties |
+| `tinct-custom.css` | `~/.config/keylightd/keylightd-tray/tinct-custom.css` | **Theme application** — `@import`s the palette and maps `--tinct-*` onto keylightd-tray's UI variables (`--bg-primary`, `--accent`, `--slider-track`, …) |
+
+If `XDG_CONFIG_HOME` is set, both files land under `$XDG_CONFIG_HOME/keylightd/keylightd-tray/` instead.
+
+## Integration
+
+keylightd-tray loads `custom.css` from its config directory. To pull in the tinct theme, add a single `@import` line to that file (and leave it in place across regenerations — only the imported files are rewritten by tinct):
 
 ```bash
-export GOOGLE_API_KEY="your-api-key"
-tinct generate -i google-genai --prompt "sunset over mountains" -o keylightd-tray
+$EDITOR ~/.config/keylightd/keylightd-tray/custom.css
 ```
-
-## Output
-
-The plugin generates two files:
-
-```
-~/.config/keylightd/keylightd-tray/tinct-colours.css   # Raw colour definitions
-~/.config/keylightd/keylightd-tray/tinct-custom.css    # Theme application
-```
-
-Or if `XDG_CONFIG_HOME` is set:
-
-```
-$XDG_CONFIG_HOME/keylightd/keylightd-tray/tinct-colours.css
-$XDG_CONFIG_HOME/keylightd/keylightd-tray/tinct-custom.css
-```
-
-- **tinct-colours.css**: Contains raw colour values from tinct with `--tinct-*` prefixed variables
-- **tinct-custom.css**: Imports the colours and applies them to keylightd-tray's theme variables
-
-## Setup
-
-After the first run, you need to import the tinct theme in your `custom.css`:
 
 ```css
 @import url("tinct-custom.css");
 
-/* Your additional customizations here */
+/* Your additional customisations here */
 ```
 
-The plugin will remind you if the import is missing.
+The plugin prints a reminder in `--verbose` mode if `custom.css` is missing the import.
 
-## Generated CSS Variables
+## Reload behaviour
 
-### tinct-colours.css (Raw Colours)
+### Automatic
 
-The colours file exports tinct palette colours with `--tinct-*` prefix:
+keylightd-tray watches its CSS files via the standard GTK file-monitor and re-renders the tray UI as soon as the imported file changes. No signal, IPC or restart is needed — regenerate with tinct and the new colours appear immediately.
 
-| Variable | Tinct Role |
-|----------|------------|
-| `--tinct-background` | background |
-| `--tinct-foreground` | foreground |
-| `--tinct-surface` | surface |
-| `--tinct-subtle` | subtle |
-| `--tinct-overlay` | overlay |
-| `--tinct-surface-container-lowest` | surfaceContainerLowest |
-| `--tinct-surface-container-low` | surfaceContainerLow |
-| `--tinct-surface-container` | surfaceContainer |
-| `--tinct-surface-container-high` | surfaceContainerHigh |
-| `--tinct-surface-container-highest` | surfaceContainerHighest |
-| `--tinct-border-muted` | borderMuted |
-| `--tinct-accent` | accent1 |
-| `--tinct-green` | green |
-| `--tinct-yellow` | yellow |
-| `--tinct-red` | red |
+### Manual fallback
 
-### tinct-custom.css (Theme Application)
+If the new colours don't appear, the watcher may have been disabled or the import may not be in place. Restart keylightd-tray:
 
-The custom file imports the colours and maps them to keylightd-tray variables:
+```bash
+pkill keylightd-tray && keylightd-tray &
+```
 
-| Variable | Source | Description |
-|----------|--------|-------------|
-| `--bg-primary` | `--tinct-background` | Primary background color |
-| `--bg-secondary` | `--tinct-surface` | Secondary background color |
-| `--bg-tertiary` | `--tinct-surface` | Tertiary background color |
-| `--text-primary` | `--tinct-foreground` | Primary text color |
-| `--text-secondary` | `--tinct-subtle` | Secondary text color |
-| `--text-muted` | `--tinct-subtle` | Muted text color |
-| `--accent` | `--tinct-accent` | Sliders and interactive elements |
-| `--success` | `--tinct-green` | Power button "on" state |
+## Uninstall / revert
+
+1. **Remove the import line** from `~/.config/keylightd/keylightd-tray/custom.css`:
+
+   ```bash
+   $EDITOR ~/.config/keylightd/keylightd-tray/custom.css
+   # delete the @import url("tinct-custom.css"); line
+   ```
+
+2. **Delete the generated files**:
+
+   ```bash
+   rm ~/.config/keylightd/keylightd-tray/tinct-colours.css \
+      ~/.config/keylightd/keylightd-tray/tinct-custom.css
+   ```
+
+3. **Reload to drop the theme**: keylightd-tray re-renders on `custom.css` change. If it doesn't, restart it:
+
+   ```bash
+   pkill keylightd-tray && keylightd-tray &
+   ```
+
+4. **External state**: this plugin only writes to `~/.config/keylightd/keylightd-tray/`. To also remove the plugin binary:
+
+   ```bash
+   tinct plugins uninstall keylightd-tray
+   # or, for a source build:
+   rm ~/.local/bin/tinct-plugin-keylightd-tray
+   ```
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| (none) | — | Override the output directory via the `TINCT_PLUGIN_KEYLIGHTD_TRAY_OUTPUT_DIR` env var |
+
+## Colour role mapping
+
+### Palette file (`tinct-colours.css`)
+
+The palette exports tinct's semantic roles as `--tinct-*` custom properties.
+
+| CSS variable | Tinct role |
+|---|---|
+| `--tinct-background` | `background` |
+| `--tinct-foreground` | `foreground` |
+| `--tinct-surface` | `surface` |
+| `--tinct-subtle` | `subtle` |
+| `--tinct-overlay` | `overlay` |
+| `--tinct-surface-container-lowest` | `surfaceContainerLowest` |
+| `--tinct-surface-container-low` | `surfaceContainerLow` |
+| `--tinct-surface-container` | `surfaceContainer` |
+| `--tinct-surface-container-high` | `surfaceContainerHigh` |
+| `--tinct-surface-container-highest` | `surfaceContainerHighest` |
+| `--tinct-border-muted` | `borderMuted` |
+| `--tinct-outline-variant` | `outlineVariant` |
+| `--tinct-accent` | `accent1` (falls back to `accent`) |
+| `--tinct-green` | `green` (falls back to `accent2`) |
+| `--tinct-yellow` | `yellow` (falls back to `accent3`) |
+| `--tinct-red` | `red` (falls back to `accent4`) |
+
+### Theme application file (`tinct-custom.css`)
+
+These map the palette onto keylightd-tray's UI variables.
+
+| keylightd-tray variable | Palette variable | Used for |
+|---|---|---|
+| `--bg-primary` | `--tinct-background` | Window background |
+| `--bg-secondary` / `--bg-tertiary` | `--tinct-surface` | Panel backgrounds |
+| `--text-primary` | `--tinct-foreground` | Primary text |
+| `--text-secondary` / `--text-muted` | `--tinct-subtle` | Secondary text |
+| `--accent` | `--tinct-accent` | Sliders, interactive elements |
+| `--success` | `--tinct-green` | Power "on" indicator |
 | `--warning` | `--tinct-yellow` | Warning indicators |
 | `--error` | `--tinct-red` | Error indicators |
-| `--surface` | `--tinct-surface` | Surface color |
-| `--overlay` | `--tinct-overlay` | Overlay color |
+| `--surface` | `--tinct-surface` | Surface fills |
+| `--overlay` | `--tinct-overlay` | Overlay fills |
 | `--slider-track` | `--tinct-surface-container-low` | Slider track background |
 | `--input-bg` | `--tinct-surface-container-lowest` | Input field background |
 | `--input-border` | `--tinct-border-muted` | Input field border |
 | `--list-item-bg` | `--tinct-surface-container-lowest` | List item background |
 
-## Example Output
+## Customising the template
 
-### tinct-colours.css
-
-```css
-/* Tinct-generated colours for keylightd-tray */
-/* Generated by tinct-plugin-keylightd-tray */
-
-:root {
-  --tinct-background: #1e1e2e;
-  --tinct-foreground: #cdd6f4;
-  --tinct-surface: #313244;
-  --tinct-subtle: #a6adc8;
-  --tinct-overlay: #45475a;
-  --tinct-surface-container-lowest: #11111b;
-  --tinct-surface-container-low: #181825;
-  --tinct-border-muted: #45475a;
-  --tinct-accent: #89b4fa;
-  --tinct-green: #a6e3a1;
-  --tinct-yellow: #f9e2af;
-  --tinct-red: #f38ba8;
-}
-```
-
-### tinct-custom.css
+The plugin's CSS is generated in Go (no `text/template` template file), so customisation is best done by editing the generated `tinct-custom.css` mappings — keep `tinct-colours.css` untouched (it's regenerated) and add overrides in your own `custom.css` after the `@import` line:
 
 ```css
-/* Tinct custom theme for keylightd-tray */
-/* Import the tinct colour definitions */
-@import url("tinct-colours.css");
+@import url("tinct-custom.css");
 
+/* Override after the import */
 :root {
-  /* Background colors */
-  --bg-primary: var(--tinct-background);
-  --bg-secondary: var(--tinct-surface);
-  --bg-tertiary: var(--tinct-surface);
-
-  /* Text colors */
-  --text-primary: var(--tinct-foreground);
-  --text-secondary: var(--tinct-subtle);
-  --text-muted: var(--tinct-subtle);
-
-  /* Accent and state colors */
   --accent: var(--tinct-accent);
-  --success: var(--tinct-green);
-  --warning: var(--tinct-yellow);
-  --error: var(--tinct-red);
-
-  /* Surface colors */
-  --surface: var(--tinct-surface);
-  --overlay: var(--tinct-overlay);
-
-  /* Component-specific colors */
-  --slider-track: var(--tinct-surface-container-low);
-  --input-bg: var(--tinct-surface-container-lowest);
-  --input-border: var(--tinct-border-muted);
-  --list-item-bg: var(--tinct-surface-container-lowest);
+  --slider-track: var(--tinct-surface-container);
 }
 ```
-
-## Applying the Theme
-
-keylightd-tray automatically watches for changes to custom.css and reloads the theme. Simply regenerate with tinct and the changes will be applied immediately.
-
-If the theme doesn't load:
-
-1. Check the tinct file exists:
-   ```bash
-   cat ~/.config/keylightd/keylightd-tray/tinct-custom.css
-   ```
-
-2. Ensure custom.css imports it:
-   ```bash
-   cat ~/.config/keylightd/keylightd-tray/custom.css
-   ```
-   Should contain: `@import url("tinct-custom.css");`
-
-3. Verify the CSS syntax is valid
-
-4. Restart keylightd-tray
-
-## Technical Details
-
-### Plugin Protocol
-- **Type**: go-plugin (HashiCorp)
-- **Protocol Version**: 0.1.0
-- **Plugin Type**: output
-
-### Dependencies
-- `github.com/jmylchreest/tinct/pkg/plugin` - Plugin protocol
-- `github.com/hashicorp/go-plugin` - Plugin framework
-- `github.com/hashicorp/go-hclog` - Logging
 
 ## Troubleshooting
 
-### Plugin Not Found
+### Plugin not found by tinct
 
-Ensure the binary is in your PATH:
 ```bash
 which tinct-plugin-keylightd-tray
+tinct plugins list | grep keylightd-tray
 ```
 
-### Theme Not Loading
+If the binary isn't on `$PATH`, reinstall via `tinct plugins install keylightd-tray` or symlink the source build into `~/.local/bin/`.
 
-1. Check the output file exists:
-   ```bash
-   ls -la ~/.config/keylightd/keylightd-tray/custom.css
-   ```
+### Theme not applied
 
-2. Check application logs for CSS syntax errors
-
-3. Restart keylightd-tray
-
-### Verbose Output
-
-For debugging, use verbose mode:
 ```bash
-tinct generate -i file --path ~/wallpaper.png -o keylightd-tray --verbose
+cat ~/.config/keylightd/keylightd-tray/custom.css
 ```
 
-## Contributing
+Ensure the file contains `@import url("tinct-custom.css");`. If it doesn't, add it; the plugin prints this reminder when run with `--verbose`.
 
-This plugin is part of the tinct project. Contributions welcome!
+### Generated files missing
 
-## License
+```bash
+ls -l ~/.config/keylightd/keylightd-tray/tinct-*.css
+tinct generate -i image -p ~/wallpaper.jpg -o keylightd-tray --verbose
+```
 
-Same as tinct - check the main repository for license information.
+Verbose mode shows the resolved output directory and any write errors.
 
-## See Also
+## Related plugins
 
-- [Tinct Documentation](https://github.com/jmylchreest/tinct)
-- [keylightd-tray Documentation](https://github.com/jmylchreest/keylightd/tree/main/contrib/keylightd-tray)
+- [waybar](../../../../internal/plugin/output/waybar/README.md) — status bar that also uses CSS theming.
+- [keylightd](https://github.com/jmylchreest/keylightd) — the upstream daemon and tray applet themed by this plugin.

@@ -22,6 +22,8 @@ Input plugins extract or generate colour palettes from various sources.
 | [remote-css](./remote-css.md) | Fetch colours from remote CSS variables | url | network |
 | [google-genai](./google-genai.md) | Generate images with Google Imagen and extract colours | api | network; creds: GOOGLE_API_KEY |
 | [openrouter](./openrouter.md) | Generate images with OpenRouter.ai models and extract colours | api | network; creds: OPENROUTER_API_KEY |
+| [paletty](./paletty.md) | Fetch curated terminal palettes from paletty.dev | api | network |
+| [random](./random.md) | Generate random colour palettes with configurable seed and colour count | generated |  |
 
 {/* END AUTO-PLUGIN-TABLE */}
 

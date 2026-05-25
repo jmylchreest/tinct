@@ -236,6 +236,12 @@ func (p *PalettyPlugin) ThemeHint() string {
 }
 
 // GetMetadata returns plugin metadata.
+//
+// The optional Metadata block lets tinct-check-readmes diff the README
+// frontmatter against runtime reality. Input plugins don't write config
+// files, so the output-only fields (DefaultOutputDir, GeneratedFiles,
+// Pattern, Reload) stay zero. paletty is a pure-Go HTTP client — no
+// external binaries to declare either.
 func (p *PalettyPlugin) GetMetadata() tinctplugin.PluginInfo {
 	return tinctplugin.PluginInfo{
 		Name:            pluginName,
@@ -244,6 +250,7 @@ func (p *PalettyPlugin) GetMetadata() tinctplugin.PluginInfo {
 		ProtocolVersion: tinctplugin.ProtocolVersion,
 		Description:     "Fetch terminal palettes from paletty.dev",
 		PluginProtocol:  "go-plugin",
+		Metadata:        &tinctplugin.Metadata{},
 	}
 }
 

@@ -1,90 +1,94 @@
-# Tinct Zed Theme Plugin
+---
+title: zed
+sidebar_position: 6
 
-An external output plugin for [tinct](https://github.com/jmylchreest/tinct) that generates theme files for the [Zed editor](https://zed.dev).
+plugin:
+  type: output
+  name: zed
+  category: editors
+  source: external
+  app: Zed
+  app_url: https://zed.dev
+  version: 0.1.0
+  protocol_version: 0.3.0
+  repository: https://github.com/jmylchreest/tinct
+  install: tinct plugins install zed
+  requires: []
+  optional: []
+  pattern: single-file
+  default_output_dir: ~/.config/zed/themes
+  generated_files: [tinct.json]
+  reload:
+    method: watch
+    user_action_required: false
+---
 
-## Features
+# zed
 
-- **Full Zed Theme Support**: Generates complete Zed theme JSON with 100+ color mappings
-- **Semantic Color Mapping**: Maps tinct's semantic roles to Zed's extensive UI elements
-- **ANSI Terminal Colors**: Automatic ANSI color matching for terminal themes
-- **Template-Based**: Uses tinct's public template API for maintainable theme generation
-- **Auto-Detection**: Automatically detects dark/light theme type
-- **Material Design 3**: Leverages tinct's Material Design 3 surface colors
+Generates a complete theme file for the [Zed editor](https://zed.dev) — a fast Rust-based collaborative code editor. The output is a single JSON file conforming to Zed's v0.2.0 theme schema, mapping tinct's semantic palette onto Zed's UI tokens, syntax highlighting, terminal ANSI block, and diff/diagnostic colours. Zed auto-discovers themes by directory and reloads the active theme live when its file changes on disk.
+
+When tinct is run with both primary and alternate themes (`--dual-theme`), the plugin emits a single JSON file containing both variants inside the `themes` array. Zed displays them as separate entries in the theme picker.
 
 ## Installation
 
-### Build from Source
+### Via the official plugin repository
+
+```bash
+tinct plugins install zed
+```
+
+### Build from source
 
 ```bash
 cd contrib/plugins/output/zed
-go build -o tinct-plugin-zed
+go build -ldflags "-X main.Version=0.1.0" -o tinct-plugin-zed
+install -m 0755 tinct-plugin-zed ~/.local/bin/
 ```
 
-### Install to PATH
+### Verify
 
 ```bash
-# Build with version information
-go build -ldflags "-X main.Version=0.1.0 -X main.Commit=$(git rev-parse HEAD) -X main.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o tinct-plugin-zed
-
-# Install to ~/.local/bin (or any directory in your PATH)
-mkdir -p ~/.local/bin
-mv tinct-plugin-zed ~/.local/bin/
-chmod +x ~/.local/bin/tinct-plugin-zed
+which tinct-plugin-zed
+tinct-plugin-zed --plugin-info | jq .
 ```
 
-## Usage
+The plugin uses tinct's go-plugin RPC protocol and is discovered automatically once it's on `$PATH`.
 
-The plugin uses tinct's go-plugin protocol and is discovered automatically when in your PATH.
-
-### Generate from Image
+## Quick start
 
 ```bash
-tinct generate -i file --path ~/wallpaper.png -o zed
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o zed
 ```
 
-### Generate from Google Gemini
+## Generated files
+
+| File | Path | Role |
+|------|------|------|
+| `tinct.json` | `~/.config/zed/themes/tinct.json` | Complete Zed theme — UI tokens, syntax highlighting, terminal ANSI block, diff/diagnostic colours. Wrapped in Zed's v0.2.0 `themes` array. |
+
+The plugin auto-detects Zed's config directory at both `~/.config/zed/themes` (native) and `~/.var/app/dev.zed.Zed/config/zed/themes` (Flatpak), writing to whichever exists. If both exist, both get the theme.
+
+## Integration
+
+**No manual configuration required to make the theme available.** Zed scans `~/.config/zed/themes/` on startup and watches it for changes. Generating the theme is enough to make it appear in Zed's theme picker.
+
+To activate it, choose one:
+
+### Via the command palette (recommended)
+
+Press `Cmd+Shift+P` (macOS) / `Ctrl+Shift+P` (Linux), then run:
+
+```
+theme selector: toggle
+```
+
+then select **Tinct** from the list.
+
+### Via Zed's settings file
 
 ```bash
-export GOOGLE_API_KEY="your-api-key"
-tinct generate -i google-genai --prompt "sunset over mountains" -o zed
+$EDITOR ~/.config/zed/settings.json
 ```
-
-### Specify Custom Output Directory
-
-```bash
-tinct generate -i file --path ~/wallpaper.png -o zed --output-dir ~/.config/zed/themes
-```
-
-## Output
-
-The plugin generates a single file:
-
-```
-~/.config/zed/themes/tinct.json
-```
-
-## Applying the Theme to Zed
-
-After generating the theme, you need to activate it in Zed:
-
-### Method 1: Command Palette (Recommended)
-
-1. Open Zed
-2. Press `Cmd+Shift+P` (macOS) or `Ctrl+Shift+P` (Linux/Windows) to open the command palette
-3. Type "theme" and select **"theme selector: toggle"**
-4. Search for "Tinct" in the theme list
-5. Select the theme to apply it
-
-### Method 2: Settings File
-
-Add the theme to your Zed settings file:
-
-```bash
-# Open Zed settings
-zed ~/.config/zed/settings.json
-```
-
-Add or update the `theme` setting:
 
 ```json
 {
@@ -92,196 +96,152 @@ Add or update the `theme` setting:
 }
 ```
 
-### Method 3: Settings UI
+For dual-theme mode, point both light and dark slots:
 
-1. Open Zed
-2. Go to **Settings** (Cmd+, on macOS, Ctrl+, on Linux)
-3. Search for "theme"
-4. Select "Tinct" from the theme dropdown
-
-### Automatic Theme Reload
-
-Zed automatically watches the themes directory for changes. When you regenerate the theme with tinct, Zed will reload it automatically if it's already selected.
-
-```bash
-# Generate new theme from a different wallpaper
-tinct generate -i file --path ~/new-wallpaper.png -o zed
-
-# Zed will automatically reload the theme if "Tinct" is selected
+```json
+{
+  "theme": {
+    "mode": "system",
+    "light": "Tinct LIGHT",
+    "dark": "Tinct DARK"
+  }
+}
 ```
 
-### Verifying Theme Installation
+## Reload behaviour
 
-Check that Zed recognizes your theme:
+### Automatic
+
+Zed watches its `themes` directory and reloads the active theme live when its file changes. After the initial selection, regenerating with tinct propagates immediately to any running Zed window — no restart, no re-selection.
+
+### Manual fallback
+
+If a regeneration doesn't appear:
+
+- Confirm Zed has the theme selected (`grep theme ~/.config/zed/settings.json`).
+- Reload the theme manually via the command palette: `theme selector: toggle` → select **Tinct** again.
+- Restart Zed if all else fails.
+
+## Uninstall / revert
+
+1. **Remove the config line** from `~/.config/zed/settings.json` if you set `"theme": "Tinct"` — pick a different theme, or remove the key to fall back to Zed's default:
+
+   ```bash
+   $EDITOR ~/.config/zed/settings.json
+   ```
+
+2. **Delete the generated file**:
+
+   ```bash
+   rm ~/.config/zed/themes/tinct.json
+   # also remove from Flatpak install if present:
+   rm -f ~/.var/app/dev.zed.Zed/config/zed/themes/tinct.json
+   ```
+
+3. **Reload**: Zed picks up the file deletion live via its themes-dir watcher. If the active theme was Tinct, Zed will switch to its default — re-select your preferred theme via the command palette.
+
+4. **External state**: this plugin only writes to Zed's `themes/` directory. To also remove the plugin binary:
+
+   ```bash
+   tinct plugins uninstall zed
+   # or, for a source build:
+   rm ~/.local/bin/tinct-plugin-zed
+   ```
+
+## Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--zed.output-dir` / `-o` | auto-detected (`~/.config/zed/themes`) | Override the output directory |
+
+## Colour role mapping
+
+Zed's v0.2.0 theme schema is large — ~100 tokens covering editor chrome, syntax, terminal, diagnostics, diffs, and Git status. Selected mappings:
+
+### UI chrome
+
+| Zed token | Tinct role |
+|---|---|
+| `background` | `background` |
+| `surface.background` / `elevated_surface.background` | `surface` |
+| `element.background` | `surfaceContainer` |
+| `element.hover` | `surfaceContainerHigh` |
+| `element.active` / `element.selected` | `surfaceContainerHighest` |
+| `border` | `outline` |
+| `border.variant` | `outlineVariant` |
+| `border.focused` | `accent1` |
+| `border.disabled` | `borderMuted` |
+| `text` | `foreground` |
+| `text.muted` | `foregroundMuted` |
+| `text.accent` | `accent1` |
+| `panel.background` / `tab_bar.background` | `surfaceContainerLowest` |
+| `tab.active_background` / `toolbar.background` | `surfaceContainerLow` |
+
+### Diagnostics & status
+
+| Zed token | Tinct role |
+|---|---|
+| `error` | `danger` |
+| `warning` | `warning` |
+| `success` | `success` |
+| `info` / `hint` | `info` |
+
+### Terminal ANSI
+
+All 16 ANSI colours (`terminal.ansi.black`–`white` and `bright_*`) use tinct's perceptual ANSI matcher so terminal output sits close to standard expectations regardless of palette source.
+
+### Syntax highlighting
+
+| Zed token | Tinct role |
+|---|---|
+| `comment` | `foregroundMuted` (italic) |
+| `keyword` | `accent4` |
+| `function` | `accent1` |
+| `string` | `success` |
+| `type` | `accent2` |
+| `constant` | `accent3` |
+| `operator` | `onSurface` |
+| `variable` | `foreground` |
+
+## Customising the template
 
 ```bash
-# List all available Zed themes (including custom ones)
-ls -la ~/.config/zed/themes/
-
-# View the generated theme
-cat ~/.config/zed/themes/tinct.json | jq '.name'
-```
-
-The output should show `"Tinct"`.
-
-## Theme Structure
-
-The generated theme includes:
-
-### UI Elements
-- **Borders**: outline, accent1, borderMuted
-- **Surfaces**: background, surface, surfaceContainer variants
-- **Editor**: background, foreground, line numbers, gutters
-- **Panels**: status bar, title bar, toolbar, tabs
-- **Scrollbars**: with semi-transparent styling
-
-### Status Indicators
-- **Error**: danger role (red)
-- **Warning**: warning role (yellow/orange)
-- **Success**: success role (green)
-- **Info**: info role (blue)
-- **Hint**: info role
-
-### Syntax Highlighting
-- **Comments**: foregroundMuted (italic)
-- **Keywords**: accent4 (purple/pink)
-- **Functions**: accent1 (primary accent)
-- **Strings**: success (green)
-- **Types**: accent2 (secondary accent)
-- **Constants**: accent3
-- **Operators**: onSurface
-
-### Terminal Colors
-All 16 ANSI colors using tinct's perceptual color matching:
-- Standard: black, red, green, yellow, blue, magenta, cyan, white
-- Bright variants: bright_black through bright_white
-
-## Color Mapping
-
-The plugin leverages tinct's semantic color roles:
-
-| Zed Element | Tinct Role | Description |
-|-------------|------------|-------------|
-| background | background | Editor background |
-| surface | surface | Panels, sidebars |
-| border | outline | Primary borders |
-| text | foreground | Primary text |
-| text.accent | accent1 | Highlighted text |
-| error | danger | Error indicators |
-| warning | warning | Warning indicators |
-| success | success | Success indicators |
-| terminal.ansi.* | ANSI mapping | Automatic color matching |
-
-## Template Customization
-
-The theme template uses tinct's public template API. To customize:
-
-```bash
-# Extract the template
 mkdir -p ~/.config/tinct/templates/zed
-cp templates/theme.json.tmpl ~/.config/tinct/templates/zed/
-
-# Edit the template
+tinct plugins templates dump -o zed -l ~/.config/tinct/templates/zed
 $EDITOR ~/.config/tinct/templates/zed/theme.json.tmpl
 ```
 
-### Available Template Functions
-
-- `get . "roleName"` - Get color by semantic role
-- `ansi . "colorName"` - Get ANSI color by name
-- `hex` - Format as #RRGGBB
-- `hexAlpha` - Format as #RRGGBBAA
-- `withAlpha value alpha` - Set alpha (0.0-1.0)
-- `themeType .` - Get "dark" or "light"
-
-Example:
-```json
-"background": "{{ get . \"background\" | hex }}",
-"accent": "{{ get . \"accent1\" | hex }}",
-"transparent": "{{ withAlpha (get . \"surface\") 0.5 | hexAlpha }}",
-"terminal.red": "{{ ansi . \"red\" | hex }}"
-```
-
-## Technical Details
-
-### Plugin Protocol
-- **Type**: go-plugin (HashiCorp)
-- **Protocol Version**: 0.0.1
-- **Plugin Type**: output
-
-### Dependencies
-- `github.com/jmylchreest/tinct/pkg/colour` - Color utilities
-- `github.com/jmylchreest/tinct/pkg/template` - Template helpers
-- `github.com/jmylchreest/tinct/pkg/plugin` - Plugin protocol
-- `github.com/hashicorp/go-plugin` - Plugin framework
-
-### Architecture
-
-This plugin demonstrates tinct's public API:
-
-1. **Receives** PaletteData via go-plugin RPC
-2. **Converts** to colour.ThemeData with PaletteHelper
-3. **Renders** template using template.TemplateFuncs()
-4. **Outputs** JSON to ~/.config/zed/themes/
+Tinct prefers your version over the embedded default. See the [templating reference](https://jmylchreest.github.io/tinct/docs/templating) for available functions.
 
 ## Troubleshooting
 
-### Plugin Not Found
+### Plugin skipped: "Zed not installed (config directory does not exist)"
 
-Ensure the binary is in your PATH:
 ```bash
-which tinct-plugin-zed
+ls ~/.config/zed 2>/dev/null
+ls ~/.var/app/dev.zed.Zed/config/zed 2>/dev/null
 ```
 
-### Theme Not Loading in Zed
+The plugin requires either the native or Flatpak Zed config directory to exist. If you've installed Zed in a non-standard location, pass `--zed.output-dir` explicitly.
 
-1. Check the output file exists:
-   ```bash
-   ls -la ~/.config/zed/themes/tinct.json
-   ```
+### Theme not appearing in Zed's picker
 
-2. Validate JSON syntax:
-   ```bash
-   jq . ~/.config/zed/themes/tinct.json
-   ```
-
-3. Restart Zed to reload themes
-
-### Template Errors
-
-Check tinct output for template rendering errors:
 ```bash
-tinct generate -i file --path ~/wallpaper.png -o zed --verbose
+ls -l ~/.config/zed/themes/tinct.json
+jq '.themes[].name' ~/.config/zed/themes/tinct.json
 ```
 
-## Examples
+If the file exists and is valid JSON, the picker scans on each toggle — open `theme selector: toggle` again. If the file is missing, the plugin was skipped: run with `--verbose` to see detection logs.
 
-### Dark Theme from Image
+### JSON parse errors in Zed
+
 ```bash
-tinct generate -i file --path ~/dark-wallpaper.png -o zed
+jq . ~/.config/zed/themes/tinct.json
 ```
 
-### Light Theme with Prompt
-```bash
-export GOOGLE_API_KEY="your-key"
-tinct generate -i google-genai --prompt "bright sunny beach" -o zed
-```
+A template syntax error from a custom override is the usual cause. Remove the override or fix it; if you didn't customise the template, file an issue with the verbose output.
 
-### Preview Generated Theme
-```bash
-cat ~/.config/zed/themes/tinct.json | jq '.themes[0].style | keys'
-```
+## Related plugins
 
-## Contributing
-
-This plugin is part of the tinct project. Contributions welcome!
-
-## License
-
-Same as tinct - check the main repository for license information.
-
-## See Also
-
-- [Tinct Documentation](https://github.com/jmylchreest/tinct)
-- [Zed Theme Documentation](https://zed.dev/docs/themes)
-- [Zed Theme Schema](https://zed.dev/schema/themes/v0.2.0.json)
+- [opencode](../opencode/README.md) — AI-assisted coding agent themed the same way.
+- [neovim](../../../../internal/plugin/output/neovim/README.md), [helix](../../../../internal/plugin/output/helix/README.md) — other editors tinct themes.
