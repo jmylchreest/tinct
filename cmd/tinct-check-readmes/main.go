@@ -84,6 +84,14 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/zellij"
 )
 
+// Source values for the frontmatter `plugin.source` field. Also used as
+// the subcommand names so a user can `tinct-check-readmes builtin` /
+// `... external`.
+const (
+	sourceBuiltin  = "builtin"
+	sourceExternal = "external"
+)
+
 // builtinRegistry returns one instance of every built-in output plugin
 // the tool knows how to check. Keep aligned with the manager's registry.
 func builtinRegistry() []output.Plugin {
@@ -146,13 +154,13 @@ type readmePlugin struct {
 	Reload           *readmeReload `yaml:"reload"`
 
 	// input-only.
-	SourceType         string   `yaml:"source_type"`
-	Description        string   `yaml:"description"`
-	Service            string   `yaml:"service"`
-	ServiceURL         string   `yaml:"service_url"`
-	RequiresNetwork    bool     `yaml:"requires_network"`
-	RequiresCreds      []string `yaml:"requires_credentials"`
-	ProducesWallpaper  bool     `yaml:"produces_wallpaper"`
+	SourceType        string   `yaml:"source_type"`
+	Description       string   `yaml:"description"`
+	Service           string   `yaml:"service"`
+	ServiceURL        string   `yaml:"service_url"`
+	RequiresNetwork   bool     `yaml:"requires_network"`
+	RequiresCreds     []string `yaml:"requires_credentials"`
+	ProducesWallpaper bool     `yaml:"produces_wallpaper"`
 
 	// external-only.
 	Version         string `yaml:"version"`
@@ -174,14 +182,16 @@ func main() {
 	}
 
 	switch os.Args[1] {
-	case "builtin":
+	case sourceBuiltin:
 		runBuiltin(os.Args[2:])
-	case "external":
+	case sourceExternal:
 		runExternal(os.Args[2:])
 	case "-h", "--help":
 		printUsage()
 	default:
-		fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n", os.Args[1])
+		// G705 false positive: os.Args is shell-quoted user input, but we're
+		// writing to stderr in a CLI, not rendering HTML.
+		fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n", os.Args[1]) //nolint:gosec
 		printUsage()
 	}
 }
@@ -195,7 +205,7 @@ func printUsage() {
 }
 
 func runBuiltin(args []string) {
-	fs := flag.NewFlagSet("builtin", flag.ExitOnError)
+	fs := flag.NewFlagSet(sourceBuiltin, flag.ExitOnError)
 	root := fs.String("root", "internal/plugin/output", "root directory containing built-in plugin sub-dirs")
 	categoriesFile := fs.String("categories", "internal/plugin/output/categories.json", "path to output category enum (single source of truth)")
 	if err := fs.Parse(args); err != nil {
@@ -239,7 +249,7 @@ func runBuiltin(args []string) {
 }
 
 func runExternal(args []string) {
-	fs := flag.NewFlagSet("external", flag.ExitOnError)
+	fs := flag.NewFlagSet(sourceExternal, flag.ExitOnError)
 	binary := fs.String("binary", "", "path to the external plugin binary (required)")
 	readme := fs.String("readme", "", "path to the README (default: README.md in same dir as --binary)")
 	if err := fs.Parse(args); err != nil {
@@ -256,7 +266,7 @@ func runExternal(args []string) {
 
 	info, err := runPluginInfo(*binary)
 	if err != nil {
-		warn("%s: --plugin-info failed: %v", filepath.Base(*binary), err)
+		warnf("%s: --plugin-info failed: %v", filepath.Base(*binary), err)
 		return
 	}
 
@@ -279,16 +289,16 @@ func loadFrontmatter(path, pluginName string) (readmeFrontmatter, bool) {
 	var fm readmeFrontmatter
 	data, err := os.ReadFile(path)
 	if err != nil {
-		warn("%s: README missing or unreadable at %s (%v)", pluginName, path, err)
+		warnf("%s: README missing or unreadable at %s (%v)", pluginName, path, err)
 		return fm, false
 	}
 	raw, err := extractFrontmatter(data)
 	if err != nil {
-		warn("%s: README at %s has no parseable frontmatter (%v)", pluginName, path, err)
+		warnf("%s: README at %s has no parseable frontmatter (%v)", pluginName, path, err)
 		return fm, false
 	}
 	if err := yaml.Unmarshal(raw, &fm); err != nil {
-		warn("%s: frontmatter YAML parse error: %v", pluginName, err)
+		warnf("%s: frontmatter YAML parse error: %v", pluginName, err)
 		return fm, false
 	}
 	return fm, true
@@ -307,106 +317,107 @@ func extractFrontmatter(data []byte) ([]byte, error) {
 	if i := bytes.IndexByte(rest, '\n'); i >= 0 {
 		rest = rest[i+1:]
 	}
-	end := bytes.Index(rest, []byte("\n"+fence))
-	if end < 0 {
+	body, _, ok := bytes.Cut(rest, []byte("\n"+fence))
+	if !ok {
 		return nil, fmt.Errorf("no closing %q fence found", fence)
 	}
-	return rest[:end], nil
+	return body, nil
 }
 
-func compareBuiltin(p output.Plugin, readmePath string, fm readmeFrontmatter) {
+func compareBuiltin(p output.Plugin, _ string, fm readmeFrontmatter) {
 	name := p.Name()
 
 	if fm.Plugin.Type != "output" {
-		warn("%s: frontmatter type=%q expected %q", name, fm.Plugin.Type, "output")
+		warnf("%s: frontmatter type=%q expected %q", name, fm.Plugin.Type, "output")
 	}
 	if fm.Plugin.Name != name {
-		warn("%s: frontmatter name=%q differs from Plugin.Name()=%q", name, fm.Plugin.Name, name)
+		warnf("%s: frontmatter name=%q differs from Plugin.Name()=%q", name, fm.Plugin.Name, name)
 	}
-	if fm.Plugin.Source != "builtin" {
-		warn("%s: frontmatter source=%q expected %q", name, fm.Plugin.Source, "builtin")
+	if fm.Plugin.Source != sourceBuiltin {
+		warnf("%s: frontmatter source=%q expected %q", name, fm.Plugin.Source, sourceBuiltin)
 	}
 	if len(knownCategories) > 0 && !knownCategories[fm.Plugin.Category] {
-		warn("%s: frontmatter category=%q not in categories.json; plugin will be invisible on the docs landing table and orphaned in the sidebar until the enum is extended",
+		warnf("%s: frontmatter category=%q not in categories.json; plugin will be invisible on the docs landing table and orphaned in the sidebar until the enum is extended",
 			name, fm.Plugin.Category)
 	}
 
 	actualDir := foldHome(p.DefaultOutputDir())
 	if fm.Plugin.DefaultOutputDir != actualDir {
-		warn("%s: frontmatter default_output_dir=%q differs from runtime %q",
+		warnf("%s: frontmatter default_output_dir=%q differs from runtime %q",
 			name, fm.Plugin.DefaultOutputDir, actualDir)
 	}
 
 	if hp, ok := p.(hooks.Provider); ok {
 		spec := hp.Hooks()
 		if !equalSets(fm.Plugin.Requires, spec.RequiredBinaries) {
-			warn("%s: frontmatter requires=%v differs from RequiredBinaries=%v",
+			warnf("%s: frontmatter requires=%v differs from RequiredBinaries=%v",
 				name, fm.Plugin.Requires, spec.RequiredBinaries)
 		}
 		if !equalSets(fm.Plugin.Optional, spec.OptionalBinaries) {
-			warn("%s: frontmatter optional=%v differs from OptionalBinaries=%v",
+			warnf("%s: frontmatter optional=%v differs from OptionalBinaries=%v",
 				name, fm.Plugin.Optional, spec.OptionalBinaries)
 		}
 		actualMethod := deriveReloadMethod(spec)
 		if fm.Plugin.Reload == nil {
 			if actualMethod != "none" {
-				warn("%s: frontmatter has no reload block but runtime reload method=%q",
+				warnf("%s: frontmatter has no reload block but runtime reload method=%q",
 					name, actualMethod)
 			}
 		} else if fm.Plugin.Reload.Method != actualMethod {
-			warn("%s: frontmatter reload.method=%q differs from runtime %q",
+			warnf("%s: frontmatter reload.method=%q differs from runtime %q",
 				name, fm.Plugin.Reload.Method, actualMethod)
 		}
 	}
 }
 
-func compareExternal(info plugin.PluginInfo, readmePath string, fm readmeFrontmatter) {
+//nolint:gocyclo // long but linear sequence of field-by-field comparisons; splitting would obscure the diff intent
+func compareExternal(info plugin.PluginInfo, _ string, fm readmeFrontmatter) {
 	name := info.Name
 
 	if fm.Plugin.Name != name {
-		warn("%s: frontmatter name=%q differs from --plugin-info name=%q", name, fm.Plugin.Name, name)
+		warnf("%s: frontmatter name=%q differs from --plugin-info name=%q", name, fm.Plugin.Name, name)
 	}
-	if fm.Plugin.Source != "external" {
-		warn("%s: frontmatter source=%q expected %q", name, fm.Plugin.Source, "external")
+	if fm.Plugin.Source != sourceExternal {
+		warnf("%s: frontmatter source=%q expected %q", name, fm.Plugin.Source, sourceExternal)
 	}
 	if fm.Plugin.Version != "" && fm.Plugin.Version != info.Version {
-		warn("%s: frontmatter version=%q differs from --plugin-info version=%q",
+		warnf("%s: frontmatter version=%q differs from --plugin-info version=%q",
 			name, fm.Plugin.Version, info.Version)
 	}
 	if fm.Plugin.ProtocolVersion != "" && fm.Plugin.ProtocolVersion != info.ProtocolVersion {
-		warn("%s: frontmatter protocol_version=%q differs from --plugin-info protocol_version=%q",
+		warnf("%s: frontmatter protocol_version=%q differs from --plugin-info protocol_version=%q",
 			name, fm.Plugin.ProtocolVersion, info.ProtocolVersion)
 	}
 
 	if info.Metadata == nil {
-		warn("%s: --plugin-info has no metadata block; cannot check requires/output_dir/reload",
+		warnf("%s: --plugin-info has no metadata block; cannot check requires/output_dir/reload",
 			name)
 		return
 	}
 	m := info.Metadata
 	if !equalSets(fm.Plugin.Requires, m.RequiredBinaries) {
-		warn("%s: frontmatter requires=%v differs from metadata.required_binaries=%v",
+		warnf("%s: frontmatter requires=%v differs from metadata.required_binaries=%v",
 			name, fm.Plugin.Requires, m.RequiredBinaries)
 	}
 	if !equalSets(fm.Plugin.Optional, m.OptionalBinaries) {
-		warn("%s: frontmatter optional=%v differs from metadata.optional_binaries=%v",
+		warnf("%s: frontmatter optional=%v differs from metadata.optional_binaries=%v",
 			name, fm.Plugin.Optional, m.OptionalBinaries)
 	}
 	if fm.Plugin.DefaultOutputDir != m.DefaultOutputDir {
-		warn("%s: frontmatter default_output_dir=%q differs from metadata.default_output_dir=%q",
+		warnf("%s: frontmatter default_output_dir=%q differs from metadata.default_output_dir=%q",
 			name, fm.Plugin.DefaultOutputDir, m.DefaultOutputDir)
 	}
 	if !equalSets(fm.Plugin.GeneratedFiles, m.GeneratedFiles) {
-		warn("%s: frontmatter generated_files=%v differs from metadata.generated_files=%v",
+		warnf("%s: frontmatter generated_files=%v differs from metadata.generated_files=%v",
 			name, fm.Plugin.GeneratedFiles, m.GeneratedFiles)
 	}
 	if fm.Plugin.Pattern != "" && fm.Plugin.Pattern != m.Pattern {
-		warn("%s: frontmatter pattern=%q differs from metadata.pattern=%q",
+		warnf("%s: frontmatter pattern=%q differs from metadata.pattern=%q",
 			name, fm.Plugin.Pattern, m.Pattern)
 	}
 	if m.Reload != nil && fm.Plugin.Reload != nil {
 		if fm.Plugin.Reload.Method != m.Reload.Method {
-			warn("%s: frontmatter reload.method=%q differs from metadata.reload.method=%q",
+			warnf("%s: frontmatter reload.method=%q differs from metadata.reload.method=%q",
 				name, fm.Plugin.Reload.Method, m.Reload.Method)
 		}
 	}
@@ -417,17 +428,17 @@ func compareExternal(info plugin.PluginInfo, readmePath string, fm readmeFrontma
 // hooks.Spec, or generated files, so most fields are documentation-only.
 // We verify what we can: type discriminator, plugin name, source,
 // optionally produces_wallpaper (derived from WallpaperProvider).
-func compareInputBuiltin(p input.Plugin, readmePath string, fm readmeFrontmatter) {
+func compareInputBuiltin(p input.Plugin, _ string, fm readmeFrontmatter) {
 	name := p.Name()
 
 	if fm.Plugin.Type != "input" {
-		warn("%s: frontmatter type=%q expected %q", name, fm.Plugin.Type, "input")
+		warnf("%s: frontmatter type=%q expected %q", name, fm.Plugin.Type, "input")
 	}
 	if fm.Plugin.Name != name {
-		warn("%s: frontmatter name=%q differs from Plugin.Name()=%q", name, fm.Plugin.Name, name)
+		warnf("%s: frontmatter name=%q differs from Plugin.Name()=%q", name, fm.Plugin.Name, name)
 	}
-	if fm.Plugin.Source != "builtin" {
-		warn("%s: frontmatter source=%q expected %q", name, fm.Plugin.Source, "builtin")
+	if fm.Plugin.Source != sourceBuiltin {
+		warnf("%s: frontmatter source=%q expected %q", name, fm.Plugin.Source, sourceBuiltin)
 	}
 
 	// If the plugin implements WallpaperProvider, produces_wallpaper
@@ -435,10 +446,10 @@ func compareInputBuiltin(p input.Plugin, readmePath string, fm readmeFrontmatter
 	// edge cases where wallpaper is produced via another mechanism).
 	_, hasWallpaper := p.(input.WallpaperProvider)
 	if hasWallpaper && !fm.Plugin.ProducesWallpaper {
-		warn("%s: plugin implements WallpaperProvider but frontmatter produces_wallpaper=false", name)
+		warnf("%s: plugin implements WallpaperProvider but frontmatter produces_wallpaper=false", name)
 	}
 	if !hasWallpaper && fm.Plugin.ProducesWallpaper {
-		warn("%s: frontmatter produces_wallpaper=true but plugin does not implement WallpaperProvider", name)
+		warnf("%s: frontmatter produces_wallpaper=true but plugin does not implement WallpaperProvider", name)
 	}
 }
 
@@ -477,7 +488,7 @@ func runPluginInfo(binary string) (plugin.PluginInfo, error) {
 	cmd := exec.CommandContext(ctx, binary, "--plugin-info")
 	out, err := cmd.Output()
 	if err != nil {
-		return info, err
+		return info, fmt.Errorf("exec %s --plugin-info: %w", binary, err)
 	}
 	if err := json.Unmarshal(out, &info); err != nil {
 		return info, fmt.Errorf("invalid JSON: %w", err)
@@ -538,9 +549,9 @@ var knownCategories map[string]bool
 // because the check tool's primary job (README ↔ runtime diff) still
 // works without it.
 func loadKnownCategories(path string) map[string]bool {
-	data, err := os.ReadFile(path) //nolint:gosec // path comes from a flag with a safe default
+	data, err := os.ReadFile(path)
 	if err != nil {
-		warn("could not load %s (%v) — category enum validation disabled", path, err)
+		warnf("could not load %s (%v) — category enum validation disabled", path, err)
 		return nil
 	}
 	var cats []struct {
@@ -548,7 +559,7 @@ func loadKnownCategories(path string) map[string]bool {
 		Label string `json:"label"`
 	}
 	if err := json.Unmarshal(data, &cats); err != nil {
-		warn("%s: failed to parse: %v — category enum validation disabled", path, err)
+		warnf("%s: failed to parse: %v — category enum validation disabled", path, err)
 		return nil
 	}
 	known := make(map[string]bool, len(cats))
@@ -563,7 +574,7 @@ func loadKnownCategories(path string) map[string]bool {
 // errors) as well as compare-stage drifts.
 var warningCount int
 
-func warn(format string, args ...any) {
+func warnf(format string, args ...any) {
 	warningCount++
 	fmt.Fprintf(os.Stderr, "WARN "+format+"\n", args...)
 }

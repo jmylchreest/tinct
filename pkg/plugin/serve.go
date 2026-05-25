@@ -27,7 +27,8 @@ func watchParentDeath(initial int, interval time.Duration) {
 	defer ticker.Stop()
 	for range ticker.C {
 		if os.Getppid() != initial {
-			os.Exit(0)
+			// Process is exiting; the deferred ticker.Stop is moot.
+			os.Exit(0) //nolint:gocritic // exitAfterDefer is fine here; we're terminating
 		}
 	}
 }

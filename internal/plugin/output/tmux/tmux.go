@@ -112,7 +112,7 @@ func reloadRunningSessions(ctx context.Context, path string) error {
 		// is the normal case on a fresh shell.
 		return nil
 	}
-	if len(strings.TrimSpace(string(out))) == 0 {
+	if strings.TrimSpace(string(out)) == "" {
 		return nil
 	}
 	return exec.CommandContext(ctx, "tmux", "source-file", path).Run()

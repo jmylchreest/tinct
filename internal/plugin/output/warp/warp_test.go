@@ -102,7 +102,7 @@ func TestWarpPlugin_HexColours(t *testing.T) {
 
 	// Lines containing colour values should be quoted; otherwise YAML
 	// would treat the leading `#` as a comment marker and lose the value.
-	for _, line := range strings.Split(themeFile, "\n") {
+	for line := range strings.SplitSeq(themeFile, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.Contains(trimmed, "#") {
 			continue

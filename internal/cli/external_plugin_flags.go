@@ -98,13 +98,15 @@ func collectExternalPluginFlags(cmd *cobra.Command, pluginArgs map[string]string
 			continue
 		}
 		var value any
+		// The flag was registered above with the matching type, so the
+		// type-check inside cobra's GetBool/GetInt/GetString cannot fail.
 		switch mapping.argType {
 		case "bool":
-			value, _ = cmd.Flags().GetBool(cobraName)
+			value, _ = cmd.Flags().GetBool(cobraName) //nolint:errcheck
 		case "int":
-			value, _ = cmd.Flags().GetInt(cobraName)
+			value, _ = cmd.Flags().GetInt(cobraName) //nolint:errcheck
 		default:
-			value, _ = cmd.Flags().GetString(cobraName)
+			value, _ = cmd.Flags().GetString(cobraName) //nolint:errcheck
 		}
 		merged, err := mergeArgIntoJSON(pluginArgs[mapping.plugin], mapping.arg, value)
 		if err != nil {
