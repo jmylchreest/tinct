@@ -199,7 +199,7 @@ func runPluginInstall(cmd *cobra.Command, args []string) (err error) { //nolint:
 	}
 
 	// Update manifest with repository source tracking.
-	lock.ExternalPlugins[metadata.Name] = &ExternalPluginMeta{
+	repoMeta := &ExternalPluginMeta{
 		Name:        metadata.Name,
 		Path:        pluginPath,
 		Type:        metadata.Type,
@@ -213,6 +213,8 @@ func runPluginInstall(cmd *cobra.Command, args []string) (err error) { //nolint:
 			Checksum:   download.Checksum,
 		},
 	}
+	PopulateFlagsCache(repoMeta)
+	lock.ExternalPlugins[metadata.Name] = repoMeta
 
 	if err := savePluginManifest(manifestPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)

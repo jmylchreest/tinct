@@ -161,20 +161,42 @@ func commandUsesPlugins() bool {
 	return false
 }
 
-// getPluginFlagHelp queries an external plugin's flag list.
-// TODO(phase-3): short-circuit via a cache field on ExternalPluginMeta
-// populated at install time, so this doesn't spawn the plugin binary
-// on every generate invocation.
+// getPluginFlagHelp returns an external plugin's flag list. Prefers
+// the cached value on meta.Flags (populated at install time) and
+// falls back to spawning the binary when the cache is empty (e.g.
+// plugins installed before the cache landed, or after a binary swap).
 func getPluginFlagHelp(meta *ExternalPluginMeta) []input.FlagHelp {
-	if meta == nil || meta.Path == "" {
+	if meta == nil {
 		return nil
 	}
-	exec, err := executor.NewWithVerbose(meta.Path, false)
+	if len(meta.Flags) > 0 {
+		return meta.Flags
+	}
+	return fetchPluginFlags(meta.Path)
+}
+
+// PopulateFlagsCache fetches the plugin's flag help and stores it on
+// meta.Flags. Install/update sites call this before saving the
+// manifest so the runtime path doesn't have to spawn on every
+// invocation.
+func PopulateFlagsCache(meta *ExternalPluginMeta) {
+	if meta == nil || meta.Path == "" {
+		return
+	}
+	if flags := fetchPluginFlags(meta.Path); len(flags) > 0 {
+		meta.Flags = flags
+	}
+}
+
+func fetchPluginFlags(path string) []input.FlagHelp {
+	if path == "" {
+		return nil
+	}
+	exec, err := executor.NewWithVerbose(path, false)
 	if err != nil {
 		return nil
 	}
 	defer exec.Close()
-
 	flags, err := exec.GetFlagHelp(context.Background())
 	if err != nil {
 		return nil

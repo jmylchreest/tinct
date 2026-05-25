@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jmylchreest/tinct/internal/plugin/input"
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
@@ -92,6 +93,12 @@ type ExternalPluginMeta struct {
 
 	// SourceLegacy is the old string-based source field for backward compatibility.
 	SourceLegacy string `json:"source_legacy,omitempty"`
+
+	// Flags caches the plugin's GetFlagHelp() output so the generate
+	// command can register --<plugin>.<arg> entries at startup without
+	// spawning the plugin binary. Populated at install/update time;
+	// stale entries are auto-refreshed by the runtime path if missing.
+	Flags []input.FlagHelp `json:"flags,omitempty"`
 }
 
 var (
@@ -370,7 +377,7 @@ func runPluginAdd(cmd *cobra.Command, args []string) (err error) { //nolint:gocy
 	// Build structured source metadata.
 	pluginSource := buildPluginSource(source, pluginSourceType, finalPath)
 
-	lock.ExternalPlugins[pluginInfo.Name] = &ExternalPluginMeta{
+	meta := &ExternalPluginMeta{
 		Name:         pluginInfo.Name,
 		Path:         finalPath,
 		Type:         pluginInfo.Type,
@@ -379,6 +386,8 @@ func runPluginAdd(cmd *cobra.Command, args []string) (err error) { //nolint:gocy
 		Version:      pluginInfo.Version,
 		Description:  pluginInfo.Description,
 	}
+	PopulateFlagsCache(meta)
+	lock.ExternalPlugins[pluginInfo.Name] = meta
 
 	if err := savePluginManifest(manifestPath, lock); err != nil {
 		return fmt.Errorf("failed to save plugin lock: %w", err)
@@ -655,7 +664,7 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) (err error) { //nolint:gocy
 		}
 
 		// Update metadata in manifest.
-		lock.ExternalPlugins[name] = &ExternalPluginMeta{
+		updatedMeta := &ExternalPluginMeta{
 			Name:        actualName,
 			Path:        pluginPath,
 			Type:        pluginType,
@@ -663,6 +672,8 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) (err error) { //nolint:gocy
 			Version:     version,
 			Description: pluginDescription,
 		}
+		PopulateFlagsCache(updatedMeta)
+		lock.ExternalPlugins[name] = updatedMeta
 
 		// Show version change or just new version
 		var status string
