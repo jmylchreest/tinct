@@ -62,7 +62,7 @@ sidebar_position: <int>               # docs site ordering within its category
 plugin:
   type: output                        # MANDATORY discriminator
   name: <string>                      # MUST match Plugin.Name()
-  category: <enum>                    # terminals | desktop | hyprland | bars-launchers | editors | special
+  category: <enum>                    # see categories.json — the single source of truth shared by the docs build, sidebars.ts, and tinct-check-readmes
   source: <enum>                      # builtin | external
   app: <string>                       # human-readable app name, e.g. "Dunst"
   app_url: <url>                      # upstream project URL
