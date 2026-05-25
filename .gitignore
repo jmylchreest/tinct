@@ -31,6 +31,7 @@ go.work
 # Build artifacts
 /tinct
 /tinct-repo-manager
+/tinct-check-readmes
 *.tar.gz
 *.zip
 
