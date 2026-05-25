@@ -16,11 +16,45 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 ## [0.3.2]
 *2026-05-06*
 
+### Fixed
+
+- fix(plugin): stop external plugins from leaking across CLI invocations (f87c41b)
+
 ## [0.3.1]
 *2026-05-06*
 
+### Added
+
+- feat(plugin/warp): add Warp terminal output plugin (99ba4d1)
+
+### Fixed
+
+- fix: ship paletty in releases, fix docs build, flush plugin telemetry (11c5686)
+
+### Changed
+
+- refactor(cli/telemetry): centralise plugin telemetry on cobra.OnFinalize (55573e4)
+
 ## [0.3.0]
 *2026-05-04*
+
+### Added
+
+- feat(plugin): expose external plugin templates via TemplateLister RPC (84eafa3)
+- feat(telemetry): emit plugins_command event for each subcommand (582d35e)
+- feat(plugin/random): adopt Validator for plugin-args (bb6fb04)
+- feat(cli/plugins): auto-prune missing-binary entries from manifest views (0174610)
+- feat(plugin/paletty): add external paletty.dev input plugin (ca0e991)
+- feat(plugin): protocol 0.3.0 — role hints, theme hints, validator, hooks-provider (cb636ff)
+
+### Fixed
+
+- fix(plugin/awob): drop unconditional PostExecute banner (0509d45)
+
+### Changed
+
+- refactor(cli/plugins): rename "lock file" → "manifest" (1e015a0)
+- refactor(plugin/awob,ptyxis): migrate static instructions to HooksProvider (c145d6b)
 
 ## [0.2.4]
 *2026-05-04*
@@ -70,17 +104,57 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 ## [0.2.3]
 *2026-05-03*
 
+### Fixed
+
+- fix(ptyxis): write to watched dir and emit valid Light/Dark palettes (a891dd7)
+
+### Changed
+
+- refactor: extract shared helpers to eliminate code clones (9e0965c)
+
 ## [0.2.2]
 *2026-04-10*
+
+### Added
+
+- feat: add rosec-prompt output plugin and update dependencies (0800d0c)
+- feat: add standalone lualine theme generation to neovim plugin (bd89c2d)
+
+### Fixed
+
+- fix: resolve all golangci-lint issues (aad4050)
 
 ## [0.2.1]
 *2026-03-18*
 
+### Fixed
+
+- fix: use secrets with vars fallback for telemetry credentials in CI (a6ae7a8)
+
 ## [0.2.0]
 *2026-03-18*
 
+### Fixed
+
+- fix: implement JSON-stdio structured response protocol (v0.2.0) (c65bbb3)
+
+### Changed
+
+- refactor: replace aptabase telemetry with statsfactory SDK (ab6d98a)
+
 ## [0.1.28]
 *2026-03-14*
+
+### Fixed
+
+- fix: restore wallpaper format detection for URLs without file extensions (60810ea)
+
+### Changed
+
+- refactor: remove security.ValidateFilePath in favour of plugin-managed output paths (52770fb)
+- refactor: eliminate 3 remaining clone groups (RPC client, path utils, sync finalization) (0104c9a)
+- refactor: extract shared two-pass tar extraction into extractFromTar (aab71bb)
+- refactor: eliminate code duplication across 6 clone groups (da18f5a)
 
 ## [0.1.27]
 *2026-03-12*
@@ -88,11 +162,37 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 ## [0.1.26]
 *2026-02-20*
 
+### Added
+
+- feat: centralise config to tinct.toml, async batched telemetry, remove plugin enable/disable (6b11cf8)
+- feat: add anonymous usage telemetry via Aptabase (b3c137b)
+- feat: add wbg (simple Wayland wallpaper) output plugin (7127b75)
+- feat: add awww (animated Wayland wallpaper daemon) output plugin (e8049b8)
+- feat: add Midnight Commander (mc) skin plugin and xterm256 color conversion (46bed02)
+- feat: add OpenCode theme output plugin (0044489)
+
+### Fixed
+
+- fix: resolve lint warnings (errcheck, errname, gocognit) (0a8151c)
+- fix: deploy docs from latest main after versioning (b7d0c7b)
+
 ## [0.1.24]
 *2026-02-10*
 
+### Added
+
+- feat: add Midnight Commander (mc) skin plugin and xterm256 color conversion (3d3541a)
+
 ## [0.1.23]
 *2026-02-10*
+
+### Added
+
+- feat: add OpenCode theme output plugin (ba85ac0)
+
+### Fixed
+
+- fix: changelog TOC and release workflow (64f4995)
 
 ## [0.1.22]
 *2026-01-02*
