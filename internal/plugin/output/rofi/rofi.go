@@ -92,30 +92,51 @@ func (p *Plugin) Hooks() hooks.Spec {
 	}
 }
 
-// Generate creates the theme file.
+// Generate creates the theme files. Two files are produced: a palette
+// (tinct-colours.rasi) declaring every tinct role as a named rasi colour,
+// and a main theme (<themeName>.rasi, default tinct.rasi) that `@import`s
+// the palette and applies opinionated widget styling.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
+	colours, err := p.renderTemplate("tinct-colours.rasi.tmpl", themeData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render colours: %w", err)
+	}
+
+	main, err := p.renderTemplate("tinct.rasi.tmpl", themeData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render main theme: %w", err)
+	}
+
+	return map[string][]byte{
+		"tinct-colours.rasi":  colours,
+		p.themeName + ".rasi": main,
+	}, nil
+}
+
+// renderTemplate loads and executes a single template (with custom
+// override support) against the given theme data.
+func (p *Plugin) renderTemplate(name string, themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("rofi", templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
-	tmplContent, _, err := loader.Load("tinct.rasi.tmpl")
+	tmplContent, _, err := loader.Load(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read template: %w", err)
+		return nil, fmt.Errorf("failed to read template %s: %w", name, err)
 	}
 
-	tmpl, err := template.New("rofi").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
+	tmpl, err := template.New(name).Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse template: %w", err)
+		return nil, fmt.Errorf("failed to parse template %s: %w", name, err)
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
-		return nil, fmt.Errorf("failed to execute template: %w", err)
+		return nil, fmt.Errorf("failed to execute template %s: %w", name, err)
 	}
-
-	return map[string][]byte{p.themeName + ".rasi": buf.Bytes()}, nil
+	return buf.Bytes(), nil
 }

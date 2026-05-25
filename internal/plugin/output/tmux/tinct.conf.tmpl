@@ -5,59 +5,50 @@
 #   source-file ~/.config/tmux/tinct.conf
 # then reload with prefix-r or `tmux source-file ~/.config/tmux/tmux.conf`.
 #
+# This file sources the palette (tinct-palette.conf) which exposes every
+# tinct role as a tmux user option (@tinct-<role>), then applies an
+# opinionated default styling on top. If you only want the variables and
+# prefer to write your own status line, source the palette directly:
+#   source-file ~/.config/tmux/tinct-palette.conf
+#
 # Detected theme: {{ themeType . }}
 
 # ----------------------------------------------------------------------------
-# Custom variables. Reusable in your own format strings via #{@thm_*}.
+# Palette: defines @tinct-* user options for every role.
 # ----------------------------------------------------------------------------
-set -gq @thm_bg            "{{ get . "background" | hex }}"
-set -gq @thm_fg            "{{ get . "foreground" | hex }}"
-set -gq @thm_fg_muted      "{{ get . "foregroundMuted" | hex }}"
-set -gq @thm_bg_muted      "{{ get . "backgroundMuted" | hex }}"
-set -gq @thm_surface       "{{ get . "surface" | hex }}"
-set -gq @thm_surface_low   "{{ get . "surfaceContainerLow" | hex }}"
-set -gq @thm_surface_high  "{{ get . "surfaceContainerHigh" | hex }}"
-set -gq @thm_outline       "{{ get . "outline" | hex }}"
-set -gq @thm_accent1       "{{ get . "accent1" | hex }}"
-set -gq @thm_accent2       "{{ get . "accent2" | hex }}"
-set -gq @thm_accent3       "{{ get . "accent3" | hex }}"
-set -gq @thm_accent4       "{{ get . "accent4" | hex }}"
-set -gq @thm_danger        "{{ get . "danger" | hex }}"
-set -gq @thm_warning       "{{ get . "warning" | hex }}"
-set -gq @thm_success       "{{ get . "success" | hex }}"
-set -gq @thm_info          "{{ get . "info" | hex }}"
+source-file ~/.config/tmux/tinct-palette.conf
 
 # ----------------------------------------------------------------------------
 # Status bar.
 # ----------------------------------------------------------------------------
-set -g status-style "bg=#{@thm_surface},fg=#{@thm_fg}"
-set -g status-left-style "bg=#{@thm_accent1},fg=#{@thm_bg},bold"
-set -g status-right-style "bg=#{@thm_surface_high},fg=#{@thm_fg}"
+set -g status-style "bg=#{@tinct-surface},fg=#{@tinct-foreground}"
+set -g status-left-style "bg=#{@tinct-accent1},fg=#{@tinct-on-accent1},bold"
+set -g status-right-style "bg=#{@tinct-surface-container-high},fg=#{@tinct-foreground}"
 
 # ----------------------------------------------------------------------------
 # Windows (tab) colours.
 # ----------------------------------------------------------------------------
-set -g window-status-style "bg=#{@thm_surface},fg=#{@thm_fg_muted}"
-set -g window-status-current-style "bg=#{@thm_accent1},fg=#{@thm_bg},bold"
-set -g window-status-activity-style "bg=#{@thm_surface},fg=#{@thm_warning}"
-set -g window-status-bell-style "bg=#{@thm_surface},fg=#{@thm_danger},bold"
+set -g window-status-style "bg=#{@tinct-surface},fg=#{@tinct-foreground-muted}"
+set -g window-status-current-style "bg=#{@tinct-accent1},fg=#{@tinct-on-accent1},bold"
+set -g window-status-activity-style "bg=#{@tinct-surface},fg=#{@tinct-warning}"
+set -g window-status-bell-style "bg=#{@tinct-surface},fg=#{@tinct-danger},bold"
 
 # ----------------------------------------------------------------------------
 # Panes.
 # ----------------------------------------------------------------------------
-set -g pane-border-style "fg=#{@thm_outline}"
-set -g pane-active-border-style "fg=#{@thm_accent1}"
+set -g pane-border-style "fg=#{@tinct-outline}"
+set -g pane-active-border-style "fg=#{@tinct-accent1}"
 
 # ----------------------------------------------------------------------------
 # Messages and modes.
 # ----------------------------------------------------------------------------
-set -g message-style "bg=#{@thm_accent2},fg=#{@thm_bg}"
-set -g message-command-style "bg=#{@thm_accent3},fg=#{@thm_bg}"
-set -g mode-style "bg=#{@thm_accent1},fg=#{@thm_bg}"
+set -g message-style "bg=#{@tinct-accent2},fg=#{@tinct-on-accent2}"
+set -g message-command-style "bg=#{@tinct-accent3},fg=#{@tinct-on-accent3}"
+set -g mode-style "bg=#{@tinct-accent1},fg=#{@tinct-on-accent1}"
 
 # ----------------------------------------------------------------------------
 # Clock and copy mode.
 # ----------------------------------------------------------------------------
-set -g clock-mode-colour "#{@thm_accent2}"
-set -g copy-mode-match-style "bg=#{@thm_warning},fg=#{@thm_bg}"
-set -g copy-mode-current-match-style "bg=#{@thm_accent1},fg=#{@thm_bg}"
+set -g clock-mode-colour "#{@tinct-accent2}"
+set -g copy-mode-match-style "bg=#{@tinct-warning},fg=#{@tinct-on-warning}"
+set -g copy-mode-current-match-style "bg=#{@tinct-accent1},fg=#{@tinct-on-accent1}"

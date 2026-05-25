@@ -3,10 +3,13 @@ package tmux
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -72,11 +75,24 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // Hooks declares tmux's pre/post-execute behaviour. tmux doesn't watch
-// config files, so reload requires the user to source the new file.
+// config files, so we attempt an automatic reload via ReloadFn: if any
+// tmux server is running (`tmux ls` succeeds with at least one session),
+// we source the freshly generated tinct.conf into it. The verb-based
+// ReloadSpec can't express "only run if a server is up", so we use the
+// ReloadFn closure to keep the conditional silent in the no-server case
+// (which is the common case on a clean shell). The runner already
+// verbose-gates any error chatter; we don't add any normal-output
+// diagnostic ourselves. InstructionsFn (which is itself verbose-only in
+// the runner) still describes the manual user action.
 func (p *Plugin) Hooks() hooks.Spec {
 	return hooks.Spec{
 		RequiredBinaries: []string{"tmux"},
 		AutoCreateDir:    true,
+		ReloadFn: func(ctx context.Context) error {
+			outputDir := p.DefaultOutputDir()
+			path := filepath.Join(outputDir, "tinct.conf")
+			return reloadRunningSessions(ctx, path)
+		},
 		InstructionsFn: func(hctx hooks.Context) string {
 			path := filepath.Join(hctx.OutputDir, "tinct.conf")
 			return fmt.Sprintf("   Add 'source-file %s' to your tmux.conf, then reload with 'tmux source-file ~/.config/tmux/tmux.conf' or prefix-r.", path)
@@ -84,30 +100,69 @@ func (p *Plugin) Hooks() hooks.Spec {
 	}
 }
 
-// Generate creates the theme file.
+// reloadRunningSessions sources the generated config into any running
+// tmux server. Returns nil (no error) when no server is running so the
+// runner stays silent; surfaces real errors back to the runner, which
+// only logs them in verbose mode.
+func reloadRunningSessions(ctx context.Context, path string) error {
+	out, err := exec.CommandContext(ctx, "tmux", "ls").Output()
+	if err != nil {
+		// `tmux ls` exits non-zero (and writes "no server running") when
+		// there's no server — treat that as "nothing to reload", which
+		// is the normal case on a fresh shell.
+		return nil
+	}
+	if len(strings.TrimSpace(string(out))) == 0 {
+		return nil
+	}
+	return exec.CommandContext(ctx, "tmux", "source-file", path).Run()
+}
+
+// Generate creates the theme files. Two files are produced: a palette
+// (tinct-palette.conf) that exposes every tinct role as a tmux user
+// option (@tinct-<role>), and a main file (tinct.conf) that sources the
+// palette and applies opinionated styling on top.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
+	palette, err := p.renderTemplate("tinct-palette.conf.tmpl", themeData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render palette: %w", err)
+	}
+
+	main, err := p.renderTemplate("tinct.conf.tmpl", themeData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render main config: %w", err)
+	}
+
+	return map[string][]byte{
+		"tinct-palette.conf": palette,
+		"tinct.conf":         main,
+	}, nil
+}
+
+// renderTemplate loads and executes a single template (with custom
+// override support) against the given theme data.
+func (p *Plugin) renderTemplate(name string, themeData *colour.ThemeData) ([]byte, error) {
 	loader := tmplloader.New("tmux", templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
-	tmplContent, _, err := loader.Load("tinct.conf.tmpl")
+	tmplContent, _, err := loader.Load(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read template: %w", err)
+		return nil, fmt.Errorf("failed to read template %s: %w", name, err)
 	}
 
-	tmpl, err := template.New("tmux").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
+	tmpl, err := template.New(name).Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse template: %w", err)
+		return nil, fmt.Errorf("failed to parse template %s: %w", name, err)
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, themeData); err != nil {
-		return nil, fmt.Errorf("failed to execute template: %w", err)
+		return nil, fmt.Errorf("failed to execute template %s: %w", name, err)
 	}
-
-	return map[string][]byte{"tinct.conf": buf.Bytes()}, nil
+	return buf.Bytes(), nil
 }
