@@ -11,16 +11,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
-## [Unreleased]
-
 ## [0.2.1]
 *2026-03-18*
+
+### Fixed
+
+- fix: use secrets with vars fallback for telemetry credentials in CI (a6ae7a8)
 
 ## [0.2.0]
 *2026-03-18*
 
+### Fixed
+
+- fix: implement JSON-stdio structured response protocol (v0.2.0) (c65bbb3)
+
+### Changed
+
+- refactor: replace aptabase telemetry with statsfactory SDK (ab6d98a)
+
 ## [0.1.28]
 *2026-03-14*
+
+### Fixed
+
+- fix: restore wallpaper format detection for URLs without file extensions (60810ea)
+
+### Changed
+
+- refactor: remove security.ValidateFilePath in favour of plugin-managed output paths (52770fb)
+- refactor: eliminate 3 remaining clone groups (RPC client, path utils, sync finalization) (0104c9a)
+- refactor: extract shared two-pass tar extraction into extractFromTar (aab71bb)
+- refactor: eliminate code duplication across 6 clone groups (da18f5a)
 
 ## [0.1.27]
 *2026-03-12*
@@ -28,11 +49,46 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 ## [0.1.26]
 *2026-02-20*
 
+### Added
+
+- feat: centralise config to tinct.toml, async batched telemetry, remove plugin enable/disable (6b11cf8)
+
+### Fixed
+
+- fix: resolve lint warnings (errcheck, errname, gocognit) (0a8151c)
+
+## [0.1.25]
+*2026-02-19*
+
+### Added
+
+- feat: add anonymous usage telemetry via Aptabase (b3c137b)
+- feat: add wbg (simple Wayland wallpaper) output plugin (7127b75)
+- feat: add awww (animated Wayland wallpaper daemon) output plugin (e8049b8)
+- feat: add Midnight Commander (mc) skin plugin and xterm256 color conversion (46bed02)
+- feat: add OpenCode theme output plugin (0044489)
+
+### Fixed
+
+- fix: deploy docs from latest main after versioning (b7d0c7b)
+
 ## [0.1.24]
 *2026-02-10*
 
+### Added
+
+- feat: add Midnight Commander (mc) skin plugin and xterm256 color conversion (3d3541a)
+
 ## [0.1.23]
 *2026-02-10*
+
+### Added
+
+- feat: add OpenCode theme output plugin (ba85ac0)
+
+### Fixed
+
+- fix: changelog TOC and release workflow (64f4995)
 
 ## [0.1.22]
 *2026-01-02*

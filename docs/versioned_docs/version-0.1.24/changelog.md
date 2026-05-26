@@ -11,13 +11,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
-## [Unreleased]
-
 ## [0.1.24]
 *2026-02-10*
 
+### Added
+
+- feat: add Midnight Commander (mc) skin plugin and xterm256 color conversion (3d3541a)
+
 ## [0.1.23]
 *2026-02-10*
+
+### Added
+
+- feat: add OpenCode theme output plugin (ba85ac0)
+
+### Fixed
+
+- fix: changelog TOC and release workflow (64f4995)
 
 ## [0.1.22]
 *2026-01-02*
