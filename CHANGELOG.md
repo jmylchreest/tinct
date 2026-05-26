@@ -197,6 +197,16 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 ### Added
 
 - feat: centralise config to tinct.toml, async batched telemetry, remove plugin enable/disable (6b11cf8)
+
+### Fixed
+
+- fix: resolve lint warnings (errcheck, errname, gocognit) (0a8151c)
+
+## [0.1.25]
+*2026-02-19*
+
+### Added
+
 - feat: add anonymous usage telemetry via Aptabase (b3c137b)
 - feat: add wbg (simple Wayland wallpaper) output plugin (7127b75)
 - feat: add awww (animated Wayland wallpaper daemon) output plugin (e8049b8)
@@ -205,7 +215,6 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Fixed
 
-- fix: resolve lint warnings (errcheck, errname, gocognit) (0a8151c)
 - fix: deploy docs from latest main after versioning (b7d0c7b)
 
 ## [0.1.24]
