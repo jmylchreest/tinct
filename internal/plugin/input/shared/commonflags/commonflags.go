@@ -33,6 +33,9 @@ var (
 	SeedMode  string
 	SeedValue int64
 
+	// TrimLetterbox removes solid borders some providers bake into generated images.
+	TrimLetterbox bool
+
 	// defaultCacheDir stores the default cache directory.
 	defaultCacheDir string
 )
@@ -96,6 +99,11 @@ func RegisterFlags(cmd *cobra.Command) {
 	if cmd.Flags().Lookup("seed-value") == nil {
 		cmd.Flags().Int64Var(&SeedValue, "seed-value", 0, "Manual seed value (used with --seed-mode=manual)")
 	}
+
+	// Post-processing
+	if cmd.Flags().Lookup("trim-letterbox") == nil {
+		cmd.Flags().BoolVar(&TrimLetterbox, "trim-letterbox", true, "Trim solid letterbox borders from generated images")
+	}
 }
 
 // Reset resets all flag values to defaults. Useful for testing.
@@ -112,6 +120,7 @@ func Reset() {
 	SampleMethod = "average"
 	SeedMode = "content"
 	SeedValue = 0
+	TrimLetterbox = true
 }
 
 // GetDefaultCacheDir returns the default cache directory.

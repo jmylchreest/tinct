@@ -30,6 +30,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/aiprompt"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/commonflags"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/imagecolours"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/imagepost"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
@@ -175,6 +176,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		}
 
 		fmt.Fprintf(os.Stderr, "Image generated: %s\n", imagePath)
+		imagepost.TrimLetterboxIfEnabled(imagePath, commonflags.AspectRatio, commonflags.TrimLetterbox, opts.Verbose)
 	} else {
 		fmt.Fprintf(os.Stderr, "Using cached image: %s\n", imagePath)
 	}
@@ -668,6 +670,7 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 		{Name: "sample-method", Type: "string", Default: "average", Description: "Sampling method (average or dominant)", Required: false},
 		{Name: "seed-mode", Type: "string", Default: "content", Description: "Seed mode (content, manual, random)", Required: false},
 		{Name: "seed-value", Type: "int64", Default: "0", Description: "Manual seed value", Required: false},
+		{Name: "trim-letterbox", Type: "bool", Default: "true", Description: "Trim solid letterbox borders from generated images", Required: false},
 		// Plugin-specific flags
 		{Name: "openrouter.prefer-free", Type: "bool", Default: "true", Description: "Prefer free models when using auto selection", Required: false},
 	}

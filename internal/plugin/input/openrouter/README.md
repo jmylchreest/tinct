@@ -105,6 +105,7 @@ Use `--ai.list-models` to see what's currently available with live pricing.
 | `--sample-method` | `average` | `average` or `dominant` |
 | `--seed-mode` | `content` | Seed mode for k-means extraction |
 | `--seed-value` | `0` | Seed value when `--seed-mode=manual` |
+| `--trim-letterbox` | `true` | Trim solid letterbox borders baked into the generated image, then restore the requested aspect (`--trim-letterbox=false` to disable) |
 
 ## Output
 
