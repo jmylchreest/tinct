@@ -13,6 +13,21 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.4.0]
+*2026-06-20*
+
+### Added
+
+- feat(minimax): add MiniMax (Hailuo) image input plugin (5cf1b8f)
+- feat(google-genai): refresh image model catalogue with Gemini 3 models (cd63965)
+- feat(input): trim letterbox borders from AI-generated images (d311e26)
+
+### Fixed
+
+- fix(deps): bump golang.org/x/net for GO-2026-5026 and refresh dependencies (9266d16)
+- fix(docs): rewrite archived absolute template links to relative paths (5f8b1d0)
+- fix(scripts): promote-unreleased exits 0 when both bodies are empty (2fcb8fe)
+
 ## [0.3.3]
 *2026-05-25*
 
