@@ -364,7 +364,10 @@ func TestIsGeminiModel(t *testing.T) {
 		expected bool
 	}{
 		{"gemini-2.5-flash-image", true},
+		{"gemini-3-pro-image-preview", true},
+		{"gemini-3.1-flash-image", true},
 		{"imagen-4.0-generate-001", false},
+		{"imagen-4.0-ultra-generate-001", false},
 		{"imagen-4.0-fast-generate-001", false},
 		{"imagen-3.0-generate-002", false},
 	}
@@ -373,28 +376,6 @@ func TestIsGeminiModel(t *testing.T) {
 		result := isGeminiModel(tt.model)
 		if result != tt.expected {
 			t.Errorf("isGeminiModel(%q) = %v, expected %v", tt.model, result, tt.expected)
-		}
-	}
-}
-
-// TestIsImageGenerationModel tests the isImageGenerationModel function.
-func TestIsImageGenerationModel(t *testing.T) {
-	tests := []struct {
-		name     string
-		expected bool
-	}{
-		{"models/imagen-4.0-generate-001", true},
-		{"models/imagen-3.0-generate-002", true},
-		{"models/gemini-2.5-flash-image", true},
-		{"models/gemini-pro", false},
-		{"models/text-bison", false},
-		{"imagen-4.0-fast-generate-001", true},
-	}
-
-	for _, tt := range tests {
-		result := isImageGenerationModel(tt.name)
-		if result != tt.expected {
-			t.Errorf("isImageGenerationModel(%q) = %v, expected %v", tt.name, result, tt.expected)
 		}
 	}
 }

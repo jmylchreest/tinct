@@ -23,15 +23,13 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/aiprompt"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/commonflags"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/imagecolours"
+	"github.com/jmylchreest/tinct/internal/plugin/input/shared/imagepost"
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
 const (
-	// modelPrefix is the prefix that Google API returns for model names.
-	modelPrefix = "models/"
-
 	// defaultModel is the default model used when none is specified.
-	defaultModel = "gemini-2.5-flash-image"
+	defaultModel = "gemini-3.1-flash-image"
 
 	// defaultBackend is the default backend used when none is specified.
 	defaultBackend = "gemini-api"
@@ -122,11 +120,11 @@ func (p *Plugin) Validate() error {
 
 // Generate creates an image using Google Gen AI and extracts colors.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
-	// If list-models flag is set, list models and exit
+	// If list-models flag is set, print the maintained model catalogue and exit.
+	// Listing does not call the API: model availability is stable and per-model
+	// pricing is not exposed by the API, so we maintain the list (with prices) here.
 	if aiflags.ListModels {
-		if err := p.listAvailableModels(ctx, opts.Verbose); err != nil {
-			return nil, fmt.Errorf("failed to list models: %w", err)
-		}
+		ListModels()
 		os.Exit(0)
 	}
 
@@ -172,6 +170,7 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		}
 
 		fmt.Fprintf(os.Stderr, "Image generated: %s\n", imagePath)
+		imagepost.TrimLetterboxIfEnabled(imagePath, commonflags.AspectRatio, commonflags.TrimLetterbox, opts.Verbose)
 	} else {
 		fmt.Fprintf(os.Stderr, "Using cached image: %s\n", imagePath)
 	}
@@ -277,8 +276,10 @@ func (p *Plugin) clientSetup(ctx context.Context, verbose bool) (*genai.Client, 
 }
 
 // isGeminiModel checks if a model uses the Gemini API (GenerateContent) vs Imagen API (GenerateImages).
+// Gemini image models (e.g. gemini-2.5-flash-image, gemini-3-pro-image-preview) generate via
+// GenerateContent; Imagen models (imagen-*) generate via GenerateImages.
 func isGeminiModel(model string) bool {
-	return model == "gemini-2.5-flash-image"
+	return strings.HasPrefix(model, "gemini-") && strings.Contains(model, "image")
 }
 
 // generateImage calls Google Gen AI SDK to create an image.
@@ -534,146 +535,11 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 		{Name: "sample-method", Type: "string", Default: "average", Description: "Sampling method (average or dominant)", Required: false},
 		{Name: "seed-mode", Type: "string", Default: "content", Description: "Seed mode (content, manual, random)", Required: false},
 		{Name: "seed-value", Type: "int64", Default: "0", Description: "Manual seed value", Required: false},
+		{Name: "trim-letterbox", Type: "bool", Default: "true", Description: "Trim solid letterbox borders from generated images", Required: false},
 		// Plugin-specific flags
 		{Name: "googlegenai.backend", Type: "string", Default: defaultBackend, Description: "Google Gen AI backend (gemini-api or vertex-ai)", Required: false},
 		{Name: "googlegenai.image-size", Type: "string", Default: "2K", Description: "Image size (1K or 2K, only for Imagen Standard/Ultra models)", Required: false},
 	}
-}
-
-// listAvailableModels lists available Imagen models from the API.
-func (p *Plugin) listAvailableModels(ctx context.Context, verbose bool) error {
-	client, err := p.clientSetup(ctx, verbose)
-	if err != nil {
-		// For list-models, fall back to hardcoded list on API key error
-		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Showing known models instead:\n\n")
-		ListModels()
-		return nil
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Fetching available models from API...\n\n")
-	}
-
-	// List all models
-	fmt.Println("Available Image Generation Models:")
-	fmt.Println()
-	fmt.Printf("Default Model: %s\n", defaultModel)
-	fmt.Printf("Default Backend: %s\n", defaultBackend)
-	fmt.Println()
-	fmt.Println("Note: Pricing shown is for indication only and may not reflect current rates.")
-	fmt.Println("      Visit https://ai.google.dev/gemini-api/docs/pricing for up-to-date pricing.")
-	fmt.Println()
-
-	modelCount := 0
-	for model, err := range client.Models.All(ctx) {
-		if err != nil {
-			// If we encounter an error, show what we got so far and fall back
-			if modelCount > 0 {
-				fmt.Fprintf(os.Stderr, "\nWarning: Error during model listing: %v\n", err)
-				fmt.Fprintf(os.Stderr, "Showing %d models retrieved before error\n\n", modelCount)
-				return nil
-			}
-			// If no models retrieved, fall back to hardcoded list
-			fmt.Fprintf(os.Stderr, "Warning: Could not fetch models from API: %v\n", err)
-			fmt.Fprintf(os.Stderr, "Showing known models instead:\n\n")
-			ListModels()
-			return nil
-		}
-
-		// Filter for image generation models (Imagen and Gemini)
-		if model.Name != "" && isImageGenerationModel(model.Name) {
-			modelCount++
-
-			// Remove "models/" prefix from model name for cleaner output
-			modelName := strings.TrimPrefix(model.Name, modelPrefix)
-
-			fmt.Printf("Model: %s\n", modelName)
-			if model.DisplayName != "" {
-				fmt.Printf("  Display Name: %s\n", model.DisplayName)
-			}
-			if model.Description != "" {
-				fmt.Printf("  Description: %s\n", model.Description)
-			}
-
-			// Show backend availability
-			if isGeminiModel(modelName) {
-				fmt.Printf("  Backend: gemini-api only\n")
-				fmt.Printf("  Pricing: Free tier (500 RPD)\n")
-			} else {
-				fmt.Printf("  Backend: gemini-api, vertex-ai\n")
-				fmt.Printf("  Pricing: gemini-api - Free tier (15 RPM); vertex-ai - Pay per use\n")
-			}
-
-			fmt.Println()
-		}
-	}
-
-	if modelCount == 0 {
-		fmt.Println("No image generation models found via API.")
-		fmt.Println("Showing known models instead:")
-		fmt.Println()
-		ListModels()
-	} else if verbose {
-		fmt.Fprintf(os.Stderr, "\nTotal image generation models found: %d\n", modelCount)
-	}
-
-	// Show pricing and free tier information
-	fmt.Println()
-	fmt.Println("Pricing Information:")
-	fmt.Println("  For current pricing and free tier details, visit:")
-	fmt.Println("  https://ai.google.dev/gemini-api/docs/pricing")
-	fmt.Println()
-	fmt.Println("  Free tier available via Gemini API:")
-	fmt.Println("  - 15 requests per minute")
-	fmt.Println("  - Rate limits vary by model")
-
-	return nil
-}
-
-// isImageGenerationModel checks if a model is an image generation model (Imagen or Gemini image models).
-func isImageGenerationModel(name string) bool {
-	// Convert to lowercase for case-insensitive matching
-	nameLower := ""
-	for _, r := range name {
-		if r >= 'A' && r <= 'Z' {
-			nameLower += string(r + 32)
-		} else {
-			nameLower += string(r)
-		}
-	}
-
-	// Check for Imagen models
-	if containsSubstring(nameLower, "imagen") {
-		return true
-	}
-
-	// Check for Gemini image generation models
-	// These contain "flash" (or similar) AND either "image" or support image generation
-	if containsSubstring(nameLower, "flash") && containsSubstring(nameLower, "image") {
-		return true
-	}
-
-	// Check for other Gemini image models
-	if containsSubstring(nameLower, "gemini") && containsSubstring(nameLower, "image") {
-		return true
-	}
-
-	return false
-}
-
-// containsSubstring checks if haystack contains needle (case-sensitive).
-func containsSubstring(haystack, needle string) bool {
-	if len(haystack) < len(needle) {
-		return false
-	}
-
-	for i := 0; i <= len(haystack)-len(needle); i++ {
-		if haystack[i:i+len(needle)] == needle {
-			return true
-		}
-	}
-	return false
 }
 
 // ListModels prints available Imagen and Gemini image generation models to stdout.
@@ -684,27 +550,28 @@ func ListModels() {
 		Description string
 		Cost        string
 		Generation  string
+		Notes       string
 	}{
 		{
-			ID:          "imagen-3.0-generate-002",
-			Name:        "Imagen 3",
-			Description: "Previous generation model (stable)",
-			Cost:        "$0.03",
-			Generation:  "3",
+			ID:          "gemini-3-pro-image-preview",
+			Name:        "Gemini 3 Pro Image (Nano Banana Pro)",
+			Description: "Highest quality; advanced multimodal reasoning, best-in-class text rendering, blends up to 8 reference images with identity preservation",
+			Cost:        "$0.134 per image",
+			Generation:  "Gemini 3",
 		},
 		{
-			ID:          "imagen-4.0-fast-generate-001",
-			Name:        "Imagen 4 Fast",
-			Description: "Fastest generation, ideal for high-volume tasks",
-			Cost:        "$0.02",
-			Generation:  "4",
+			ID:          "gemini-3.1-flash-image",
+			Name:        "Gemini 3.1 Flash Image (Nano Banana 2)",
+			Description: "High-efficiency Gemini 3 sibling to Pro; fast, high-volume image generation and editing with strong text rendering (default)",
+			Cost:        "$0.0672 per image",
+			Generation:  "Gemini 3",
 		},
 		{
-			ID:          "imagen-4.0-generate-001",
-			Name:        "Imagen 4",
-			Description: "Flagship model with balanced quality and speed",
-			Cost:        "$0.04",
-			Generation:  "4",
+			ID:          "gemini-2.5-flash-image",
+			Name:        "Gemini 2.5 Flash Image (Nano Banana)",
+			Description: "Fast multimodal image generation and editing, conversational workflow support",
+			Cost:        "$0.039 per image",
+			Generation:  "Gemini 2.5",
 		},
 		{
 			ID:          "imagen-4.0-ultra-generate-001",
@@ -712,19 +579,37 @@ func ListModels() {
 			Description: "Highest quality, best prompt alignment",
 			Cost:        "$0.06",
 			Generation:  "4",
+			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-3-pro-image-preview",
 		},
 		{
-			ID:          "gemini-2.5-flash-image",
-			Name:        "Gemini 2.5 Flash Image (Nano Banana)",
-			Description: "Fast multimodal image generation and editing, conversational workflow support (default)",
-			Cost:        "$0.039 per image",
-			Generation:  "Gemini 2.5",
+			ID:          "imagen-4.0-generate-001",
+			Name:        "Imagen 4",
+			Description: "Flagship model with balanced quality and speed",
+			Cost:        "$0.04",
+			Generation:  "4",
+			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-2.5-flash-image",
+		},
+		{
+			ID:          "imagen-4.0-fast-generate-001",
+			Name:        "Imagen 4 Fast",
+			Description: "Fastest generation, ideal for high-volume tasks",
+			Cost:        "$0.02",
+			Generation:  "4",
+			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-2.5-flash-image",
+		},
+		{
+			ID:          "imagen-3.0-generate-002",
+			Name:        "Imagen 3",
+			Description: "Previous generation model (stable)",
+			Cost:        "$0.03",
+			Generation:  "3",
+			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-2.5-flash-image",
 		},
 	}
 
 	fmt.Println("Available Image Generation Models:")
 	fmt.Println()
-	fmt.Println("Default Model: gemini-2.5-flash-image")
+	fmt.Printf("Default Model: %s\n", defaultModel)
 	fmt.Println("Default Backend: gemini-api")
 	fmt.Println()
 	fmt.Println("Note: Pricing shown is for indication only and may not reflect current rates.")
@@ -737,6 +622,9 @@ func ListModels() {
 		fmt.Printf("  Description: %s\n", model.Description)
 		fmt.Printf("  Cost: %s (approximate)\n", model.Cost)
 		fmt.Printf("  Generation: %s\n", model.Generation)
+		if model.Notes != "" {
+			fmt.Printf("  Notes: %s\n", model.Notes)
+		}
 
 		// Show backend availability
 		if isGeminiModel(model.ID) {
