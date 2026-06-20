@@ -8,15 +8,15 @@ require (
 	github.com/google/go-github/v70 v70.0.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/jmylchreest/statsfactory/packages/sdk-go v0.0.0-20260410205747-c94915d1fe55
+	github.com/jmylchreest/statsfactory/packages/sdk-go v0.0.0-20260609230132-bf9e155d8714
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/ulikunitz/xz v0.5.15
-	golang.org/x/image v0.39.0
+	golang.org/x/image v0.43.0
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/term v0.42.0
-	google.golang.org/genai v1.55.0
+	golang.org/x/term v0.43.0
+	google.golang.org/genai v1.61.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -46,10 +46,10 @@ require (
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
-	golang.org/x/net v0.53.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/api v0.277.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
 	google.golang.org/grpc v1.80.0 // indirect
