@@ -31,6 +31,7 @@ Output plugins generate configuration files for applications and devices.
 
 | Plugin | Description |
 |--------|-------------|
+| [niri](./desktop/niri.md) | Themed colour configuration for niri, the scrollable-tiling Wayland compositor. |
 | [gnome-shell](./desktop/gnome-shell.md) | CSS theme for GNOME Shell, the compositor and panel of the GNOME desktop. |
 | [gtk3](./desktop/gtk3.md) | Per-user CSS override for GTK 3 applications (GIMP, Inkscape, Pidgin, and most non-libadwaita GNOME 3-era apps). |
 | [gtk4](./desktop/gtk4.md) | Per-user CSS override for traditional GTK 4 applications — i.e. GTK 4 apps that do not use libadwaita. |

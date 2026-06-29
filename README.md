@@ -76,7 +76,7 @@ tinct generate -i remote-json \
 | Category | Applications |
 |----------|-------------|
 | Terminals | Alacritty, Ghostty, Kitty, Konsole, Ptyxis |
-| Desktop | GNOME Shell, KDE Plasma, GTK3/4, Libadwaita, Qt5/6 |
+| Desktop | GNOME Shell, KDE Plasma, GTK3/4, Libadwaita, Qt5/6, niri |
 | Hyprland | Hyprland, Hyprpaper, Hyprlock |
 | Bars & Launchers | Waybar, Dunst, SwayOSD, Fuzzel, Walker, Wofi |
 | Editors | Neovim, Zellij |
