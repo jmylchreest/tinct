@@ -63,6 +63,7 @@ Output plugins generate configuration files for applications and devices.
 | [awob](./bars-launchers/awob.md) | Shared palette plus a worked-example theme for awob, an animated Wayland Overlay Bar. |
 | [dunstify](./bars-launchers/dunstify.md) | Pops a desktop notification via dunstify (or notify-send) every time tinct generate finishes. |
 | [wob](./bars-launchers/wob.md) | Tinct.ini theme overlay for wob, the Wayland Overlay Bar — the bar you see when adjusting volume or brightness. |
+| [noctalia](./bars-launchers/noctalia.md) | Custom colour palette for the Noctalia shell, a Wayland desktop shell (bar, dock, launcher, control center, notifications) fo… |
 
 ## Editors & Multiplexers
 

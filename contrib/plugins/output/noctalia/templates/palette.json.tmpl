@@ -1,0 +1,46 @@
+{
+  "mPrimary": "{{ get . "accent1" | hex }}",
+  "mOnPrimary": "{{ get . "onAccent1" | hex }}",
+  "mSecondary": "{{ get . "accent2" | hex }}",
+  "mOnSecondary": "{{ get . "onAccent2" | hex }}",
+  "mTertiary": "{{ get . "accent3" | hex }}",
+  "mOnTertiary": "{{ get . "onAccent3" | hex }}",
+  "mError": "{{ get . "danger" | hex }}",
+  "mOnError": "{{ get . "onDanger" | hex }}",
+  "mSurface": "{{ get . "surface" | hex }}",
+  "mOnSurface": "{{ get . "onSurface" | hex }}",
+  "mSurfaceVariant": "{{ get . "surfaceVariant" | hex }}",
+  "mOnSurfaceVariant": "{{ get . "onSurfaceVariant" | hex }}",
+  "mOutline": "{{ get . "outline" | hex }}",
+  "mShadow": "{{ get . "shadow" | hex }}",
+  "mHover": "{{ get . "accent4" | hex }}",
+  "mOnHover": "{{ get . "onAccent4" | hex }}",
+  "terminal": {
+    "foreground": "{{ get . "foreground" | hex }}",
+    "background": "{{ get . "background" | hex }}",
+    "selectionFg": "{{ get . "onAccent1" | hex }}",
+    "selectionBg": "{{ get . "accent1" | hex }}",
+    "cursorText": "{{ get . "background" | hex }}",
+    "cursor": "{{ get . "foreground" | hex }}",
+    "normal": {
+      "black": "{{ ansi . "black" | hex }}",
+      "red": "{{ ansi . "red" | hex }}",
+      "green": "{{ ansi . "green" | hex }}",
+      "yellow": "{{ ansi . "yellow" | hex }}",
+      "blue": "{{ ansi . "blue" | hex }}",
+      "magenta": "{{ ansi . "magenta" | hex }}",
+      "cyan": "{{ ansi . "cyan" | hex }}",
+      "white": "{{ ansi . "white" | hex }}"
+    },
+    "bright": {
+      "black": "{{ ansi . "brightblack" | hex }}",
+      "red": "{{ ansi . "brightred" | hex }}",
+      "green": "{{ ansi . "brightgreen" | hex }}",
+      "yellow": "{{ ansi . "brightyellow" | hex }}",
+      "blue": "{{ ansi . "brightblue" | hex }}",
+      "magenta": "{{ ansi . "brightmagenta" | hex }}",
+      "cyan": "{{ ansi . "brightcyan" | hex }}",
+      "white": "{{ ansi . "brightwhite" | hex }}"
+    }
+  }
+}
