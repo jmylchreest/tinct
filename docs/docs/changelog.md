@@ -13,6 +13,13 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.4.1]
+*2026-06-30*
+
+### Added
+
+- feat(niri): add niri compositor output plugin (5a1ee49)
+
 ## [0.4.0]
 *2026-06-20*
 
