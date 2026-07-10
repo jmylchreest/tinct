@@ -3,6 +3,7 @@ package googlegenai
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -377,5 +378,75 @@ func TestIsGeminiModel(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("isGeminiModel(%q) = %v, expected %v", tt.model, result, tt.expected)
 		}
+	}
+}
+
+func TestGetExtensionForMIME(t *testing.T) {
+	tests := map[string]string{
+		"image/jpeg":    ".jpg",
+		"image/jpg":     ".jpg",
+		"image/png":     ".png",
+		"image/webp":    ".webp",
+		"image/gif":     ".gif",
+		"application/x": ".png", // unknown -> png (requested output format)
+	}
+	for mime, want := range tests {
+		if got := getExtensionForMIME(mime); got != want {
+			t.Errorf("getExtensionForMIME(%q) = %q, want %q", mime, got, want)
+		}
+	}
+}
+
+func TestImageExtension(t *testing.T) {
+	jpegBytes := []byte("\xff\xd8\xff\xe0\x00\x10JFIF")
+	pngBytes := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
+
+	// Reported MIME type wins over the bytes.
+	if mime, ext := imageExtension("image/jpeg", pngBytes); mime != "image/jpeg" || ext != ".jpg" {
+		t.Errorf("imageExtension(reported jpeg) = (%q, %q), want (image/jpeg, .jpg)", mime, ext)
+	}
+
+	// Missing MIME type falls back to sniffing the bytes.
+	if mime, ext := imageExtension("", jpegBytes); mime != "image/jpeg" || ext != ".jpg" {
+		t.Errorf("imageExtension(sniff jpeg) = (%q, %q), want (image/jpeg, .jpg)", mime, ext)
+	}
+	if mime, ext := imageExtension("", pngBytes); mime != "image/png" || ext != ".png" {
+		t.Errorf("imageExtension(sniff png) = (%q, %q), want (image/png, .png)", mime, ext)
+	}
+}
+
+func TestFindCachedImage(t *testing.T) {
+	dir := t.TempDir()
+	base := filepath.Join(dir, "genai-abc123")
+
+	if got := findCachedImage(base); got != "" {
+		t.Errorf("expected empty result for missing image, got %q", got)
+	}
+
+	want := base + ".jpg"
+	if err := os.WriteFile(want, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := findCachedImage(base); got != want {
+		t.Errorf("findCachedImage = %q, want %q", got, want)
+	}
+}
+
+func TestGetImageBasePathStripsExtension(t *testing.T) {
+	resetFlags()
+	commonflags.CacheDir = t.TempDir()
+	commonflags.CacheFilename = "mywallpaper.png"
+	defer resetFlags()
+
+	plugin := New()
+	base, err := plugin.getImageBasePath("gemini-3.1-flash-image")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Ext(base) != "" {
+		t.Errorf("expected base path without extension, got %q", base)
+	}
+	if filepath.Base(base) != "mywallpaper" {
+		t.Errorf("expected base name 'mywallpaper', got %q", filepath.Base(base))
 	}
 }

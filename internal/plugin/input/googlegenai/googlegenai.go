@@ -9,6 +9,7 @@ import (
 	"image/color"
 	_ "image/jpeg" // Required for JPEG image decoding
 	_ "image/png"  // Required for PNG image decoding
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -151,21 +152,29 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 		return colour.NewPalette([]color.Color{}), nil
 	}
 
-	// Determine image path
-	imagePath, err := p.getImagePath(model)
+	// Determine base image path (without extension); the actual extension is
+	// determined from the image format in the API response.
+	imageBasePath, err := p.getImageBasePath(model)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine image path: %w", err)
 	}
 
-	// Generate image if needed
-	if commonflags.CacheOverwrite || !fileExists(imagePath) {
+	// Check for existing cached image (any supported extension)
+	var imagePath string
+	if !commonflags.CacheOverwrite {
+		imagePath = findCachedImage(imageBasePath)
+	}
+
+	// Generate image if not cached
+	if imagePath == "" {
 		enhancedPrompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
 		additionalPrompt := enhancedPrompt[len(aiflags.Prompt):]
 		fmt.Fprintf(os.Stderr, "[google-genai] backend=%s model=%s prompt=\"%s\" additional=\"%s\"\n",
 			p.backend, model, aiflags.Prompt, additionalPrompt)
 		fmt.Fprintf(os.Stderr, "Waiting for response...\n")
 
-		if err := p.generateImage(ctx, model, imagePath, opts.Verbose); err != nil {
+		imagePath, err = p.generateImage(ctx, model, imageBasePath, opts.Verbose)
+		if err != nil {
 			return nil, fmt.Errorf("failed to generate image: %w", err)
 		}
 
@@ -210,10 +219,12 @@ func (p *Plugin) WallpaperRawPath() string {
 	return p.loadedImagePath
 }
 
-// getImagePath determines where to save/load the generated image.
-func (p *Plugin) getImagePath(model string) (string, error) {
+// getImageBasePath determines the base path (without extension) for the generated image.
+// The actual extension is determined after we know the image format from the API response.
+func (p *Plugin) getImageBasePath(model string) (string, error) {
 	if !commonflags.CacheEnabled {
-		tmpFile, err := os.CreateTemp("", "tinct-genai-*.png")
+		// For temp files, create without extension - we'll rename after
+		tmpFile, err := os.CreateTemp("", "tinct-genai-*")
 		if err != nil {
 			return "", fmt.Errorf("failed to create temp file: %w", err)
 		}
@@ -231,10 +242,56 @@ func (p *Plugin) getImagePath(model string) (string, error) {
 	if filename == "" {
 		hash := sha256.Sum256([]byte(aiflags.Prompt + model))
 		hashStr := hex.EncodeToString(hash[:])[:16]
-		filename = fmt.Sprintf("genai-%s.png", hashStr)
+		// Return without extension - will be added based on actual image format
+		filename = fmt.Sprintf("genai-%s", hashStr)
+	} else {
+		// If user provided a filename, strip any extension - we'll add the correct one
+		if ext := filepath.Ext(filename); ext != "" {
+			filename = strings.TrimSuffix(filename, ext)
+		}
 	}
 
 	return filepath.Join(cacheDir, filename), nil
+}
+
+// getExtensionForMIME returns the file extension for an image MIME type.
+func getExtensionForMIME(mimeType string) string {
+	switch mimeType {
+	case "image/jpeg", "image/jpg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	default:
+		// Default to png for unknown types
+		return ".png"
+	}
+}
+
+// imageExtension resolves the extension for generated image bytes, preferring the
+// MIME type reported by the API and falling back to sniffing the bytes themselves.
+func imageExtension(reportedMIME string, imageBytes []byte) (mimeType, ext string) {
+	mimeType = reportedMIME
+	if mimeType == "" {
+		mimeType = http.DetectContentType(imageBytes)
+	}
+	return mimeType, getExtensionForMIME(mimeType)
+}
+
+// findCachedImage looks for an existing cached image with any supported extension.
+// Returns the full path if found, empty string if not found.
+func findCachedImage(basePath string) string {
+	extensions := []string{".png", ".jpg", ".jpeg", ".webp", ".gif"}
+	for _, ext := range extensions {
+		path := basePath + ext
+		if fileExists(path) {
+			return path
+		}
+	}
+	return ""
 }
 
 // clientSetup encapsulates client configuration, creation, and logging.
@@ -284,18 +341,20 @@ func isGeminiModel(model string) bool {
 
 // generateImage calls Google Gen AI SDK to create an image.
 // Routes to appropriate generation method based on model type.
-func (p *Plugin) generateImage(ctx context.Context, model, outputPath string, verbose bool) error {
+// Returns the path the image was written to (base path plus the extension
+// matching the actual image format).
+func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (string, error) {
 	if isGeminiModel(model) {
-		return p.generateImageWithGemini(ctx, model, outputPath, verbose)
+		return p.generateImageWithGemini(ctx, model, outputBasePath, verbose)
 	}
-	return p.generateImageWithImagen(ctx, model, outputPath, verbose)
+	return p.generateImageWithImagen(ctx, model, outputBasePath, verbose)
 }
 
 // generateImageWithImagen generates an image using the Imagen API (GenerateImages).
-func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath string, verbose bool) error { //nolint:gocyclo
+func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBasePath string, verbose bool) (string, error) { //nolint:gocyclo
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Enhance prompt for wallpaper suitability
@@ -339,12 +398,12 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath 
 	// Generate images
 	response, err := client.Models.GenerateImages(ctx, model, enhancedPrompt, genConfig)
 	if err != nil {
-		return fmt.Errorf("image generation failed: %w", err)
+		return "", fmt.Errorf("image generation failed: %w", err)
 	}
 
 	// Check if we got any images
 	if len(response.GeneratedImages) == 0 {
-		return fmt.Errorf("no images generated in response")
+		return "", fmt.Errorf("no images generated in response")
 	}
 
 	// Get the first generated image
@@ -352,26 +411,35 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath 
 
 	// Check if image was filtered
 	if generatedImage.RAIFilteredReason != "" {
-		return fmt.Errorf("image was filtered by safety system: %s", generatedImage.RAIFilteredReason)
+		return "", fmt.Errorf("image was filtered by safety system: %s", generatedImage.RAIFilteredReason)
 	}
 
 	// Get image data
 	if generatedImage.Image == nil {
-		return fmt.Errorf("generated image has no image data")
+		return "", fmt.Errorf("generated image has no image data")
 	}
 
 	imageBytes := generatedImage.Image.ImageBytes
 	if len(imageBytes) == 0 {
-		return fmt.Errorf("generated image has empty image data")
+		return "", fmt.Errorf("generated image has empty image data")
 	}
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
 	}
 
+	// Determine extension from the actual image format; PNG is requested via
+	// OutputMIMEType but the response is authoritative.
+	mimeType, ext := imageExtension(generatedImage.Image.MIMEType, imageBytes)
+	outputPath := outputBasePath + ext
+
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Image format: %s (extension: %s)\n", mimeType, ext)
+	}
+
 	// Write image to file
 	if err := os.WriteFile(outputPath, imageBytes, 0o600); err != nil {
-		return fmt.Errorf("failed to write image to file: %w", err)
+		return "", fmt.Errorf("failed to write image to file: %w", err)
 	}
 
 	// Save metadata alongside the image
@@ -404,14 +472,14 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputPath 
 		fmt.Fprintf(os.Stderr, "Warning: failed to save metadata: %v\n", err)
 	}
 
-	return nil
+	return outputPath, nil
 }
 
 // generateImageWithGemini generates an image using the Gemini API (GenerateContent).
-func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputPath string, verbose bool) error { //nolint:gocyclo
+func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputBasePath string, verbose bool) (string, error) { //nolint:gocyclo
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Enhance prompt for wallpaper suitability
@@ -439,43 +507,53 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputPath 
 	// Generate content
 	response, err := client.Models.GenerateContent(ctx, model, contents, genConfig)
 	if err != nil {
-		return fmt.Errorf("image generation failed: %w", err)
+		return "", fmt.Errorf("image generation failed: %w", err)
 	}
 
 	// Check if response is valid
 	if response == nil {
-		return fmt.Errorf("received nil response from API")
+		return "", fmt.Errorf("received nil response from API")
 	}
 
 	// Check if we got any parts in the response
 	if len(response.Candidates) == 0 {
-		return fmt.Errorf("no candidates in response")
+		return "", fmt.Errorf("no candidates in response")
 	}
 
 	if response.Candidates[0].Content == nil || len(response.Candidates[0].Content.Parts) == 0 {
-		return fmt.Errorf("no image data in response")
+		return "", fmt.Errorf("no image data in response")
 	}
 
 	// Extract image data from the first part's inline data
 	var imageBytes []byte
+	var reportedMIME string
 	for _, part := range response.Candidates[0].Content.Parts {
 		if part.InlineData != nil && part.InlineData.Data != nil {
 			imageBytes = part.InlineData.Data
+			reportedMIME = part.InlineData.MIMEType
 			break
 		}
 	}
 
 	if len(imageBytes) == 0 {
-		return fmt.Errorf("no inline image data found in response")
+		return "", fmt.Errorf("no inline image data found in response")
 	}
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
 	}
 
+	// Gemini image models commonly return JPEG; name the file for what we got.
+	mimeType, ext := imageExtension(reportedMIME, imageBytes)
+	outputPath := outputBasePath + ext
+
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Image format: %s (extension: %s)\n", mimeType, ext)
+	}
+
 	// Write image to file
 	if err := os.WriteFile(outputPath, imageBytes, 0o600); err != nil {
-		return fmt.Errorf("failed to write image to file: %w", err)
+		return "", fmt.Errorf("failed to write image to file: %w", err)
 	}
 
 	// Save metadata alongside the image
@@ -494,7 +572,7 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputPath 
 		fmt.Fprintf(os.Stderr, "Warning: failed to save metadata: %v\n", err)
 	}
 
-	return nil
+	return outputPath, nil
 }
 
 // saveMetadata saves generation metadata as a JSON file alongside the image.
