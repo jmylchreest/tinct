@@ -1,6 +1,7 @@
 package niri
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -8,6 +9,21 @@ import (
 	"github.com/jmylchreest/tinct/internal/colour"
 	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/shared/testing"
 )
+
+// TestMain pins HOME (which the template loader's override base derives from)
+// and XDG_CONFIG_HOME to a temp dir so tests render the embedded templates
+// rather than any user overrides in ~/.config/tinct/templates.
+func TestMain(m *testing.M) {
+	dir, err := os.MkdirTemp("", "tinct-niri-test-home")
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("HOME", dir)
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, ".config"))
+	code := m.Run()
+	_ = os.RemoveAll(dir)
+	os.Exit(code)
+}
 
 // TestNiriPlugin runs all standard plugin tests using shared utilities.
 func TestNiriPlugin(t *testing.T) {
