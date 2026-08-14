@@ -457,11 +457,12 @@ func (p *ExternalInputPlugin) RegisterFlags(_ *cobra.Command) {
 }
 
 // Validate fail-fast checks the plugin's own configuration via the
-// optional Validator RPC. The plugin's persistent args (set via
-// `tinct plugins config`) are forwarded so it can validate keys it
-// cares about. Plugins that don't implement Validator (or run on JSON
-// stdio) report success and surface their errors at Generate time as
-// before.
+// optional Validator RPC. The args set by SetArgs (from --plugin-args
+// and the dynamic --<plugin>.<arg> flags) are forwarded so the plugin
+// can validate keys it cares about; the map is empty when nothing was
+// configured for this plugin. Plugins that don't
+// implement Validator (or run on JSON stdio) report success and
+// surface their errors at Generate time as before.
 func (p *ExternalInputPlugin) Validate() error {
 	pluginExec, err := executor.NewWithVerbose(p.path, false)
 	if err != nil {
@@ -574,11 +575,12 @@ func (p *ExternalOutputPlugin) RegisterFlags(_ *cobra.Command) {
 }
 
 // Validate fail-fast checks the plugin's own configuration via the
-// optional Validator RPC. The plugin's persistent args (set via
-// `tinct plugins config`) are forwarded so it can validate keys it
-// cares about. Plugins that don't implement Validator (or run on JSON
-// stdio) report success and surface their errors at Generate time as
-// before.
+// optional Validator RPC. The args set by SetArgs (from --plugin-args
+// and the dynamic --<plugin>.<arg> flags) are forwarded so the plugin
+// can validate keys it cares about; the map is empty when nothing was
+// configured for this plugin. Plugins that don't
+// implement Validator (or run on JSON stdio) report success and
+// surface their errors at Generate time as before.
 func (p *ExternalOutputPlugin) Validate() error {
 	pluginExec, err := executor.NewWithVerbose(p.path, false)
 	if err != nil {

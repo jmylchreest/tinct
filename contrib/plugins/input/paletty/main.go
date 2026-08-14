@@ -80,11 +80,11 @@ type PalettyPlugin struct {
 	themeHint string
 }
 
-// Validate fail-fast checks the persistent palette argument supplied at
-// `tinct plugins config` time, so misconfigured plugins error out
-// before the host attempts a fetch. Per-run --plugin-args overrides
-// land at Generate time and are validated there. Implements
-// tinctplugin.Validator.
+// Validate fail-fast checks the palette argument, so a misconfigured
+// plugin errors out before the host attempts a fetch. The host applies
+// --plugin-args and the dynamic --paletty.<arg> flags before calling
+// Validate, so the value checked here is the one Generate will see.
+// Implements tinctplugin.Validator.
 func (p *PalettyPlugin) Validate(args map[string]any) error {
 	raw, _ := args["palette"].(string)
 	if raw == "" {

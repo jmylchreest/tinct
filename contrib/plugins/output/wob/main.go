@@ -73,7 +73,7 @@ func main() {
 				// pipe values from the FIFO into wob's stdin. Coreutils
 				// is universally installed, so it's optional rather
 				// than required.
-				"optional_binaries": []string{"tail"},
+				"optional_binaries":  []string{"tail"},
 				"default_output_dir": "~/.config/wob/themes",
 				"generated_files":    []string{"tinct.ini"},
 				"pattern":            "two-file",

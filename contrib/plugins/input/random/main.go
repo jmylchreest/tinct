@@ -60,10 +60,11 @@ var (
 // optional Validator (protocol 0.3.0+) for fail-fast on bad plugin-args.
 type RandomPlugin struct{}
 
-// Validate checks that the persistent count/seed plugin-args (set via
-// `tinct plugins config`) are well-typed before the host spawns the
-// plugin to actually run. JSON unmarshal turns numbers into float64,
-// so we accept that and just sanity-check the value range.
+// Validate checks that the count/seed plugin-args (from --random.count
+// / --random.seed, or --plugin-args random='{…}') are well-typed before
+// the host spawns the plugin to actually run. JSON unmarshal turns
+// numbers into float64, so we accept that and just sanity-check the
+// value range.
 //
 // Implements tinctplugin.Validator.
 func (p *RandomPlugin) Validate(args map[string]any) error {
