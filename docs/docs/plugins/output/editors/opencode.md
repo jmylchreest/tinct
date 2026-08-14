@@ -133,7 +133,7 @@ then choose **tinct** again. Or restart OpenCode.
 4. **External state**: this plugin only writes to `~/.config/opencode/themes/`. To also remove the plugin binary:
 
    ```bash
-   tinct plugins uninstall opencode
+   tinct plugins delete opencode
    # or, for a source build:
    rm ~/.local/bin/tinct-plugin-opencode
    ```

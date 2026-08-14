@@ -89,10 +89,12 @@ No configuration required. Add `dunstify` to the `-o` plugin list whenever you w
 tinct generate -i image -p ~/wallpaper.jpg -o ghostty,waybar,dunstify
 ```
 
-Or enable it permanently so it runs alongside every generate:
+Include it in the `-o` list on every run to have it fire alongside your other
+plugins — there is no persistent enable/disable state, so a shell alias is the
+simplest way to make it permanent:
 
 ```bash
-tinct plugins enable output:dunstify
+alias tinct-theme='tinct generate -i image -o ghostty,waybar,dunstify -p'
 ```
 
 ## Reload behaviour
@@ -111,17 +113,17 @@ If the notification didn't appear:
 
 ## Uninstall / revert
 
-1. **Remove the config line**: this plugin has no config to remove. If you opted in permanently with `tinct plugins enable output:dunstify`, disable it:
-
-       tinct plugins disable output:dunstify
+1. **Remove the config line**: this plugin has no config to remove. Drop
+   `dunstify` from the `-o` list (or from whatever alias or script wraps your
+   `tinct generate` invocation) and it stops running.
 
 2. **Delete the generated files**: none — this plugin writes nothing to disk. Nothing to remove.
 
-3. **Reload to drop the styling**: not applicable. Once disabled, the plugin stops dispatching notifications immediately.
+3. **Reload to drop the styling**: not applicable. Once it's out of the `-o` list, the plugin stops dispatching notifications immediately.
 
 4. **External state**: this plugin only fires desktop notifications via the system notification daemon. No files outside `tinct generate`'s working set are touched. To remove the plugin binary:
 
-       tinct plugins uninstall dunstify
+       tinct plugins delete dunstify
        # or, for a source build:
        rm ~/.local/bin/tinct-plugin-dunstify
 

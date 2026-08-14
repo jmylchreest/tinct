@@ -69,7 +69,7 @@ source         = "custom"    # use the palette file instead of wallpaper generat
 custom_palette = "tinct"     # reads ~/.config/noctalia/palettes/tinct.json
 ```
 
-**Noctalia v4** (Quickshell/QML) stores schemes at `~/.config/noctalia/colorschemes/<name>/<name>.json` and selects them in **Settings → Color Scheme**. Point `--output-dir` accordingly if you run v4 (see [Flags](#flags)).
+**Noctalia v4** (Quickshell/QML) stores schemes at `~/.config/noctalia/colorschemes/<name>/<name>.json` and selects them in **Settings → Color Scheme**. Point `--noctalia.output-dir` accordingly if you run v4 (see [Flags](#flags)).
 
 ## Colour role mapping
 
@@ -113,15 +113,15 @@ qs -c noctalia-shell ipc call darkMode toggle
    ```bash
    rm ~/.config/noctalia/palettes/tinct.json
    ```
-3. `tinct plugins remove noctalia` to drop the plugin.
+3. `tinct plugins delete noctalia` to drop the plugin.
 
 ## Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--output-dir`, `-o` | `~/.config/noctalia/palettes` | Output directory for the palette file (use `~/.config/noctalia/colorschemes/tinct` for Noctalia v4) |
+| `--noctalia.output-dir` | `~/.config/noctalia/palettes` | Output directory for the palette file (use `~/.config/noctalia/colorschemes/tinct` for Noctalia v4) |
 
-Pass plugin flags via `--plugin-args`, e.g. `tinct generate ... -o noctalia --plugin-args noctalia.output-dir=/some/path`.
+Flags can also be passed as JSON via `--plugin-args`, e.g. `tinct generate ... -o noctalia --plugin-args noctalia='{"output-dir":"/some/path"}'`.
 
 ## Customising the template
 
@@ -139,7 +139,7 @@ Noctalia is still on its wallpaper/builtin generator. Set `[theme] source = "cus
 
 ### Plugin skipped ("Noctalia not installed")
 
-The plugin skips when `~/.config/noctalia` does not exist. Create it, or pass an explicit `--output-dir`.
+The plugin skips when `~/.config/noctalia` does not exist. Create it, or pass an explicit `--noctalia.output-dir`.
 
 ## Related plugins
 

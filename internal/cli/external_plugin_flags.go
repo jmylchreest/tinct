@@ -31,7 +31,40 @@ import (
 type externalPluginFlagMapping struct {
 	plugin  string
 	arg     string
-	argType string // "string" | "bool" | "int" — from FlagHelp.Type
+	argType string // one of flagTypeString, flagTypeBool, flagTypeInt
+}
+
+// The three kinds normaliseFlagType folds FlagHelp.Type down to. These
+// are the only values stored in externalPluginFlagMapping.argType, and
+// they gate both flag registration and the post-parse value read.
+const (
+	flagTypeString = "string"
+	flagTypeBool   = "bool"
+	flagTypeInt    = "int"
+)
+
+// normaliseFlagType folds the free-form FlagHelp.Type string down to the
+// three kinds the flag layer actually registers: "bool", "int" or
+// "string". FlagHelp.Type is documented by example rather than as a
+// closed enum, so plugins in the wild spell integers several ways
+// ("int64", "uint64"). Folding them here keeps a numeric argument from
+// silently registering as a string flag, which would then be rejected by
+// the plugin's own Validator (or, worse, ignored at Generate time where
+// the arg is read with a float64 type assertion).
+//
+// Anything unrecognised — "duration", "map", a plugin's own vocabulary —
+// stays a string and is passed through verbatim for the plugin to parse.
+func normaliseFlagType(t string) string {
+	switch strings.ToLower(strings.TrimSpace(t)) {
+	case "bool", "boolean":
+		return flagTypeBool
+	case "int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64",
+		"integer", "number":
+		return flagTypeInt
+	default:
+		return flagTypeString
+	}
 }
 
 // externalPluginFlags maps the cobra flag name (e.g. "paletty.palette")
@@ -67,10 +100,10 @@ func registerExternalPluginFlags(cmd *cobra.Command) {
 				continue
 			}
 			description := fmt.Sprintf("(%s) %s", meta.Name, f.Description)
-			switch strings.ToLower(f.Type) {
-			case "bool":
+			switch normaliseFlagType(f.Type) {
+			case flagTypeBool:
 				cmd.Flags().Bool(cobraName, parseBoolOr(f.Default, false), description)
-			case "int":
+			case flagTypeInt:
 				cmd.Flags().Int(cobraName, parseIntOr(f.Default, 0), description)
 			default:
 				cmd.Flags().String(cobraName, f.Default, description)
@@ -78,7 +111,7 @@ func registerExternalPluginFlags(cmd *cobra.Command) {
 			externalPluginFlags[cobraName] = externalPluginFlagMapping{
 				plugin:  meta.Name,
 				arg:     f.Name,
-				argType: strings.ToLower(f.Type),
+				argType: normaliseFlagType(f.Type),
 			}
 		}
 	}
@@ -101,9 +134,9 @@ func collectExternalPluginFlags(cmd *cobra.Command, pluginArgs map[string]string
 		// The flag was registered above with the matching type, so the
 		// type-check inside cobra's GetBool/GetInt/GetString cannot fail.
 		switch mapping.argType {
-		case "bool":
+		case flagTypeBool:
 			value, _ = cmd.Flags().GetBool(cobraName) //nolint:errcheck
-		case "int":
+		case flagTypeInt:
 			value, _ = cmd.Flags().GetInt(cobraName) //nolint:errcheck
 		default:
 			value, _ = cmd.Flags().GetString(cobraName) //nolint:errcheck

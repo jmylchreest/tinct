@@ -31,12 +31,20 @@ The `extract` command extracts a colour palette without generating any configura
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-c, --colors` | `16` | Number of colours to extract |
-| `-p, --path` | | Path or URL for input |
-| `-o, --output` | | Output file path |
-| `--format` | `palette` | Output format: `palette`, `hex`, `json` |
+| `-c, --image.colours` | `16` | Number of colours the image plugin extracts (1–256) |
+| `-p, --image.path` | | Path, directory, or URL for the image plugin |
+| `--count` | `32` | Number of colours in the resulting palette |
+| `-o, --output` | | Output file path (default: stdout) |
+| `-f, --format` | `palette` | Output format: `palette`, `hex`, `rgb`, `json`, `categorised` |
+| `--colour` | | Colour override as `role=hex`, repeatable |
 | `--preview` | `false` | Show visual preview |
 | `--backend` | `kmeans` | Extraction algorithm |
+| `--plugin-args` | | Arguments for an external plugin, as `<plugin>=<json>` |
+
+Each input plugin contributes its own `--<plugin>.<flag>` options — `--image.*`
+for the built-in image plugin, and for installed external plugins whatever
+their `--plugin-info` declares. Run `tinct extract --help` to see the set
+available on your machine.
 
 ## Output formats
 
@@ -121,6 +129,19 @@ tinct extract -i image -p "https://example.com/wallpaper.jpg"
 tinct extract -i remote-json \
   --remote-json.url "https://github.com/catppuccin/palette/raw/main/palette.json" \
   --remote-json.query "colors.mocha"
+```
+
+### From an external input plugin
+
+Installed external plugins take their arguments the same way here as on
+`generate` — either as dedicated flags or as JSON:
+
+```bash
+# Dedicated flags, registered from the plugin's own --plugin-info
+tinct extract -i random --random.seed 12345 --random.count 8
+
+# The equivalent JSON form
+tinct extract -i random --plugin-args random='{"seed":12345,"count":8}'
 ```
 
 ## Use cases

@@ -121,7 +121,7 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
   `scene.kdl` and `manifest.toml`. Other awob themes can adopt the
   tinct palette by adding `import "../_palettes/tinct.kdl"` to their
   scene; the palette refreshes in place on every `tinct generate` and
-  awob-daemon hot-reloads. Install with `tinct plugin install awob`.
+  awob-daemon hot-reloads. Install with `tinct plugins install awob`.
 
 ### Removed
 
@@ -130,7 +130,7 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
   `tinct-plugin-dunstify-bin`, `tinct-plugin-zed-bin`,
   `tinct-plugin-opencode-bin`, `tinct-plugin-keylightd-tray-bin`) are no
   longer built. Plugins should be installed via the plugin manager
-  (`tinct plugin install <name>`).
+  (`tinct plugins install <name>`).
 
   This is the canonical install path — it pins versions, sandboxes
   installs to `~/.local/share/tinct/plugins/`, and uninstalls cleanly.

@@ -44,7 +44,7 @@ No credentials, no network, no external prerequisites. You provide either `--fil
 
 ### File formats
 
-**JSON** — a tinct `CategorisedPalette` (the format `tinct extract --json` and the `markdown` output plugin produce). Roles and the `allColours` array are preserved.
+**JSON** — a tinct `CategorisedPalette` (the format `tinct extract -f json` and the `markdown` output plugin produce). Roles and the `allColours` array are preserved.
 
 **Text** — one entry per line. Blank lines and `#` comments are ignored. Each line is either a bare hex value or `role=hex`:
 

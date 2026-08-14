@@ -160,8 +160,10 @@ func (e *PluginExecutor) GetFlagHelp(ctx context.Context) ([]input.FlagHelp, err
 //
 // pluginRole selects which RPC client to dispense ("input" or "output");
 // callers know this from the registry that owns the plugin. args is the
-// plugin's persistent argument map (set via `tinct plugins config`),
-// passed through to the plugin so it can validate keys it cares about.
+// plugin's argument map, assembled from --plugin-args and the dynamic
+// --<plugin>.<arg> flags, passed through so the plugin can validate the
+// keys it cares about. It is empty when the caller never configured
+// args for this plugin.
 func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args map[string]any) error {
 	if e.protocolType != protocol.PluginTypeGoPlugin {
 		return nil

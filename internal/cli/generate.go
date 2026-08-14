@@ -26,6 +26,7 @@ import (
 const (
 	pluginTypeAll    = "all"
 	pluginTypeOutput = "output"
+	pluginTypeInput  = "input"
 )
 
 // isValidPath checks if a path is safe to use in commands.
@@ -492,7 +493,21 @@ func setPluginArgs(mgr *manager.Manager, pluginName, pluginType, argsJSON string
 			extPlugin.SetArgs(args)
 		}
 	}
-	// Could add input plugin support here in the future.
+
+	// Input plugins also receive their args through GenerateOptions at
+	// Generate time. Setting them here as well is what lets an external
+	// input plugin's optional Validator see the same values, since
+	// Validate() runs before Generate() and reads the stored args.
+	if pluginType == pluginTypeInput {
+		plugin, ok := mgr.GetInputPlugin(pluginName)
+		if !ok {
+			return fmt.Errorf("plugin not found")
+		}
+
+		if extPlugin, ok := plugin.(*manager.ExternalInputPlugin); ok {
+			extPlugin.SetArgs(args)
+		}
+	}
 
 	return nil
 }

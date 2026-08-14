@@ -54,11 +54,14 @@ The plugin uses tinct's go-plugin RPC protocol and is discovered automatically o
 ```bash
 # By URL — paste from your browser
 tinct generate -i paletty \
-  --plugin-arg palette=https://paletty.dev/p/MDRHC0lqRj/midnight-a \
+  --paletty.palette https://paletty.dev/p/MDRHC0lqRj/midnight-a \
   -o ghostty
 
 # By palette ID
-tinct generate -i paletty --plugin-arg palette=MDRHC0lqRj -o ghostty
+tinct generate -i paletty --paletty.palette MDRHC0lqRj -o ghostty
+
+# Preview the palette without writing theme files
+tinct extract -i paletty --paletty.palette MDRHC0lqRj
 ```
 
 ## Configuration / credentials
@@ -85,8 +88,8 @@ The remaining ANSI slots (cyan/white, bright variants, cursor/selection) are sti
 
 ```bash
 tinct generate -i paletty \
-  --plugin-arg palette=MDRHC0lqRj \
-  --plugin-arg map='{"accent1":"ansi.normal.6","accent2":"ansi.bright.5"}' \
+  --paletty.palette MDRHC0lqRj \
+  --paletty.map '{"accent1":"ansi.normal.6","accent2":"ansi.bright.5"}' \
   -o kitty
 ```
 
@@ -104,14 +107,16 @@ Any of these can appear on the right-hand side of a `map` entry.
 
 ## Flags
 
-This plugin uses `--plugin-arg key=value` rather than dedicated CLI flags:
+Once installed, tinct registers this plugin's arguments as `--paletty.<arg>`
+flags. They can also be supplied as JSON via
+`--plugin-args paletty='{"palette":"MDRHC0lqRj"}'`.
 
-| Argument | Type | Default | Description |
+| Flag | Type | Default | Description |
 |----------|------|---------|-------------|
-| `palette` | string | _(required)_ | paletty.dev palette ID or full URL |
-| `timeout` | duration | `10s` | HTTP timeout for the fetch |
-| `base_url` | string | `https://paletty.dev` | Override the base URL (advanced/testing) |
-| `map` | JSON object | _(none)_ | Extra role → paletty-key mappings merged on top of the defaults |
+| `--paletty.palette` | string | _(required)_ | paletty.dev palette ID or full URL |
+| `--paletty.timeout` | duration | `10s` | HTTP timeout for the fetch |
+| `--paletty.base_url` | string | `https://paletty.dev` | Override the base URL (advanced/testing) |
+| `--paletty.map` | JSON object | _(none)_ | Extra role → paletty-key mappings merged on top of the defaults |
 
 ## Output
 
@@ -123,7 +128,7 @@ This plugin **does not provide a wallpaper**. Combine it with the `image` or `go
 
 ### `plugin-arg 'palette' is required`
 
-Pass either a palette ID or a paletty.dev URL via `--plugin-arg palette=…`. IDs are alphanumeric tokens of 6–32 characters; URLs of the form `https://paletty.dev/p/<id>/<slug>` and `https://paletty.dev/api/palettes/<id>` both work.
+Pass either a palette ID or a paletty.dev URL via `--paletty.palette`. IDs are alphanumeric tokens of 6–32 characters; URLs of the form `https://paletty.dev/p/<id>/<slug>` and `https://paletty.dev/api/palettes/<id>` both work.
 
 ### `invalid paletty palette reference`
 
@@ -139,8 +144,8 @@ The plugin enforces a 10-second HTTP timeout by default. Raise it for slow links
 
 ```bash
 tinct generate -i paletty \
-  --plugin-arg palette=MDRHC0lqRj \
-  --plugin-arg timeout=30s \
+  --paletty.palette MDRHC0lqRj \
+  --paletty.timeout 30s \
   -o ghostty
 ```
 

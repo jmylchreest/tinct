@@ -42,10 +42,13 @@ Tinct supports different seed modes for deterministic or varied results:
 
 ```bash
 # Deterministic based on content
-tinct generate -i image -p ~/wallpaper.jpg --image.seed content
+tinct generate -i image -p ~/wallpaper.jpg --image.seed-mode content
 
 # Random results
-tinct generate -i image -p ~/wallpaper.jpg --image.seed random
+tinct generate -i image -p ~/wallpaper.jpg --image.seed-mode random
+
+# Pin an explicit seed
+tinct generate -i image -p ~/wallpaper.jpg --image.seed-mode manual --image.seed-value 42
 ```
 
 ## Ambient edge extraction

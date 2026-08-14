@@ -149,7 +149,7 @@ If Spotify is already configured to use the `tinct` theme, you only need `spicet
 5. **Remove the tinct plugin binary**:
 
    ```bash
-   tinct plugins uninstall spicetify
+   tinct plugins delete spicetify
    # or, for a source build:
    rm ~/.local/bin/tinct-plugin-spicetify
    ```

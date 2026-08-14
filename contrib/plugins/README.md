@@ -8,9 +8,8 @@ Quick guide for creating external plugins with Tinct. Plugins can be written in 
 # Add a plugin
 tinct plugins add ./my-plugin.sh
 
-# Enable and use
-tinct plugins enable my-plugin
-tinct generate -i image -o my-plugin
+# Use it — added plugins are available immediately
+tinct generate -i image -p ~/wallpaper.jpg -o my-plugin
 ```
 
 ## Two Plugin Protocols
@@ -194,16 +193,17 @@ All plugins must respond to `--plugin-info`:
 tinct plugins add ./plugin.sh
 tinct plugins add https://example.com/plugin.tar.gz:plugin
 
-# Enable/Disable
-tinct plugins enable my-plugin
-tinct plugins disable my-plugin
-tinct plugins clear my-plugin  # Reset
-
-# List
+# List (built-in and external)
 tinct plugins list
 
 # Delete
 tinct plugins delete my-plugin
+
+# Reinstall everything recorded in the manifest
+tinct plugins sync
+
+# Remove plugins that aren't in the manifest
+tinct plugins clean
 ```
 
 ## Examples
@@ -286,6 +286,7 @@ echo '{"dry_run":true}' | ./plugin.sh
 
 ## More Information
 
-- [Plugin Protocols](../../docs/PLUGIN-PROTOCOLS.md) - Detailed protocol comparison
-- [Hybrid Architecture](../../docs/HYBRID-PLUGIN-SUMMARY.md) - Implementation details
-- [Plugin Packages](../../docs/PLUGIN-PACKAGES.md) - Distribution guide
+- [Plugin protocols](../../docs/docs/plugin-development/protocols.md) - Detailed protocol comparison
+- [Creating plugins](../../docs/docs/plugin-development/creating.md) - Worked examples in shell, Python and Go
+- [Hooks](../../docs/docs/plugin-development/hooks.md) - Pre/post-execute behaviour
+- [Publishing](../../docs/docs/plugin-development/publishing.md) - Distribution guide

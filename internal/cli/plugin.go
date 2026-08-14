@@ -971,6 +971,41 @@ func registerExternalPlugin(meta *ExternalPluginMeta, resolveAbsolutePaths, _ bo
 
 // configureExternalPlugin applies additional configuration to an external plugin
 // (dry-run mode, plugin-specific arguments, etc.)
+// applyExternalPluginArgs forwards plugin args to every external plugin
+// registered from the manifest. Unlike configureExternalPlugin this only
+// sets arguments — extract writes no files, so there is no dry-run state
+// to apply. Call it before validating plugins so an optional Validator
+// sees the same args Generate() will receive.
+func applyExternalPluginArgs(pluginArgs map[string]string, verbose bool) {
+	if len(pluginArgs) == 0 {
+		return
+	}
+
+	lock, _, err := loadPluginManifest()
+	if err != nil || lock == nil {
+		return
+	}
+
+	for _, meta := range lock.ExternalPlugins {
+		pluginName := meta.Name
+		if pluginName == "" {
+			pluginName, _, _, _, _ = queryPluginMetadata(meta.Path)
+		}
+		if pluginName == "" {
+			continue
+		}
+
+		argsJSON, ok := pluginArgs[pluginName]
+		if !ok {
+			continue
+		}
+
+		if err := setPluginArgs(sharedPluginManager, pluginName, meta.Type, argsJSON); err != nil && verbose {
+			fmt.Fprintf(os.Stderr, " Failed to set args for plugin '%s': %v\n", pluginName, err)
+		}
+	}
+}
+
 func configureExternalPlugin(pluginName, pluginType string, dryRun bool, pluginArgs map[string]string, verbose bool) {
 	// Set dry-run mode if applicable.
 	if err := setPluginDryRun(sharedPluginManager, pluginName, pluginType, dryRun); err != nil {

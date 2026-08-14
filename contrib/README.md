@@ -113,7 +113,6 @@ contrib/
 6. **Submit PR:**
    - Include tests if applicable
    - Update this README to list your plugin
-   - Add to [docs/PLUGINS-WISHLIST.md](../docs/PLUGINS-WISHLIST.md) if it's a new plugin type
 
 ### Plugin Guidelines
 
@@ -157,14 +156,13 @@ tinct generate -i image -p wallpaper.jpg -o hyprland,kitty,notify-send,wob
 ## Resources
 
 - **[Plugin Development Guide](plugins/README.md)** - How to create external plugins
-- **[External Plugins Documentation](../docs/external-plugins.md)** - Comprehensive external plugin guide
+- **[Plugin Development](../docs/docs/plugin-development/index.md)** - Comprehensive external plugin guide
 - **[Built-in Plugins](../internal/plugin/README.md)** - Core plugin documentation
 - **[Main README](../README.md)** - Project overview and usage
-- **[Development Guide](../docs/DEVELOPMENT.md)** - Contributing to Tinct
+- **[Plugin protocols](../docs/docs/plugin-development/protocols.md)** - The `--plugin-info` and JSON-stdio contracts
 
 ## Questions?
 
 - Check existing plugin examples in this directory
 - Read the [plugin development guide](plugins/README.md)
 - Open an issue on GitHub
-- See [PLUGINS-WISHLIST.md](../docs/PLUGINS-WISHLIST.md) for planned plugins

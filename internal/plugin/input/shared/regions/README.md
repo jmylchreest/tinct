@@ -238,6 +238,5 @@ go test -cover ./internal/plugin/input/shared/regions
 
 ## See Also
 
-- [Ambient Lighting Research](../../../../../docs/AMBIENT-LIGHTING-RESEARCH.md)
-- [Region Selection Guide](../../../../../docs/AMBIENT-LIGHTING-REGIONS.md)
-- [RoleHints Documentation](../../../../../docs/ROLE-HINTS-USAGE.md)
+- [Colour extraction](../../../../../docs/docs/concepts/color-extraction.md) — including ambient edge extraction
+- [Colour roles](../../../../../docs/docs/concepts/color-roles.md) — the semantic role vocabulary these regions feed

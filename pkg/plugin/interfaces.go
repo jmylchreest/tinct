@@ -36,17 +36,23 @@ type InputPlugin interface {
 // Validator is an optional interface input or output plugins may
 // implement to fail-fast before any expensive work runs.
 //
-// The host calls Validate(args) with the plugin's persistent arguments
-// (set via `tinct plugins config <name> args=…`) and aborts the run if
-// it returns a non-nil error. Use it for cheap, deterministic checks
-// against the supplied args — missing required keys, malformed values,
-// unsupported combinations — not for network calls or filesystem-state
-// probing, which belong in PreExecute or Generate.
+// The host calls Validate(args) with the plugin's argument map and
+// aborts the run if it returns a non-nil error. Use it for cheap,
+// deterministic checks against the supplied args — missing required
+// keys, malformed values, unsupported combinations — not for network
+// calls or filesystem-state probing, which belong in PreExecute or
+// Generate.
 //
-// Per-invocation args supplied via `--plugin-args` are NOT included in
-// the map passed to Validate, because they're applied at Generate time
-// after Validate has run. Plugins that need to validate per-run args
-// should do so at the top of Generate.
+// The map is assembled from `--plugin-args <name>='{…}'` and the
+// dynamic `--<name>.<arg>` flags, which are merged and applied to the
+// plugin before Validate runs, on both `tinct generate` and `tinct
+// extract`. There is no persistent store for these: tinct.toml's
+// [plugin.<name>] tables are read only by built-in output plugins for
+// their output_dir, never by external plugins.
+//
+// Input plugins additionally receive the same map through
+// InputOptions.PluginArgs at Generate time; the copy stored for Validate
+// is what makes fail-fast possible before Generate is reached.
 //
 // Plugins that don't implement Validator are treated as always-valid;
 // older plugins built against pre-0.3.0 SDKs continue to work unchanged.

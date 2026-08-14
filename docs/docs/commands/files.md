@@ -14,14 +14,24 @@ tinct files <subcommand> [flags]
 
 ## Description
 
-Tinct tracks all files it generates in a manifest file. The `files` command lets you view and manage these tracked files.
+Every file tinct writes is recorded in a manifest, along with the plugin that
+produced it and a checksum of the content. The `files` command is how you
+inspect that manifest, check whether anything has drifted, bring pre-existing
+files under tinct's management, and clean up after plugins you've removed.
 
 ## Subcommands
 
 | Command | Description |
 |---------|-------------|
 | `list` | Show all tracked files |
-| `untrack` | Stop tracking a file |
+| `verify` | Check tracked files against their recorded checksums |
+| `adopt` | Bring existing files into the manifest under a plugin |
+| `delete` | Delete tracked files and drop them from the manifest |
+| `orphans` | List files whose plugin is no longer available |
+| `clean` | Delete orphaned files from disk |
+
+`list`, `verify` and `delete` accept `--plugin <name>` to narrow the operation
+to a single plugin.
 
 ## tinct files list
 
@@ -29,62 +39,114 @@ Display all files currently tracked by tinct:
 
 ```bash
 tinct files list
+
+# Only one plugin's files
+tinct files list --plugin kitty
 ```
-
-Output shows:
-
-- File path
-- Generation timestamp
-- Source plugin
-- Checksum
 
 ### Example output
 
 ```
-Tracked files:
-
-~/.config/kitty/current-theme.conf
-  Generated: 2024-01-15 14:30:22
-  Plugin: kitty
-  Checksum: abc123...
-
-~/.config/hypr/tinct.conf
-  Generated: 2024-01-15 14:30:22
-  Plugin: hyprland
-  Checksum: def456...
-
-~/.config/waybar/colors.css
-  Generated: 2024-01-15 14:30:22
-  Plugin: waybar
-  Checksum: ghi789...
+File                               Plugin  Size    Updated
+---------------------------------  ------  ------  ----------------
+~/.config/kitty/themes/tinct.conf  kitty   3.2 KB  2026-07-01 11:05
 ```
 
-## tinct files untrack
+## tinct files verify
 
-Stop tracking a file (does not delete it):
+Check that tracked files still match the checksums recorded when tinct wrote
+them. This is how you find files that have been edited by hand or clobbered by
+another tool:
 
 ```bash
-tinct files untrack ~/.config/kitty/current-theme.conf
+tinct files verify
+tinct files verify --plugin niri
 ```
 
-After untracking:
+Output flags each discrepancy and ends with a summary:
 
-- File remains on disk
-- Tinct won't overwrite it automatically
-- Use `--force` to write to untracked locations
+```
+MODIFIED: ~/.config/niri/tinct-colours.kdl
+MISSING: ~/.config/wofi/tinct-colours.css
+
+Verified: 36, Modified: 2, Missing: 6
+```
+
+`verify` exits non-zero when anything is modified or missing, so it works in a
+dotfile health-check script.
+
+## tinct files adopt
+
+Bring configuration files that already exist under tinct's management. Useful
+when you've been maintaining a colour file by hand and want tinct to take over.
+Both the plugin name and the file(s) are required:
+
+```bash
+tinct files adopt hyprland ~/.config/hypr/colors.conf
+tinct files adopt waybar ~/.config/waybar/tinct.css
+tinct files adopt kde-plasma ~/.local/share/color-schemes/*.colors
+```
+
+Once adopted, a file is tracked like any other — tinct will overwrite it on the
+next `generate` rather than skipping it.
+
+## tinct files delete
+
+Delete generated files and remove them from the manifest:
+
+```bash
+# Specific files
+tinct files delete ~/.config/hypr/colors.conf
+
+# Everything from one plugin
+tinct files delete --plugin kde-plasma
+
+# Skip the confirmation prompt
+tinct files delete --plugin kde-plasma --force
+```
+
+This removes the files from disk, not just from tracking.
+
+## tinct files orphans
+
+List files left behind by plugins that are no longer available — typically
+external plugins you've since deleted:
+
+```bash
+tinct files orphans
+```
+
+```
+Plugin: opencode (not available)
+  ~/.config/opencode/themes/tinct-light.json
+```
+
+## tinct files clean
+
+Delete every file `orphans` reports, and drop them from the manifest:
+
+```bash
+tinct files clean
+tinct files clean --force
+```
 
 ## Manifest file
 
-Tinct stores tracking information in `~/.config/tinct/.tinct-manifest.json`:
+Tinct stores tracking information in `~/.local/share/tinct/manifest.json`:
 
 ```json
 {
+  "version": "1",
+  "created_at": "2026-02-19T18:50:32Z",
+  "updated_at": "2026-07-01T11:05:14Z",
   "files": {
-    "~/.config/kitty/current-theme.conf": {
-      "path": "~/.config/kitty/current-theme.conf",
+    "/home/me/.config/kitty/themes/tinct.conf": {
       "plugin": "kitty",
-      "generated_at": "2024-01-15T14:30:22Z",
-      "checksum": "abc123..."
+      "created_at": "2026-02-19T18:50:32Z",
+      "updated_at": "2026-07-01T11:05:14Z",
+      "checksum": "sha256:b3e856e0f39217ec9b00a47c718143bdd5fe191922eb9352cb2878523f516946",
+      "size": 3277,
+      "action": "modified"
     }
   }
 }
@@ -98,10 +160,15 @@ When tinct generates a file, it:
 
 1. Checks if the location is already tracked
 2. If tracked, overwrites with new content
-3. If not tracked, checks if file exists
-4. If exists and not tracked, refuses to overwrite (unless `--force`)
+3. If not tracked, checks if the file exists
+4. If it exists and is not tracked, skips it (unless `--force`)
 
-This prevents accidentally overwriting user-modified files.
+This prevents accidentally overwriting files you wrote yourself. Skipped files
+are reported on stderr:
+
+```
+Skipping ~/.config/kitty/kitty.conf: file exists but is not tracked by tinct
+```
 
 ### Clean regeneration
 
@@ -115,43 +182,54 @@ tinct generate -i image -p ~/wallpaper1.jpg -o all
 tinct generate -i image -p ~/wallpaper2.jpg -o all
 ```
 
-### Manual file protection
+### Customising generated output
 
-If you manually edit a generated file:
+Tracked files are overwritten on every run, so hand-editing one is temporary —
+`tinct files verify` will report it as `MODIFIED`, and the next `generate` will
+discard your changes.
+
+To make a change stick, edit the plugin's *template* instead:
 
 ```bash
-# Untrack to protect from overwriting
-tinct files untrack ~/.config/kitty/current-theme.conf
-
-# Now tinct won't overwrite it (without --force)
+tinct plugins templates dump -o kitty
+# edit ~/.config/tinct/templates/kitty/tinct.conf.tmpl
 ```
+
+Tinct picks up custom templates automatically. See
+[templating](../templating/index.md).
 
 ## Examples
 
-### View tracked files
+### Audit what tinct owns
 
 ```bash
 tinct files list
+tinct files verify
 ```
 
-### Untrack all files for a plugin
+### Remove one plugin's output entirely
 
 ```bash
-# Get list of files
-tinct files list | grep kitty
-
-# Untrack each
-tinct files untrack ~/.config/kitty/current-theme.conf
+tinct files delete --plugin kitty --force
 ```
 
-### Force overwrite untracked
+### Clean up after removing an external plugin
 
 ```bash
-# Overwrite even if not tracked
+tinct plugins delete opencode
+tinct files orphans
+tinct files clean
+```
+
+### Force overwrite untracked files
+
+```bash
 tinct generate -i image -p ~/wallpaper.jpg -o all --force
 ```
 
 ## See also
 
 - [generate](./generate.md) - Generate theme files
+- [plugins](./plugins.md) - Manage input and output plugins
+- [Templating](../templating/index.md) - Customise generated output
 - [Output plugins](../plugins/output/index.md) - Output file locations

@@ -131,16 +131,20 @@ Each plugin writes to application-specific locations. Most use XDG directories:
 
 ### Post-generation hooks
 
-Many plugins support automatic reload:
+Most plugins reload the target application themselves after writing — kitty is
+signalled with `SIGUSR1`, waybar with `SIGUSR2`, and so on. A few make it
+opt-in via a flag:
 
 ```bash
-# Kitty with reload
-tinct generate -i image -p ~/wallpaper.jpg -o kitty --kitty.reload
+# Hyprland with reload
+tinct generate -i image -p ~/wallpaper.jpg -o hyprland --hyprland.reload
 ```
+
+Each plugin's page documents its reload behaviour.
 
 ### File tracking
 
-Generated files are tracked in `~/.config/tinct/.tinct-manifest.json`.
+Generated files are tracked in `~/.local/share/tinct/manifest.json`.
 
 ## See also
 

@@ -11,10 +11,20 @@
 
 # Contrib plugin binaries (any tinct-plugin-* binary anywhere under contrib/)
 contrib/**/tinct-plugin-*
-# Also ignore non-standard named binaries
+# Also ignore binaries named after their plugin directory, which is what
+# `go build ./...` produces inside each contrib module.
+contrib/plugins/input/paletty/paletty
 contrib/plugins/input/random/random
+contrib/plugins/output/awob/awob
 contrib/plugins/output/dunstify/dunstify
+contrib/plugins/output/keylightd-tray/keylightd-tray
+contrib/plugins/output/noctalia/noctalia
+contrib/plugins/output/opencode/opencode
+contrib/plugins/output/ptyxis/ptyxis
+contrib/plugins/output/spicetify/spicetify
 contrib/plugins/output/templater/templater
+contrib/plugins/output/wob/wob
+contrib/plugins/output/zed/zed
 # Python cache from any contrib plugin that has a __pycache__/
 contrib/**/__pycache__/
 

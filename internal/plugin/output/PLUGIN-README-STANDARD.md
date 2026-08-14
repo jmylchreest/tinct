@@ -375,5 +375,5 @@ The Makefile target `make check-readmes` invokes the builtin mode across the rep
 
 ## See also
 
-- [PLUGIN-STANDARD.md](./PLUGIN-STANDARD.md) — the broader plugin coding standard
+- [Built-in plugins](../README.md) — the coding standard for in-tree Go plugins
 - [Plugin protocols](../../../docs/docs/plugin-development/protocols.md) — the `--plugin-info` schema including the optional `metadata` block
