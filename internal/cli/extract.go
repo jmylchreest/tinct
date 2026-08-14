@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -23,6 +24,7 @@ var (
 	extractOutput      string
 	extractShowPreview bool
 	extractBackend     string
+	extractPluginArgs  map[string]string
 )
 
 // extractCmd represents the extract command.
@@ -63,6 +65,10 @@ Examples:
   # Extract for dark theme
   tinct extract -i image -p wallpaper.jpg --theme dark
 
+  # Pass arguments to an external input plugin
+  tinct extract -i random --random.seed 12345
+  tinct extract -i random --plugin-args random='{"seed":12345}'
+
 Note: All role names use camelCase (e.g., backgroundMuted, accent1)
       Position hints use camelCase (e.g., positionTopLeft, positionBottom)`,
 	Args: cobra.NoArgs,
@@ -81,6 +87,37 @@ func init() {
 	extractCmd.Flags().StringVarP(&extractOutput, "output", "o", "", "output file (default: stdout)")
 	extractCmd.Flags().BoolVar(&extractShowPreview, "preview", false, "show colour previews in terminal")
 	extractCmd.Flags().StringVar(&extractBackend, "backend", "kmeans", "Colour extraction backend (kmeans)")
+	extractCmd.Flags().StringToStringVar(&extractPluginArgs, "plugin-args", nil, "Plugin-specific arguments (key=value format, repeatable for multiple plugins)")
+
+	// Register --<plugin>.<arg> flags for installed external plugins, matching
+	// generate. External input plugins can declare required arguments (paletty's
+	// palette ID, for instance), so without these extract cannot drive them.
+	registerExternalPluginFlags(extractCmd)
+}
+
+// buildExtractPluginArgs decodes the --plugin-args entry for the selected
+// input plugin. Input plugins receive their arguments through
+// GenerateOptions rather than SetArgs, mirroring generate's
+// buildInputOptions. A malformed entry is reported (when verbose) and
+// treated as absent rather than failing the run, matching generate.
+func buildExtractPluginArgs(verbose bool) map[string]any {
+	argsJSON, ok := extractPluginArgs[extractInputPlugin]
+	if !ok {
+		return make(map[string]any)
+	}
+
+	var args map[string]any
+	if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+		if verbose {
+			fmt.Fprintf(os.Stderr, "   Failed to parse plugin args: %v\n", err)
+		}
+		return make(map[string]any)
+	}
+
+	if verbose {
+		fmt.Fprintf(os.Stderr, "   Plugin args: %v\n", args)
+	}
+	return args
 }
 
 // runExtract executes the extract command.
@@ -91,12 +128,20 @@ func runExtract(cmd *cobra.Command, _ []string) error { //nolint:gocyclo
 		return fmt.Errorf("failed to get verbose flag: %w", err)
 	}
 
+	// Merge values from dynamic --<plugin>.<arg> flags into the shared
+	// --plugin-args map before the executor reads it.
+	extractPluginArgs = collectExternalPluginFlags(cmd, extractPluginArgs)
+
 	// Reload plugin manager config from manifest if available (overrides env).
 	// Load plugin lock and apply configuration to shared manager.
 	if err := loadAndApplyPluginManifest(); err != nil && verbose {
 		// Log informational message if verbose - no manifest is acceptable
 		fmt.Fprintf(os.Stderr, "Note: No plugin manifest found (continuing with defaults)\n")
 	}
+
+	// Forward plugin args to external plugins so Validate() sees the same
+	// values Generate() will. Must run before the Validate() call below.
+	applyExternalPluginArgs(extractPluginArgs, verbose)
 
 	// Get input plugin from shared manager.
 	inputPlugin, ok := sharedPluginManager.GetInputPlugin(extractInputPlugin)
@@ -125,7 +170,7 @@ func runExtract(cmd *cobra.Command, _ []string) error { //nolint:gocyclo
 		DryRun:          false,
 		Backend:         extractBackend,
 		ColourOverrides: []string{},
-		PluginArgs:      make(map[string]any),
+		PluginArgs:      buildExtractPluginArgs(verbose),
 	}
 
 	// Generate raw palette from input plugin.
