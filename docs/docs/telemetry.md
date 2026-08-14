@@ -90,7 +90,7 @@ Prior to v0.1.26, telemetry settings were stored in `~/.local/share/tinct/teleme
 
 ## Why we collect telemetry
 
-Tinct supports 25+ output plugins and multiple input sources. Telemetry helps us:
+Tinct ships more than 35 output plugins and a range of input sources. Telemetry helps us:
 
 - **Prioritise maintenance** -- focus on the plugins people actually use
 - **Track plugin adoption** -- understand which external plugins are popular

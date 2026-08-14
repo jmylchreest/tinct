@@ -54,7 +54,7 @@ Tinct will:
 Most applications need to be reloaded or restarted to pick up changes:
 
 ```bash
-# Kitty (if --kitty.reload was not used)
+# Kitty (tinct signals it for you; this is the manual equivalent)
 kill -SIGUSR1 $(pgrep kitty)
 
 # Waybar
@@ -64,10 +64,11 @@ killall -SIGUSR2 waybar
 # No reload needed
 ```
 
-Some plugins support automatic reload via flags:
+Several plugins reload the target application themselves after writing, so the
+step above is usually unnecessary. A few make it opt-in via a flag:
 
 ```bash
-tinct generate -i image -p ~/Pictures/wallpaper.jpg -o kitty --kitty.reload
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o hyprland --hyprland.reload
 ```
 
 ## Step 6: Save your theme

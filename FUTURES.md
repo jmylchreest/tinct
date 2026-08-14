@@ -147,8 +147,8 @@ flag it.
 
 ### Why
 
-External plugins are installed via `tinct plugin install <repo>` and
-pinned in `tinct.lock`. Today users have to run `tinct plugin upgrade`
+External plugins are installed via `tinct plugins install <repo>` and
+pinned in `plugins.manifest.json`. Today users have to run `tinct plugins update`
 manually to pick up new releases — easy to forget, leaving themes stale
 or worse, broken against a tinct version they no longer match. Matugen
 sidesteps this by being template-driven (no plugins). For tinct's
@@ -174,7 +174,7 @@ CLI override: `--plugins.auto-upgrade=true|false`.
 Env override: `TINCT_PLUGINS_AUTO_UPGRADE=true`.
 
 Behaviour when enabled:
-1. Before resolving plugins, walk `tinct.lock` external entries.
+1. Before resolving plugins, walk `plugins.manifest.json` external entries.
 2. For each, check the timestamp of the last upgrade probe (cached in
    `$XDG_STATE_HOME/tinct/upgrade-cache.json`).
 3. If older than `auto_upgrade_interval`, query the source (GitHub
@@ -211,7 +211,7 @@ schema migration concerns because the file is regenerated on miss.
   precisely so a user with `auto_upgrade=true` doesn't issue 50 GitHub
   API calls on every `tinct generate`.
 - **Auto-installing new plugins.** Out of scope. Auto-upgrade only
-  touches plugins already in `tinct.lock`.
+  touches plugins already in `plugins.manifest.json`.
 
 ### Acceptance criteria
 
@@ -222,7 +222,7 @@ schema migration concerns because the file is regenerated on miss.
 - Network failures during the upgrade check produce a single warning
   line each and never abort generation.
 - The upgrade cache prevents repeated probes within the configured
-  interval; a manual `tinct plugin upgrade` always forces a check.
+  interval; a manual `tinct plugins update` always forces a check.
 - Documented in `docs/docs/configuration.md` alongside the existing
   `[plugin.<name>]` and `[telemetry]` tables.
 

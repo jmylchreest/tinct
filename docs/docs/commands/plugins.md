@@ -24,6 +24,8 @@ tinct plugins <subcommand> [flags]
 | `update` | Update all external plugins from their sources |
 | `sync` | Install missing plugins from the manifest |
 | `clean` | Remove plugins not in the manifest |
+| `templates list` | List embedded and overridden output templates |
+| `templates dump` | Export templates to `~/.config/tinct/templates/` for editing |
 | `repo add` | Add a plugin repository |
 | `repo list` | List configured repositories |
 | `repo delete` | Remove a repository |

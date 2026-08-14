@@ -143,7 +143,7 @@ If a regeneration doesn't appear:
 4. **External state**: this plugin only writes to Zed's `themes/` directory. To also remove the plugin binary:
 
    ```bash
-   tinct plugins uninstall zed
+   tinct plugins delete zed
    # or, for a source build:
    rm ~/.local/bin/tinct-plugin-zed
    ```

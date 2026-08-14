@@ -75,12 +75,16 @@ images = true
 # Override the cache directory. Default: $XDG_CACHE_HOME/tinct.
 dir = ""
 
+# Override the cached image filename. Default: auto-generated from a URL hash.
+filename = ""
+
 # Re-download cached images on every run. Default: false.
 overwrite = false
 ```
 
 These also support env-var overrides (`TINCT_TELEMETRY=off`,
 `TINCT_IMAGE_CACHE=false`, `TINCT_IMAGE_CACHE_DIR=/path`,
+`TINCT_IMAGE_CACHE_FILENAME=wallpaper.png`,
 `TINCT_IMAGE_CACHE_OVERWRITE=true`).
 
 ## File location

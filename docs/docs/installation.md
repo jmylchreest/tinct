@@ -20,7 +20,7 @@ paru -S tinct-bin
 
 ## From Go
 
-If you have Go 1.25+ installed:
+If you have Go 1.26+ installed:
 
 ```bash
 go install github.com/jmylchreest/tinct/cmd/tinct@latest

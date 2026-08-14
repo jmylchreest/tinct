@@ -160,6 +160,18 @@ Returns `r g b` space-separated format (for Zellij KDL).
 # Output: 137 180 250
 ```
 
+### `xterm256 <colour>`
+
+Maps the colour to the nearest xterm-256 palette entry and returns it as a
+`colorN` string, for applications that take xterm-256 indices rather than hex
+(Midnight Commander, tmux). System colours 0–15 are skipped so the result
+doesn't shift with the terminal's own palette.
+
+```go
+{{ get . "background" | xterm256 }}
+# Output: color235
+```
+
 ## Alpha manipulation
 
 ### `withAlpha <colour> <alpha>`
@@ -234,6 +246,51 @@ Get all colours sorted by luminance.
 {{ range $i, $colour := allColors . }}
 colour{{ $i }} {{ $colour | hex }}
 {{ end }}
+```
+
+## String helpers
+
+These take their operands *before* the subject string, so they chain naturally
+in a pipeline. Note this is the reverse of Go's `strings.TrimPrefix` and
+`strings.ReplaceAll` argument order.
+
+### `trimPrefix <prefix> <string>`
+
+Removes a leading prefix — most often the `#` on a hex colour, for formats that
+want bare hex.
+
+```go
+{{ get . "background" | hex | trimPrefix "#" }}
+# Output: 1e1e2e
+```
+
+### `trimSuffix <suffix> <string>`
+
+Removes a trailing suffix.
+
+```go
+{{ "tinct.conf" | trimSuffix ".conf" }}
+# Output: tinct
+```
+
+### `replace <old> <new> <string>`
+
+Replaces every occurrence of `old` with `new`. Useful for converting role names
+into the identifier style a config format expects.
+
+```go
+{{ range $role := allRoles . }}
+@define-color {{ $role | replace "_" "-" }} {{ get $ $role | hex }};
+{{ end }}
+```
+
+### `toLower <string>` / `toUpper <string>`
+
+Case conversion.
+
+```go
+{{ get . "accent1" | hex | toUpper }}
+# Output: #89B4FA
 ```
 
 ## Context fields

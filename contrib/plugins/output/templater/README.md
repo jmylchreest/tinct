@@ -158,7 +158,7 @@ Reload each downstream app yourself, using whatever method it expects — `dunst
 5. **External state**: templater only writes to the paths you configure. To also remove the plugin binary:
 
    ```bash
-   tinct plugins uninstall templater
+   tinct plugins delete templater
    # or, for a source build:
    rm ~/.local/bin/tinct-plugin-templater
    ```

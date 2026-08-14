@@ -16,17 +16,23 @@ Tinct uses Go's `text/template` syntax to generate configuration files for each 
 
 ```bash
 # List templates for a plugin
-tinct templates list --plugin hyprland
+tinct plugins templates list -o hyprland
+
+# List templates for every plugin
+tinct plugins templates list
 ```
 
 ### Dump templates for editing
 
 ```bash
 # Export all templates for a plugin
-tinct templates dump --plugin hyprland
+tinct plugins templates dump -o hyprland
 
-# Export a specific template
-tinct templates dump --plugin hyprland --file tinct-colours.conf.tmpl
+# Export templates for several plugins at once
+tinct plugins templates dump -o hyprland,waybar
+
+# Overwrite existing custom templates
+tinct plugins templates dump -o hyprland --force
 ```
 
 Templates are copied to `~/.config/tinct/templates/<plugin>/`.

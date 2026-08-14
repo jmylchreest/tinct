@@ -111,7 +111,7 @@ Plugins should:
 - Handle errors gracefully
 - Provide helpful error messages
 - Support `--help` flag
-- Follow the [Plugin Protocol](../../docs/PLUGIN-PROTOCOLS.md)
+- Follow the [plugin protocol](../../docs/docs/plugin-development/protocols.md)
 
 ## Questions?
 

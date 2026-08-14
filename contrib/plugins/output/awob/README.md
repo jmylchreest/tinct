@@ -148,7 +148,7 @@ systemctl --user restart awob-daemon   # if you run it as a user service
 
 5. **External state**: this plugin only writes to `~/.config/awob/themes/`. To also remove the plugin binary:
 
-       tinct plugins uninstall awob
+       tinct plugins delete awob
        # or, for a source build:
        rm ~/.local/bin/tinct-plugin-awob
 

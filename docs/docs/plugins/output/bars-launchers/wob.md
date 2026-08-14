@@ -215,7 +215,7 @@ tinct-plugin-wob send 0
 
    To remove the plugin binary:
 
-       tinct plugins uninstall wob
+       tinct plugins delete wob
        # or, for a source build:
        rm ~/.local/bin/tinct-plugin-wob
 

@@ -21,7 +21,7 @@ plugin:
 
 # random
 
-Generates a colour palette algorithmically — no image, no file, no network. Each colour is drawn from a deterministic PRNG (ChaCha8) seeded either explicitly via `--plugin-arg seed=…` or, by default, from `crypto/rand`. The same seed always produces the same palette, which makes this plugin useful for reproducible experimentation, stress-testing the categoriser with hostile inputs, and bootstrapping a theme when you have no image or palette in mind.
+Generates a colour palette algorithmically — no image, no file, no network. Each colour is drawn from a deterministic PRNG (ChaCha8) seeded either explicitly via `--random.seed` or, by default, from `crypto/rand`. The same seed always produces the same palette, which makes this plugin useful for reproducible experimentation, stress-testing the categoriser with hostile inputs, and bootstrapping a theme when you have no image or palette in mind.
 
 ## Installation
 
@@ -52,29 +52,41 @@ The plugin uses tinct's go-plugin RPC protocol and is discovered automatically o
 
 ```bash
 # Default — 32 random colours from a fresh crypto/rand seed
-tinct generate -i random -o tailwind
+tinct generate -i random -o kitty
 
 # Reproducible — same seed, same palette every run
-tinct generate -i random -o tailwind --plugin-arg seed=12345
+tinct generate -i random -o kitty --random.seed 12345
 
 # Smaller palette
-tinct generate -i random -o tailwind --plugin-arg count=16
+tinct generate -i random -o kitty --random.count 16
+
+# Inspect a palette without writing any theme files
+tinct extract -i random --random.seed 12345 --random.count 8
 ```
 
 ## Configuration / credentials
 
-No credentials, no network access, no files. The only inputs are the two plugin-args (`count` and `seed`). Both can be persisted via `tinct plugins config random` so subsequent `tinct generate -i random …` invocations don't need to repeat them.
+No credentials, no network access, no files. The only inputs are the two
+plugin-args (`count` and `seed`), and both are per-invocation — external plugin
+arguments are not read from `tinct.toml`, so there is nothing to persist. Wrap
+the call in a shell alias if you want a fixed seed:
 
-If `seed` is omitted, the plugin reads 8 bytes from `crypto/rand` and uses them as the ChaCha8 seed — so every run produces a different palette. Pass `seed` (any unsigned 64-bit integer) to lock generation to a known result.
+```bash
+alias tinct-random='tinct generate -i random --random.seed 12345 -o'
+```
+
+If `seed` is omitted, the plugin reads 8 bytes from `crypto/rand` and uses them as the ChaCha8 seed — so every run produces a different palette. Pass `seed` to lock generation to a known result. The flag is registered as a signed 64-bit integer, so use the `--plugin-args` JSON form if you need a value above 2^63-1.
 
 ## Flags
 
-This plugin uses `--plugin-arg key=value` rather than dedicated CLI flags:
+Once the plugin is installed, tinct registers its arguments as regular
+`--random.<arg>` flags. They can also be passed as JSON via
+`--plugin-args random='{"seed":12345}'`.
 
-| Argument | Type | Default | Description |
+| Flag | Type | Default | Description |
 |----------|------|---------|-------------|
-| `count` | integer | `32` | Number of colours to generate (0–4096) |
-| `seed` | integer | _(crypto/rand)_ | ChaCha8 seed for reproducible generation |
+| `--random.count` | integer | `32` | Number of colours to generate (0–4096) |
+| `--random.seed` | integer | _(crypto/rand)_ | ChaCha8 seed for reproducible generation |
 
 ## Output
 
@@ -90,7 +102,7 @@ This plugin **does not provide a wallpaper**.
 
 ### `plugin-arg 'count' must be a number`
 
-Plugin-args arrive as JSON, where numbers decode as `float64`. Pass the value bare (`count=32`) — quotes turn it into a string and the validator will reject it.
+Plugin-args arrive as JSON, where numbers decode as `float64`. The `--random.count` flag always sends a number, so this only bites with the raw JSON form: write `--plugin-args random='{"count":32}'`, not `'{"count":"32"}'` — quoting turns it into a string and the validator rejects it.
 
 ### Same seed produces a different palette than last time
 

@@ -123,7 +123,7 @@ pkill keylightd-tray && keylightd-tray &
 4. **External state**: this plugin only writes to `~/.config/keylightd/keylightd-tray/`. To also remove the plugin binary:
 
    ```bash
-   tinct plugins uninstall keylightd-tray
+   tinct plugins delete keylightd-tray
    # or, for a source build:
    rm ~/.local/bin/tinct-plugin-keylightd-tray
    ```

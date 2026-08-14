@@ -42,7 +42,7 @@ This repository contains:
 
 ## For Repository Maintainers
 
-This repository is maintained using `tinct-repo-manager`. See the [Repository Manager Guide](../../docs/REPOSITORY-MANAGER.md) for details.
+This repository is maintained using `tinct-repo-manager` (see [cmd/tinct-repo-manager](../../cmd/tinct-repo-manager)). Run `tinct-repo-manager --help` for the full command reference.
 
 ### Quick Start
 
@@ -168,11 +168,7 @@ Removed:
 Summary: +2 versions -1 removed
 ```
 
-See [Changelog Documentation](../../docs/REPOSITORY-CHANGELOG.md) for details on:
-- How changelog tracking works
-- Setting up GitHub Actions with changelog
-- Troubleshooting common issues
-- Migration guide for existing setups
+Run `tinct-repo-manager sync --help` for the full set of changelog and pruning options.
 
 Example workflow: [example-sync-workflow.yml](example-sync-workflow.yml)
 

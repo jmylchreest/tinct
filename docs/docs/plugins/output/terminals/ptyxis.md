@@ -119,7 +119,7 @@ The first time the palette is written, the user has to **select it** in **Prefer
 4. **External state**: this plugin only writes to Ptyxis's palettes directory. To also remove the plugin binary:
 
    ```bash
-   tinct plugins uninstall ptyxis
+   tinct plugins delete ptyxis
    # or, for a source build:
    rm ~/.local/bin/tinct-plugin-ptyxis
    ```
