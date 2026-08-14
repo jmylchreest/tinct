@@ -13,6 +13,17 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.4.2]
+*2026-08-14*
+
+### Added
+
+- feat(noctalia): add Noctalia shell external output plugin (144bddc)
+
+### Fixed
+
+- fix(google-genai): name generated images by actual format, not hardcoded .png (8b40397)
+
 ## [0.4.1]
 *2026-06-30*
 
