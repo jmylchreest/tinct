@@ -69,12 +69,12 @@ Generated images are cached under `~/.cache/tinct/generated/google-genai/`. Each
 | `gemini-3-pro-image-preview` | Nano Banana Pro — highest quality (~$0.134/image) |
 | `gemini-3.1-flash-image` | **Default.** Nano Banana 2, GA — fast, balanced quality (~$0.0672/image) |
 | `gemini-2.5-flash-image` | Nano Banana — cheapest Gemini image model (~$0.039/image) |
-| `imagen-4.0-ultra-generate-001` | Imagen 4 Ultra — _deprecated, shuts down 2026-08-17_ |
-| `imagen-4.0-generate-001` | Imagen 4 — _deprecated, shuts down 2026-08-17_ |
-| `imagen-4.0-fast-generate-001` | Imagen 4 Fast — _deprecated, shuts down 2026-08-17_ |
-| `imagen-3.0-generate-002` | Imagen 3 — _deprecated, shuts down 2026-08-17_ |
+| `imagen-4.0-ultra-generate-001` | Imagen 4 Ultra — _deprecated, earliest shutdown 2026-08-17_ |
+| `imagen-4.0-generate-001` | Imagen 4 — _deprecated, earliest shutdown 2026-08-17_ |
+| `imagen-4.0-fast-generate-001` | Imagen 4 Fast — _deprecated, earliest shutdown 2026-08-17_ |
+| `imagen-3.0-generate-002` | Imagen 3 — _retired; shutdown date was 2025-11-10, calls may already fail_ |
 
-The Imagen family is deprecated; migrate to the Gemini image models (Nano Banana). Run `tinct generate -i google-genai --ai.list-models` to print this list (works offline; no API key needed). Pricing is approximate — see the [Gemini API pricing page](https://ai.google.dev/gemini-api/docs/pricing).
+The Imagen family is deprecated; Google recommends migrating to `gemini-3.1-flash-image`. Selecting one of these models prints a migration warning to stderr. The dates above are Google's [published shutdown dates](https://ai.google.dev/gemini-api/docs/deprecations), which are the *earliest possible* retirement dates rather than firm ones — a model may keep working past them. Run `tinct generate -i google-genai --ai.list-models` to print this list (works offline; no API key needed). Pricing is approximate — see the [Gemini API pricing page](https://ai.google.dev/gemini-api/docs/pricing).
 
 ## Flags
 
