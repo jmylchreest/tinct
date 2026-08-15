@@ -2,6 +2,7 @@ package googlegenai
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -496,5 +497,210 @@ func TestWarnIfDeprecatedModelIsSilentForLiveModels(t *testing.T) {
 		if _, ok := deprecatedModels[id]; ok {
 			t.Errorf("live model %q must not be on the deprecation list", id)
 		}
+	}
+}
+
+// captureStderr runs fn with os.Stderr redirected and returns what it wrote.
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	orig := os.Stderr
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+
+	fn()
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("close pipe: %v", err)
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("read pipe: %v", err)
+	}
+	return string(out)
+}
+
+// TestWarnIfDeprecatedModelOutput checks the warning users actually see: that
+// it names the model, explains the status, and points at a live replacement.
+func TestWarnIfDeprecatedModelOutput(t *testing.T) {
+	tests := []struct {
+		name        string
+		model       string
+		wantWarning bool
+		wantSubstr  []string
+	}{
+		{
+			name:        "retired 3.0 reports its real past shutdown date",
+			model:       "imagen-3.0-generate-002",
+			wantWarning: true,
+			// The date this PR corrects: it was previously advertised as 2026-08-17.
+			wantSubstr: []string{"imagen-3.0-generate-002", "retired", "2025-11-10", "gemini-3.1-flash-image"},
+		},
+		{
+			name:        "deprecated 4.0 reports earliest-shutdown wording",
+			model:       "imagen-4.0-generate-001",
+			wantWarning: true,
+			wantSubstr:  []string{"imagen-4.0-generate-001", "earliest shutdown", "2026-08-17", "gemini-3.1-flash-image"},
+		},
+		{
+			name:        "ultra names the nearest quality tier as well",
+			model:       "imagen-4.0-ultra-generate-001",
+			wantWarning: true,
+			wantSubstr:  []string{"gemini-3.1-flash-image", "gemini-3-pro-image-preview"},
+		},
+		{
+			name:        "default model is silent",
+			model:       defaultModel,
+			wantWarning: false,
+		},
+		{
+			name:        "unknown model is silent",
+			model:       "some-future-model",
+			wantWarning: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := captureStderr(t, func() { warnIfDeprecatedModel(tt.model) })
+
+			if !tt.wantWarning {
+				if out != "" {
+					t.Errorf("expected no warning for %q, got %q", tt.model, out)
+				}
+				return
+			}
+
+			if out == "" {
+				t.Fatalf("expected a warning for %q, got none", tt.model)
+			}
+			for _, want := range tt.wantSubstr {
+				if !strings.Contains(out, want) {
+					t.Errorf("warning for %q missing %q\ngot: %s", tt.model, want, out)
+				}
+			}
+		})
+	}
+}
+
+// TestWarnIfDeprecatedModelNeverMentionsARetiredReplacement guards the failure
+// mode where advice sends a user from one dead model to another: Google's own
+// table lists imagen-4.0-generate-001 as the replacement for imagen-3.0, and
+// that model is itself on the way out.
+func TestWarnIfDeprecatedModelNeverMentionsARetiredReplacement(t *testing.T) {
+	for model := range deprecatedModels {
+		out := captureStderr(t, func() { warnIfDeprecatedModel(model) })
+		for dead := range deprecatedModels {
+			if dead == model {
+				continue
+			}
+			if strings.Contains(out, dead) {
+				t.Errorf("advice for %q points at deprecated model %q: %s", model, dead, out)
+			}
+		}
+	}
+}
+
+// captureStdout runs fn with os.Stdout redirected and returns what it wrote.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	orig := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = orig }()
+
+	fn()
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("close pipe: %v", err)
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("read pipe: %v", err)
+	}
+	return string(out)
+}
+
+// TestListModelsOutput covers the catalogue rendering, which is the only place
+// a user can discover model status. It runs offline and needs no API key.
+func TestListModelsOutput(t *testing.T) {
+	out := captureStdout(t, ListModels)
+
+	if out == "" {
+		t.Fatal("ListModels produced no output")
+	}
+
+	// Every model the plugin accepts must be listed, or users cannot discover it.
+	for _, id := range []string{
+		"gemini-3-pro-image-preview",
+		"gemini-3.1-flash-image",
+		"gemini-2.5-flash-image",
+		"imagen-4.0-ultra-generate-001",
+		"imagen-4.0-generate-001",
+		"imagen-4.0-fast-generate-001",
+		"imagen-3.0-generate-002",
+	} {
+		if !strings.Contains(out, id) {
+			t.Errorf("model %q missing from ListModels output", id)
+		}
+	}
+
+	// The default must be identified as such.
+	if !strings.Contains(out, defaultModel) {
+		t.Errorf("default model %q not named in output", defaultModel)
+	}
+	if !strings.Contains(out, "Default Model:") {
+		t.Error("output does not label the default model")
+	}
+
+	// Every deprecated model must carry a visible note. Without this the
+	// catalogue can silently list a dead model as though it were live.
+	for id := range deprecatedModels {
+		idx := strings.Index(out, id)
+		if idx < 0 {
+			continue // reported above
+		}
+		rest := out[idx:]
+		if end := strings.Index(rest, "ID: "); end > 0 {
+			rest = rest[:end]
+		}
+		if !strings.Contains(rest, "Notes:") {
+			t.Errorf("deprecated model %q has no Notes line in ListModels output", id)
+		}
+	}
+}
+
+// TestListModelsReportsCorrectedShutdownDates pins the specific dates this
+// change fixes, so a future edit cannot quietly reintroduce the wrong one.
+func TestListModelsReportsCorrectedShutdownDates(t *testing.T) {
+	out := captureStdout(t, ListModels)
+
+	// imagen-3.0 was previously advertised with the 4.0 family's date.
+	idx := strings.Index(out, "imagen-3.0-generate-002")
+	if idx < 0 {
+		t.Fatal("imagen-3.0-generate-002 missing from output")
+	}
+	entry := out[idx:]
+	if end := strings.Index(entry, "ID: "); end > 0 {
+		entry = entry[:end]
+	}
+	if strings.Contains(entry, "2026-08-17") {
+		t.Errorf("imagen-3.0-generate-002 still shows the 4.0 shutdown date:\n%s", entry)
+	}
+	if !strings.Contains(entry, "2025-11-10") {
+		t.Errorf("imagen-3.0-generate-002 missing its real shutdown date:\n%s", entry)
+	}
+
+	// Google's dates are earliest-possible; the wording must not overstate them.
+	if strings.Contains(out, "shuts down 2026-08-17") {
+		t.Error("output states a firm shutdown date; Google publishes earliest-possible dates")
 	}
 }
