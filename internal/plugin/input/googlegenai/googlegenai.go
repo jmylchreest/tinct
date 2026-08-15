@@ -36,6 +36,33 @@ const (
 	defaultBackend = "gemini-api"
 )
 
+// deprecatedModels maps a retired or soon-to-be-retired model ID to the
+// advice printed when someone selects it explicitly. The same information
+// is in the ListModels catalogue, but that is only seen by users who run
+// --ai.list-models; a model pinned in a script or tinct.toml would
+// otherwise fail with nothing but the raw API error.
+//
+// Dates are Google's published shutdown dates. Per
+// https://ai.google.dev/gemini-api/docs/deprecations these are the
+// earliest possible retirement dates rather than firm ones, except where
+// the date has already passed.
+var deprecatedModels = map[string]string{
+	"imagen-4.0-ultra-generate-001": "deprecated; earliest shutdown 2026-08-17. Google recommends gemini-3.1-flash-image (gemini-3-pro-image-preview is the nearest quality tier)",
+	"imagen-4.0-generate-001":       "deprecated; earliest shutdown 2026-08-17. Migrate to gemini-3.1-flash-image",
+	"imagen-4.0-fast-generate-001":  "deprecated; earliest shutdown 2026-08-17. Migrate to gemini-3.1-flash-image",
+	"imagen-3.0-generate-002":       "retired; its shutdown date was 2025-11-10, so calls may already fail. Migrate to gemini-3.1-flash-image",
+}
+
+// warnIfDeprecatedModel prints migration advice to stderr when the chosen
+// model is on the deprecation list. It never blocks the run: the dates are
+// Google's earliest possible retirement dates, so a model may well keep
+// working past them.
+func warnIfDeprecatedModel(model string) {
+	if advice, ok := deprecatedModels[model]; ok {
+		fmt.Fprintf(os.Stderr, "Warning: model %q is %s\n", model, advice)
+	}
+}
+
 // ImageMetadata contains metadata about a generated image.
 type ImageMetadata struct {
 	// Generation parameters
@@ -134,6 +161,10 @@ func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*col
 	if model == "" || model == "auto" {
 		model = defaultModel
 	}
+
+	// Warn as soon as the model is known, so the advice is visible on
+	// dry runs and on failures that happen before generation starts.
+	warnIfDeprecatedModel(model)
 
 	if opts.Verbose {
 		fmt.Fprintf(os.Stderr, "Google Gen AI Plugin Configuration:\n")
@@ -657,7 +688,7 @@ func ListModels() {
 			Description: "Highest quality, best prompt alignment",
 			Cost:        "$0.06",
 			Generation:  "4",
-			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-3-pro-image-preview",
+			Notes:       "Deprecated — earliest shutdown 2026-08-17. Google recommends gemini-3.1-flash-image; gemini-3-pro-image-preview is the nearest quality tier",
 		},
 		{
 			ID:          "imagen-4.0-generate-001",
@@ -665,7 +696,7 @@ func ListModels() {
 			Description: "Flagship model with balanced quality and speed",
 			Cost:        "$0.04",
 			Generation:  "4",
-			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-2.5-flash-image",
+			Notes:       "Deprecated — earliest shutdown 2026-08-17; migrate to gemini-3.1-flash-image",
 		},
 		{
 			ID:          "imagen-4.0-fast-generate-001",
@@ -673,7 +704,7 @@ func ListModels() {
 			Description: "Fastest generation, ideal for high-volume tasks",
 			Cost:        "$0.02",
 			Generation:  "4",
-			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-2.5-flash-image",
+			Notes:       "Deprecated — earliest shutdown 2026-08-17; migrate to gemini-3.1-flash-image",
 		},
 		{
 			ID:          "imagen-3.0-generate-002",
@@ -681,7 +712,7 @@ func ListModels() {
 			Description: "Previous generation model (stable)",
 			Cost:        "$0.03",
 			Generation:  "3",
-			Notes:       "Deprecated — shuts down 2026-08-17; migrate to gemini-2.5-flash-image",
+			Notes:       "Retired — shutdown date was 2025-11-10; expect API errors. Migrate to gemini-3.1-flash-image",
 		},
 	}
 

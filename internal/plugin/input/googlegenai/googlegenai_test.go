@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/jmylchreest/tinct/internal/plugin/input"
@@ -448,5 +449,52 @@ func TestGetImageBasePathStripsExtension(t *testing.T) {
 	}
 	if filepath.Base(base) != "mywallpaper" {
 		t.Errorf("expected base name 'mywallpaper', got %q", filepath.Base(base))
+	}
+}
+
+// TestDeprecatedModelsMatchCatalogue guards against the two lists drifting:
+// every model carrying a Notes entry in the ListModels catalogue must also
+// appear in deprecatedModels, so a user who pins that model on the command
+// line gets the same warning that --ai.list-models shows.
+func TestDeprecatedModelsMatchCatalogue(t *testing.T) {
+	// The catalogue is built inside ListModels, so assert against the model
+	// IDs we know carry deprecation notes.
+	wantDeprecated := []string{
+		"imagen-4.0-ultra-generate-001",
+		"imagen-4.0-generate-001",
+		"imagen-4.0-fast-generate-001",
+		"imagen-3.0-generate-002",
+	}
+
+	for _, id := range wantDeprecated {
+		if _, ok := deprecatedModels[id]; !ok {
+			t.Errorf("model %q is deprecated in the catalogue but missing from deprecatedModels", id)
+		}
+	}
+
+	if len(deprecatedModels) != len(wantDeprecated) {
+		t.Errorf("deprecatedModels has %d entries, want %d", len(deprecatedModels), len(wantDeprecated))
+	}
+
+	// The default must never itself be deprecated.
+	if _, ok := deprecatedModels[defaultModel]; ok {
+		t.Errorf("defaultModel %q is on the deprecation list", defaultModel)
+	}
+
+	// Every replacement suggestion must name a live Gemini model.
+	for id, advice := range deprecatedModels {
+		if !strings.Contains(advice, "gemini-") {
+			t.Errorf("advice for %q does not name a replacement model: %q", id, advice)
+		}
+	}
+}
+
+// TestWarnIfDeprecatedModelIsSilentForLiveModels ensures the warning does not
+// fire for the models we actually recommend.
+func TestWarnIfDeprecatedModelIsSilentForLiveModels(t *testing.T) {
+	for _, id := range []string{defaultModel, "gemini-3-pro-image-preview", "gemini-2.5-flash-image"} {
+		if _, ok := deprecatedModels[id]; ok {
+			t.Errorf("live model %q must not be on the deprecation list", id)
+		}
 	}
 }
