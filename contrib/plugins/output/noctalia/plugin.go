@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/jmylchreest/tinct/pkg/colour"
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
@@ -25,6 +27,16 @@ var templatesFS embed.FS
 // <paletteName>.json and selected in config via `custom_palette = "tinct"`.
 const paletteName = "tinct"
 
+// noctaliaBinary is the Noctalia CLI, used to nudge a running shell into
+// re-reading the palette.
+const noctaliaBinary = "noctalia"
+
+// reloadCommand is the command PostExecute runs. GetMetadata advertises
+// the same thing, so both derive from here rather than drifting apart.
+func reloadCommand() []string {
+	return []string{noctaliaBinary, "msg", "config-reload"}
+}
+
 // Plugin implements the tinct OutputPlugin interface for the Noctalia shell.
 //
 // Noctalia (v5) ships its own Material You generator, but reads a fixed
@@ -37,6 +49,18 @@ type Plugin struct {
 	commit    string
 	date      string
 	outputDir string
+
+	// paletteUnchanged records that Generate rendered a palette byte-
+	// identical to the one already on disk, so PostExecute can skip the
+	// reload. Reloading Noctalia re-reads its whole config tree, which is
+	// wasted work when nothing about the colours moved.
+	//
+	// The zero value deliberately means "reload". Generate and
+	// PostExecute only share this field when the host keeps one plugin
+	// subprocess for the run; against an older host they run in separate
+	// processes, the flag stays false, and the reload happens
+	// unconditionally as it did before.
+	paletteUnchanged bool
 }
 
 // noctaliaConfigDir resolves Noctalia's config directory, honouring
@@ -172,10 +196,30 @@ func (p *Plugin) Generate(_ context.Context, palette tinctplugin.PaletteData) (m
 		return nil, fmt.Errorf("failed to create palettes directory %q: %w", outputDir, err)
 	}
 
+	palettePath := filepath.Join(outputDir, paletteName+".json")
+	p.paletteUnchanged = matchesFileOnDisk(palettePath, content)
+	if p.paletteUnchanged && palette.Verbose {
+		fmt.Fprintf(os.Stderr, "   Palette unchanged; will skip the reload\n")
+	}
+
 	files := map[string][]byte{
-		filepath.Join(outputDir, paletteName+".json"): content,
+		palettePath: content,
 	}
 	return files, nil
+}
+
+// matchesFileOnDisk reports whether path already holds exactly content.
+//
+// Called from Generate, before the host writes the file, so the value on
+// disk is still the previous run's. Any uncertainty — missing file, read
+// error — answers false, because a spurious reload is cheap and a missed
+// one leaves the shell showing stale colours.
+func matchesFileOnDisk(path string, content []byte) bool {
+	existing, err := os.ReadFile(path) // #nosec G304 -- path is the plugin's own output file
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(existing, content)
 }
 
 // loadTemplate loads and parses the palette variant template.
@@ -225,49 +269,65 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	return false, "", nil
 }
 
-// PostExecute is a no-op — the reload is declared statically in Hooks()
-// so the host's shared runner owns the binary check and the timeout.
-func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
-	return nil
-}
-
-// Hooks declares Noctalia's static post-execute behaviour.
+// PostExecute nudges the running shell to re-read the palette, unless
+// Generate found the file already byte-identical.
 //
-// Noctalia v5 does NOT pick up palette changes on its own. It inotifies
+// Noctalia v5 does not pick up palette changes on its own. It inotifies
 // ~/.config/noctalia (and ~/.local/state/noctalia) non-recursively and
 // only treats a changed *.toml as a config change. The palette misses on
 // both counts: palettes/ is a subdirectory, and tinct.json is not TOML.
-// So a regenerated palette produces no event and the running shell keeps
-// the colours it resolved at startup.
+// So a regenerated palette produces no event, and the running shell
+// keeps the colours it resolved at startup.
 //
-// `noctalia msg config-reload` forces a config reload, which re-runs the
+// `noctalia msg config-reload` forces a config reload, which re-runs
 // theme resolution and — for a custom palette source — re-reads the JSON
-// from disk. That is the whole fix, so it is the reload verb here.
+// from disk. Not `color-scheme-set custom <name>`: that re-reads the
+// file too, but persists a theme override into
+// ~/.local/state/noctalia/settings.toml which then shadows the user's
+// own config.
 //
-// The binary is optional rather than required: the plugin detects
-// Noctalia by config directory (see PreExecute), which lets users
-// generate into a config tree for a machine where the binary is absent.
-// The host runner warns about the missing binary in verbose mode and the
-// exec verb is a non-fatal no-op when it cannot be found.
+// This is imperative rather than a hooks.Spec reload verb because the
+// decision is dynamic. The declarative verb fires on every write, and
+// hooks.Spec's function fields (ReloadFn) cannot cross the RPC boundary
+// to an external plugin. The host still bounds the call —
+// runPostExecutionHooks gives PostExecute a 10s context.
 //
-// `color-scheme-set custom <name>` also re-reads the file, but persists a
-// theme override into ~/.local/state/noctalia/settings.toml that then
-// shadows the user's own config — config-reload has no such side effect.
+// Failure is deliberately silent: Noctalia may simply not be running,
+// which is not worth failing a generate over.
+func (p *Plugin) PostExecute(ctx context.Context, files []string) error {
+	if len(files) == 0 || p.paletteUnchanged {
+		return nil
+	}
+	if _, err := exec.LookPath(noctaliaBinary); err != nil {
+		return nil
+	}
+
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	args := reloadCommand()
+	_ = exec.CommandContext(cctx, args[0], args[1:]...).Run()
+	return nil
+}
+
+// Hooks declares Noctalia's static pre-execute behaviour: how to tell
+// whether Noctalia is installed at all.
 //
-// Detection is by config directory, declared as RequiredDirs so the
-// shared runner skips the plugin (with a consistent reason string) when
-// Noctalia is not installed. The path is resolved here rather than
-// written as a "~/.config/noctalia" literal because the runner does not
-// expand environment variables — see noctaliaConfigDir.
+// Detection is by config directory rather than by binary, so a user can
+// generate into a config tree for a machine where the CLI is absent.
+// That is why `noctalia` is an optional binary here — its absence limits
+// the reload (see PostExecute), it does not make the plugin unusable.
+//
+// The directory is resolved rather than written as a "~/.config/noctalia"
+// literal because the hook runner only expands ~, with no environment
+// variable support — see noctaliaConfigDir.
+//
+// The reload itself is not declared here: it depends on whether the
+// palette actually changed, which a static spec cannot express.
 //
 // Implements tinctplugin.HooksProvider (protocol 0.3.0+).
 func (p *Plugin) Hooks() hooks.Spec {
 	spec := hooks.Spec{
-		OptionalBinaries: []string{"noctalia"},
-		Reload: &hooks.ReloadSpec{
-			Verb: hooks.VerbExec,
-			Args: []string{"noctalia", "msg", "config-reload"},
-		},
+		OptionalBinaries: []string{noctaliaBinary},
 	}
 	// With an explicit --noctalia.output-dir the user has said where to
 	// write, so the config-directory check would be wrong — that is the
@@ -325,7 +385,7 @@ func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 				// declarative hook in Hooks() nudges the running shell to
 				// re-resolve the palette from disk.
 				Method:             "ipc",
-				Command:            "noctalia msg config-reload",
+				Command:            strings.Join(reloadCommand(), " "),
 				UserActionRequired: false,
 			},
 		},
