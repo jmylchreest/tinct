@@ -544,3 +544,50 @@ func copyTestScript(t *testing.T, scriptName string) string {
 
 	return pluginPath
 }
+
+// --- Configure -------------------------------------------------------------
+
+// Configure returns its error rather than swallowing it, so a failure to
+// hand a plugin its args is diagnosable instead of silent. It stays
+// non-fatal at the call site, but the executor must not hide it.
+func TestConfigureReturnsErrorForUnknownKind(t *testing.T) {
+	pluginPath := copyTestScript(t, "basic-input.sh")
+	executor, err := NewWithVerbose(pluginPath, false)
+	if err != nil {
+		t.Fatalf("Failed to create executor: %v", err)
+	}
+	defer executor.Close()
+
+	// Force the go-plugin branch so the kind switch is reached; a JSON
+	// stdio executor returns early before it.
+	executor.protocolType = protocol.PluginTypeGoPlugin
+
+	err = executor.Configure(context.Background(), "bogus", plugin.ConfigureRequest{})
+	if err == nil {
+		t.Fatal("Configure accepted an unknown plugin kind")
+	}
+	if !strings.Contains(err.Error(), "bogus") {
+		t.Errorf("error %q, want it to name the offending kind", err.Error())
+	}
+}
+
+// JSON-stdio plugins have no Configure RPC; the call is a no-op rather
+// than an error, so those plugins keep working untouched.
+func TestConfigureIsNoOpForJSONStdio(t *testing.T) {
+	pluginPath := copyTestScript(t, "basic-input.sh")
+	executor, err := NewWithVerbose(pluginPath, false)
+	if err != nil {
+		t.Fatalf("Failed to create executor: %v", err)
+	}
+	defer executor.Close()
+
+	if executor.protocolType != protocol.PluginTypeJSON {
+		t.Skipf("fixture is not a JSON stdio plugin (got %v)", executor.protocolType)
+	}
+
+	for _, kind := range []string{"input", "output", "bogus"} {
+		if err := executor.Configure(context.Background(), kind, plugin.ConfigureRequest{}); err != nil {
+			t.Errorf("Configure(%q) returned %v, want nil for a JSON stdio plugin", kind, err)
+		}
+	}
+}
