@@ -13,6 +13,7 @@ import (
 
 	"github.com/jmylchreest/tinct/pkg/colour"
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	tincttemplate "github.com/jmylchreest/tinct/pkg/template"
 )
 
@@ -37,22 +38,27 @@ type Plugin struct {
 	outputDir string
 }
 
-// noctaliaConfigDir returns ~/.config/noctalia (honouring NOCTALIA_CONFIG_HOME
-// then XDG_CONFIG_HOME), and whether the directory currently exists.
-func noctaliaConfigDir() (dir string, exists bool) {
+// noctaliaConfigDir resolves Noctalia's config directory, honouring
+// NOCTALIA_CONFIG_HOME then XDG_CONFIG_HOME before falling back to
+// ~/.config/noctalia. It returns the path whether or not it exists —
+// existence is the hook runner's business (see Hooks) — or "" when even
+// the home directory cannot be determined.
+//
+// This stays a local helper rather than a hooks.Spec literal because
+// RequiredDirs paths are only ~-expanded by the runner; it has no
+// env-var expansion, so the XDG chain has to be resolved here.
+func noctaliaConfigDir() string {
 	if c := os.Getenv("NOCTALIA_CONFIG_HOME"); c != "" {
-		dir = c
-	} else if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
-		dir = filepath.Join(x, "noctalia")
-	} else {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", false
-		}
-		dir = filepath.Join(home, ".config", "noctalia")
+		return c
 	}
-	_, err := os.Stat(dir)
-	return dir, err == nil
+	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
+		return filepath.Join(x, "noctalia")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".config", "noctalia")
 }
 
 // resolveOutputDir returns the palettes directory to write into.
@@ -60,7 +66,7 @@ func (p *Plugin) resolveOutputDir() (string, error) {
 	if p.outputDir != "" {
 		return p.outputDir, nil
 	}
-	dir, _ := noctaliaConfigDir()
+	dir := noctaliaConfigDir()
 	if dir == "" {
 		return "", fmt.Errorf("failed to resolve noctalia config directory")
 	}
@@ -181,21 +187,64 @@ func renderVariant(tmpl *template.Template, themeData *colour.ThemeData) (map[st
 	return obj, nil
 }
 
-// PreExecute skips the plugin when Noctalia is not installed (no config dir).
+// PreExecute is a no-op — the "is Noctalia installed?" check is declared
+// in Hooks() as a RequiredDirs entry, which the host's shared runner
+// evaluates before this method is called.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	if p.outputDir != "" {
-		return false, "", nil
-	}
-	if _, exists := noctaliaConfigDir(); !exists {
-		return true, "Noctalia not installed (config directory does not exist)", nil
-	}
 	return false, "", nil
 }
 
-// PostExecute is a no-op: Noctalia v5 watches its config/palette files and
-// hot-reloads automatically when the palette changes.
+// PostExecute is a no-op — the reload is declared statically in Hooks()
+// so the host's shared runner owns the binary check and the timeout.
 func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
 	return nil
+}
+
+// Hooks declares Noctalia's static post-execute behaviour.
+//
+// Noctalia v5 does NOT pick up palette changes on its own. It inotifies
+// ~/.config/noctalia (and ~/.local/state/noctalia) non-recursively and
+// only treats a changed *.toml as a config change. The palette misses on
+// both counts: palettes/ is a subdirectory, and tinct.json is not TOML.
+// So a regenerated palette produces no event and the running shell keeps
+// the colours it resolved at startup.
+//
+// `noctalia msg config-reload` forces a config reload, which re-runs the
+// theme resolution and — for a custom palette source — re-reads the JSON
+// from disk. That is the whole fix, so it is the reload verb here.
+//
+// The binary is optional rather than required: the plugin detects
+// Noctalia by config directory (see PreExecute), which lets users
+// generate into a config tree for a machine where the binary is absent.
+// The host runner warns about the missing binary in verbose mode and the
+// exec verb is a non-fatal no-op when it cannot be found.
+//
+// `color-scheme-set custom <name>` also re-reads the file, but persists a
+// theme override into ~/.local/state/noctalia/settings.toml that then
+// shadows the user's own config — config-reload has no such side effect.
+//
+// Detection is by config directory, declared as RequiredDirs so the
+// shared runner skips the plugin (with a consistent reason string) when
+// Noctalia is not installed. The path is resolved here rather than
+// written as a "~/.config/noctalia" literal because the runner does not
+// expand environment variables — see noctaliaConfigDir.
+//
+// Implements tinctplugin.HooksProvider (protocol 0.3.0+).
+func (p *Plugin) Hooks() hooks.Spec {
+	spec := hooks.Spec{
+		OptionalBinaries: []string{"noctalia"},
+		Reload: &hooks.ReloadSpec{
+			Verb: hooks.VerbExec,
+			Args: []string{"noctalia", "msg", "config-reload"},
+		},
+	}
+	// An unresolvable config dir is left to Generate, which fails with a
+	// specific error; declaring RequiredDirs{""} would skip the plugin
+	// with a truncated, confusing reason instead.
+	if dir := noctaliaConfigDir(); dir != "" {
+		spec.RequiredDirs = []string{dir}
+	}
+	return spec
 }
 
 // Templates exposes the embedded template so `tinct plugins templates dump`
@@ -228,13 +277,16 @@ func (p *Plugin) GetMetadata() tinctplugin.PluginInfo {
 		Metadata: &tinctplugin.Metadata{
 			// Noctalia detection is by config-directory presence
 			// (~/.config/noctalia); no binary on PATH is required.
+			OptionalBinaries: []string{"noctalia"},
 			DefaultOutputDir: "~/.config/noctalia/palettes",
 			GeneratedFiles:   []string{"tinct.json"},
 			Pattern:          "single-file",
 			Reload: &tinctplugin.ReloadMetadata{
-				// Noctalia v5 watches its config/palette files and reloads
-				// the active palette live when the file changes.
-				Method:             "watch",
+				// Noctalia does not watch the palettes directory, so the
+				// declarative hook in Hooks() nudges the running shell to
+				// re-resolve the palette from disk.
+				Method:             "ipc",
+				Command:            "noctalia msg config-reload",
 				UserActionRequired: false,
 			},
 		},

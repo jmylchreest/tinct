@@ -13,7 +13,7 @@ import (
 var (
 	// Version is the semantic version of the plugin.
 	// Injected at build time via: -ldflags "-X main.Version=x.y.z"
-	Version = "0.1.0"
+	Version = "0.2.0"
 
 	// Commit is the git commit hash of the build.
 	// Injected at build time via: -ldflags "-X main.Commit=$(git rev-parse HEAD)"

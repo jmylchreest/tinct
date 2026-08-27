@@ -8,18 +8,20 @@ plugin:
   source: external
   app: Noctalia
   app_url: 'https://github.com/noctalia-dev/noctalia-shell'
-  version: 0.1.0
+  version: 0.2.0
   protocol_version: 0.3.0
   repository: 'https://github.com/jmylchreest/tinct'
   install: tinct plugins install noctalia
   requires: []
-  optional: []
+  optional:
+    - noctalia
   pattern: single-file
   default_output_dir: ~/.config/noctalia/palettes
   generated_files:
     - tinct.json
   reload:
-    method: watch
+    method: ipc
+    command: noctalia msg config-reload
     user_action_required: false
 ---
 
@@ -95,7 +97,19 @@ Both `dark` and `light` variants are written in one file when tinct produces a d
 
 ### Automatic
 
-Noctalia v5 watches its config and palette files and **hot-reloads** the active palette when `tinct.json` changes — no action required.
+After writing the palette the plugin runs:
+
+```bash
+noctalia msg config-reload
+```
+
+That forces a config reload, which re-runs Noctalia's theme resolution and — with `source = "custom"` — re-reads `tinct.json` from disk. No user action required.
+
+The reload is declared as a `hooks.Spec` reload verb, so tinct's shared hook runner owns it: `noctalia` is an **optional** binary (the plugin detects Noctalia by config directory, not by binary, so you can still generate into a config tree for another machine), the command runs under a timeout, and a missing binary or a shell that isn't running is a non-fatal no-op.
+
+**Why a reload is needed at all:** Noctalia does *not* watch the palette file. It inotifies `~/.config/noctalia` non-recursively and only treats a changed `*.toml` as a config change — `palettes/tinct.json` misses on both counts (subdirectory, and not TOML). Without the nudge the file is rewritten and the running shell keeps the colours it resolved at startup.
+
+`noctalia msg color-scheme-set custom tinct` also re-reads the palette, but it **persists** the selection into `~/.local/state/noctalia/settings.toml`, which then shadows your own config. Prefer `config-reload`.
 
 ### Manual fallback
 
@@ -135,11 +149,21 @@ This writes `templates/palette.json.tmpl`, rendered once per variant. tinct uses
 
 ### Colours unchanged after generating
 
-Noctalia is still on its wallpaper/builtin generator. Set `[theme] source = "custom"` and `custom_palette = "tinct"` (v5), or select the scheme in Settings (v4).
+Noctalia is still on its wallpaper/builtin generator. Set `[theme] source = "custom"` and `custom_palette = "tinct"` (v5), or select the scheme in Settings (v4). Check with:
 
-### Plugin skipped ("Noctalia not installed")
+```bash
+noctalia msg color-scheme-get      # expect: custom tinct
+```
 
-The plugin skips when `~/.config/noctalia` does not exist. Create it, or pass an explicit `--noctalia.output-dir`.
+If that already reports `custom tinct`, the reload did not reach the shell. Run `noctalia msg config-reload` by hand: if the colours change, `noctalia` was not on `$PATH` during the generate (`tinct generate ... -o noctalia --verbose` warns about the missing optional binary).
+
+### `custom palette 'tinct' not found or invalid`
+
+Noctalia logs this and falls back to the builtin palette when it cannot read or parse the file. Check that `~/.config/noctalia/palettes/tinct.json` exists, is readable by your user, and contains a `dark` key.
+
+### Plugin skipped ("required directory does not exist")
+
+Detection is by config directory: the plugin declares `~/.config/noctalia` (or `$NOCTALIA_CONFIG_HOME` / `$XDG_CONFIG_HOME/noctalia`) as a required directory, and tinct's hook runner skips the plugin when it is absent. Create the directory to enable the plugin.
 
 ## Related plugins
 
