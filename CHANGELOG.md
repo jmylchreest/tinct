@@ -13,7 +13,18 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Added
+
+- Optional `Configurable` plugin interface and `Plugin.Configure` RPC. The host pushes args, dry-run and verbose into a plugin before the pre-execute lifecycle, so `PreExecute` and `Hooks` can honour flags instead of assuming defaults. Plugins that do not implement it are unaffected — unknown-method errors fall back like `Validate` and `GetHooks`.
+
+### Changed
+
+- External plugins keep one subprocess for a whole run instead of spawning a fresh one per RPC. A full generate went from ~25 plugin launches to 3 (5 to 1 for a single-plugin run), which also all but removes the stray `yamux: Failed to write header` lines those teardowns produced.
+
 ### Fixed
+
+- `--noctalia.output-dir` was accepted and silently ignored — the plugin never read `PaletteData.PluginArgs` and its output directory was never assigned. It now arrives via `Configure` before `Hooks`/`PreExecute`, expands `~`, and suppresses the config-directory check when set.
+- External input plugins no longer lose their debug output under `--verbose`. Verbose is set on the plugin before `Validate`, which is the first RPC and therefore the call that starts the subprocess whose logger is fixed for its lifetime.
 
 - The noctalia output plugin now reloads the running shell after writing the palette. Noctalia does not watch `~/.config/noctalia/palettes/` — its inotify watch is non-recursive and only reacts to `*.toml` — so a regenerated palette never reached the running shell and the colours stayed as they were at startup. The plugin declares a `hooks.Spec` reload running `noctalia msg config-reload`, with `noctalia` as an optional binary.
 

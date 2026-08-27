@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/pkg/colour"
@@ -59,6 +60,36 @@ func noctaliaConfigDir() string {
 		return ""
 	}
 	return filepath.Join(home, ".config", "noctalia")
+}
+
+// Configure records the host's per-run configuration. It is what makes
+// --noctalia.output-dir load-bearing: the flag arrives here before
+// PreExecute and Hooks run, so the declared RequiredDirs can follow the
+// override instead of always pointing at the default config directory.
+//
+// Implements tinctplugin.Configurable (protocol 0.3.0+).
+func (p *Plugin) Configure(req tinctplugin.ConfigureRequest) error {
+	if dir, ok := req.Args["output-dir"].(string); ok && dir != "" {
+		p.outputDir = expandTilde(dir)
+	}
+	return nil
+}
+
+// expandTilde expands a leading ~ so a flag value can be written in the
+// shell-style form users expect. The host does not expand it for us —
+// plugin args arrive as literal strings.
+func expandTilde(path string) string {
+	if path != "~" && !strings.HasPrefix(path, "~/") {
+		return path
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	if path == "~" {
+		return home
+	}
+	return filepath.Join(home, path[2:])
 }
 
 // resolveOutputDir returns the palettes directory to write into.
@@ -238,6 +269,14 @@ func (p *Plugin) Hooks() hooks.Spec {
 			Args: []string{"noctalia", "msg", "config-reload"},
 		},
 	}
+	// With an explicit --noctalia.output-dir the user has said where to
+	// write, so the config-directory check would be wrong — that is the
+	// documented way to generate for a machine that has no Noctalia
+	// install of its own.
+	if p.outputDir != "" {
+		return spec
+	}
+
 	// An unresolvable config dir is left to Generate, which fails with a
 	// specific error; declaring RequiredDirs{""} would skip the plugin
 	// with a truncated, confusing reason instead.

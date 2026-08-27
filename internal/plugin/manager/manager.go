@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -312,12 +313,85 @@ func (e *IncompatiblePluginError) Error() string {
 }
 
 // externalPluginBase holds fields and methods shared by all external plugin wrappers.
+//
+// session caches the plugin subprocess for the lifetime of one run. Every
+// RPC used to spawn its own executor and Kill() it immediately, which
+// meant a single output plugin was launched five times per generate
+// (Validate, GetHooks, PreExecute, Generate, PostExecute) — five
+// handshakes, five yamux sessions, and five chances to race the
+// teardown (the stray "yamux: Failed to write header" lines). Worse,
+// each spawn got a fresh plugin object, so anything a plugin learned in
+// one call (its args, for instance) was gone by the next.
+//
+// Reusing one process fixes both: the plugin keeps its state across the
+// call sequence, and Configure can push args in once, before the
+// pre-execute checks that need them.
 type externalPluginBase struct {
 	name        string
 	description string
 	path        string
 	args        map[string]any
 	dryRun      bool
+	// verbose must be set before the first session() call: it selects
+	// the go-plugin logger, which is fixed for the life of the
+	// subprocess. Both input and output wrappers expose SetVerbose so
+	// the CLI can set it before validation starts.
+	verbose bool
+
+	mu          sync.Mutex
+	execSession *executor.PluginExecutor
+	// configured guards the one-shot Configure RPC so re-entering
+	// session() mid-run does not re-push args.
+	configured bool
+}
+
+// session returns the cached executor, starting the plugin subprocess on
+// first use. kind is "input" or "output" and selects which Configure RPC
+// is attempted.
+//
+// Configure is optional: plugins built against older SDKs (or that do
+// not implement Configurable) report "can't find method" and the host
+// carries on, exactly as with the other optional 0.3.0+ methods. Its
+// failure is never fatal — a plugin that cannot be configured still
+// generates, it just does not see its args early.
+func (b *externalPluginBase) session(kind string) (*executor.PluginExecutor, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.execSession != nil {
+		return b.execSession, nil
+	}
+
+	pluginExec, err := executor.NewWithVerbose(b.path, b.verbose)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
+	}
+	b.execSession = pluginExec
+
+	if !b.configured {
+		b.configured = true
+		pluginExec.Configure(context.Background(), kind, plugin.ConfigureRequest{
+			Args:    b.args,
+			DryRun:  b.dryRun,
+			Verbose: b.verbose,
+		})
+	}
+
+	return b.execSession, nil
+}
+
+// Close shuts down the cached plugin subprocess. Safe to call more than
+// once and on a plugin that never started one. The host calls this when
+// a run finishes; the next session() starts a fresh process.
+func (b *externalPluginBase) Close() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.execSession != nil {
+		b.execSession.Close()
+		b.execSession = nil
+	}
+	b.configured = false
 }
 
 // Name returns the plugin's name.
@@ -343,6 +417,14 @@ func (b *externalPluginBase) SetArgs(args map[string]any) { b.args = args }
 
 // GetArgs returns custom arguments for this plugin.
 func (b *externalPluginBase) GetArgs() map[string]any { return b.args }
+
+// SetVerbose sets the verbose flag. It only affects sessions started
+// afterwards — a running plugin subprocess keeps the logger it was
+// created with — so the host sets it before the first RPC.
+func (b *externalPluginBase) SetVerbose(verbose bool) { b.verbose = verbose }
+
+// GetVerbose returns the verbose flag.
+func (b *externalPluginBase) GetVerbose() bool { return b.verbose }
 
 // SetDryRun sets the dry-run mode for this plugin.
 func (b *externalPluginBase) SetDryRun(dryRun bool) { b.dryRun = dryRun }
@@ -387,18 +469,13 @@ func NewExternalInputPlugin(name, description, path string) *ExternalInputPlugin
 // Uses the hybrid executor which automatically detects and uses the appropriate
 // protocol (go-plugin RPC or JSON-stdio).
 func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
-	// Close previous executor if it exists
-	if p.lastExecutor != nil {
-		p.lastExecutor.Close()
-	}
-
-	// Create executor (detects protocol automatically).
-	pluginExec, err := executor.NewWithVerbose(p.path, opts.Verbose)
+	pluginExec, err := p.session("input")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
+		return nil, err
 	}
 
-	// Store the executor so we can query wallpaper path later
+	// Kept for the wallpaper-path accessors below; the session owns the
+	// process lifetime, so this must not be closed here.
 	p.lastExecutor = pluginExec
 
 	// Merge plugin args from opts with plugin's own args.
@@ -486,11 +563,10 @@ func (p *ExternalInputPlugin) RegisterFlags(_ *cobra.Command) {
 // implement Validator (or run on JSON stdio) report success and
 // surface their errors at Generate time as before.
 func (p *ExternalInputPlugin) Validate() error {
-	pluginExec, err := executor.NewWithVerbose(p.path, false)
+	pluginExec, err := p.session("input")
 	if err != nil {
-		return fmt.Errorf("failed to create plugin executor: %w", err)
+		return err
 	}
-	defer pluginExec.Close()
 	return pluginExec.Validate(context.Background(), "input", p.args)
 }
 
@@ -531,7 +607,6 @@ func (p *ExternalInputPlugin) Close() {
 // ExternalOutputPlugin wraps an external executable as an output plugin.
 type ExternalOutputPlugin struct {
 	externalPluginBase
-	verbose          bool
 	alternatePalette *colour.CategorisedPalette
 }
 
@@ -546,16 +621,6 @@ func NewExternalOutputPlugin(name, description, path string) *ExternalOutputPlug
 	}
 }
 
-// SetVerbose sets the verbose flag for this plugin.
-func (p *ExternalOutputPlugin) SetVerbose(verbose bool) {
-	p.verbose = verbose
-}
-
-// GetVerbose returns the verbose setting for this plugin.
-func (p *ExternalOutputPlugin) GetVerbose() bool {
-	return p.verbose
-}
-
 // SetAlternatePalette sets the alternate palette for dual-theme generation.
 func (p *ExternalOutputPlugin) SetAlternatePalette(palette *colour.CategorisedPalette) {
 	p.alternatePalette = palette
@@ -563,12 +628,10 @@ func (p *ExternalOutputPlugin) SetAlternatePalette(palette *colour.CategorisedPa
 
 // Generate executes the external plugin and returns its output.
 func (p *ExternalOutputPlugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
-	// Create executor (detects protocol automatically).
-	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
+	pluginExec, err := p.session("output")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create plugin executor: %w", err)
+		return nil, err
 	}
-	defer pluginExec.Close()
 
 	// Extract palette from themeData.
 	palette := themeData.Palette()
@@ -604,11 +667,10 @@ func (p *ExternalOutputPlugin) RegisterFlags(_ *cobra.Command) {
 // implement Validator (or run on JSON stdio) report success and
 // surface their errors at Generate time as before.
 func (p *ExternalOutputPlugin) Validate() error {
-	pluginExec, err := executor.NewWithVerbose(p.path, false)
+	pluginExec, err := p.session("output")
 	if err != nil {
-		return fmt.Errorf("failed to create plugin executor: %w", err)
+		return err
 	}
-	defer pluginExec.Close()
 	return pluginExec.Validate(context.Background(), "output", p.args)
 }
 
@@ -618,11 +680,10 @@ func (p *ExternalOutputPlugin) Validate() error {
 // hooks.Provider interface so the existing CLI hook runner picks up
 // external plugin specs without any extra wiring.
 func (p *ExternalOutputPlugin) Hooks() hooks.Spec {
-	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
+	pluginExec, err := p.session("output")
 	if err != nil {
 		return hooks.Spec{}
 	}
-	defer pluginExec.Close()
 	spec, _ := pluginExec.GetHooks(context.Background())
 	return spec
 }
@@ -653,12 +714,10 @@ func (p *ExternalOutputPlugin) DefaultOutputDir() string {
 // PreExecute calls the external plugin's pre-execute hook.
 // Implements the output.PreExecuteHook interface.
 func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	// Create executor (detects protocol automatically).
-	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
+	pluginExec, err := p.session("output")
 	if err != nil {
-		return false, "", fmt.Errorf("failed to create plugin executor: %w", err)
+		return false, "", err
 	}
-	defer pluginExec.Close()
 
 	// Execute pre-execute hook.
 	return pluginExec.PreExecute(ctx)
@@ -683,12 +742,10 @@ func (p *ExternalOutputPlugin) GetFlagHelp() []input.FlagHelp {
 // into pluginExec.PostExecute and the parameter becomes load-bearing
 // without changing this signature.
 func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, _ output.ExecutionContext, writtenFiles []string) error {
-	// Create executor (detects protocol automatically).
-	pluginExec, err := executor.NewWithVerbose(p.path, p.verbose)
+	pluginExec, err := p.session("output")
 	if err != nil {
-		return fmt.Errorf("failed to create plugin executor: %w", err)
+		return err
 	}
-	defer pluginExec.Close()
 
 	// Execute post-execute hook.
 	return pluginExec.PostExecute(ctx, writtenFiles)

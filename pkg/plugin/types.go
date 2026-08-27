@@ -50,6 +50,32 @@ func HookSpecToSpec(p HookSpecPayload) hooks.Spec {
 	}
 }
 
+// ConfigureRequest carries the host's per-run configuration to a plugin
+// before any other lifecycle call.
+//
+// Args, DryRun and Verbose also travel inside PaletteData on Generate;
+// this delivers them earlier, so a plugin's PreExecute and Hooks can act
+// on flags such as an overridden output directory instead of having to
+// assume defaults. It exists because those two RPCs carry no arguments
+// of their own and, historically, ran in a throwaway process that could
+// not have learned anything anyway.
+type ConfigureRequest struct {
+	Args    map[string]any
+	DryRun  bool
+	Verbose bool
+}
+
+// Configurable is an optional interface plugins may implement to receive
+// the host's per-run configuration before PreExecute / Hooks / Generate.
+//
+// Implementations should only record the values; the host treats a
+// Configure error as non-fatal and continues the run. Plugins that do
+// not implement it keep working unchanged — they simply see their args
+// for the first time in Generate, as before.
+type Configurable interface {
+	Configure(req ConfigureRequest) error
+}
+
 // InputOptions holds options for input plugin generation.
 type InputOptions struct {
 	Verbose         bool           `json:"verbose"`
