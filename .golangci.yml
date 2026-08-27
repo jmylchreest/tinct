@@ -90,7 +90,8 @@ linters:
       # declarations reads better with them than with constants — a
       # `typeString` indirection would obscure what the protocol actually
       # carries. Excluded rather than extracted.
-      ignore-string-values: '^(string|int|bool|float|true|false)$'
+      ignore-string-values:
+        - '^(string|int|bool|float|true|false)$'
 
     # Go critic
     gocritic:
