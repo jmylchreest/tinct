@@ -195,28 +195,32 @@ func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args m
 // verbose) into the plugin before any other lifecycle call, so
 // PreExecute and GetHooks can honour flags rather than assume defaults.
 //
-// kind selects the client ("input" or "output"). Failure is deliberately
-// swallowed: a plugin that cannot be configured — old SDK, no
+// kind selects the client ("input" or "output"). A returned error is
+// never fatal: a plugin that cannot be configured — old SDK, no
 // Configurable implementation, JSON stdio, or a transport hiccup — must
 // still run, it just sees its args later, in Generate, as it always did.
-func (e *PluginExecutor) Configure(ctx context.Context, kind string, req plugin.ConfigureRequest) {
+// It is returned rather than swallowed so the caller can surface it in
+// verbose mode instead of the failure being invisible.
+func (e *PluginExecutor) Configure(ctx context.Context, kind string, req plugin.ConfigureRequest) error {
 	if e.protocolType != protocol.PluginTypeGoPlugin {
-		return
+		return nil
 	}
 
 	switch kind {
 	case "input":
 		client, err := e.getInputRPCClient(ctx)
 		if err != nil {
-			return
+			return err
 		}
-		_ = client.Configure(req)
+		return client.Configure(req)
 	case "output":
 		client, err := e.getOutputRPCClient(ctx)
 		if err != nil {
-			return
+			return err
 		}
-		_ = client.Configure(req)
+		return client.Configure(req)
+	default:
+		return fmt.Errorf("unknown plugin kind %q", kind)
 	}
 }
 

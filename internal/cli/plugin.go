@@ -963,9 +963,8 @@ func registerExternalPluginsFromManifest(manifest *PluginManifest, resolveAbsolu
 			// An outdated plugin is always worth reporting: it silently
 			// disappears from the registry, so the user would otherwise
 			// only see "unknown plugin" and chase the wrong problem.
-			var incompatible *manager.IncompatiblePluginError
-			if errors.As(err, &incompatible) {
-				fmt.Fprintf(os.Stderr, "⊘ Skipping plugin %q: %v\n", meta.Name, err)
+			if incompatible, ok := errors.AsType[*manager.IncompatiblePluginError](err); ok {
+				fmt.Fprintf(os.Stderr, "⊘ Skipping plugin %q: %v\n", meta.Name, incompatible)
 				fmt.Fprintf(os.Stderr, "   Update it with: tinct plugins update %s\n", meta.Name)
 				continue
 			}
