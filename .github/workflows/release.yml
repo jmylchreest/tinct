@@ -74,6 +74,25 @@ jobs:
       - name: Run benchmarks
         run: go test -bench=. -benchmem ./...
 
+      # The contrib plugins are separate Go modules, so the root `./...`
+      # above does not reach them. Without this they were never built or
+      # tested in CI, and a plugin could be broken by a change to the
+      # shared SDK without anything failing.
+      - name: Build and test contrib plugin modules
+        run: |
+          set -euo pipefail
+          failed=0
+          for mod in $(find contrib -name go.mod | sort); do
+            dir="$(dirname "$mod")"
+            echo "::group::$dir"
+            if ! (cd "$dir" && go build ./... && go test ./...); then
+              echo "::error file=$mod::contrib module failed: $dir"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$failed"
+
   # Lint job - runs on all pushes and PRs
   lint:
     name: Lint
