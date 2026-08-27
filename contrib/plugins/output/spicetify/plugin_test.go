@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -136,46 +137,51 @@ func TestPlugin_GetFlagHelp(t *testing.T) {
 	}
 }
 
-func TestPlugin_PreExecute_NoSpicetify(t *testing.T) {
-	// Restrict PATH so `spicetify` cannot be found.
-	t.Setenv("PATH", "/nonexistent")
+// Detection moved onto the declarative hooks.Spec: the shared runner
+// evaluates RequiredBinaries before PreExecute is reached, so PreExecute
+// itself must no longer gate. Two gates would be able to disagree.
+func TestPlugin_HooksRequireSpicetify(t *testing.T) {
+	spec := (&Plugin{}).Hooks()
 
-	p := &Plugin{}
-	skip, reason, err := p.PreExecute(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if !slices.Contains(spec.RequiredBinaries, "spicetify") {
+		t.Errorf("RequiredBinaries = %v, want it to contain spicetify", spec.RequiredBinaries)
 	}
-	if !skip {
-		t.Error("expected skip=true when spicetify is not on PATH")
-	}
-	if !strings.Contains(reason, "spicetify") || !strings.Contains(reason, "spicetify.app") {
-		t.Errorf("expected reason to reference spicetify and the install URL, got %q", reason)
+
+	// Without spicetify the theme files cannot be applied at all, so the
+	// binary is required rather than optional.
+	if slices.Contains(spec.OptionalBinaries, "spicetify") {
+		t.Error("spicetify is listed as optional; without it the theme cannot be applied")
 	}
 }
 
-func TestPlugin_PreExecute_SpicetifyPresent(t *testing.T) {
-	// Create a fake `spicetify` binary on a temp PATH.
-	tmpDir := t.TempDir()
-	fake := filepath.Join(tmpDir, "spicetify")
-	if err := os.WriteFile(fake, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatalf("failed to write fake binary: %v", err)
-	}
-	t.Setenv("PATH", tmpDir)
+func TestPlugin_PreExecuteNeverSkips(t *testing.T) {
+	t.Setenv("PATH", "/nonexistent")
 
-	p := &Plugin{}
-	skip, _, err := p.PreExecute(context.Background())
+	skip, reason, err := (&Plugin{}).PreExecute(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if skip {
-		t.Error("expected skip=false when spicetify is present on PATH")
+		t.Errorf("PreExecute skipped (%q); the RequiredBinaries hook owns that decision", reason)
 	}
 }
 
-func TestPlugin_PostExecute_PrintsInstructions(t *testing.T) {
-	p := &Plugin{}
-	// Should not return an error and should never attempt to invoke spicetify.
-	if err := p.PostExecute(context.Background(), []string{"/tmp/color.ini"}); err != nil {
+// The manual-apply guidance moved to Hooks().Instructions, which the host
+// prints in verbose mode after files are written.
+func TestPlugin_InstructionsExplainManualApply(t *testing.T) {
+	got := (&Plugin{}).Hooks().Instructions
+
+	for _, want := range []string{"NOT applied", "Close Spotify", "spicetify apply"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("Instructions missing %q; got:\n%s", want, got)
+		}
+	}
+}
+
+// PostExecute is a no-op: the guidance lives in Hooks().Instructions and
+// `spicetify apply` is deliberately never invoked for the user.
+func TestPlugin_PostExecuteIsNoop(t *testing.T) {
+	if err := (&Plugin{}).PostExecute(context.Background(), []string{"/tmp/color.ini"}); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
