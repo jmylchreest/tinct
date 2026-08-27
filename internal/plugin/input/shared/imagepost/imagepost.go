@@ -46,6 +46,8 @@ func TrimLetterboxFile(path string, targetAspect float64) (changed bool, err err
 		return false, nil
 	}
 
+	// #nosec G703 -- same tinct-managed cache path just read above; the
+	// write rewrites that exact file in place and never derives a new one.
 	if err := os.WriteFile(path, trimmed, 0o600); err != nil {
 		return false, fmt.Errorf("failed to write trimmed image: %w", err)
 	}

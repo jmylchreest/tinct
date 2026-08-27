@@ -88,7 +88,7 @@ func runPluginSearch(_ *cobra.Command, args []string) (err error) {
 	}
 
 	// Display results in table format matching plugins list
-	table := NewTable([]string{"TYPE", "PLUGIN", "VERSION", "REPO", "COMPAT", "DESCRIPTION"})
+	table := NewTable([]string{colType, colPlugin, colVersion, "REPO", "COMPAT", "DESCRIPTION"})
 
 	// Enable terminal-aware column sizing for description
 	table.EnableTerminalAwareWidth(5, 40) // Min width of 40 chars for description

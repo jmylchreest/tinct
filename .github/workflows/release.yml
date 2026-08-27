@@ -108,16 +108,20 @@ jobs:
           go-version: "1.26.x"
           cache: true
 
+      # These three are gates, not reports: continue-on-error made the job
+      # report success while golangci-lint was printing "##[error]issues
+      # found", so lint was decorative for as long as it has existed.
+      #
+      # golangci-lint is pinned rather than tracking `latest`, so a new
+      # release cannot turn a green branch red without a deliberate bump.
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.13.1
           args: --timeout=5m
-        continue-on-error: true
 
       - name: Run go vet
         run: go vet ./...
-        continue-on-error: true
 
       - name: Check formatting
         run: |
@@ -126,7 +130,6 @@ jobs:
             gofmt -d .
             exit 1
           fi
-        continue-on-error: true
 
   # Security scan job
   security:

@@ -27,6 +27,11 @@ import (
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
+// pluginName is this plugin's identifier: the Name() result, the
+// pluginconfig key, its XDG directory and the binary it looks for are
+// all the same string.
+const pluginName = "gnome-shell"
+
 //go:embed *.tmpl
 var templates embed.FS
 
@@ -49,7 +54,7 @@ func New() *Plugin {
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "gnome-shell"
+	return pluginName
 }
 
 // Description returns the plugin description.
@@ -98,15 +103,15 @@ func (p *Plugin) Validate() error {
 
 // DefaultOutputDir returns the default output directory.
 func (p *Plugin) DefaultOutputDir() string {
-	return pluginconfig.Resolve("gnome-shell", "output_dir", p.outputDir,
+	return pluginconfig.Resolve(pluginName, "output_dir", p.outputDir,
 		filepath.Join(paths.XDGDataDir(), "themes"))
 }
 
 // PreExecute checks if GNOME Shell and User Themes extension are installed.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
 	// Check if all required binaries are installed
-	if !appdetect.IsPresentAll([]string{"gnome-shell", "gsettings", "gnome-extensions"}, nil) {
-		if !appdetect.IsPresentAny([]string{"gnome-shell"}, nil) {
+	if !appdetect.IsPresentAll([]string{pluginName, "gsettings", "gnome-extensions"}, nil) {
+		if !appdetect.IsPresentAny([]string{pluginName}, nil) {
 			return true, "gnome-shell is not installed", nil
 		}
 		if !appdetect.IsPresentAny([]string{"gsettings"}, nil) {
@@ -123,7 +128,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 		return true, "cannot determine home directory", nil
 	}
 
-	userThemesPath := filepath.Join(home, ".local", "share", "gnome-shell", "extensions", userThemeExtensionID)
+	userThemesPath := filepath.Join(home, ".local", "share", pluginName, "extensions", userThemeExtensionID)
 	systemThemesPath := "/usr/share/gnome-shell/extensions/" + userThemeExtensionID
 
 	// Check both user and system installation locations
@@ -167,7 +172,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 
 // generateCSS generates the GNOME Shell CSS content.
 func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
-	loader := tmplloader.New("gnome-shell", templates)
+	loader := tmplloader.New(pluginName, templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
@@ -177,7 +182,7 @@ func (p *Plugin) generateCSS(themeData *colour.ThemeData) ([]byte, error) {
 		return nil, fmt.Errorf("failed to load template: %w", err)
 	}
 
-	tmpl, err := template.New("gnome-shell").
+	tmpl, err := template.New(pluginName).
 		Funcs(utils.TemplateFuncs()).
 		Parse(string(tmplContent))
 	if err != nil {
@@ -251,7 +256,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	processes, err := ps.Processes()
 	if err == nil {
 		for _, proc := range processes {
-			if proc.Executable() == "gnome-shell" {
+			if proc.Executable() == pluginName {
 				gnomeShellRunning = true
 				break
 			}

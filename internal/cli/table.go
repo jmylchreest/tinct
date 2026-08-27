@@ -11,6 +11,28 @@ import (
 	"golang.org/x/term"
 )
 
+// Column headers and subcommand verbs repeated across the cli package.
+// Shared so a rename cannot leave one table or one command behind.
+const (
+	// colPlugin is the plugin-name column header used by every table
+	// that lists plugins.
+	colPlugin = "PLUGIN"
+
+	// colType is the plugin-type column header.
+	colType = "TYPE"
+
+	// colStatus is the per-row progress/result column header used by the
+	// live tables (install, update, sync).
+	colStatus = "STATUS"
+
+	// colVersion is the plugin-version column header.
+	colVersion = "VERSION"
+
+	// verbList is the cobra Use: value for the `list` subcommand, which
+	// several command groups each provide.
+	verbList = "list"
+)
+
 // Table represents a simple table formatter with dynamic column widths.
 type Table struct {
 	headers               []string

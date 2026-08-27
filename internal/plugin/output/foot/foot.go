@@ -26,6 +26,11 @@ import (
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
+// pluginName is this plugin's identifier: the Name() result, the
+// pluginconfig key, its XDG directory and the binary it looks for are
+// all the same string.
+const pluginName = "foot"
+
 //go:embed *.tmpl
 var templates embed.FS
 
@@ -51,7 +56,7 @@ func New() *Plugin {
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "foot"
+	return pluginName
 }
 
 // Description returns the plugin description.
@@ -98,8 +103,8 @@ func (p *Plugin) Validate() error {
 // [plugin.foot] output_dir → platform default. foot is Wayland-only
 // (Linux); paths.XDGConfigDir resolves the standard XDG path.
 func (p *Plugin) DefaultOutputDir() string {
-	return pluginconfig.Resolve("foot", "output_dir", p.outputDir,
-		filepath.Join(paths.XDGConfigDir(), "foot"))
+	return pluginconfig.Resolve(pluginName, "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), pluginName))
 }
 
 // Hooks declares foot's pre/post-execute behaviour. foot reloads its
@@ -109,11 +114,11 @@ func (p *Plugin) DefaultOutputDir() string {
 // verbose mode (the runner emits its own diagnostics when verbose).
 func (p *Plugin) Hooks() hooks.Spec {
 	return hooks.Spec{
-		RequiredBinaries: []string{"foot"},
+		RequiredBinaries: []string{pluginName},
 		AutoCreateDir:    true,
 		Reload: &hooks.ReloadSpec{
 			Verb: hooks.VerbSignal,
-			Args: []string{"foot", "SIGUSR1"},
+			Args: []string{pluginName, "SIGUSR1"},
 		},
 		InstructionsFn: func(_ hooks.Context) string {
 			return "   Add `include=~/.config/foot/tinct-colors.ini` to your foot.ini (or rename the generated tinct.ini to foot.ini if you don't have one yet)."
@@ -157,7 +162,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 // renderTemplate loads (honouring user overrides), parses and executes
 // the named embedded template.
 func (p *Plugin) renderTemplate(name string, themeData *colour.ThemeData) ([]byte, error) {
-	loader := tmplloader.New("foot", templates)
+	loader := tmplloader.New(pluginName, templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}

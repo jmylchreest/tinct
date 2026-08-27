@@ -21,6 +21,11 @@ import (
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
+// pluginName is this plugin's identifier: the Name() result, the
+// pluginconfig key, its XDG directory and the binary it looks for are
+// all the same string.
+const pluginName = "waybar"
+
 //go:embed *.tmpl
 var templates embed.FS
 
@@ -54,7 +59,7 @@ func New() *Plugin {
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "waybar"
+	return pluginName
 }
 
 // Description returns the plugin description.
@@ -103,8 +108,8 @@ func (p *Plugin) Validate() error {
 
 // DefaultOutputDir returns the default output directory for this plugin.
 func (p *Plugin) DefaultOutputDir() string {
-	return pluginconfig.Resolve("waybar", "output_dir", p.outputDir,
-		filepath.Join(paths.XDGConfigDir(), "waybar", "themes"))
+	return pluginconfig.Resolve(pluginName, "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), pluginName, "themes"))
 }
 
 // Generate creates the theme files.
@@ -142,7 +147,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 // generateColors creates the color definitions CSS file.
 func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
-	loader := tmplloader.New("waybar", templates)
+	loader := tmplloader.New(pluginName, templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
@@ -172,7 +177,7 @@ func (p *Plugin) generateColors(themeData *colour.ThemeData) ([]byte, error) {
 // generateStubCSS creates an example CSS file showing how to use the colors.
 func (p *Plugin) generateStubCSS(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
-	loader := tmplloader.New("waybar", templates)
+	loader := tmplloader.New(pluginName, templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
@@ -207,13 +212,13 @@ func (p *Plugin) generateStubCSS(themeData *colour.ThemeData) ([]byte, error) {
 // verb runner.
 func (p *Plugin) Hooks() hooks.Spec {
 	spec := hooks.Spec{
-		RequiredBinaries: []string{"waybar"},
+		RequiredBinaries: []string{pluginName},
 		RequiredDirs:     []string{p.DefaultOutputDir()},
 	}
 	if p.reloadConfig {
 		spec.Reload = &hooks.ReloadSpec{
 			Verb: hooks.VerbSignal,
-			Args: []string{"waybar", "SIGUSR2"},
+			Args: []string{pluginName, "SIGUSR2"},
 		}
 	}
 	return spec

@@ -45,7 +45,7 @@ Example:
 
 // pluginRepoListCmd lists all repositories.
 var pluginRepoListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   verbList,
 	Short: "List configured repositories",
 	Long:  `List all configured plugin repositories with their status.`,
 	RunE:  runPluginRepoList,

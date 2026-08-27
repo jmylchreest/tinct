@@ -635,8 +635,7 @@ func (e *PluginExecutor) preExecuteJSON(ctx context.Context) (skip bool, reason 
 	stdoutBytes, stderrBytes, err := e.processRunner.Run(execCtx, e.path, []string{"--pre-execute"}, nil)
 
 	// Exit code 0 = continue, 1 = skip, 2+ = error.
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		exitCode := exitErr.ExitCode()
 
 		if exitCode == 1 {

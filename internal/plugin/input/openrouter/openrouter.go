@@ -34,6 +34,10 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
+// extPNG is the fallback extension for a generated image whose format the
+// provider did not state, and the name under which such files are cached.
+const extPNG = ".png"
+
 const (
 	// apiBaseURL is the base URL for OpenRouter API.
 	apiBaseURL = "https://openrouter.ai/api/v1"
@@ -258,14 +262,14 @@ func getExtensionForMIME(mimeType string) string {
 	case "image/jpeg", "image/jpg":
 		return ".jpg"
 	case "image/png":
-		return ".png"
+		return extPNG
 	case "image/webp":
 		return ".webp"
 	case "image/gif":
 		return ".gif"
 	default:
 		// Default to png for unknown types
-		return ".png"
+		return extPNG
 	}
 }
 
