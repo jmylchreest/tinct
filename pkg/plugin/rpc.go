@@ -121,6 +121,20 @@ func (s *InputPluginRPCServer) Validate(args map[string]any, resp *string) error
 }
 
 // WallpaperPath implements the RPC method for fetching wallpaper path.
+// Configure implements the optional Configurable RPC method for input
+// plugins. See OutputPluginRPCServer.Configure.
+func (s *InputPluginRPCServer) Configure(req ConfigureRequest, resp *string) error {
+	c, ok := s.Impl.(Configurable)
+	if !ok {
+		*resp = ""
+		return nil
+	}
+	if err := c.Configure(req); err != nil {
+		*resp = err.Error()
+	}
+	return nil
+}
+
 func (s *InputPluginRPCServer) WallpaperPath(_ any, resp *string) error {
 	*resp = s.Impl.WallpaperPath()
 	return nil
@@ -241,6 +255,22 @@ func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 // against pre-0.3.0 SDKs don't expose the method — net/rpc surfaces
 // that as "can't find method", which is mapped to a successful
 // validation so older plugins remain compatible.
+// Configure calls the remote optional Configure method for input
+// plugins. See OutputPluginRPCClient.Configure.
+func (c *InputPluginRPCClient) Configure(req ConfigureRequest) error {
+	var msg string
+	if err := call(c.client, "Plugin.Configure", req, &msg, callTimeout); err != nil {
+		if isMissingMethodErr(err) {
+			return nil
+		}
+		return fmt.Errorf("RPC call failed: %w", err)
+	}
+	if msg != "" {
+		return &RPCError{Message: msg}
+	}
+	return nil
+}
+
 func (c *InputPluginRPCClient) Validate(args map[string]any) error {
 	if args == nil {
 		args = map[string]any{}
@@ -370,6 +400,21 @@ func (s *OutputPluginRPCServer) Validate(args map[string]any, resp *string) erro
 	return nil
 }
 
+// Configure implements the optional Configurable RPC method. Plugins
+// that do not implement Configurable simply succeed with no effect, so
+// the host never has to distinguish "unsupported" from "no-op".
+func (s *OutputPluginRPCServer) Configure(req ConfigureRequest, resp *string) error {
+	c, ok := s.Impl.(Configurable)
+	if !ok {
+		*resp = ""
+		return nil
+	}
+	if err := c.Configure(req); err != nil {
+		*resp = err.Error()
+	}
+	return nil
+}
+
 // GetHooks implements the optional HooksProvider RPC method. Returns
 // the gob-safe subset of the plugin's hooks.Spec; function fields
 // (ReloadFn, InstructionsFn, Wallpaper) are not transmitted because
@@ -472,6 +517,25 @@ func (c *OutputPluginRPCClient) Validate(args map[string]any) error {
 	var msg string
 	err := call(c.client, "Plugin.Validate", args, &msg, callTimeout)
 	if err != nil {
+		if isMissingMethodErr(err) {
+			return nil
+		}
+		return fmt.Errorf("RPC call failed: %w", err)
+	}
+	if msg != "" {
+		return &RPCError{Message: msg}
+	}
+	return nil
+}
+
+// Configure calls the remote optional Configure method, handing the
+// plugin its args before the pre-execute lifecycle begins. A plugin
+// built against a pre-0.3.0 SDK has no such method; net/rpc reports
+// that as "can't find method" and we treat it as a no-op rather than an
+// error, matching Validate and GetHooks.
+func (c *OutputPluginRPCClient) Configure(req ConfigureRequest) error {
+	var msg string
+	if err := call(c.client, "Plugin.Configure", req, &msg, callTimeout); err != nil {
 		if isMissingMethodErr(err) {
 			return nil
 		}

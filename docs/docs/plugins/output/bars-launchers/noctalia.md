@@ -8,7 +8,7 @@ plugin:
   source: external
   app: Noctalia
   app_url: 'https://github.com/noctalia-dev/noctalia-shell'
-  version: 0.2.0
+  version: 0.3.0
   protocol_version: 0.3.0
   repository: 'https://github.com/jmylchreest/tinct'
   install: tinct plugins install noctalia
@@ -163,7 +163,7 @@ Noctalia logs this and falls back to the builtin palette when it cannot read or 
 
 ### Plugin skipped ("required directory does not exist")
 
-Detection is by config directory: the plugin declares `~/.config/noctalia` (or `$NOCTALIA_CONFIG_HOME` / `$XDG_CONFIG_HOME/noctalia`) as a required directory, and tinct's hook runner skips the plugin when it is absent. Create the directory to enable the plugin.
+Detection is by config directory: the plugin declares `~/.config/noctalia` (or `$NOCTALIA_CONFIG_HOME` / `$XDG_CONFIG_HOME/noctalia`) as a required directory, and tinct's hook runner skips the plugin when it is absent. Create the directory to enable the plugin, or pass `--noctalia.output-dir` — an explicit destination disables the config-directory check, which is how you generate for a machine that has no Noctalia install of its own.
 
 ## Related plugins
 

@@ -60,7 +60,7 @@ func NewWithVerboseAndRunner(pluginPath string, verbose bool, runner ProcessRunn
 	// hang on the magic-cookie exchange with no actionable error.
 	//
 	// This applies the general floor only; the per-type floor (input
-	// plugins need a newer protocol for WallpaperRawPath) is enforced at
+	// plugins need 0.2.0 for WallpaperRawPath) is enforced at
 	// registration, where the plugin's type is known.
 	//
 	// Empty versions are tolerated for backward compatibility with
@@ -188,6 +188,35 @@ func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args m
 		return client.Validate(args)
 	default:
 		return nil
+	}
+}
+
+// Configure pushes the host's per-run configuration (args, dry-run,
+// verbose) into the plugin before any other lifecycle call, so
+// PreExecute and GetHooks can honour flags rather than assume defaults.
+//
+// kind selects the client ("input" or "output"). Failure is deliberately
+// swallowed: a plugin that cannot be configured — old SDK, no
+// Configurable implementation, JSON stdio, or a transport hiccup — must
+// still run, it just sees its args later, in Generate, as it always did.
+func (e *PluginExecutor) Configure(ctx context.Context, kind string, req plugin.ConfigureRequest) {
+	if e.protocolType != protocol.PluginTypeGoPlugin {
+		return
+	}
+
+	switch kind {
+	case "input":
+		client, err := e.getInputRPCClient(ctx)
+		if err != nil {
+			return
+		}
+		_ = client.Configure(req)
+	case "output":
+		client, err := e.getOutputRPCClient(ctx)
+		if err != nil {
+			return
+		}
+		_ = client.Configure(req)
 	}
 }
 

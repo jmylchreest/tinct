@@ -140,6 +140,13 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	// External plugins keep one subprocess alive across their whole
+	// call sequence (Validate → Hooks → PreExecute → Generate →
+	// PostExecute). Shut them down once the run is over, including the
+	// input plugin, whose wallpaper-path accessors are read above.
+	defer closePlugins(outputPlugins)
+	defer closePlugins([]input.Plugin{inputPlugin})
+
 	executions := preparePluginExecutions(ctx, outputPlugins)
 	successCount := generateAndWriteFiles(executions, palette, alternatePalette, wallpaperPath, wallpaperRawPath)
 
@@ -162,6 +169,20 @@ func runGenerate(cmd *cobra.Command, _ []string) error {
 
 	return summaryErr
 }
+
+// closePlugins shuts down any plugin holding a live subprocess.
+// In-tree plugins don't implement pluginCloser and are skipped.
+func closePlugins[T any](plugins []T) {
+	for _, p := range plugins {
+		if closer, ok := any(p).(pluginCloser); ok {
+			closer.Close()
+		}
+	}
+}
+
+// pluginCloser is implemented by external plugin wrappers, which cache a
+// plugin subprocess for the duration of a run.
+type pluginCloser interface{ Close() }
 
 // runGlobalHookScript executes a global hook script if it exists.
 // Looks for scripts at ~/.config/tinct/hooks/{hook-name}.sh.

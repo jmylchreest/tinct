@@ -286,3 +286,77 @@ func keys(m map[string][]byte) []string {
 	}
 	return out
 }
+
+// TestConfigureSetsOutputDir covers the wiring that makes
+// --noctalia.output-dir load-bearing: the host delivers args via
+// Configure before PreExecute/Hooks, and the plugin must record them.
+func TestConfigureSetsOutputDir(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("no home directory")
+	}
+
+	tests := []struct {
+		name string
+		args map[string]any
+		want string
+	}{
+		{name: "absolute path", args: map[string]any{"output-dir": "/tmp/palettes"}, want: "/tmp/palettes"},
+		{name: "tilde is expanded", args: map[string]any{"output-dir": "~/pal"}, want: filepath.Join(home, "pal")},
+		{name: "empty value ignored", args: map[string]any{"output-dir": ""}, want: ""},
+		{name: "wrong type ignored", args: map[string]any{"output-dir": 42}, want: ""},
+		{name: "absent key ignored", args: map[string]any{}, want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Plugin{}
+			if err := p.Configure(tinctplugin.ConfigureRequest{Args: tt.args}); err != nil {
+				t.Fatalf("Configure returned error: %v", err)
+			}
+			if p.outputDir != tt.want {
+				t.Errorf("outputDir = %q, want %q", p.outputDir, tt.want)
+			}
+		})
+	}
+}
+
+// An explicit output dir means the user chose the destination, so the
+// config-directory check must not skip the plugin — that is how you
+// generate for a machine with no Noctalia install.
+func TestHooksSkipsConfigDirCheckWhenOutputDirOverridden(t *testing.T) {
+	t.Setenv("NOCTALIA_CONFIG_HOME", filepath.Join(t.TempDir(), "absent"))
+
+	p := &Plugin{}
+	if got := p.Hooks(); len(got.RequiredDirs) == 0 {
+		t.Fatal("expected a RequiredDirs check without an output-dir override")
+	}
+
+	if err := p.Configure(tinctplugin.ConfigureRequest{
+		Args: map[string]any{"output-dir": t.TempDir()},
+	}); err != nil {
+		t.Fatalf("Configure returned error: %v", err)
+	}
+	if got := p.Hooks(); len(got.RequiredDirs) != 0 {
+		t.Errorf("RequiredDirs = %v, want none when output-dir is overridden", got.RequiredDirs)
+	}
+}
+
+// Generate must write to the configured directory, not the default.
+func TestGenerateHonoursConfiguredOutputDir(t *testing.T) {
+	dir := t.TempDir()
+	p := &Plugin{}
+	if err := p.Configure(tinctplugin.ConfigureRequest{Args: map[string]any{"output-dir": dir}}); err != nil {
+		t.Fatalf("Configure returned error: %v", err)
+	}
+
+	files, err := p.Generate(context.Background(), testPalette("dark"))
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	want := filepath.Join(dir, "tinct.json")
+	if _, ok := files[want]; !ok {
+		t.Errorf("Generate wrote %v, want a file at %s", keys(files), want)
+	}
+}

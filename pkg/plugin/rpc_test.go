@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"image/color"
 	"net"
 	"net/rpc"
@@ -379,6 +380,76 @@ func TestFlagHelp(t *testing.T) {
 		t.Error("Required = false, want true")
 	}
 }
+
+// --- Configure -------------------------------------------------------------
+
+type configurableOutput struct {
+	OutputPlugin
+	got   ConfigureRequest
+	calls int
+	err   error
+}
+
+func (c *configurableOutput) Configure(req ConfigureRequest) error {
+	c.got = req
+	c.calls++
+	return c.err
+}
+
+// A plugin implementing Configurable receives the host's args.
+func TestOutputRPCServerConfigure(t *testing.T) {
+	impl := &configurableOutput{}
+	srv := &OutputPluginRPCServer{Impl: impl}
+
+	var resp string
+	req := ConfigureRequest{Args: map[string]any{"output-dir": "/tmp/x"}, DryRun: true, Verbose: true}
+	if err := srv.Configure(req, &resp); err != nil {
+		t.Fatalf("Configure returned error: %v", err)
+	}
+	if resp != "" {
+		t.Errorf("resp = %q, want empty", resp)
+	}
+	if impl.calls != 1 {
+		t.Fatalf("Configure called %d times, want 1", impl.calls)
+	}
+	if got := impl.got.Args["output-dir"]; got != "/tmp/x" {
+		t.Errorf("Args[output-dir] = %v, want /tmp/x", got)
+	}
+	if !impl.got.DryRun || !impl.got.Verbose {
+		t.Errorf("DryRun/Verbose not propagated: %+v", impl.got)
+	}
+}
+
+// A plugin error is reported in the response rather than as a transport
+// error, so the host can decide it is non-fatal.
+func TestOutputRPCServerConfigureReportsPluginError(t *testing.T) {
+	impl := &configurableOutput{err: errors.New("bad output dir")}
+	srv := &OutputPluginRPCServer{Impl: impl}
+
+	var resp string
+	if err := srv.Configure(ConfigureRequest{}, &resp); err != nil {
+		t.Fatalf("Configure returned transport error: %v", err)
+	}
+	if resp != "bad output dir" {
+		t.Errorf("resp = %q, want the plugin's error text", resp)
+	}
+}
+
+// Plugins that predate Configurable must not break: the server treats
+// them as a successful no-op.
+func TestOutputRPCServerConfigureNonConfigurableIsNoOp(t *testing.T) {
+	srv := &OutputPluginRPCServer{Impl: &nonConfigurableOutput{}}
+
+	var resp string
+	if err := srv.Configure(ConfigureRequest{Args: map[string]any{"a": 1}}, &resp); err != nil {
+		t.Fatalf("Configure returned error: %v", err)
+	}
+	if resp != "" {
+		t.Errorf("resp = %q, want empty", resp)
+	}
+}
+
+type nonConfigurableOutput struct{ OutputPlugin }
 
 // --- bounded RPC -----------------------------------------------------------
 

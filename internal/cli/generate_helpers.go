@@ -56,6 +56,14 @@ func getAndValidateInputPlugin() (input.Plugin, error) {
 		return nil, fmt.Errorf("unknown input plugin: %s (available: %s)", generateInputPlugin, strings.Join(availablePlugins, ", "))
 	}
 
+	// Set verbose before Validate: for external plugins Validate is the
+	// first RPC, and it starts the subprocess whose logger is fixed for
+	// the life of that process. Setting it afterwards would be too late
+	// and the run would silently lose plugin debug output.
+	if verbosePlugin, ok := plugin.(interface{ SetVerbose(bool) }); ok {
+		verbosePlugin.SetVerbose(generateVerbose)
+	}
+
 	if err := plugin.Validate(); err != nil {
 		return nil, fmt.Errorf("input plugin validation failed: %w", err)
 	}
