@@ -454,6 +454,12 @@ func preparePluginExecutions(ctx context.Context, plugins []output.Plugin) []plu
 	return executions
 }
 
+// skipReasonIndent is the continuation indent for multi-line skip
+// reasons. Plugins can return install hints spanning several lines; the
+// runner's Indent helper re-aligns everything after the first line to
+// this column so a 30-plugin run stays scannable.
+const skipReasonIndent = "   "
+
 // shouldSkipFromPreHook runs the pre-execute checks and determines if a
 // plugin should be skipped. It evaluates the declarative hooks.Spec first
 // (if the plugin implements hooks.Provider), then the optional imperative
@@ -475,7 +481,7 @@ func shouldSkipFromPreHook(ctx context.Context, plugin output.Plugin, exec *plug
 		}
 		if skip {
 			if generateVerbose {
-				fmt.Fprintf(os.Stderr, "⊘ Skipping %s: %s\n", plugin.Name(), reason)
+				fmt.Fprintf(os.Stderr, "⊘ Skipping %s: %s\n", plugin.Name(), hooks.Indent(reason, skipReasonIndent))
 			}
 			exec.skip = true
 			exec.skipReason = reason
@@ -501,7 +507,7 @@ func shouldSkipFromPreHook(ctx context.Context, plugin output.Plugin, exec *plug
 
 	if skip {
 		if generateVerbose {
-			fmt.Fprintf(os.Stderr, "⊘ Skipping %s: %s\n", plugin.Name(), reason)
+			fmt.Fprintf(os.Stderr, "⊘ Skipping %s: %s\n", plugin.Name(), hooks.Indent(reason, skipReasonIndent))
 		}
 		exec.skip = true
 		exec.skipReason = reason

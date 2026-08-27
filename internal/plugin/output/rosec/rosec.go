@@ -7,7 +7,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
@@ -19,6 +18,7 @@ import (
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
@@ -135,20 +135,24 @@ func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PreExecute checks if rosec is available before generating the theme.
-// Skips if neither the rosec config file nor the rosec-prompt binary exist.
+// PreExecute is a no-op — detection is declared in Hooks().
 // Implements the output.PreExecuteHook interface.
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if rosec config file exists.
-	configPath := filepath.Join(p.DefaultOutputDir(), "config.toml")
-	if _, err := os.Stat(configPath); err == nil {
-		return false, "", nil
-	}
+	return false, "", nil
+}
 
-	// Check if rosec-prompt binary exists on PATH.
-	if _, err := exec.LookPath("rosec-prompt"); err == nil {
-		return false, "", nil
+// Hooks declares rosec's detection. rosec counts as installed if EITHER
+// its config file exists OR the rosec-prompt binary is on PATH — an
+// any-of group, which RequiredDirs / RequiredBinaries cannot express
+// because both are all-of.
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredAny: []hooks.AnyOf{{
+			Binaries: []string{"rosec-prompt"},
+			Dirs:     []string{filepath.Join(p.DefaultOutputDir(), "config.toml")},
+			Reason: "rosec does not appear to be installed.\n" +
+				"Neither ~/.config/rosec/config.toml nor the rosec-prompt binary was found.\n" +
+				"Install rosec-prompt, or create the config, to enable this plugin.",
+		}},
 	}
-
-	return true, "neither rosec config (~/.config/rosec/config.toml) nor rosec-prompt binary found", nil
 }

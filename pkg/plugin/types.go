@@ -12,6 +12,7 @@ type HookSpecPayload struct {
 	RequiredBinaries  []string
 	OptionalBinaries  []string
 	RequiredDirs      []string
+	RequiredAny       []hooks.AnyOf
 	AutoCreateDir     bool
 	Reload            *hooks.ReloadSpec
 	MakeExecutable    []string
@@ -26,6 +27,7 @@ func HookSpecFromSpec(s hooks.Spec) HookSpecPayload {
 		RequiredBinaries:  s.RequiredBinaries,
 		OptionalBinaries:  s.OptionalBinaries,
 		RequiredDirs:      s.RequiredDirs,
+		RequiredAny:       s.RequiredAny,
 		AutoCreateDir:     s.AutoCreateDir,
 		Reload:            s.Reload,
 		MakeExecutable:    s.MakeExecutable,
@@ -42,6 +44,7 @@ func HookSpecToSpec(p HookSpecPayload) hooks.Spec {
 		RequiredBinaries:  p.RequiredBinaries,
 		OptionalBinaries:  p.OptionalBinaries,
 		RequiredDirs:      p.RequiredDirs,
+		RequiredAny:       p.RequiredAny,
 		AutoCreateDir:     p.AutoCreateDir,
 		Reload:            p.Reload,
 		MakeExecutable:    p.MakeExecutable,

@@ -15,10 +15,13 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- `hooks.Spec.RequiredAny` — a satisfied-by-any detection group (`AnyOf{Binaries, Dirs, Reason}`). Groups are ANDed, entries within a group ORed, so plugins whose app has more than one valid install shape no longer need a hand-rolled `PreExecute`. Paths are checked with `os.Stat`, so plain files (`kdeglobals`, `config.toml`) count as markers; binaries still resolve through appdetect (PATH/Flatpak/AppImage). An optional per-group `Reason` replaces the generated skip message.
+- Multi-line skip reasons and `Instructions` are formatted by the hook runner. `hooks.Indent` dedents continuation lines and re-indents them under the header, preserving relative nesting so a command indented under a numbered step stays indented.
 - Optional `Configurable` plugin interface and `Plugin.Configure` RPC. The host pushes args, dry-run and verbose into a plugin before the pre-execute lifecycle, so `PreExecute` and `Hooks` can honour flags instead of assuming defaults. Plugins that do not implement it are unaffected — unknown-method errors fall back like `Validate` and `GetHooks`.
 
 ### Changed
 
+- kde-plasma, rosec, qt5, qt6 and spicetify move their installation detection (and, for spicetify, the manual-apply message) off hand-rolled `PreExecute`/`PostExecute` onto the declarative `hooks.Spec`.
 - External plugins keep one subprocess for a whole run instead of spawning a fresh one per RPC. A full generate went from ~25 plugin launches to 3 (5 to 1 for a single-plugin run), which also all but removes the stray `yamux: Failed to write header` lines those teardowns produced.
 
 ### Fixed

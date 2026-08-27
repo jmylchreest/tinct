@@ -18,6 +18,7 @@ type Spec struct {
 	RequiredBinaries []string
 	OptionalBinaries []string
 	RequiredDirs     []string
+	RequiredAny      []AnyOf
 	AutoCreateDir    bool
 
 	Reload   *ReloadSpec
@@ -30,6 +31,33 @@ type Spec struct {
 
 	Instructions   string
 	InstructionsFn func(ctx Context) string
+}
+
+// AnyOf is a satisfied-by-any group of detection candidates: the group
+// passes when ANY of its Binaries or Dirs is present. Groups in
+// Spec.RequiredAny are ANDed with each other (and with RequiredBinaries
+// / RequiredDirs), so "all groups must be satisfied, each by at least
+// one of its entries".
+//
+// This is the primitive for apps with more than one valid install
+// shape — a config that may live in either of two places, or a tool
+// detectable by config file OR by binary:
+//
+//	AnyOf{Dirs: []string{"~/.config/kdeglobals", "~/.config/plasmarc"}}
+//	AnyOf{Binaries: []string{"rosec-prompt"}, Dirs: []string{"~/.config/rosec/config.toml"}}
+//
+// Binaries are resolved with appdetect (PATH, Flatpak, AppImage); Dirs
+// accept files as well as directories and are ~-expanded. A single-entry
+// group is legitimate when the point is to attach a better Reason than
+// the runner's generated one.
+//
+// Reason, when non-empty, replaces the generated skip message. It may be
+// multi-line — the runner indents continuation lines so install hints
+// stay readable in a multi-plugin run.
+type AnyOf struct {
+	Binaries []string
+	Dirs     []string
+	Reason   string
 }
 
 // ReloadSpec describes a reload action as a verb plus arguments. Bare
