@@ -13,6 +13,11 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Fixed
+
+- `tinct plugins update <name>` now updates only the named plugin. The command declared no positional arguments and never read them, so cobra accepted the name, discarded it, and updated every plugin in the manifest. An unknown name is now an error listing what is installed, rather than a silent full update.
+- `tinct plugins update` can update plugins added from a local path. Local sources record their origin in `source.original_path`, which the update path never consulted — so every plugin installed with `tinct plugins add ./binary` reported "No source information" and could never be updated.
+
 ### Breaking changes
 
 - Input plugins must now speak protocol `0.2.0` or newer. `WallpaperRawPath` was added after the `0.1.0` bump but before `0.2.0`, so a `0.1.0` input plugin may not implement it — and the host calls it unconditionally. Older input plugins are refused at registration with a message naming the gap; run `tinct plugins update <name>`. Output plugins are unaffected and keep the `0.0.1` floor: every RPC the host calls on them unconditionally predates `0.1.0`.
