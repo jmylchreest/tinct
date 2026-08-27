@@ -370,11 +370,17 @@ func (b *externalPluginBase) session(kind string) (*executor.PluginExecutor, err
 
 	if !b.configured {
 		b.configured = true
-		pluginExec.Configure(context.Background(), kind, plugin.ConfigureRequest{
+		cfgErr := pluginExec.Configure(context.Background(), kind, plugin.ConfigureRequest{
 			Args:    b.args,
 			DryRun:  b.dryRun,
 			Verbose: b.verbose,
 		})
+		// Non-fatal by design — the plugin still generates, it just sees
+		// its args later, in Generate. Surfaced in verbose mode so the
+		// failure is diagnosable rather than silent.
+		if cfgErr != nil && b.verbose {
+			fmt.Fprintf(os.Stderr, "   %s: configure failed: %v\n", b.name, cfgErr)
+		}
 	}
 
 	return b.execSession, nil

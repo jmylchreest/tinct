@@ -102,10 +102,10 @@ func TestInputPluginRPC(t *testing.T) {
 		},
 	}
 
-	rpc := &InputPluginRPC{Impl: mock}
+	rpcPlugin := &InputPluginRPC{Impl: mock}
 
 	t.Run("Server", func(t *testing.T) {
-		server, err := rpc.Server(nil)
+		server, err := rpcPlugin.Server(nil)
 		if err != nil {
 			t.Fatalf("Server() error = %v", err)
 		}
@@ -123,7 +123,7 @@ func TestInputPluginRPC(t *testing.T) {
 	})
 
 	t.Run("Client", func(t *testing.T) {
-		client, err := rpc.Client(nil, nil)
+		client, err := rpcPlugin.Client(nil, nil)
 		if err != nil {
 			t.Fatalf("Client() error = %v", err)
 		}
@@ -152,10 +152,10 @@ func TestOutputPluginRPC(t *testing.T) {
 		},
 	}
 
-	rpc := &OutputPluginRPC{Impl: mock}
+	rpcPlugin := &OutputPluginRPC{Impl: mock}
 
 	t.Run("Server", func(t *testing.T) {
-		server, err := rpc.Server(nil)
+		server, err := rpcPlugin.Server(nil)
 		if err != nil {
 			t.Fatalf("Server() error = %v", err)
 		}
@@ -173,7 +173,7 @@ func TestOutputPluginRPC(t *testing.T) {
 	})
 
 	t.Run("Client", func(t *testing.T) {
-		client, err := rpc.Client(nil, nil)
+		client, err := rpcPlugin.Client(nil, nil)
 		if err != nil {
 			t.Fatalf("Client() error = %v", err)
 		}
@@ -469,8 +469,9 @@ func (s *slowService) Hang(_ string, reply *string) error {
 }
 
 // newLoopbackClient serves slowService over an in-memory pipe and
-// returns a connected rpc.Client.
-func newLoopbackClient(t *testing.T) (*rpc.Client, *slowService) {
+// returns a connected rpc.Client. The service itself is released by the
+// cleanup below, so callers never need a handle on it.
+func newLoopbackClient(t *testing.T) *rpc.Client {
 	t.Helper()
 
 	svc := &slowService{release: make(chan struct{})}
@@ -487,12 +488,12 @@ func newLoopbackClient(t *testing.T) (*rpc.Client, *slowService) {
 		close(svc.release)
 		_ = client.Close()
 	})
-	return client, svc
+	return client
 }
 
 // A responsive method returns its reply and no error.
 func TestCallReturnsReply(t *testing.T) {
-	client, _ := newLoopbackClient(t)
+	client := newLoopbackClient(t)
 
 	var got string
 	if err := call(client, "Plugin.Echo", "hello", &got, callTimeout); err != nil {
@@ -506,7 +507,7 @@ func TestCallReturnsReply(t *testing.T) {
 // The regression this exists for: a method that never replies must fail
 // on a deadline rather than block the host forever.
 func TestCallTimesOutInsteadOfHanging(t *testing.T) {
-	client, _ := newLoopbackClient(t)
+	client := newLoopbackClient(t)
 
 	done := make(chan error, 1)
 	go func() {
@@ -532,7 +533,7 @@ func TestCallTimesOutInsteadOfHanging(t *testing.T) {
 // A missing method must surface as an error call() passes through, so
 // isMissingMethodErr can classify it for the optional-RPC fallbacks.
 func TestCallSurfacesMissingMethod(t *testing.T) {
-	client, _ := newLoopbackClient(t)
+	client := newLoopbackClient(t)
 
 	var got string
 	err := call(client, "Plugin.NoSuchMethod", "x", &got, callTimeout)
