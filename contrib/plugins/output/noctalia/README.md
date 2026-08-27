@@ -9,7 +9,7 @@ plugin:
   source: external
   app: Noctalia
   app_url: https://github.com/noctalia-dev/noctalia-shell
-  version: 0.3.0
+  version: 0.4.0
   protocol_version: 0.3.0
   repository: https://github.com/jmylchreest/tinct
   install: tinct plugins install noctalia
@@ -104,7 +104,9 @@ noctalia msg config-reload
 
 That forces a config reload, which re-runs Noctalia's theme resolution and — with `source = "custom"` — re-reads `tinct.json` from disk. No user action required.
 
-The reload is declared as a `hooks.Spec` reload verb, so tinct's shared hook runner owns it: `noctalia` is an **optional** binary (the plugin detects Noctalia by config directory, not by binary, so you can still generate into a config tree for another machine), the command runs under a timeout, and a missing binary or a shell that isn't running is a non-fatal no-op.
+**The reload is skipped when the palette did not change.** Generate compares the rendered palette against the file already on disk; if they are byte-identical the shell is left alone, because a reload makes Noctalia re-read its whole config tree. Regenerating from the same wallpaper therefore costs nothing.
+
+`noctalia` is an **optional** binary — the plugin detects Noctalia by config directory, not by binary, so you can still generate into a config tree for another machine. A missing binary, or a shell that isn't running, is a non-fatal no-op, and the call runs under a timeout.
 
 **Why a reload is needed at all:** Noctalia does *not* watch the palette file. It inotifies `~/.config/noctalia` non-recursively and only treats a changed `*.toml` as a config change — `palettes/tinct.json` misses on both counts (subdirectory, and not TOML). Without the nudge the file is rewritten and the running shell keeps the colours it resolved at startup.
 

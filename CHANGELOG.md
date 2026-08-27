@@ -24,6 +24,10 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - kde-plasma, rosec, qt5, qt6 and spicetify move their installation detection (and, for spicetify, the manual-apply message) off hand-rolled `PreExecute`/`PostExecute` onto the declarative `hooks.Spec`.
 - External plugins keep one subprocess for a whole run instead of spawning a fresh one per RPC. A full generate went from ~25 plugin launches to 3 (5 to 1 for a single-plugin run), which also all but removes the stray `yamux: Failed to write header` lines those teardowns produced.
 
+### Changed
+
+- The noctalia plugin skips the shell reload when the regenerated palette is byte-identical to the one already on disk. A reload makes Noctalia re-read its whole config tree, which is wasted work when the colours have not moved — regenerating from the same wallpaper now costs nothing.
+
 ### Fixed
 
 - `--noctalia.output-dir` was accepted and silently ignored — the plugin never read `PaletteData.PluginArgs` and its output directory was never assigned. It now arrives via `Configure` before `Hooks`/`PreExecute`, expands `~`, and suppresses the config-directory check when set.

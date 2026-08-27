@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
-	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 var hexRe = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
@@ -183,26 +182,19 @@ func TestMetadata(t *testing.T) {
 	}
 }
 
-// TestHooksDeclaresReload guards the reload contract: Noctalia does not
-// watch its palettes directory, so a regenerated palette only takes
-// effect if the running shell is told to re-read it.
-func TestHooksDeclaresReload(t *testing.T) {
-	spec := (&Plugin{}).Hooks()
-
-	if spec.Reload == nil {
-		t.Fatal("Hooks().Reload is nil; the palette would never be reloaded")
-	}
-	if spec.Reload.Verb != hooks.VerbExec {
-		t.Errorf("Reload.Verb = %q, want %q", spec.Reload.Verb, hooks.VerbExec)
-	}
+// TestReloadCommand guards the reload contract: Noctalia does not watch
+// its palettes directory, so a regenerated palette only takes effect if
+// the running shell is told to re-read it.
+func TestReloadCommand(t *testing.T) {
 	want := []string{"noctalia", "msg", "config-reload"}
-	if !slices.Equal(spec.Reload.Args, want) {
-		t.Errorf("Reload.Args = %v, want %v", spec.Reload.Args, want)
+	if !slices.Equal(reloadCommand(), want) {
+		t.Errorf("reloadCommand() = %v, want %v", reloadCommand(), want)
 	}
 
 	// The binary guard must be optional, not required: detection is by
 	// config directory, so generating for a machine without the binary
 	// must still write the palette.
+	spec := (&Plugin{}).Hooks()
 	if !slices.Contains(spec.OptionalBinaries, "noctalia") {
 		t.Errorf("OptionalBinaries = %v, want it to contain noctalia", spec.OptionalBinaries)
 	}
@@ -264,18 +256,18 @@ func TestPreExecuteNeverSkips(t *testing.T) {
 	}
 }
 
-// TestMetadataMatchesHooks keeps the documented reload (used for README
-// frontmatter drift checks) in step with what the runner actually does.
-func TestMetadataMatchesHooks(t *testing.T) {
+// TestMetadataMatchesReload keeps the advertised reload (used for README
+// frontmatter drift checks) in step with what PostExecute actually runs.
+func TestMetadataMatchesReload(t *testing.T) {
 	p := &Plugin{}
 	meta := p.GetMetadata().Metadata
-	spec := p.Hooks()
 
-	if got, want := meta.Reload.Command, strings.Join(spec.Reload.Args, " "); got != want {
-		t.Errorf("metadata reload command = %q, hooks run %q", got, want)
+	if got, want := meta.Reload.Command, strings.Join(reloadCommand(), " "); got != want {
+		t.Errorf("metadata reload command = %q, PostExecute runs %q", got, want)
 	}
-	if !slices.Equal(meta.OptionalBinaries, spec.OptionalBinaries) {
-		t.Errorf("metadata OptionalBinaries = %v, hooks declare %v", meta.OptionalBinaries, spec.OptionalBinaries)
+	if !slices.Equal(meta.OptionalBinaries, p.Hooks().OptionalBinaries) {
+		t.Errorf("metadata OptionalBinaries = %v, hooks declare %v",
+			meta.OptionalBinaries, p.Hooks().OptionalBinaries)
 	}
 }
 
@@ -358,5 +350,106 @@ func TestGenerateHonoursConfiguredOutputDir(t *testing.T) {
 	want := filepath.Join(dir, "tinct.json")
 	if _, ok := files[want]; !ok {
 		t.Errorf("Generate wrote %v, want a file at %s", keys(files), want)
+	}
+}
+
+// --- unchanged-palette suppression ----------------------------------------
+
+// Generate must notice when the rendered palette already matches what is
+// on disk, so PostExecute can skip a pointless whole-config reload.
+func TestGenerateDetectsUnchangedPalette(t *testing.T) {
+	dir := t.TempDir()
+	p := &Plugin{}
+	if err := p.Configure(tinctplugin.ConfigureRequest{Args: map[string]any{"output-dir": dir}}); err != nil {
+		t.Fatalf("Configure: %v", err)
+	}
+
+	// First run: nothing on disk yet, so the palette counts as changed.
+	files, err := p.Generate(context.Background(), testPalette("dark"))
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if p.paletteUnchanged {
+		t.Error("first generate reported unchanged with no file on disk")
+	}
+
+	// Emulate the host writing what Generate returned.
+	path := filepath.Join(dir, "tinct.json")
+	if err := os.WriteFile(path, files[path], 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	// Second run with identical input must now report unchanged.
+	if _, err := p.Generate(context.Background(), testPalette("dark")); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if !p.paletteUnchanged {
+		t.Error("second generate reported changed for a byte-identical palette")
+	}
+
+	// A different palette must flip it back.
+	if _, err := p.Generate(context.Background(), testPalette("light")); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if p.paletteUnchanged {
+		t.Error("generate reported unchanged after the colours moved")
+	}
+}
+
+func TestMatchesFileOnDisk(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "palette.json")
+	if err := os.WriteFile(path, []byte("hello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		path    string
+		content []byte
+		want    bool
+	}{
+		{name: "identical", path: path, content: []byte("hello"), want: true},
+		{name: "different", path: path, content: []byte("world"), want: false},
+		{name: "trailing byte differs", path: path, content: []byte("hello\n"), want: false},
+		// Uncertainty must answer false: a spurious reload is cheap, a
+		// missed one leaves the shell showing stale colours.
+		{name: "missing file", path: filepath.Join(dir, "absent"), content: []byte("hello"), want: false},
+		{name: "unreadable directory", path: dir, content: []byte("hello"), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := matchesFileOnDisk(tt.path, tt.content); got != tt.want {
+				t.Errorf("matchesFileOnDisk = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// The zero value must mean "reload". Generate and PostExecute only share
+// state when the host keeps one subprocess per run; against an older
+// host they run in separate processes and the flag is never set, so the
+// default has to be the safe one.
+func TestPaletteUnchangedDefaultsToReloading(t *testing.T) {
+	if (&Plugin{}).paletteUnchanged {
+		t.Error("zero value suppresses the reload; it must default to reloading")
+	}
+}
+
+// No files written means nothing changed on disk, so there is nothing to
+// reload for — and the host would not normally call PostExecute at all.
+func TestPostExecuteNoFilesIsNoOp(t *testing.T) {
+	if err := (&Plugin{}).PostExecute(context.Background(), nil); err != nil {
+		t.Errorf("PostExecute returned error: %v", err)
+	}
+}
+
+// Hooks no longer declares a reload verb — PostExecute owns it, because
+// the decision depends on whether the palette actually changed. Two
+// reload paths would mean two whole-config reloads per generate.
+func TestHooksDeclaresNoReloadVerb(t *testing.T) {
+	if spec := (&Plugin{}).Hooks(); spec.Reload != nil {
+		t.Errorf("Hooks declares a reload verb (%+v); PostExecute already reloads", spec.Reload)
 	}
 }
