@@ -198,16 +198,21 @@ Examples:
 
 // pluginUpdateCmd updates external plugins from manifest sources.
 var pluginUpdateCmd = &cobra.Command{
-	Use:   "update",
+	Use:   "update [name...]",
 	Short: "Update external plugins from manifest sources",
 	Long: `Update external plugins by re-downloading/copying from their source locations.
 
-This reads the plugin manifest and updates all external plugins based on their
-source field. Useful for keeping plugins in sync across machines or after
-pulling manifest changes from a shared dotfiles repo.
+This reads the plugin manifest and updates plugins based on their source field.
+Useful for keeping plugins in sync across machines or after pulling manifest
+changes from a shared dotfiles repo.
+
+Named plugins are updated on their own; with no names, every external plugin in
+the manifest is updated.
 
 Examples:
   tinct plugins update
+  tinct plugins update noctalia
+  tinct plugins update noctalia zed
   tinct plugins update --manifest-file /path/to/plugins.manifest.json`,
 	RunE: runPluginUpdate,
 }
@@ -541,8 +546,54 @@ func updatePluginFromRepository(meta *ExternalPluginMeta, pluginDir string, verb
 	return pluginPath, nil
 }
 
+// selectPluginsToUpdate resolves the plugin names to update, sorted.
+//
+// With no names, every external plugin in the manifest is returned —
+// the historical behaviour. With names, only those are returned, and an
+// unknown one is an error rather than a silent no-op.
+//
+// This exists because the command previously declared no positional
+// arguments and never read them: cobra accepted `tinct plugins update
+// noctalia` and then updated everything, which is both surprising and
+// slow when a user wants one plugin refreshed.
+func selectPluginsToUpdate(lock *PluginManifest, names []string) ([]string, error) {
+	if len(names) == 0 {
+		all := make([]string, 0, len(lock.ExternalPlugins))
+		for name := range lock.ExternalPlugins {
+			all = append(all, name)
+		}
+		sort.Strings(all)
+		return all, nil
+	}
+
+	known := make([]string, 0, len(lock.ExternalPlugins))
+	for name := range lock.ExternalPlugins {
+		known = append(known, name)
+	}
+	sort.Strings(known)
+
+	seen := make(map[string]bool, len(names))
+	selected := make([]string, 0, len(names))
+	for _, name := range names {
+		if _, ok := lock.ExternalPlugins[name]; !ok {
+			return nil, fmt.Errorf(
+				"unknown plugin %q (installed: %s)",
+				name, strings.Join(known, ", "),
+			)
+		}
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		selected = append(selected, name)
+	}
+
+	sort.Strings(selected)
+	return selected, nil
+}
+
 // runPluginUpdate updates external plugins from manifest sources.
-func runPluginUpdate(cmd *cobra.Command, _ []string) (err error) { //nolint:gocyclo,gocognit // batch plugin update with per-plugin error handling
+func runPluginUpdate(cmd *cobra.Command, args []string) (err error) { //nolint:gocyclo,gocognit // batch plugin update with per-plugin error handling
 	items := 0
 	defer func() { sendPluginSubcommandResult("update", "", items, err) }()
 
@@ -561,7 +612,6 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) (err error) { //nolint:gocy
 		fmt.Println("No external plugins found in manifest")
 		return nil
 	}
-	items = len(lock.ExternalPlugins)
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Using manifest: %s\n", manifestPath)
@@ -582,18 +632,20 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) (err error) { //nolint:gocy
 	fmt.Fprintln(os.Stderr)
 	table := NewTable([]string{"PLUGIN", "STATUS"}).SetLive(true).WithWriter(os.Stderr)
 
-	// Get sorted plugin names
-	pluginNames := make([]string, 0, len(lock.ExternalPlugins))
-	for name := range lock.ExternalPlugins {
-		pluginNames = append(pluginNames, name)
+	// Get sorted plugin names, restricted to the ones named on the
+	// command line when any were given.
+	pluginNames, err := selectPluginsToUpdate(lock, args)
+	if err != nil {
+		return err
 	}
-	sort.Strings(pluginNames)
 
 	// Initialize all rows with "Queued" status
 	// In live mode, rendering is deferred until Finish() is called
 	for _, name := range pluginNames {
 		table.AddRowWithID(name, []string{name, "Queued"})
 	}
+
+	items = len(pluginNames)
 
 	// Update each external plugin
 	successCount := 0
@@ -623,6 +675,13 @@ func runPluginUpdate(cmd *cobra.Command, _ []string) (err error) { //nolint:gocy
 			switch {
 			case meta.Source != nil && meta.Source.URL != "":
 				sourceForInstall = meta.Source.URL
+			case meta.Source != nil && meta.Source.OriginalPath != "":
+				// Local sources record where they were installed from in
+				// OriginalPath, not URL. Without this, every plugin added
+				// with `tinct plugins add ./some/binary` reported "No
+				// source information" and could never be updated — even
+				// though the manifest knew exactly where it came from.
+				sourceForInstall = meta.Source.OriginalPath
 			case meta.SourceLegacy != "":
 				sourceForInstall = meta.SourceLegacy
 			default:
