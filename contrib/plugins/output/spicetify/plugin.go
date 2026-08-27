@@ -6,12 +6,12 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/pkg/colour"
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	tincttemplate "github.com/jmylchreest/tinct/pkg/template"
 )
 
@@ -105,41 +105,40 @@ func (p *Plugin) loadTemplate(verbose bool) (*template.Template, error) {
 	return tmpl, nil
 }
 
-// PreExecute verifies that the spicetify CLI is installed.
-//
-// Without spicetify, the theme files we'd write are useless — there's no
-// way to apply them. Skip with a clear pointer to the install docs.
+// PreExecute and PostExecute are no-ops — both the install check and the
+// manual apply instructions are declared in Hooks().
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	if _, lookErr := exec.LookPath("spicetify"); lookErr != nil {
-		return true, "spicetify CLI not installed; install from https://spicetify.app", nil
-	}
 	return false, "", nil
 }
 
-// PostExecute prints the manual apply instructions when verbose.
+func (p *Plugin) PostExecute(_ context.Context, _ []string) error {
+	return nil
+}
+
+// Hooks declares spicetify's install check and its apply instructions.
 //
-// We intentionally do NOT auto-run `spicetify apply`:
+// We intentionally do NOT auto-run `spicetify apply`, so there is no
+// reload verb here:
 //   - apply patches Spotify's installed app directory (invasive).
 //   - it requires the Spotify client to be closed; running it under a
 //     live Spotify produces a partially-patched client.
 //   - it can fail in user-visible ways that the user needs to see (e.g.
 //     permission errors on the Spotify dir on first run).
 //
-// The user is the right actor to choose when to do this.
-func (p *Plugin) PostExecute(_ context.Context, files []string) error {
-	if len(files) == 0 {
-		return nil
+// The user is the right actor to choose when to do this. The runner
+// prints Instructions only in verbose mode and only when files were
+// written, and re-indents the continuation lines.
+//
+// Implements tinctplugin.HooksProvider (protocol 0.3.0+).
+func (p *Plugin) Hooks() hooks.Spec {
+	return hooks.Spec{
+		RequiredBinaries: []string{"spicetify"},
+		Instructions: "theme written but NOT applied. To activate:\n" +
+			"  1. Close Spotify completely.\n" +
+			"  2. Run:\n" +
+			"       spicetify config current_theme tinct color_scheme tinct\n" +
+			"       spicetify apply",
 	}
-
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "   spicetify: theme written but NOT applied. To activate:")
-	fmt.Fprintln(os.Stderr, "     1. Close Spotify completely.")
-	fmt.Fprintln(os.Stderr, "     2. Run:")
-	fmt.Fprintln(os.Stderr, "          spicetify config current_theme tinct color_scheme tinct")
-	fmt.Fprintln(os.Stderr, "          spicetify apply")
-	fmt.Fprintln(os.Stderr, "")
-
-	return nil
 }
 
 // stdLogger implements the Logger interface for template loading.

@@ -225,3 +225,117 @@ func TestRenderTemplate(t *testing.T) {
 		})
 	}
 }
+
+// --- RequiredAny / Indent -------------------------------------------------
+
+func TestRunPreRequiredAny(t *testing.T) {
+	dir := t.TempDir()
+	present := filepath.Join(dir, "present")
+	if err := os.MkdirAll(present, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	missing := filepath.Join(dir, "missing")
+
+	tests := []struct {
+		name     string
+		spec     Spec
+		wantSkip bool
+		wantWord string
+	}{
+		{
+			name:     "satisfied by the second candidate",
+			spec:     Spec{RequiredAny: []AnyOf{{Dirs: []string{missing, present}}}},
+			wantSkip: false,
+		},
+		{
+			name:     "no candidate present",
+			spec:     Spec{RequiredAny: []AnyOf{{Dirs: []string{missing, missing + "2"}}}},
+			wantSkip: true,
+			wantWord: "none of the following were found",
+		},
+		{
+			name:     "custom reason wins",
+			spec:     Spec{RequiredAny: []AnyOf{{Dirs: []string{missing}, Reason: "install the thing"}}},
+			wantSkip: true,
+			wantWord: "install the thing",
+		},
+		{
+			name: "groups are ANDed",
+			spec: Spec{RequiredAny: []AnyOf{
+				{Dirs: []string{present}},
+				{Dirs: []string{missing}},
+			}},
+			wantSkip: true,
+			wantWord: "not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			skip, reason, err := RunPre(tt.spec, Context{PluginName: "test"})
+			if err != nil {
+				t.Fatalf("RunPre error: %v", err)
+			}
+			if skip != tt.wantSkip {
+				t.Fatalf("skip = %v (reason %q), want %v", skip, reason, tt.wantSkip)
+			}
+			if tt.wantWord != "" && !strings.Contains(reason, tt.wantWord) {
+				t.Errorf("reason = %q, want it to contain %q", reason, tt.wantWord)
+			}
+		})
+	}
+}
+
+// A file (not a directory) must satisfy an AnyOf group — kde-plasma
+// detects via kdeglobals/plasmarc, which are files.
+func TestRunPreRequiredAnyAcceptsFiles(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "kdeglobals")
+	if err := os.WriteFile(marker, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	skip, reason, err := RunPre(Spec{RequiredAny: []AnyOf{{Dirs: []string{marker}}}}, Context{})
+	if err != nil {
+		t.Fatalf("RunPre error: %v", err)
+	}
+	if skip {
+		t.Errorf("skipped on an existing file: %s", reason)
+	}
+}
+
+func TestIndent(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  string
+		want string
+	}{
+		{
+			name: "single line is untouched",
+			msg:  "nothing to align",
+			want: "nothing to align",
+		},
+		{
+			name: "continuation lines are re-indented",
+			msg:  "line one\nline two\nline three",
+			want: "line one\n>>line two\n>>line three",
+		},
+		{
+			name: "relative nesting survives the dedent",
+			msg:  "header:\n  1. step\n  2. run:\n       a command",
+			want: "header:\n>>1. step\n>>2. run:\n>>     a command",
+		},
+		{
+			name: "blank lines do not become trailing whitespace",
+			msg:  "header:\n\n  tail",
+			want: "header:\n\n>>tail",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Indent(tt.msg, ">>"); got != tt.want {
+				t.Errorf("Indent()\n got: %q\nwant: %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -22,6 +22,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/dbus"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
@@ -99,32 +100,27 @@ func (p *Plugin) DefaultOutputDir() string {
 		filepath.Join(paths.XDGDataDir(), "color-schemes"))
 }
 
-// PreExecute checks if KDE Plasma is installed.
+// PreExecute is a no-op — detection is declared in Hooks().
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	// Check if KDE config directory exists
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return true, "Could not determine home directory", nil
-	}
-
-	kdeConfigDir := filepath.Join(home, ".config", "kdeglobals")
-	plasmarcPath := filepath.Join(home, ".config", "plasmarc")
-
-	// Check for either kdeglobals or plasmarc to determine if KDE is installed
-	_, kdeErr := os.Stat(kdeConfigDir)
-	_, plasmaErr := os.Stat(plasmarcPath)
-
-	if os.IsNotExist(kdeErr) && os.IsNotExist(plasmaErr) {
-		return true, fmt.Sprintf(
-			"KDE Plasma does not appear to be installed.\n"+
-				"  Neither %s nor %s exist.\n"+
-				"  This plugin is for KDE Plasma desktop environment.\n"+
-				"  For Qt apps on other desktops, use the qt5 or qt6 plugins instead.",
-			kdeConfigDir, plasmarcPath,
-		), nil
-	}
-
 	return false, "", nil
+}
+
+// Hooks declares KDE Plasma's detection. Either marker file is enough,
+// so this is an any-of group; RequiredDirs would demand both. The
+// entries are files rather than directories, which AnyOf accepts.
+func (p *Plugin) Hooks() hooks.Spec {
+	kdeglobals := filepath.Join(paths.XDGConfigDir(), "kdeglobals")
+	plasmarc := filepath.Join(paths.XDGConfigDir(), "plasmarc")
+	return hooks.Spec{
+		RequiredAny: []hooks.AnyOf{{
+			Dirs: []string{kdeglobals, plasmarc},
+			Reason: fmt.Sprintf("KDE Plasma does not appear to be installed.\n"+
+				"Neither %s nor %s exist.\n"+
+				"This plugin is for the KDE Plasma desktop environment.\n"+
+				"For Qt apps on other desktops, use the qt5 or qt6 plugins instead.",
+				kdeglobals, plasmarc),
+		}},
+	}
 }
 
 // Generate creates the KDE Plasma color scheme files.

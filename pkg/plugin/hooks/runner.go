@@ -42,6 +42,13 @@ func RunPre(spec Spec, hctx Context) (skip bool, reason string, err error) {
 		}
 	}
 
+	for _, group := range spec.RequiredAny {
+		if group.satisfied() {
+			continue
+		}
+		return true, group.skipReason(), nil
+	}
+
 	if spec.AutoCreateDir && hctx.OutputDir != "" {
 		if _, statErr := os.Stat(hctx.OutputDir); os.IsNotExist(statErr) {
 			if mkErr := os.MkdirAll(hctx.OutputDir, 0o750); mkErr != nil {
@@ -54,6 +61,112 @@ func RunPre(spec Spec, hctx Context) (skip bool, reason string, err error) {
 	}
 
 	return false, "", nil
+}
+
+// satisfied reports whether any single candidate in the group is
+// present. Binaries go through appdetect (PATH, Flatpak, AppImage);
+// paths are checked with os.Stat rather than appdetect's dirExists,
+// because detection markers are frequently plain files (kdeglobals,
+// config.toml) and appdetect only counts directories.
+func (g AnyOf) satisfied() bool {
+	for _, bin := range g.Binaries {
+		if bin != "" && appdetect.IsPresentAny([]string{bin}, nil) {
+			return true
+		}
+	}
+	for _, d := range g.Dirs {
+		if d == "" {
+			continue
+		}
+		if _, err := os.Stat(expandHome(d)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// skipReason renders the message shown when an AnyOf group is not
+// satisfied: the plugin's own Reason when it set one, otherwise a
+// generated "none of ..." listing every candidate the group accepted.
+func (g AnyOf) skipReason() string {
+	if g.Reason != "" {
+		return g.Reason
+	}
+
+	candidates := make([]string, 0, len(g.Binaries)+len(g.Dirs))
+	for _, b := range g.Binaries {
+		if b != "" {
+			candidates = append(candidates, b+" (executable)")
+		}
+	}
+	for _, d := range g.Dirs {
+		if d != "" {
+			candidates = append(candidates, d)
+		}
+	}
+
+	switch len(candidates) {
+	case 0:
+		return "no detection candidates declared"
+	case 1:
+		return "not found: " + candidates[0]
+	default:
+		return "none of the following were found: " + strings.Join(candidates, ", ")
+	}
+}
+
+// Indent formats a possibly multi-line message for display under a
+// "⊘ Skipping <plugin>: " or "   <plugin>: " style header.
+//
+// The first line is returned as-is — it follows the header on the same
+// line. Continuation lines are dedented by their common leading
+// whitespace and then re-indented to `indent`, so a message written as
+// a naturally-indented Go string literal lands aligned under the header
+// while keeping its *relative* structure: a command nested under a
+// numbered step stays nested. Blank lines stay blank rather than
+// becoming trailing whitespace.
+//
+// Exported because the CLI formats skip reasons at its own indent level
+// and should not reimplement this.
+func Indent(msg, indent string) string {
+	lines := strings.Split(msg, "\n")
+	if len(lines) == 1 {
+		return msg
+	}
+
+	common := commonIndent(lines[1:])
+
+	out := make([]string, 0, len(lines))
+	out = append(out, strings.TrimRight(lines[0], " \t"))
+	for _, line := range lines[1:] {
+		if strings.TrimSpace(line) == "" {
+			out = append(out, "")
+			continue
+		}
+		out = append(out, indent+strings.TrimRight(strings.TrimPrefix(line, common), " \t"))
+	}
+	return strings.Join(out, "\n")
+}
+
+// commonIndent returns the longest leading run of spaces/tabs shared by
+// every non-blank line, which Indent strips before re-indenting.
+func commonIndent(lines []string) string {
+	common := ""
+	first := true
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		lead := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+		if first {
+			common, first = lead, false
+			continue
+		}
+		for !strings.HasPrefix(lead, common) {
+			common = common[:len(common)-1]
+		}
+	}
+	return common
 }
 
 // linePrefix returns the verbose-output prefix for a plugin. When name is
@@ -137,6 +250,12 @@ func applyMakeExecutable(names, written []string, pluginName string, verbose boo
 	}
 }
 
+// instructionIndent is the hanging indent for continuation lines of a
+// multi-line Instructions block, sized to sit clear of the "   " that
+// prefixes every tinct output line without tracking the plugin-name
+// width (which varies per plugin).
+const instructionIndent = "     "
+
 func printInstructions(spec Spec, hctx Context) {
 	var msg string
 	switch {
@@ -145,9 +264,17 @@ func printInstructions(spec Spec, hctx Context) {
 	case spec.Instructions != "":
 		msg = renderTemplate(spec.Instructions, hctx)
 	}
-	if msg != "" {
-		fmt.Fprintln(os.Stderr, msg)
+	if msg == "" {
+		return
 	}
+
+	// Instructions have no header line of their own, so the plugin
+	// prefix is added here and continuation lines get a hanging indent
+	// rather than repeating "<plugin>: " on every row. TrimLeft keeps
+	// older single-line Instructions — which embed their own leading
+	// indent — from being double-indented.
+	prefix := linePrefix(hctx.PluginName)
+	fmt.Fprintln(os.Stderr, prefix+Indent(strings.TrimLeft(msg, " \t"), instructionIndent))
 }
 
 // renderTemplate runs the Instructions string through text/template with a

@@ -19,8 +19,8 @@ import (
 	tmplloader "github.com/jmylchreest/tinct/internal/plugin/output/template"
 	"github.com/jmylchreest/tinct/internal/pluginconfig"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
-	"github.com/jmylchreest/tinct/pkg/util/appdetect"
 )
 
 //go:embed *.tmpl
@@ -92,23 +92,26 @@ func (p *Plugin) DefaultOutputDir() string {
 		filepath.Join(paths.XDGConfigDir(), "qt6ct", "colors"))
 }
 
-// PreExecute checks if the qt6ct config directory exists.
+// PreExecute is a no-op — detection is declared in Hooks().
 func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return true, "cannot determine home directory", nil
-	}
-
-	qt6ctConfigDir := filepath.Join(home, ".config", "qt6ct")
-
-	// Check if qt6ct config directory exists
-	if !appdetect.IsPresentAll(nil, []string{qt6ctConfigDir}) {
-		return true, fmt.Sprintf("qt6ct config directory does not exist (%s). Install qt6ct first:\n"+
-			"  Arch/CachyOS: sudo pacman -S qt6ct\n"+
-			"  Then set: export QT_QPA_PLATFORMTHEME=qt6ct", qt6ctConfigDir), nil
-	}
-
 	return false, "", nil
+}
+
+// Hooks declares qt6's detection. A single-entry AnyOf group is used
+// rather than RequiredDirs so the skip carries the install hint: the
+// generic "required directory does not exist" tells a user what is
+// missing but not what to do about it.
+func (p *Plugin) Hooks() hooks.Spec {
+	qt6ctConfigDir := filepath.Join(paths.XDGConfigDir(), "qt6ct")
+	return hooks.Spec{
+		RequiredAny: []hooks.AnyOf{{
+			Dirs: []string{qt6ctConfigDir},
+			Reason: fmt.Sprintf("qt6ct config directory does not exist (%s).\n"+
+				"Install qt6ct first:\n"+
+				"Arch/CachyOS: sudo pacman -S qt6ct\n"+
+				"Then set: export QT_QPA_PLATFORMTHEME=qt6ct", qt6ctConfigDir),
+		}},
+	}
 }
 
 // Generate creates the Qt6 color scheme file.
