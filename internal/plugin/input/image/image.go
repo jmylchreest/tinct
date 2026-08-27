@@ -21,6 +21,11 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
+// sampleMethodAverage is the default --image.sample-method value; it is the
+// struct default, the flag default, the validation arm and the documented
+// FlagHelp default, so all four move together.
+const sampleMethodAverage = "average"
+
 const (
 	// RegionWeightFactor determines how much weight region colors receive.
 	// relative to main palette colors. Region colors get 10% of the total weight
@@ -85,7 +90,7 @@ func New() *Plugin {
 		extractAmbience: false,
 		regions:         8,
 		samplePercent:   10,
-		sampleMethod:    "average",
+		sampleMethod:    sampleMethodAverage,
 		seedMode:        string(seed.ModeContent), // Default to content-based seed
 		seedValue:       0,
 		cacheEnabled:    cacheEnabled,
@@ -119,7 +124,7 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&p.extractAmbience, "image.extractAmbience", false, "Extract edge/corner colors for ambient lighting (with reduced weight)")
 	cmd.Flags().IntVar(&p.regions, "image.regions", 8, "Number of edge/corner regions to extract (4, 8, 12, 16)")
 	cmd.Flags().IntVar(&p.samplePercent, "image.sample-size", 10, "Percentage of edge to sample (1-50)")
-	cmd.Flags().StringVar(&p.sampleMethod, "image.sample-method", "average", "Sampling method: 'average' or 'dominant'")
+	cmd.Flags().StringVar(&p.sampleMethod, "image.sample-method", sampleMethodAverage, "Sampling method: 'average' or 'dominant'")
 
 	// Seed configuration flags.
 	cmd.Flags().StringVar(&p.seedMode, "image.seed-mode", string(seed.ModeContent), "K-means seed mode: content, filepath, manual, random")
@@ -156,7 +161,7 @@ func (p *Plugin) Validate() error {
 			return fmt.Errorf("sample size must be between 1 and 50, got %d", p.samplePercent)
 		}
 		// Validate sample method.
-		if p.sampleMethod != "average" && p.sampleMethod != "dominant" {
+		if p.sampleMethod != sampleMethodAverage && p.sampleMethod != "dominant" {
 			return fmt.Errorf("sample method must be 'average' or 'dominant', got %s", p.sampleMethod)
 		}
 	}
@@ -201,7 +206,7 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 		{Name: "image.extractAmbience", Type: "bool", Default: "false", Description: "Extract edge/corner colors for ambient lighting", Required: false},
 		{Name: "image.regions", Type: "int", Default: "8", Description: "Number of edge/corner regions (4, 8, 12, 16)", Required: false},
 		{Name: "image.sample-size", Type: "int", Default: "10", Description: "Percentage of edge to sample (1-50)", Required: false},
-		{Name: "image.sample-method", Type: "string", Default: "average", Description: "Sampling method: 'average' or 'dominant'", Required: false},
+		{Name: "image.sample-method", Type: "string", Default: sampleMethodAverage, Description: "Sampling method: 'average' or 'dominant'", Required: false},
 		{Name: "image.seed-mode", Type: "string", Default: "content", Description: "K-means seed mode: content, filepath, manual, random", Required: false},
 		{Name: "image.seed-value", Type: "int64", Default: "0", Description: "K-means seed value (only used with --image.seed-mode=manual)", Required: false},
 		{Name: "image.cache", Type: "bool", Default: fmt.Sprintf("%v", p.cacheEnabled), Description: "Enable caching of remote images", Required: false},

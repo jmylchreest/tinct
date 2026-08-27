@@ -111,7 +111,7 @@ func runPluginSync(cmd *cobra.Command, _ []string) (err error) { //nolint:gocycl
 	// Create live table for sync
 	fmt.Fprintf(os.Stderr, "\nSyncing %d plugin(s)...\n", len(lock.ExternalPlugins))
 	fmt.Fprintln(os.Stderr)
-	table := NewTable([]string{"PLUGIN", "STATUS"}).SetLive(true).WithWriter(os.Stderr)
+	table := NewTable([]string{colPlugin, colStatus}).SetLive(true).WithWriter(os.Stderr)
 
 	// Get sorted plugin names
 	pluginNames := make([]string, 0, len(lock.ExternalPlugins))
@@ -134,7 +134,7 @@ func runPluginSync(cmd *cobra.Command, _ []string) (err error) { //nolint:gocycl
 		meta := lock.ExternalPlugins[name]
 		oldVersion := meta.Version
 
-		table.UpdateRow(name, map[string]string{"STATUS": "Checking..."})
+		table.UpdateRow(name, map[string]string{colStatus: "Checking..."})
 
 		// Check if plugin exists.
 		exists := false
@@ -149,13 +149,13 @@ func runPluginSync(cmd *cobra.Command, _ []string) (err error) { //nolint:gocycl
 
 		// Verify checksum if requested and available.
 		if !needsReinstall && syncVerify && meta.Source != nil && meta.Source.Checksum != "" {
-			table.UpdateRow(name, map[string]string{"STATUS": "Verifying checksum..."})
+			table.UpdateRow(name, map[string]string{colStatus: "Verifying checksum..."})
 			err := verifyPluginChecksum(meta.Path, meta.Source.Checksum)
 			if err != nil {
 				if syncForce {
 					needsReinstall = true
 				} else {
-					table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("✗ Checksum mismatch: %v", err)})
+					table.UpdateRow(name, map[string]string{colStatus: fmt.Sprintf("✗ Checksum mismatch: %v", err)})
 					stats.Failed++
 					continue
 				}
@@ -168,7 +168,7 @@ func runPluginSync(cmd *cobra.Command, _ []string) (err error) { //nolint:gocycl
 			if oldVersion != "" {
 				status = fmt.Sprintf("Already installed (%s)", oldVersion)
 			}
-			table.UpdateRow(name, map[string]string{"STATUS": status})
+			table.UpdateRow(name, map[string]string{colStatus: status})
 			stats.Existing++
 			continue
 		}
@@ -181,20 +181,20 @@ func runPluginSync(cmd *cobra.Command, _ []string) (err error) { //nolint:gocycl
 		case meta.SourceLegacy != "":
 			sourceDisplay = meta.SourceLegacy
 		default:
-			table.UpdateRow(name, map[string]string{"STATUS": "✗ No source information"})
+			table.UpdateRow(name, map[string]string{colStatus: "✗ No source information"})
 			stats.Failed++
 			continue
 		}
 
-		table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("Installing from %s...", sourceDisplay)})
+		table.UpdateRow(name, map[string]string{colStatus: fmt.Sprintf("Installing from %s...", sourceDisplay)})
 
 		if err := reinstallPlugin(meta); err != nil {
 			if syncSkipMissing {
-				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("⊘ Skipped: %v", err)})
+				table.UpdateRow(name, map[string]string{colStatus: fmt.Sprintf("⊘ Skipped: %v", err)})
 				stats.Skipped++
 				continue
 			}
-			table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("✗ %v", err)})
+			table.UpdateRow(name, map[string]string{colStatus: fmt.Sprintf("✗ %v", err)})
 			stats.Failed++
 			continue
 		}
@@ -204,14 +204,14 @@ func runPluginSync(cmd *cobra.Command, _ []string) (err error) { //nolint:gocycl
 			_, _, _, version, _ := queryPluginMetadata(meta.Path)
 			switch {
 			case version != "" && oldVersion != "" && version != oldVersion:
-				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("%s → %s", oldVersion, version)})
+				table.UpdateRow(name, map[string]string{colStatus: fmt.Sprintf("%s → %s", oldVersion, version)})
 			case version != "":
-				table.UpdateRow(name, map[string]string{"STATUS": fmt.Sprintf("Installed (%s)", version)})
+				table.UpdateRow(name, map[string]string{colStatus: fmt.Sprintf("Installed (%s)", version)})
 			default:
-				table.UpdateRow(name, map[string]string{"STATUS": "Installed"})
+				table.UpdateRow(name, map[string]string{colStatus: "Installed"})
 			}
 		} else {
-			table.UpdateRow(name, map[string]string{"STATUS": "Installed"})
+			table.UpdateRow(name, map[string]string{colStatus: "Installed"})
 		}
 		stats.Installed++
 	}

@@ -23,6 +23,11 @@ import (
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
+// pluginName is this plugin's identifier: the Name() result, the
+// pluginconfig key, its XDG directory and the binary it looks for are
+// all the same string.
+const pluginName = "kitty"
+
 //go:embed *.tmpl
 var templates embed.FS
 
@@ -48,7 +53,7 @@ func New() *Plugin {
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "kitty"
+	return pluginName
 }
 
 // Description returns the plugin description.
@@ -95,8 +100,8 @@ func (p *Plugin) Validate() error {
 // [plugin.kitty] output_dir → platform default. Kitty honours
 // $XDG_CONFIG_HOME on macOS too.
 func (p *Plugin) DefaultOutputDir() string {
-	return pluginconfig.Resolve("kitty", "output_dir", p.outputDir,
-		filepath.Join(paths.XDGConfigDir(), "kitty", "themes"))
+	return pluginconfig.Resolve(pluginName, "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), pluginName, "themes"))
 }
 
 // Hooks declares kitty's pre/post-execute behaviour. The conflict
@@ -106,12 +111,12 @@ func (p *Plugin) DefaultOutputDir() string {
 // and SIGUSR1 reload broadcast.
 func (p *Plugin) Hooks() hooks.Spec {
 	return hooks.Spec{
-		RequiredBinaries: []string{"kitty"},
+		RequiredBinaries: []string{pluginName},
 		OptionalBinaries: []string{"kitten"},
 		AutoCreateDir:    true,
 		Reload: &hooks.ReloadSpec{
 			Verb: hooks.VerbSignal,
-			Args: []string{"kitty", "SIGUSR1"},
+			Args: []string{pluginName, "SIGUSR1"},
 		},
 	}
 }
@@ -139,7 +144,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 // generateTheme creates the theme configuration file.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
-	loader := tmplloader.New("kitty", templates)
+	loader := tmplloader.New(pluginName, templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
@@ -180,7 +185,7 @@ func (p *Plugin) checkForConflictingTheme() {
 		return
 	}
 
-	kittyConf := filepath.Join(home, ".config", "kitty", "kitty.conf")
+	kittyConf := filepath.Join(home, ".config", pluginName, "kitty.conf")
 	content, err := os.ReadFile(kittyConf) // #nosec G304 -- Standard config path
 	if err != nil {
 		return // File doesn't exist or can't be read

@@ -28,6 +28,18 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
+// The two Imagen 4 model ids appear in the deprecation table, the
+// image-size guard and the model catalogue; naming them keeps those three
+// in step.
+const (
+	modelImagen4Ultra = "imagen-4.0-ultra-generate-001"
+	modelImagen4      = "imagen-4.0-generate-001"
+)
+
+// extPNG is the fallback extension for a generated image whose format the
+// provider did not state, and the name under which such files are cached.
+const extPNG = ".png"
+
 const (
 	// defaultModel is the default model used when none is specified.
 	defaultModel = "gemini-3.1-flash-image"
@@ -47,10 +59,10 @@ const (
 // earliest possible retirement dates rather than firm ones, except where
 // the date has already passed.
 var deprecatedModels = map[string]string{
-	"imagen-4.0-ultra-generate-001": "deprecated; earliest shutdown 2026-08-17. Google recommends gemini-3.1-flash-image (gemini-3-pro-image-preview is the nearest quality tier)",
-	"imagen-4.0-generate-001":       "deprecated; earliest shutdown 2026-08-17. Migrate to gemini-3.1-flash-image",
-	"imagen-4.0-fast-generate-001":  "deprecated; earliest shutdown 2026-08-17. Migrate to gemini-3.1-flash-image",
-	"imagen-3.0-generate-002":       "retired; its shutdown date was 2025-11-10, so calls may already fail. Migrate to gemini-3.1-flash-image",
+	modelImagen4Ultra:              "deprecated; earliest shutdown 2026-08-17. Google recommends gemini-3.1-flash-image (gemini-3-pro-image-preview is the nearest quality tier)",
+	modelImagen4:                   "deprecated; earliest shutdown 2026-08-17. Migrate to gemini-3.1-flash-image",
+	"imagen-4.0-fast-generate-001": "deprecated; earliest shutdown 2026-08-17. Migrate to gemini-3.1-flash-image",
+	"imagen-3.0-generate-002":      "retired; its shutdown date was 2025-11-10, so calls may already fail. Migrate to gemini-3.1-flash-image",
 }
 
 // warnIfDeprecatedModel prints migration advice to stderr when the chosen
@@ -291,14 +303,14 @@ func getExtensionForMIME(mimeType string) string {
 	case "image/jpeg", "image/jpg":
 		return ".jpg"
 	case "image/png":
-		return ".png"
+		return extPNG
 	case "image/webp":
 		return ".webp"
 	case "image/gif":
 		return ".gif"
 	default:
 		// Default to png for unknown types
-		return ".png"
+		return extPNG
 	}
 }
 
@@ -399,7 +411,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBaseP
 	}
 
 	// Set image size if supported (only for Standard and Ultra models)
-	if p.imageSize != "" && (model == "imagen-4.0-generate-001" || model == "imagen-4.0-ultra-generate-001") {
+	if p.imageSize != "" && (model == modelImagen4 || model == modelImagen4Ultra) {
 		genConfig.ImageSize = p.imageSize
 	}
 
@@ -683,7 +695,7 @@ func ListModels() {
 			Generation:  "Gemini 2.5",
 		},
 		{
-			ID:          "imagen-4.0-ultra-generate-001",
+			ID:          modelImagen4Ultra,
 			Name:        "Imagen 4 Ultra",
 			Description: "Highest quality, best prompt alignment",
 			Cost:        "$0.06",
@@ -691,7 +703,7 @@ func ListModels() {
 			Notes:       "Deprecated — earliest shutdown 2026-08-17. Google recommends gemini-3.1-flash-image; gemini-3-pro-image-preview is the nearest quality tier",
 		},
 		{
-			ID:          "imagen-4.0-generate-001",
+			ID:          modelImagen4,
 			Name:        "Imagen 4",
 			Description: "Flagship model with balanced quality and speed",
 			Cost:        "$0.04",

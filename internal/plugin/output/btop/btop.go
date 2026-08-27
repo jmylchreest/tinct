@@ -21,6 +21,11 @@ import (
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
+// pluginName is this plugin's identifier: the Name() result, the
+// pluginconfig key, its XDG directory and the binary it looks for are
+// all the same string.
+const pluginName = "btop"
+
 //go:embed *.tmpl
 var templates embed.FS
 
@@ -38,7 +43,7 @@ func New() *Plugin {
 }
 
 // Name returns the plugin name.
-func (p *Plugin) Name() string { return "btop" }
+func (p *Plugin) Name() string { return pluginName }
 
 // Description returns the plugin description.
 func (p *Plugin) Description() string { return "btop resource monitor theme" }
@@ -80,8 +85,8 @@ func (p *Plugin) Validate() error {
 // Resolution: --btop.output-dir → TINCT_PLUGIN_BTOP_OUTPUT_DIR →
 // [plugin.btop] output_dir → platform default.
 func (p *Plugin) DefaultOutputDir() string {
-	return pluginconfig.Resolve("btop", "output_dir", p.outputDir,
-		filepath.Join(paths.XDGConfigDir(), "btop", "themes"))
+	return pluginconfig.Resolve(pluginName, "output_dir", p.outputDir,
+		filepath.Join(paths.XDGConfigDir(), pluginName, "themes"))
 }
 
 // Hooks declares btop's pre/post-execute behaviour.
@@ -94,7 +99,7 @@ func (p *Plugin) DefaultOutputDir() string {
 func (p *Plugin) Hooks() hooks.Spec {
 	themeName := p.themeName
 	spec := hooks.Spec{
-		RequiredBinaries: []string{"btop"},
+		RequiredBinaries: []string{pluginName},
 		AutoCreateDir:    true,
 		InstructionsFn: func(_ hooks.Context) string {
 			return fmt.Sprintf("   Set 'color_theme = %q' in ~/.config/btop/btop.conf (or pick %s from btop's menu, press 'p'). Running instances reload automatically via SIGUSR2.", themeName, themeName)
@@ -103,7 +108,7 @@ func (p *Plugin) Hooks() hooks.Spec {
 	if p.reloadConfig {
 		spec.Reload = &hooks.ReloadSpec{
 			Verb: hooks.VerbSignal,
-			Args: []string{"btop", "SIGUSR2"},
+			Args: []string{pluginName, "SIGUSR2"},
 		}
 	}
 	return spec
@@ -115,7 +120,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
 
-	loader := tmplloader.New("btop", templates)
+	loader := tmplloader.New(pluginName, templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}
@@ -124,7 +129,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		return nil, fmt.Errorf("failed to read theme template: %w", err)
 	}
 
-	tmpl, err := template.New("btop").Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
+	tmpl, err := template.New(pluginName).Funcs(utils.TemplateFuncs()).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse theme template: %w", err)
 	}

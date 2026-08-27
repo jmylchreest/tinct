@@ -213,9 +213,9 @@ func collectAllPlugins(mgr *manager.Manager, lock *PluginManifest) []pluginInfo 
 func displayPluginTable(plugins []pluginInfo, showPath bool) {
 	var headers []string
 	if showPath {
-		headers = []string{"", "TYPE", "PLUGIN", "VERSION", "C", "PATH"}
+		headers = []string{"", colType, colPlugin, colVersion, "C", "PATH"}
 	} else {
-		headers = []string{"", "TYPE", "PLUGIN", "VERSION", "C", "DESCRIPTION"}
+		headers = []string{"", colType, colPlugin, colVersion, "C", "DESCRIPTION"}
 	}
 
 	tbl := NewTable(headers)

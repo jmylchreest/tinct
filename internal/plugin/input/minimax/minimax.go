@@ -33,6 +33,10 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 )
 
+// extJPG is the fallback extension for a generated image whose format the
+// provider did not state, and the name under which such files are cached.
+const extJPG = ".jpg"
+
 const (
 	// defaultAPIURL is the MiniMax text-to-image endpoint. It is not
 	// OpenAI-compatible; it has its own request/response shape.
@@ -267,7 +271,7 @@ func (p *Plugin) getImageBasePath(model string) (string, error) {
 func getExtensionForMIME(mimeType string) string {
 	switch mimeType {
 	case "image/jpeg", "image/jpg":
-		return ".jpg"
+		return extJPG
 	case "image/png":
 		return ".png"
 	case "image/webp":
@@ -276,7 +280,7 @@ func getExtensionForMIME(mimeType string) string {
 		return ".gif"
 	default:
 		// Default to jpg: MiniMax returns JPEG.
-		return ".jpg"
+		return extJPG
 	}
 }
 

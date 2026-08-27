@@ -22,6 +22,11 @@ import (
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
 
+// pluginName is this plugin's identifier: the Name() result, the
+// pluginconfig key, its XDG directory and the binary it looks for are
+// all the same string.
+const pluginName = "ghostty"
+
 //go:embed *.tmpl
 var templates embed.FS
 
@@ -49,7 +54,7 @@ func New() *Plugin {
 
 // Name returns the plugin name.
 func (p *Plugin) Name() string {
-	return "ghostty"
+	return pluginName
 }
 
 // Description returns the plugin description.
@@ -101,14 +106,14 @@ func (p *Plugin) Validate() error {
 //     ~/Library/Application Support/com.mitchellh.ghostty/themes
 //   - Windows: %APPDATA%/ghostty/themes
 func (p *Plugin) DefaultOutputDir() string {
-	return pluginconfig.Resolve("ghostty", "output_dir", p.outputDir, p.platformDefault())
+	return pluginconfig.Resolve(pluginName, "output_dir", p.outputDir, p.platformDefault())
 }
 
 func (p *Plugin) platformDefault() string {
 	if os.Getenv("XDG_CONFIG_HOME") == "" && runtime.GOOS == "darwin" {
 		return filepath.Join(paths.MacOSAppSupport("com.mitchellh.ghostty"), "themes")
 	}
-	return filepath.Join(paths.XDGConfigDir(), "ghostty", "themes")
+	return filepath.Join(paths.XDGConfigDir(), pluginName, "themes")
 }
 
 // Hooks declares ghostty's pre/post-execute behaviour. The SIGUSR2
@@ -117,13 +122,13 @@ func (p *Plugin) platformDefault() string {
 // stub that no-ops with a warning.
 func (p *Plugin) Hooks() hooks.Spec {
 	spec := hooks.Spec{
-		RequiredBinaries: []string{"ghostty"},
+		RequiredBinaries: []string{pluginName},
 		AutoCreateDir:    true,
 	}
 	if p.reload {
 		spec.Reload = &hooks.ReloadSpec{
 			Verb: hooks.VerbSignal,
-			Args: []string{"ghostty", "SIGUSR2"},
+			Args: []string{pluginName, "SIGUSR2"},
 		}
 	}
 	return spec
@@ -151,7 +156,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 // generateTheme creates the Ghostty theme file.
 func (p *Plugin) generateTheme(themeData *colour.ThemeData) ([]byte, error) {
 	// Load template with custom override support.
-	loader := tmplloader.New("ghostty", templates)
+	loader := tmplloader.New(pluginName, templates)
 	if p.verbose {
 		loader.WithVerbose(true, utils.NewVerboseLogger(os.Stderr))
 	}

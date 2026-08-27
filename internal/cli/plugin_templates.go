@@ -39,7 +39,7 @@ Examples:
 
 // pluginTemplatesListCmd lists available templates.
 var pluginTemplatesListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   verbList,
 	Short: "List available plugin templates",
 	Long: `List all available templates from output plugins.
 

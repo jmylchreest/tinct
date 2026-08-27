@@ -49,7 +49,7 @@ linters:
 
     # Modern Go features
     - gomoddirectives # Manage replace, retract directives in go.mod
-    - gomodguard # Check for blocked dependencies
+    - gomodguard_v2 # Check for blocked dependencies
 
     # Testing
     - tparallel # Detects inappropriate usage of t.Parallel()
@@ -83,6 +83,14 @@ linters:
     goconst:
       min-len: 3
       min-occurrences: 3
+      # FlagHelp declarations spell the plugin protocol's type vocabulary
+      # and rendered defaults inline:
+      #   {Name: "count", Type: "int", Default: "32", ...}
+      # Those literals mirror the wire field exactly, and a table of flag
+      # declarations reads better with them than with constants — a
+      # `typeString` indirection would obscure what the protocol actually
+      # carries. Excluded rather than extracted.
+      ignore-string-values: '^(string|int|bool|float|true|false)$'
 
     # Go critic
     gocritic:

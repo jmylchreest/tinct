@@ -190,9 +190,7 @@ func main() {
 	case "-h", "--help":
 		printUsage()
 	default:
-		// G705 false positive: os.Args is shell-quoted user input, but we're
-		// writing to stderr in a CLI, not rendering HTML.
-		fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n", os.Args[1]) //nolint:gosec
+		fmt.Fprintf(os.Stderr, "unknown subcommand %q\n\n", os.Args[1])
 		printUsage()
 	}
 }
