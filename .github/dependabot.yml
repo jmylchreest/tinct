@@ -1,0 +1,267 @@
+# Dependabot configuration.
+#
+# The repository is a multi-module Go workspace: the root module plus one
+# module per contrib plugin, each with its own go.mod. Dependabot does not
+# discover nested modules on its own, so every directory is listed
+# explicitly — a missing entry means that plugin silently never gets
+# security updates.
+#
+# Updates are grouped per ecosystem so a routine week produces a handful
+# of PRs rather than dozens. Commit messages use the `chore(deps)` /
+# `ci(deps)` prefixes that scripts/changelog-sections.sh filters out of
+# the user-facing changelog.
+
+version: 2
+updates:
+  # --- Go: root module ---------------------------------------------------
+  - package-ecosystem: gomod
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # --- Go: contrib plugin modules ---------------------------------------
+  # Each plugin replaces github.com/jmylchreest/tinct with a relative
+  # path, so dependabot only ever bumps their third-party dependencies
+  # (go-plugin, go-hclog); the replaced self-reference is left alone.
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/input/paletty"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      paletty-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/input/random"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      random-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/awob"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      awob-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/dunstify"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      dunstify-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/keylightd-tray"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      keylightd-tray-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/noctalia"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      noctalia-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/opencode"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      opencode-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/ptyxis"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      ptyxis-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/spicetify"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      spicetify-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/templater"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      templater-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/wob"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      wob-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: gomod
+    directory: "/contrib/plugins/output/zed"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      zed-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # --- npm: documentation site ------------------------------------------
+  # Majors are excluded: the two outstanding ones (glob 11 -> 13,
+  # typescript 5 -> 7) each want a deliberate PR with a real build and
+  # typecheck behind them, not an automated bump.
+  - package-ecosystem: npm
+    directory: "/docs"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docs-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+
+  # --- GitHub Actions ----------------------------------------------------
+  # Majors are included here: action majors are usually mechanical, and
+  # this repo had four sitting a full major behind before anyone noticed.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
