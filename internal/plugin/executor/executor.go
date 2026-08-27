@@ -58,6 +58,11 @@ func NewWithVerboseAndRunner(pluginPath string, verbose bool, runner ProcessRunn
 	// Fail-fast on protocol-version mismatch before we hand the plugin
 	// off to the RPC handshake — a mismatched go-plugin can otherwise
 	// hang on the magic-cookie exchange with no actionable error.
+	//
+	// This applies the general floor only; the per-type floor (input
+	// plugins need a newer protocol for WallpaperRawPath) is enforced at
+	// registration, where the plugin's type is known.
+	//
 	// Empty versions are tolerated for backward compatibility with
 	// pre-versioning plugins.
 	if pv := result.PluginInfo.ProtocolVersion; pv != "" {

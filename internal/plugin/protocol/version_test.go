@@ -45,8 +45,8 @@ func TestIsCompatible(t *testing.T) {
 		compatible    bool
 		errorContains string
 	}{
-		// Same version - compatible
-		{"0.0.1", true, ""},
+		// At the general floor - compatible
+		{MinCompatibleVersion, true, ""},
 
 		// Same major, higher minor - compatible (forward compatible)
 		{"0.1.0", true, ""},
@@ -98,5 +98,50 @@ func TestVersionString(t *testing.T) {
 	v2 := Version{Major: 1, Minor: 5, Patch: 3}
 	if v2.String() != "1.5.3" {
 		t.Errorf("Version.String() = %q, want %q", v2.String(), "1.5.3")
+	}
+}
+
+// The input floor is higher than the general one: the host calls
+// WallpaperRawPath on every input plugin, and that method postdates
+// 0.1.0, so an older input plugin blocks the run rather than erroring.
+func TestIsCompatibleForType(t *testing.T) {
+	tests := []struct {
+		version    string
+		pluginType string
+		compatible bool
+	}{
+		// Output plugins keep the general floor — every RPC the host
+		// calls on them unconditionally predates 0.1.0, so these work.
+		{"0.0.1", "output", true},
+		{"0.1.0", "output", true},
+		{"0.2.0", "output", true},
+
+		// Input plugins must be at least 0.2.0.
+		{"0.0.1", "input", false},
+		{"0.1.0", "input", false},
+		{"0.2.0", "input", true},
+		{"0.3.0", "input", true},
+
+		// Unknown types fall back to the general floor.
+		{"0.1.0", "", true},
+	}
+
+	for _, tt := range tests {
+		compatible, err := IsCompatibleForType(tt.version, tt.pluginType)
+		if compatible != tt.compatible {
+			t.Errorf("IsCompatibleForType(%q, %q) = %v (err %v), want %v",
+				tt.version, tt.pluginType, compatible, err, tt.compatible)
+		}
+	}
+}
+
+func TestMinCompatibleVersionForType(t *testing.T) {
+	if got := MinCompatibleVersionForType("input"); got != MinInputCompatibleVersion {
+		t.Errorf("input floor = %q, want %q", got, MinInputCompatibleVersion)
+	}
+	for _, other := range []string{"output", "", "unknown"} {
+		if got := MinCompatibleVersionForType(other); got != MinCompatibleVersion {
+			t.Errorf("%q floor = %q, want %q", other, got, MinCompatibleVersion)
+		}
 	}
 }

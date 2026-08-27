@@ -232,19 +232,19 @@ func (m *Manager) RegisterExternalPlugin(name, pluginType, path, description str
 
 	// Check protocol version compatibility.
 	if pluginInfo.ProtocolVersion != "" {
-		compatible, err := protocol.IsCompatible(pluginInfo.ProtocolVersion)
+		compatible, err := protocol.IsCompatibleForType(pluginInfo.ProtocolVersion, pluginType)
 		if err != nil || !compatible {
 			errMsg := "unknown error"
 			if err != nil {
 				errMsg = err.Error()
 			}
-			return fmt.Errorf(
-				"plugin '%s' protocol version %s is incompatible with tinct %s: %s",
-				name,
-				pluginInfo.ProtocolVersion,
-				protocol.ProtocolVersion,
-				errMsg,
-			)
+			return &IncompatiblePluginError{
+				Name:          name,
+				PluginVersion: pluginInfo.ProtocolVersion,
+				HostVersion:   protocol.ProtocolVersion,
+				MinVersion:    protocol.MinCompatibleVersionForType(pluginType),
+				Reason:        errMsg,
+			}
 		}
 	}
 	// Note: If protocol_version is missing, we allow the plugin (backward compatibility)
@@ -287,6 +287,28 @@ func queryPluginInfo(pluginPath string) (PluginInfo, error) {
 	}
 
 	return info, nil
+}
+
+// IncompatiblePluginError reports a plugin rejected for speaking a
+// protocol version this host no longer supports.
+//
+// It is a distinct type because the condition is user-fixable and must
+// not be swallowed: the plugin vanishes from the registry, so without a
+// message the only symptom is "unknown plugin", which points the user at
+// the wrong problem entirely.
+type IncompatiblePluginError struct {
+	Name          string
+	PluginVersion string
+	HostVersion   string
+	MinVersion    string
+	Reason        string
+}
+
+func (e *IncompatiblePluginError) Error() string {
+	return fmt.Sprintf(
+		"plugin %q speaks protocol %s, but tinct %s requires at least %s: %s",
+		e.Name, e.PluginVersion, e.HostVersion, e.MinVersion, e.Reason,
+	)
 }
 
 // externalPluginBase holds fields and methods shared by all external plugin wrappers.

@@ -9,6 +9,7 @@ import (
 	"maps"
 	"net/rpc"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-plugin"
 
@@ -160,7 +161,7 @@ type rgbBlock struct {
 // are cached and exposed via LastRoleHints / LastThemeHint.
 func (c *InputPluginRPCClient) Generate(_ context.Context, opts InputOptions) ([]color.Color, error) {
 	var respBytes []byte
-	err := c.client.Call("Plugin.Generate", opts, &respBytes)
+	err := call(c.client, "Plugin.Generate", opts, &respBytes, generateTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -229,7 +230,7 @@ func parseInputResponse(data []byte) (colors []rgbBlock, roleHints map[string]in
 // GetMetadata calls the remote GetMetadata method.
 func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
-	err := c.client.Call("Plugin.GetMetadata", new(any), &info)
+	err := call(c.client, "Plugin.GetMetadata", new(any), &info, callTimeout)
 	if err != nil {
 		return info, fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -245,7 +246,7 @@ func (c *InputPluginRPCClient) Validate(args map[string]any) error {
 		args = map[string]any{}
 	}
 	var msg string
-	err := c.client.Call("Plugin.Validate", args, &msg)
+	err := call(c.client, "Plugin.Validate", args, &msg, callTimeout)
 	if err != nil {
 		if isMissingMethodErr(err) {
 			return nil
@@ -261,7 +262,7 @@ func (c *InputPluginRPCClient) Validate(args map[string]any) error {
 // WallpaperPath calls the remote WallpaperPath method.
 func (c *InputPluginRPCClient) WallpaperPath() string {
 	var path string
-	err := c.client.Call("Plugin.WallpaperPath", new(any), &path)
+	err := call(c.client, "Plugin.WallpaperPath", new(any), &path, callTimeout)
 	if err != nil {
 		return ""
 	}
@@ -271,7 +272,7 @@ func (c *InputPluginRPCClient) WallpaperPath() string {
 // WallpaperRawPath calls the remote WallpaperRawPath method.
 func (c *InputPluginRPCClient) WallpaperRawPath() string {
 	var path string
-	err := c.client.Call("Plugin.WallpaperRawPath", new(any), &path)
+	err := call(c.client, "Plugin.WallpaperRawPath", new(any), &path, callTimeout)
 	if err != nil {
 		return ""
 	}
@@ -281,7 +282,7 @@ func (c *InputPluginRPCClient) WallpaperRawPath() string {
 // GetFlagHelp calls the remote GetFlagHelp method.
 func (c *InputPluginRPCClient) GetFlagHelp() []FlagHelp {
 	var help []FlagHelp
-	err := c.client.Call("Plugin.GetFlagHelp", new(any), &help)
+	err := call(c.client, "Plugin.GetFlagHelp", new(any), &help, callTimeout)
 	if err != nil {
 		return []FlagHelp{}
 	}
@@ -414,7 +415,7 @@ type OutputPluginRPCClient struct {
 // Generate calls the remote Generate method.
 func (c *OutputPluginRPCClient) Generate(_ context.Context, palette PaletteData) (map[string][]byte, error) {
 	var result map[string][]byte
-	err := c.client.Call("Plugin.Generate", palette, &result)
+	err := call(c.client, "Plugin.Generate", palette, &result, generateTimeout)
 	if err != nil {
 		return result, fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -428,7 +429,7 @@ func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (skip bool, reason
 		Reason string
 		Error  string
 	}
-	err = c.client.Call("Plugin.PreExecute", new(any), &resp)
+	err = call(c.client, "Plugin.PreExecute", new(any), &resp, callTimeout)
 	if err != nil {
 		return false, "", fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -441,7 +442,7 @@ func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (skip bool, reason
 // PostExecute calls the remote PostExecute method.
 func (c *OutputPluginRPCClient) PostExecute(_ context.Context, files []string) error {
 	var errMsg string
-	err := c.client.Call("Plugin.PostExecute", files, &errMsg)
+	err := call(c.client, "Plugin.PostExecute", files, &errMsg, callTimeout)
 	if err != nil {
 		return fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -454,7 +455,7 @@ func (c *OutputPluginRPCClient) PostExecute(_ context.Context, files []string) e
 // GetMetadata calls the remote GetMetadata method.
 func (c *OutputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
-	err := c.client.Call("Plugin.GetMetadata", new(any), &info)
+	err := call(c.client, "Plugin.GetMetadata", new(any), &info, callTimeout)
 	if err != nil {
 		return info, fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -469,7 +470,7 @@ func (c *OutputPluginRPCClient) Validate(args map[string]any) error {
 		args = map[string]any{}
 	}
 	var msg string
-	err := c.client.Call("Plugin.Validate", args, &msg)
+	err := call(c.client, "Plugin.Validate", args, &msg, callTimeout)
 	if err != nil {
 		if isMissingMethodErr(err) {
 			return nil
@@ -490,7 +491,7 @@ func (c *OutputPluginRPCClient) Validate(args map[string]any) error {
 // on transport errors.
 func (c *OutputPluginRPCClient) GetHooks() (hooks.Spec, bool) {
 	var payload HookSpecPayload
-	err := c.client.Call("Plugin.GetHooks", noArgs, &payload)
+	err := call(c.client, "Plugin.GetHooks", noArgs, &payload, callTimeout)
 	if err != nil {
 		return hooks.Spec{}, false
 	}
@@ -505,7 +506,7 @@ func (c *OutputPluginRPCClient) GetHooks() (hooks.Spec, bool) {
 // templates exposed.
 func (c *OutputPluginRPCClient) GetTemplates() (map[string][]byte, bool) {
 	var payload map[string][]byte
-	err := c.client.Call("Plugin.GetTemplates", noArgs, &payload)
+	err := call(c.client, "Plugin.GetTemplates", noArgs, &payload, callTimeout)
 	if err != nil || len(payload) == 0 {
 		return nil, false
 	}
@@ -515,11 +516,54 @@ func (c *OutputPluginRPCClient) GetTemplates() (map[string][]byte, bool) {
 // GetFlagHelp calls the remote GetFlagHelp method.
 func (c *OutputPluginRPCClient) GetFlagHelp() []FlagHelp {
 	var help []FlagHelp
-	err := c.client.Call("Plugin.GetFlagHelp", new(any), &help)
+	err := call(c.client, "Plugin.GetFlagHelp", new(any), &help, callTimeout)
 	if err != nil {
 		return []FlagHelp{}
 	}
 	return help
+}
+
+// Plugin RPC deadlines.
+//
+// net/rpc has no timeouts: Call blocks on a channel until the server
+// answers, so a plugin that never replies hangs the host forever with no
+// output and no diagnosis. That is not hypothetical — a plugin built
+// against an older protocol simply does not have a method the host later
+// added, and the call never completes.
+const (
+	// callTimeout bounds RPCs that must return promptly: metadata,
+	// hooks, flag help, wallpaper paths, validation, pre/post-execute.
+	// Generous enough to absorb a cold-start plugin on a loaded machine.
+	callTimeout = 30 * time.Second
+
+	// generateTimeout bounds Generate, which can legitimately run long —
+	// an input plugin may be waiting on remote image generation.
+	generateTimeout = 10 * time.Minute
+)
+
+// call invokes an RPC method with a deadline, converting what net/rpc
+// would leave as an indefinite hang into an actionable error.
+//
+// On timeout the call is abandoned rather than cancelled — net/rpc gives
+// no way to withdraw it. A late reply is written into the reply pointer
+// after this returns, so every caller must pass a pointer to a local it
+// no longer reads once call returns non-nil. All callers in this file do.
+func call(client *rpc.Client, method string, args, reply any, timeout time.Duration) error {
+	pending := client.Go(method, args, reply, make(chan *rpc.Call, 1))
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case done := <-pending.Done:
+		return done.Error
+	case <-timer.C:
+		return fmt.Errorf(
+			"plugin did not respond to %s within %s; it may be built against an "+
+				"incompatible protocol version (host %s, minimum %s) — try updating it",
+			method, timeout, ProtocolVersion, MinCompatibleVersion,
+		)
+	}
 }
 
 // noArgs is the canonical zero-value used for RPC methods that take no
