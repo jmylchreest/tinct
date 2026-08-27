@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
 	tinctplugin "github.com/jmylchreest/tinct/pkg/plugin"
+	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 )
 
 var hexRe = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
@@ -170,11 +172,110 @@ func TestMetadata(t *testing.T) {
 	if m.Type != "output" {
 		t.Errorf("Type = %q, want output", m.Type)
 	}
-	if m.Metadata == nil || m.Metadata.Reload == nil || m.Metadata.Reload.Method != "watch" {
-		t.Errorf("expected reload method 'watch', got %+v", m.Metadata)
+	if m.Metadata == nil || m.Metadata.Reload == nil || m.Metadata.Reload.Method != "ipc" {
+		t.Errorf("expected reload method 'ipc', got %+v", m.Metadata)
+	}
+	if m.Metadata.Reload.Command != "noctalia msg config-reload" {
+		t.Errorf("Reload.Command = %q, want 'noctalia msg config-reload'", m.Metadata.Reload.Command)
 	}
 	if !strings.Contains(m.Metadata.DefaultOutputDir, "noctalia") {
 		t.Errorf("DefaultOutputDir = %q, want it to contain noctalia", m.Metadata.DefaultOutputDir)
+	}
+}
+
+// TestHooksDeclaresReload guards the reload contract: Noctalia does not
+// watch its palettes directory, so a regenerated palette only takes
+// effect if the running shell is told to re-read it.
+func TestHooksDeclaresReload(t *testing.T) {
+	spec := (&Plugin{}).Hooks()
+
+	if spec.Reload == nil {
+		t.Fatal("Hooks().Reload is nil; the palette would never be reloaded")
+	}
+	if spec.Reload.Verb != hooks.VerbExec {
+		t.Errorf("Reload.Verb = %q, want %q", spec.Reload.Verb, hooks.VerbExec)
+	}
+	want := []string{"noctalia", "msg", "config-reload"}
+	if !slices.Equal(spec.Reload.Args, want) {
+		t.Errorf("Reload.Args = %v, want %v", spec.Reload.Args, want)
+	}
+
+	// The binary guard must be optional, not required: detection is by
+	// config directory, so generating for a machine without the binary
+	// must still write the palette.
+	if !slices.Contains(spec.OptionalBinaries, "noctalia") {
+		t.Errorf("OptionalBinaries = %v, want it to contain noctalia", spec.OptionalBinaries)
+	}
+	if len(spec.RequiredBinaries) != 0 {
+		t.Errorf("RequiredBinaries = %v, want none", spec.RequiredBinaries)
+	}
+}
+
+// TestHooksDeclaresConfigDir checks that installation detection is
+// declarative (RequiredDirs) rather than hand-rolled in PreExecute, and
+// that the declared path follows the NOCTALIA_CONFIG_HOME / XDG chain —
+// the hook runner only expands ~, so the resolution has to happen here.
+func TestHooksDeclaresConfigDir(t *testing.T) {
+	tests := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{
+			name: "NOCTALIA_CONFIG_HOME wins",
+			env:  map[string]string{"NOCTALIA_CONFIG_HOME": "/custom/noctalia", "XDG_CONFIG_HOME": "/xdg"},
+			want: "/custom/noctalia",
+		},
+		{
+			name: "XDG_CONFIG_HOME is next",
+			env:  map[string]string{"XDG_CONFIG_HOME": "/xdg"},
+			want: filepath.Join("/xdg", "noctalia"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("NOCTALIA_CONFIG_HOME", "")
+			t.Setenv("XDG_CONFIG_HOME", "")
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+
+			spec := (&Plugin{}).Hooks()
+			if !slices.Equal(spec.RequiredDirs, []string{tt.want}) {
+				t.Errorf("RequiredDirs = %v, want [%s]", spec.RequiredDirs, tt.want)
+			}
+		})
+	}
+}
+
+// TestPreExecuteNeverSkips locks in that the skip decision moved to the
+// hook runner: a PreExecute that still gated would double up on (and
+// could contradict) the RequiredDirs check.
+func TestPreExecuteNeverSkips(t *testing.T) {
+	t.Setenv("NOCTALIA_CONFIG_HOME", filepath.Join(t.TempDir(), "does-not-exist"))
+
+	skip, reason, err := (&Plugin{}).PreExecute(context.Background())
+	if err != nil {
+		t.Fatalf("PreExecute returned error: %v", err)
+	}
+	if skip {
+		t.Errorf("PreExecute skipped (%q); the RequiredDirs hook owns that decision", reason)
+	}
+}
+
+// TestMetadataMatchesHooks keeps the documented reload (used for README
+// frontmatter drift checks) in step with what the runner actually does.
+func TestMetadataMatchesHooks(t *testing.T) {
+	p := &Plugin{}
+	meta := p.GetMetadata().Metadata
+	spec := p.Hooks()
+
+	if got, want := meta.Reload.Command, strings.Join(spec.Reload.Args, " "); got != want {
+		t.Errorf("metadata reload command = %q, hooks run %q", got, want)
+	}
+	if !slices.Equal(meta.OptionalBinaries, spec.OptionalBinaries) {
+		t.Errorf("metadata OptionalBinaries = %v, hooks declare %v", meta.OptionalBinaries, spec.OptionalBinaries)
 	}
 }
 

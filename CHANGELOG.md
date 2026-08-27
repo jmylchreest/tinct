@@ -15,6 +15,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Fixed
 
+- The noctalia output plugin now reloads the running shell after writing the palette. Noctalia does not watch `~/.config/noctalia/palettes/` — its inotify watch is non-recursive and only reacts to `*.toml` — so a regenerated palette never reached the running shell and the colours stayed as they were at startup. The plugin declares a `hooks.Spec` reload running `noctalia msg config-reload`, with `noctalia` as an optional binary.
+
 - `tinct plugins update <name>` now updates only the named plugin. The command declared no positional arguments and never read them, so cobra accepted the name, discarded it, and updated every plugin in the manifest. An unknown name is now an error listing what is installed, rather than a silent full update.
 - `tinct plugins update` can update plugins added from a local path. Local sources record their origin in `source.original_path`, which the update path never consulted — so every plugin installed with `tinct plugins add ./binary` reported "No source information" and could never be updated.
 
