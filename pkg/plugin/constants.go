@@ -18,10 +18,25 @@ const (
 	// hints are provided, so 0.2.0 plugins continue to work unchanged.
 	ProtocolVersion = "0.3.0"
 
-	// MinCompatibleVersion is the oldest protocol version this tinct version can work with.
-	// Unchanged at 0.0.1 because the wire-format change is purely additive — the
-	// host still accepts the legacy bare-array Generate response.
+	// MinCompatibleVersion is the oldest protocol version this tinct
+	// version can work with for any plugin type.
+	//
+	// Every RPC the host calls unconditionally on an *output* plugin
+	// (Generate, GetMetadata, PreExecute, PostExecute, GetFlagHelp) has
+	// existed since before the 0.1.0 bump, and the optional 0.3.0+
+	// methods degrade gracefully via isMissingMethodErr. So old output
+	// plugins remain genuinely usable and are not rejected.
 	MinCompatibleVersion = "0.0.1"
+
+	// MinInputCompatibleVersion is the floor for input plugins.
+	//
+	// Higher than the general floor because WallpaperRawPath was added
+	// mid-cycle — after the 0.1.0 bump, before 0.2.0 — so a plugin
+	// reporting "0.1.0" may or may not implement it. The host calls it
+	// unconditionally after Generate, and an absent method does not fail
+	// cleanly: net/rpc blocks on the reply forever. 0.2.0 is the oldest
+	// version at which its presence is guaranteed.
+	MinInputCompatibleVersion = "0.2.0"
 )
 
 // Handshake is the handshake configuration for go-plugin protocol.

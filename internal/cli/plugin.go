@@ -3,6 +3,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -900,6 +901,15 @@ func registerExternalPluginsFromManifest(manifest *PluginManifest, resolveAbsolu
 			continue
 		}
 		if err := registerExternalPlugin(meta, resolveAbsolutePaths, verbose); err != nil {
+			// An outdated plugin is always worth reporting: it silently
+			// disappears from the registry, so the user would otherwise
+			// only see "unknown plugin" and chase the wrong problem.
+			var incompatible *manager.IncompatiblePluginError
+			if errors.As(err, &incompatible) {
+				fmt.Fprintf(os.Stderr, "⊘ Skipping plugin %q: %v\n", meta.Name, err)
+				fmt.Fprintf(os.Stderr, "   Update it with: tinct plugins update %s\n", meta.Name)
+				continue
+			}
 			if verbose {
 				fmt.Fprintf(os.Stderr, " Failed to register external plugin '%s': %v\n", meta.Name, err)
 			}

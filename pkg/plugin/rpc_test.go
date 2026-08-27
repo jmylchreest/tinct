@@ -3,7 +3,11 @@ package plugin
 import (
 	"context"
 	"image/color"
+	"net"
+	"net/rpc"
+	"strings"
 	"testing"
+	"time"
 )
 
 // Mock implementations for testing.
@@ -373,5 +377,98 @@ func TestFlagHelp(t *testing.T) {
 	}
 	if !flag.Required {
 		t.Error("Required = false, want true")
+	}
+}
+
+// --- bounded RPC -----------------------------------------------------------
+
+// slowService has one method that answers and one that never does, so we
+// can exercise both branches of call().
+type slowService struct{ release chan struct{} }
+
+func (s *slowService) Echo(arg string, reply *string) error {
+	*reply = arg
+	return nil
+}
+
+func (s *slowService) Hang(_ string, reply *string) error {
+	<-s.release // blocks until the test tears the fixture down
+	*reply = "never"
+	return nil
+}
+
+// newLoopbackClient serves slowService over an in-memory pipe and
+// returns a connected rpc.Client.
+func newLoopbackClient(t *testing.T) (*rpc.Client, *slowService) {
+	t.Helper()
+
+	svc := &slowService{release: make(chan struct{})}
+	srv := rpc.NewServer()
+	if err := srv.RegisterName("Plugin", svc); err != nil {
+		t.Fatalf("RegisterName: %v", err)
+	}
+
+	serverConn, clientConn := net.Pipe()
+	go srv.ServeConn(serverConn)
+
+	client := rpc.NewClient(clientConn)
+	t.Cleanup(func() {
+		close(svc.release)
+		_ = client.Close()
+	})
+	return client, svc
+}
+
+// A responsive method returns its reply and no error.
+func TestCallReturnsReply(t *testing.T) {
+	client, _ := newLoopbackClient(t)
+
+	var got string
+	if err := call(client, "Plugin.Echo", "hello", &got, callTimeout); err != nil {
+		t.Fatalf("call returned error: %v", err)
+	}
+	if got != "hello" {
+		t.Errorf("reply = %q, want %q", got, "hello")
+	}
+}
+
+// The regression this exists for: a method that never replies must fail
+// on a deadline rather than block the host forever.
+func TestCallTimesOutInsteadOfHanging(t *testing.T) {
+	client, _ := newLoopbackClient(t)
+
+	done := make(chan error, 1)
+	go func() {
+		var got string
+		done <- call(client, "Plugin.Hang", "x", &got, 100*time.Millisecond)
+	}()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("call succeeded; want a timeout error")
+		}
+		for _, want := range []string{"Plugin.Hang", "did not respond", "protocol version"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("error %q, want it to mention %q", err.Error(), want)
+			}
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("call did not return; the deadline is not being enforced")
+	}
+}
+
+// A missing method must surface as an error call() passes through, so
+// isMissingMethodErr can classify it for the optional-RPC fallbacks.
+func TestCallSurfacesMissingMethod(t *testing.T) {
+	client, _ := newLoopbackClient(t)
+
+	var got string
+	err := call(client, "Plugin.NoSuchMethod", "x", &got, callTimeout)
+	if err == nil {
+		t.Fatal("call succeeded on an unknown method")
+	}
+	if !isMissingMethodErr(err) {
+		t.Errorf("error %q not recognised as a missing method", err.Error())
 	}
 }

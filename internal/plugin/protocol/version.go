@@ -15,6 +15,9 @@ const ProtocolVersion = plugin.ProtocolVersion
 // MinCompatibleVersion is an alias to the public minimum compatible version.
 const MinCompatibleVersion = plugin.MinCompatibleVersion
 
+// MinInputCompatibleVersion is an alias to the public input-plugin floor.
+const MinInputCompatibleVersion = plugin.MinInputCompatibleVersion
+
 // Version represents a parsed protocol version.
 type Version struct {
 	Major int
@@ -69,6 +72,30 @@ func (v Version) AtLeast(other Version) bool {
 // - Minor version can be higher (backward compatible).
 // - Patch version can be any value (bug fixes only).
 func IsCompatible(pluginVersionStr string) (bool, error) {
+	return isCompatibleAgainst(pluginVersionStr, MinCompatibleVersion)
+}
+
+// IsCompatibleForType is IsCompatible with the floor that applies to the
+// given plugin type ("input" or "output").
+//
+// Input plugins carry a higher floor: the host calls WallpaperRawPath on
+// every input plugin, and that method postdates 0.1.0, so an older
+// plugin blocks the run instead of erroring. Output plugins have no such
+// method and keep the general floor.
+func IsCompatibleForType(pluginVersionStr, pluginType string) (bool, error) {
+	return isCompatibleAgainst(pluginVersionStr, MinCompatibleVersionForType(pluginType))
+}
+
+// MinCompatibleVersionForType returns the protocol floor for a plugin
+// type. Unknown types get the general floor.
+func MinCompatibleVersionForType(pluginType string) string {
+	if pluginType == "input" {
+		return MinInputCompatibleVersion
+	}
+	return MinCompatibleVersion
+}
+
+func isCompatibleAgainst(pluginVersionStr, minCompatible string) (bool, error) {
 	pluginVersion, err := Parse(pluginVersionStr)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse plugin version: %w", err)
@@ -79,7 +106,7 @@ func IsCompatible(pluginVersionStr string) (bool, error) {
 		return false, fmt.Errorf("failed to parse current protocol version: %w", err)
 	}
 
-	minVersion, err := Parse(MinCompatibleVersion)
+	minVersion, err := Parse(minCompatible)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse minimum compatible version: %w", err)
 	}
@@ -99,14 +126,14 @@ func IsCompatible(pluginVersionStr string) (bool, error) {
 			return false, fmt.Errorf(
 				"plugin version %s is too old, minimum required is %s",
 				pluginVersion.String(),
-				MinCompatibleVersion,
+				minCompatible,
 			)
 		}
 		if pluginVersion.Minor == minVersion.Minor && pluginVersion.Patch < minVersion.Patch {
 			return false, fmt.Errorf(
 				"plugin version %s is too old, minimum required is %s",
 				pluginVersion.String(),
-				MinCompatibleVersion,
+				minCompatible,
 			)
 		}
 	}

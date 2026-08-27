@@ -13,6 +13,16 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Input plugins must now speak protocol `0.2.0` or newer. `WallpaperRawPath` was added after the `0.1.0` bump but before `0.2.0`, so a `0.1.0` input plugin may not implement it — and the host calls it unconditionally. Older input plugins are refused at registration with a message naming the gap; run `tinct plugins update <name>`. Output plugins are unaffected and keep the `0.0.1` floor: every RPC the host calls on them unconditionally predates `0.1.0`.
+
+### Fixed
+
+- Plugin RPCs are now bounded by a deadline. `net/rpc` has no timeouts, so a plugin that never answers hung tinct indefinitely with no output and nothing to diagnose — reachable in practice via an outdated plugin missing a method the host calls unconditionally. Metadata-style calls get 30s; `Generate` gets 10 minutes, since an input plugin may legitimately be waiting on remote image generation.
+- The protocol floor is enforced rather than nominal. `MinCompatibleVersion` was `0.0.1` while the only other rule was "major version must match", so every `0.x` plugin ever built passed and the gate never fired.
+- An outdated plugin is reported without `--verbose`. It was rejected silently, leaving `unknown plugin: <name>` as the only symptom, which points at entirely the wrong problem.
+
 ## [0.4.2]
 *2026-08-14*
 
