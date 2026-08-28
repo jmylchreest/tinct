@@ -456,6 +456,72 @@ builds:
 
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  - id: tinct-plugin-noctalia
+    main: .
+    binary: tinct-plugin-noctalia
+    dir: ./contrib/plugins/output/noctalia
+
+    # Build for Linux only (Noctalia is a Wayland shell, Linux-only)
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: tinct-plugin-spicetify
+    main: .
+    binary: tinct-plugin-spicetify
+    dir: ./contrib/plugins/output/spicetify
+
+    # Build for Linux only (matches the other contrib plugins)
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+
+    goarm:
+      - "7"
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+      - -mod=mod
+
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.Date={{.Date}}
+
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 # ============================================================================
 # ARCHIVES
 # ============================================================================
@@ -732,6 +798,50 @@ archives:
       - src: contrib/plugins/output/ptyxis/README.md
         dst: README.md
       - src: contrib/plugins/output/ptyxis/templates/*.tmpl
+        dst: templates/
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-noctalia-archive
+    ids:
+      - tinct-plugin-noctalia
+    name_template: >-
+      tinct-plugin-noctalia_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+
+    files:
+      - src: contrib/plugins/output/noctalia/README.md
+        dst: README.md
+      - src: contrib/plugins/output/noctalia/templates/*.tmpl
+        dst: templates/
+      - src: LICENSE
+        dst: LICENSE
+
+  - id: tinct-plugin-spicetify-archive
+    ids:
+      - tinct-plugin-spicetify
+    name_template: >-
+      tinct-plugin-spicetify_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+    formats: [tar.gz]
+
+    files:
+      - src: contrib/plugins/output/spicetify/README.md
+        dst: README.md
+      - src: contrib/plugins/output/spicetify/templates/*.tmpl
         dst: templates/
       - src: LICENSE
         dst: LICENSE
