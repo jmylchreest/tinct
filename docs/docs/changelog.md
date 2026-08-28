@@ -13,6 +13,9 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.5.0]
+*2026-08-28*
+
 ### Breaking changes
 
 - Input plugins must now speak protocol `0.2.0` or newer. `WallpaperRawPath` was added after the `0.1.0` bump but before `0.2.0`, so a `0.1.0` input plugin may not implement it — and the host calls it unconditionally, where an absent method blocked the run indefinitely rather than erroring. Older input plugins are refused at registration with a message naming the gap; run `tinct plugins update <name>`. Output plugins are unaffected and keep the `0.0.1` floor: every RPC the host calls on them unconditionally predates `0.1.0`.
@@ -41,6 +44,29 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - `tinct plugins update` can update plugins added from a local path. Local sources record their origin in `source.original_path`, which the update path never consulted — so every plugin installed with `tinct plugins add ./binary` reported "No source information" and could never be updated.
 - `--noctalia.output-dir` was accepted and silently ignored — the plugin never read `PaletteData.PluginArgs` and its output directory was never assigned. It now arrives via `Configure` before `Hooks`/`PreExecute`, expands `~`, and suppresses the config-directory check when set.
 - External input plugins no longer lose their debug output under `--verbose`. Verbose is set on the plugin before `Validate`, which is the first RPC and therefore the call that starts the subprocess whose logger is fixed for its lifetime.
+
+### Breaking changes
+
+- fix(plugin)!: bound RPC calls and enforce the protocol floor (#11) (5ae7cd0)
+
+### Added
+
+- feat(hooks): add any-of detection groups and message formatting (#15) (805022c)
+
+### Fixed
+
+- fix(release): build and publish the noctalia and spicetify plugins (#24) (9c9d5ee)
+- fix: clear the pre-existing lint backlog and make lint a real gate (#23) (8e6ed6e)
+- fix: resolve lint regressions introduced this cycle (#22) (3442aeb)
+- fix(spicetify): update tests to the declarative detection contract (#17) (023413c)
+- fix(noctalia): reload the shell after writing the palette (#13) (621ec16)
+- fix(cli): honour the plugin name argument in `tinct plugins update` (#12) (53ae210)
+- fix(plugin)!: bound RPC calls and enforce the protocol floor (#11) (5ae7cd0)
+
+### Changed
+
+- perf(noctalia): skip the reload when the palette is unchanged (#16) (da850e8)
+- perf(plugins): reuse one plugin subprocess per run (#14) (9832096)
 
 ## [0.4.2]
 *2026-08-14*
