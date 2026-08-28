@@ -13,6 +13,35 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Input plugins must now speak protocol `0.2.0` or newer. `WallpaperRawPath` was added after the `0.1.0` bump but before `0.2.0`, so a `0.1.0` input plugin may not implement it — and the host calls it unconditionally, where an absent method blocked the run indefinitely rather than erroring. Older input plugins are refused at registration with a message naming the gap; run `tinct plugins update <name>`. Output plugins are unaffected and keep the `0.0.1` floor: every RPC the host calls on them unconditionally predates `0.1.0`.
+
+### Added
+
+- The `noctalia` and `spicetify` plugins are now built and published with releases. Both existed only as source before, so `tinct plugins install noctalia` could never succeed.
+- `hooks.Spec.RequiredAny` — a satisfied-by-any detection group (`AnyOf{Binaries, Dirs, Reason}`). Groups are ANDed, entries within a group ORed, so plugins whose app has more than one valid install shape no longer need a hand-rolled `PreExecute`. Paths are checked with `os.Stat`, so plain files (`kdeglobals`, `config.toml`) count as markers; binaries still resolve through appdetect (PATH/Flatpak/AppImage). An optional per-group `Reason` replaces the generated skip message.
+- Multi-line skip reasons and `Instructions` are formatted by the hook runner. `hooks.Indent` dedents continuation lines and re-indents them under the header, preserving relative nesting so a command indented under a numbered step stays indented.
+- Optional `Configurable` plugin interface and `Plugin.Configure` RPC. The host pushes args, dry-run and verbose into a plugin before the pre-execute lifecycle, so `PreExecute` and `Hooks` can honour flags instead of assuming defaults. Plugins that do not implement it are unaffected — unknown-method errors fall back like `Validate` and `GetHooks`.
+
+### Changed
+
+- External plugins keep one subprocess for a whole run instead of spawning a fresh one per RPC. A full generate went from roughly 25 plugin launches to 3 (5 to 1 for a single-plugin run), which also all but removes the stray `yamux: Failed to write header` lines those teardowns produced.
+- The noctalia plugin skips the shell reload when the regenerated palette is byte-identical to the one already on disk. A reload makes Noctalia re-read its whole config tree, which is wasted work when the colours have not moved — regenerating from the same wallpaper now costs nothing.
+- kde-plasma, rosec, qt5, qt6 and spicetify move their installation detection (and, for spicetify, the manual-apply message) off hand-rolled `PreExecute`/`PostExecute` onto the declarative `hooks.Spec`.
+- CI now builds and tests the contrib plugin modules, and the lint, `go vet` and formatting steps can actually fail. They carried `continue-on-error`, so the Lint job reported success while printing `##[error]issues found`.
+
+### Fixed
+
+- The noctalia output plugin now reloads the running shell after writing the palette. Noctalia does not watch `~/.config/noctalia/palettes/` — its inotify watch is non-recursive and only reacts to `*.toml` — so a regenerated palette never reached the running shell and the colours stayed as they were at startup. The plugin runs `noctalia msg config-reload`, with `noctalia` as an optional binary.
+- Plugin RPCs are now bounded by a deadline. `net/rpc` has no timeouts, so a plugin that never answers hung tinct indefinitely with no output and nothing to diagnose. Metadata-style calls get 30s; `Generate` gets 10 minutes, since an input plugin may legitimately be waiting on remote image generation.
+- The protocol floor is enforced rather than nominal. `MinCompatibleVersion` was `0.0.1` while the only other rule was "major version must match", so every `0.x` plugin ever built passed and the gate never fired.
+- An outdated plugin is reported without `--verbose`. It was rejected silently, leaving `unknown plugin: <name>` as the only symptom, which points at entirely the wrong problem.
+- `tinct plugins update <name>` now updates only the named plugin. The command declared no positional arguments and never read them, so cobra accepted the name, discarded it, and updated every plugin in the manifest. An unknown name is now an error listing what is installed, rather than a silent full update.
+- `tinct plugins update` can update plugins added from a local path. Local sources record their origin in `source.original_path`, which the update path never consulted — so every plugin installed with `tinct plugins add ./binary` reported "No source information" and could never be updated.
+- `--noctalia.output-dir` was accepted and silently ignored — the plugin never read `PaletteData.PluginArgs` and its output directory was never assigned. It now arrives via `Configure` before `Hooks`/`PreExecute`, expands `~`, and suppresses the config-directory check when set.
+- External input plugins no longer lose their debug output under `--verbose`. Verbose is set on the plugin before `Validate`, which is the first RPC and therefore the call that starts the subprocess whose logger is fixed for its lifetime.
+
 ## [0.4.2]
 *2026-08-14*
 
