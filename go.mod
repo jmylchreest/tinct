@@ -1,6 +1,6 @@
 module github.com/jmylchreest/tinct
 
-go 1.26
+go 1.26.0
 
 require (
 	github.com/BurntSushi/toml v1.6.0
@@ -13,10 +13,10 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/ulikunitz/xz v0.5.16
-	golang.org/x/image v0.45.0
-	golang.org/x/oauth2 v0.36.0
-	golang.org/x/term v0.45.0
-	google.golang.org/genai v1.70.0
+	golang.org/x/image v0.46.0
+	golang.org/x/oauth2 v0.37.0
+	golang.org/x/term v0.46.0
+	google.golang.org/genai v1.71.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -49,8 +49,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/api v0.294.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260825221802-da73d73af1c5 // indirect
 	google.golang.org/grpc v1.83.2 // indirect
