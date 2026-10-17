@@ -3,7 +3,9 @@ package plugin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"image/color"
+	"io"
 	"net"
 	"net/rpc"
 	"strings"
@@ -542,5 +544,207 @@ func TestCallSurfacesMissingMethod(t *testing.T) {
 	}
 	if !isMissingMethodErr(err) {
 		t.Errorf("error %q not recognised as a missing method", err.Error())
+	}
+}
+
+// A peer that does not read must not block request submission past cancellation.
+func TestCallContextCancelsBlockedWrite(t *testing.T) {
+	server, conn := net.Pipe()
+	defer server.Close()
+	client := rpc.NewClient(conn)
+	defer client.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	var reply string
+	err := callContext(ctx, client, "Plugin.Echo", "hello", &reply, time.Minute)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v", err)
+	}
+	if time.Since(start) > time.Second {
+		t.Fatal("blocked writing RPC request")
+	}
+}
+
+type waitingOutput struct {
+	mockOutputPlugin
+	release chan struct{}
+}
+
+func (p *waitingOutput) Generate(context.Context, PaletteData) (map[string][]byte, error) {
+	<-p.release
+	return map[string][]byte{"late": []byte("reply")}, nil
+}
+
+func (p *waitingOutput) PreExecute(context.Context) (skip bool, reason string, err error) {
+	<-p.release
+	return false, "", nil
+}
+
+func (p *waitingOutput) PostExecute(context.Context, []string) error {
+	<-p.release
+	return nil
+}
+
+func TestOutputRPCHonoursCallerDeadline(t *testing.T) {
+	for _, method := range []string{"Generate", "PreExecute", "PostExecute"} {
+		t.Run(method, func(t *testing.T) {
+			impl := &waitingOutput{release: make(chan struct{})}
+			defer close(impl.release)
+			srv := rpc.NewServer()
+			if err := srv.RegisterName("Plugin", &OutputPluginRPCServer{Impl: impl}); err != nil {
+				t.Fatal(err)
+			}
+			server, conn := net.Pipe()
+			defer server.Close()
+			go srv.ServeConn(server)
+			transport := rpc.NewClient(conn)
+			defer transport.Close()
+			client := &OutputPluginRPCClient{client: transport}
+			ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+			defer cancel()
+			var err error
+			switch method {
+			case "Generate":
+				var result map[string][]byte
+				result, err = client.Generate(ctx, PaletteData{})
+				if result != nil {
+					t.Fatal("returned a reply after cancellation")
+				}
+			case "PreExecute":
+				_, _, err = client.PreExecute(ctx)
+			case "PostExecute":
+				err = client.PostExecute(ctx, nil)
+			}
+			if !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestAlreadyCancelledRPCDoesNotSend(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	client := &InputPluginRPCClient{} // No transport should be touched.
+	if _, err := client.Generate(ctx, InputOptions{}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestLegacyNoArgumentRPCsRoundTrip(t *testing.T) {
+	for _, missing := range []bool{false, true} {
+		t.Run(fmt.Sprint("missing=", missing), func(t *testing.T) {
+			srv := rpc.NewServer()
+			var impl any = &InputPluginRPCServer{Impl: &mockInputPlugin{metadata: PluginInfo{Name: "test"}, wallpaper: "/tmp/wallpaper"}}
+			if missing {
+				impl = &slowService{}
+			}
+			if err := srv.RegisterName("Plugin", impl); err != nil {
+				t.Fatal(err)
+			}
+			server, conn := net.Pipe()
+			defer server.Close()
+			go srv.ServeConn(server)
+			transport := rpc.NewClient(conn)
+			defer transport.Close()
+			client := &InputPluginRPCClient{client: transport}
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				info, err := client.GetMetadata()
+				if missing {
+					if err == nil || !isMissingMethodErr(err) {
+						t.Errorf("missing metadata error: %v", err)
+					}
+				} else if err != nil || info.Name != "test" {
+					t.Errorf("metadata: %+v, %v", info, err)
+				}
+				path := client.WallpaperPath()
+				_ = client.WallpaperRawPath()
+				_ = client.GetFlagHelp()
+				if !missing && path != "/tmp/wallpaper" {
+					t.Errorf("wallpaper: %q", path)
+				}
+			}()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("no-argument RPC stalled")
+			}
+		})
+	}
+}
+
+func TestOutputNoArgumentRPCsRoundTrip(t *testing.T) {
+	srv := rpc.NewServer()
+	if err := srv.RegisterName("Plugin", &OutputPluginRPCServer{Impl: &mockOutputPlugin{metadata: PluginInfo{Name: "output"}}}); err != nil {
+		t.Fatal(err)
+	}
+	server, conn := net.Pipe()
+	defer server.Close()
+	go srv.ServeConn(server)
+	transport := rpc.NewClient(conn)
+	defer transport.Close()
+	client := &OutputPluginRPCClient{client: transport}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if _, _, err := client.PreExecute(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := client.GetMetadata(); err != nil || info.Name != "output" {
+		t.Fatalf("metadata: %+v, %v", info, err)
+	}
+	_ = client.GetFlagHelp()
+}
+
+// delayedRequestCodec does not inspect the body until the caller has returned.
+// Close intentionally leaves the write pending, like a half-closed transport.
+type delayedRequestCodec struct {
+	entered  chan struct{}
+	release  chan struct{}
+	observed chan string
+}
+
+func (c *delayedRequestCodec) WriteRequest(_ *rpc.Request, body any) error {
+	close(c.entered)
+	<-c.release
+	c.observed <- body.(InputOptions).PluginArgs["prompt"].(string)
+	return io.ErrClosedPipe
+}
+func (c *delayedRequestCodec) ReadResponseHeader(*rpc.Response) error { <-c.release; return io.EOF }
+func (*delayedRequestCodec) ReadResponseBody(any) error               { return nil }
+func (*delayedRequestCodec) Close() error                             { return nil }
+
+func TestCancelledRPCOwnsRequestArguments(t *testing.T) {
+	codec := &delayedRequestCodec{entered: make(chan struct{}), release: make(chan struct{}), observed: make(chan string, 1)}
+	transport := rpc.NewClientWithCodec(codec)
+	defer transport.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	args := InputOptions{PluginArgs: map[string]any{"prompt": "original"}}
+	done := make(chan error, 1)
+	go func() {
+		var reply string
+		done <- callContext(ctx, transport, "Plugin.Generate", args, &reply, time.Second)
+	}()
+	select {
+	case <-codec.entered:
+	case <-time.After(time.Second):
+		t.Fatal("request did not start")
+	}
+	cancel()
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v", err)
+	}
+	args.PluginArgs["prompt"] = "modified"
+	close(codec.release)
+	select {
+	case got := <-codec.observed:
+		if got != "original" {
+			t.Fatalf("worker read caller mutation: %q", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("request writer did not finish")
 	}
 }

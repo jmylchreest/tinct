@@ -32,6 +32,8 @@ type PluginExecutor struct {
 	protocolType          protocol.PluginType
 	pluginProtocolVersion string // Protocol version reported by the plugin (e.g. "0.2.0")
 	client                *goplug.Client
+	cancelRPC             context.CancelFunc
+	rpcErr                error
 	rpcClient             any // Either *plugin.InputPluginRPCClient or *plugin.OutputPluginRPCClient
 	verbose               bool
 	lastWallpaperPath     string // Stores canonical wallpaper path from JSON stdio plugins
@@ -89,7 +91,8 @@ func NewWithVerboseAndRunner(pluginPath string, verbose bool, runner ProcessRunn
 }
 
 // ExecuteInput runs an input plugin and returns colors.
-func (e *PluginExecutor) ExecuteInput(ctx context.Context, opts plugin.InputOptions) ([]color.Color, error) {
+func (e *PluginExecutor) ExecuteInput(ctx context.Context, opts plugin.InputOptions) (result []color.Color, err error) {
+	defer func() { e.closeCancelledRPC(err) }()
 	switch e.protocolType {
 	case protocol.PluginTypeGoPlugin:
 		return e.executeInputGoPlugin(ctx, opts)
@@ -101,7 +104,8 @@ func (e *PluginExecutor) ExecuteInput(ctx context.Context, opts plugin.InputOpti
 }
 
 // ExecuteOutput runs an output plugin and returns generated files.
-func (e *PluginExecutor) ExecuteOutput(ctx context.Context, palette plugin.PaletteData) (map[string][]byte, error) {
+func (e *PluginExecutor) ExecuteOutput(ctx context.Context, palette plugin.PaletteData) (result map[string][]byte, err error) {
+	defer func() { e.closeCancelledRPC(err) }()
 	switch e.protocolType {
 	case protocol.PluginTypeGoPlugin:
 		return e.executeOutputGoPlugin(ctx, palette)
@@ -114,6 +118,7 @@ func (e *PluginExecutor) ExecuteOutput(ctx context.Context, palette plugin.Palet
 
 // PreExecute runs the output plugin's pre-execution hook.
 func (e *PluginExecutor) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
+	defer func() { e.closeCancelledRPC(err) }()
 	switch e.protocolType {
 	case protocol.PluginTypeGoPlugin:
 		return e.preExecuteGoPlugin(ctx)
@@ -125,7 +130,8 @@ func (e *PluginExecutor) PreExecute(ctx context.Context) (skip bool, reason stri
 }
 
 // PostExecute runs the output plugin's post-execution hook.
-func (e *PluginExecutor) PostExecute(ctx context.Context, writtenFiles []string) error {
+func (e *PluginExecutor) PostExecute(ctx context.Context, writtenFiles []string) (err error) {
+	defer func() { e.closeCancelledRPC(err) }()
 	switch e.protocolType {
 	case protocol.PluginTypeGoPlugin:
 		return e.postExecuteGoPlugin(ctx, writtenFiles)
@@ -142,6 +148,21 @@ func (e *PluginExecutor) Close() {
 		e.client.Kill()
 		e.client = nil
 		e.rpcClient = nil
+	}
+	if e.cancelRPC != nil {
+		e.cancelRPC()
+		e.cancelRPC = nil
+	}
+}
+
+// closeCancelledRPC discards a session whose remote work could still be running.
+func (e *PluginExecutor) closeCancelledRPC(err error) {
+	if e.protocolType == protocol.PluginTypeGoPlugin && (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
+		if e.cancelRPC != nil {
+			e.cancelRPC()
+		}
+		e.Close()
+		e.rpcErr = err
 	}
 }
 
@@ -169,7 +190,8 @@ func (e *PluginExecutor) GetFlagHelp(ctx context.Context) ([]input.FlagHelp, err
 // --<plugin>.<arg> flags, passed through so the plugin can validate the
 // keys it cares about. It is empty when the caller never configured
 // args for this plugin.
-func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args map[string]any) error {
+func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args map[string]any) (err error) {
+	defer func() { e.closeCancelledRPC(err) }()
 	if e.protocolType != protocol.PluginTypeGoPlugin {
 		return nil
 	}
@@ -179,13 +201,13 @@ func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args m
 		if err != nil {
 			return err
 		}
-		return client.Validate(args)
+		return client.ValidateContext(ctx, args)
 	case "output":
 		client, err := e.getOutputRPCClient(ctx)
 		if err != nil {
 			return err
 		}
-		return client.Validate(args)
+		return client.ValidateContext(ctx, args)
 	default:
 		return nil
 	}
@@ -201,7 +223,8 @@ func (e *PluginExecutor) Validate(ctx context.Context, pluginRole string, args m
 // still run, it just sees its args later, in Generate, as it always did.
 // It is returned rather than swallowed so the caller can surface it in
 // verbose mode instead of the failure being invisible.
-func (e *PluginExecutor) Configure(ctx context.Context, kind string, req plugin.ConfigureRequest) error {
+func (e *PluginExecutor) Configure(ctx context.Context, kind string, req plugin.ConfigureRequest) (err error) {
+	defer func() { e.closeCancelledRPC(err) }()
 	if e.protocolType != protocol.PluginTypeGoPlugin {
 		return nil
 	}
@@ -212,13 +235,13 @@ func (e *PluginExecutor) Configure(ctx context.Context, kind string, req plugin.
 		if err != nil {
 			return err
 		}
-		return client.Configure(req)
+		return client.ConfigureContext(ctx, req)
 	case "output":
 		client, err := e.getOutputRPCClient(ctx)
 		if err != nil {
 			return err
 		}
-		return client.Configure(req)
+		return client.ConfigureContext(ctx, req)
 	default:
 		return fmt.Errorf("unknown plugin kind %q", kind)
 	}
@@ -316,7 +339,7 @@ func (e *PluginExecutor) GetLastThemeHint() string {
 // dispenseRPCPlugin creates a go-plugin client, connects via RPC, and
 // dispenses the named plugin.  It is the shared core of getInputRPCClient
 // and getOutputRPCClient.
-func (e *PluginExecutor) dispenseRPCPlugin(name string, pluginMap map[string]goplug.Plugin) (any, error) {
+func (e *PluginExecutor) dispenseRPCPlugin(ctx context.Context, name string, pluginMap map[string]goplug.Plugin) (any, error) {
 	// Configure logger based on verbose flag.
 	var logger hclog.Logger
 	if e.verbose {
@@ -334,7 +357,11 @@ func (e *PluginExecutor) dispenseRPCPlugin(name string, pluginMap map[string]gop
 	}
 
 	// Initialize go-plugin client.
-	rpcCmd := exec.Command(e.path) //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
+	sessionCtx, cancel := context.WithCancel(context.Background())
+	e.cancelRPC = cancel
+	stop := context.AfterFunc(ctx, cancel)
+	defer stop()
+	rpcCmd := exec.CommandContext(sessionCtx, e.path) // #nosec G204 -- Executing the user-selected plugin binary is intentional; no shell or interpolated arguments are used.
 	rpcCmd.Env = pluginEnv()
 	e.client = goplug.NewClient(&goplug.ClientConfig{
 		HandshakeConfig:  protocol.Handshake,
@@ -348,14 +375,20 @@ func (e *PluginExecutor) dispenseRPCPlugin(name string, pluginMap map[string]gop
 	// Connect via RPC.
 	rpcClient, err := e.client.Client()
 	if err != nil {
-		e.client.Kill()
+		e.Close()
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, fmt.Errorf("failed to get RPC client: %w", err)
 	}
 
 	// Request the plugin.
 	raw, err := rpcClient.Dispense(name)
 	if err != nil {
-		e.client.Kill()
+		e.Close()
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
 	}
 
@@ -367,15 +400,21 @@ func (e *PluginExecutor) dispenseRPCPlugin(name string, pluginMap map[string]gop
 // caches it. Generics let getInputRPCClient and getOutputRPCClient share the
 // same fetch/cast/cache flow without duplicating method bodies. Implemented
 // as a free function because Go does not allow generic methods.
-func rpcClientFor[T any](e *PluginExecutor, kind string, p goplug.Plugin) (T, error) {
+func rpcClientFor[T any](ctx context.Context, e *PluginExecutor, kind string, p goplug.Plugin) (T, error) {
 	var zero T
+	if e.rpcErr != nil {
+		return zero, e.rpcErr
+	}
+	if err := ctx.Err(); err != nil {
+		return zero, err
+	}
 	if e.rpcClient != nil {
 		if existing, ok := e.rpcClient.(T); ok {
 			return existing, nil
 		}
 	}
 
-	raw, err := e.dispenseRPCPlugin(kind, map[string]goplug.Plugin{kind: p})
+	raw, err := e.dispenseRPCPlugin(ctx, kind, map[string]goplug.Plugin{kind: p})
 	if err != nil {
 		return zero, err
 	}
@@ -388,12 +427,12 @@ func rpcClientFor[T any](e *PluginExecutor, kind string, p goplug.Plugin) (T, er
 	return client, nil
 }
 
-func (e *PluginExecutor) getInputRPCClient(_ context.Context) (*plugin.InputPluginRPCClient, error) {
-	return rpcClientFor[*plugin.InputPluginRPCClient](e, "input", &plugin.InputPluginRPC{})
+func (e *PluginExecutor) getInputRPCClient(ctx context.Context) (*plugin.InputPluginRPCClient, error) {
+	return rpcClientFor[*plugin.InputPluginRPCClient](ctx, e, "input", &plugin.InputPluginRPC{})
 }
 
-func (e *PluginExecutor) getOutputRPCClient(_ context.Context) (*plugin.OutputPluginRPCClient, error) {
-	return rpcClientFor[*plugin.OutputPluginRPCClient](e, "output", &plugin.OutputPluginRPC{})
+func (e *PluginExecutor) getOutputRPCClient(ctx context.Context) (*plugin.OutputPluginRPCClient, error) {
+	return rpcClientFor[*plugin.OutputPluginRPCClient](ctx, e, "output", &plugin.OutputPluginRPC{})
 }
 
 func (e *PluginExecutor) executeInputGoPlugin(ctx context.Context, opts plugin.InputOptions) ([]color.Color, error) {
