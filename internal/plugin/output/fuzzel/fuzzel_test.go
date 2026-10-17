@@ -148,7 +148,7 @@ func TestSelectedMatchContrast(t *testing.T) {
 			t.Fatal(err)
 		}
 		values := map[string]color.Color{}
-		for _, line := range strings.Split(string(files["tinct.ini"]), "\n") {
+		for line := range strings.SplitSeq(string(files["tinct.ini"]), "\n") {
 			key, value, ok := strings.Cut(line, "=")
 			if !ok || (key != "selection" && key != "selection-match") {
 				continue
