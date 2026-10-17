@@ -44,6 +44,8 @@ func GetEmbeddedTemplates() embed.FS {
 type Plugin struct {
 	outputDir string
 	verbose   bool
+	tty       string
+	osc       []byte
 }
 
 // New creates a new foot output plugin with default settings.
@@ -71,6 +73,7 @@ func (p *Plugin) Version() string {
 
 // RegisterFlags registers plugin-specific flags with the cobra command.
 func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&p.tty, "foot.tty", "", "Foot terminal to update via OSC (e.g. /dev/tty; opt-in)")
 	cmd.Flags().StringVar(&p.outputDir, "foot.output-dir", "", "Output directory (default: ~/.config/foot)")
 }
 
@@ -89,12 +92,16 @@ func (p *Plugin) GetEmbeddedFS() any {
 // GetFlagHelp returns help information for all plugin flags.
 func (p *Plugin) GetFlagHelp() []output.FlagHelp {
 	return []output.FlagHelp{
+		{Name: "foot.tty", Type: "string", Description: "Foot terminal to update via OSC (e.g. /dev/tty; opt-in)"},
 		{Name: "foot.output-dir", Type: "string", Default: "", Description: "Output directory (default: ~/.config/foot)", Required: false},
 	}
 }
 
 // Validate checks if the plugin configuration is valid.
 func (p *Plugin) Validate() error {
+	if p.tty != "" && p.tty != "/dev/tty" && !terminalPath.MatchString(p.tty) {
+		return fmt.Errorf("foot.tty must be /dev/tty or /dev/pts/N")
+	}
 	return nil
 }
 
@@ -110,18 +117,23 @@ func (p *Plugin) DefaultOutputDir() string {
 // Hooks checks prerequisites and explains how to load the palette.
 // Foot signals select already-loaded themes; they do not reload config files.
 func (p *Plugin) Hooks() hooks.Spec {
-	return hooks.Spec{
+	spec := hooks.Spec{
 		RequiredBinaries: []string{pluginName},
 		AutoCreateDir:    true,
 		InstructionsFn: func(_ hooks.Context) string {
-			return "   Add `include=~/.config/foot/tinct-colors.ini` to your foot.ini (or rename the generated tinct.ini to foot.ini if you don't have one yet). Open a new foot process to load the palette; restart your foot server if using server mode."
+			return "   Add `include=~/.config/foot/tinct-colors.ini` to your foot.ini (or rename the generated tinct.ini to foot.ini if you don't have one yet). Use --foot.tty /dev/tty inside Foot for live colours. Otherwise open a new foot process; server mode caches configuration."
 		},
 	}
+	if p.tty != "" {
+		spec.ReloadFn = p.reloadOSC
+	}
+	return spec
 }
 
 // Generate creates the palette fragment and the example main config.
 // Returns map of filename -> content.
 func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error) {
+	p.osc = nil
 	if themeData == nil {
 		return nil, fmt.Errorf("theme data cannot be nil")
 	}
@@ -149,6 +161,12 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	}
 	files["tinct.ini"] = mainContent
 
+	if p.tty != "" {
+		p.osc, err = paletteOSC(colourContent)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return files, nil
 }
 
