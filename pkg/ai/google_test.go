@@ -44,3 +44,21 @@ func TestGoogleResponses(t *testing.T) {
 		})
 	}
 }
+
+func TestGeminiMissingImageMIME(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"candidates":[{"content":{"parts":[{"inlineData":{"data":"iVBORw0KGgo="}}]}}]}`)
+	}))
+	defer server.Close()
+	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{APIKey: "test", Backend: genai.BackendGeminiAPI, HTTPOptions: genai.HTTPOptions{BaseURL: server.URL}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := (ai.Google{Client: client, Gemini: true}).GenerateImage(context.Background(), ai.ImageRequest{Model: "test", Prompt: "forest"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.MIMEType != "image/png" {
+		t.Fatalf("MIMEType=%q", image.MIMEType)
+	}
+}

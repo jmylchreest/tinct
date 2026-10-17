@@ -34,7 +34,7 @@ This supports local hosting when the server actually implements the Images API. 
 
 ## Policy and limits
 
-`Options` accepts an injected `*http.Client`, API key, timeout and response limit. Defaults are five minutes and 64 MiB per HTTP response. Earlier context deadlines take precedence, including with injected clients. HTTP generation requests are not retried and redirects are rejected to avoid replaying requests or forwarding credentials. HTTP errors expose status codes through `*APIError`, without echoing response bodies. Provider errors inside successful responses are validated separately.
+`Options` accepts an injected `*http.Client`, API key, timeout and response limit. Defaults are five minutes per HTTP request and 64 MiB per HTTP response. Generation and a subsequent image download each receive that timeout; set a deadline on the caller context to bound the whole operation. Earlier context deadlines take precedence, including with injected clients. HTTP generation requests are not retried and redirects are rejected to avoid replaying requests or forwarding credentials. HTTP errors expose status codes through `*APIError`, without echoing response bodies. Provider errors inside successful responses are validated separately.
 
 `Google` accepts a configured SDK client for Gemini or Vertex credentials and applies a five-minute context deadline. Its SDK controls response decoding, transport limits and retry policy; the HTTP Options settings do not configure Google. Supply only size and negative-prompt options supported by the selected Google model/backend.
 

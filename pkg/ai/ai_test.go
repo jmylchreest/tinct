@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -199,4 +200,25 @@ func protocolHandler(t *testing.T, provider string) http.HandlerFunc {
 			fmt.Fprint(w, `{"choices":[{"message":{"content":"hello world"},"finish_reason":"stop"}]}`)
 		}
 	}
+}
+
+// A signed image URL is a credential, even though it is not the API key.
+func TestTransportErrorDoesNotExposeSignedURL(t *testing.T) {
+	transport := errorTransport{}
+	_, err := (ai.OpenAI{Options: ai.Options{BaseURL: "http://localhost/v1", Client: &http.Client{Transport: transport}}}).GenerateImage(context.Background(), ai.ImageRequest{})
+	if err == nil || strings.Contains(err.Error(), "secret") {
+		t.Fatalf("unsafe error: %v", err)
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("lost wrapped error: %v", err)
+	}
+}
+
+type errorTransport struct{}
+
+func (errorTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.Method == http.MethodPost {
+		return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"data":[{"url":"https://images.example/image?token=secret"}]}`)), Request: r}, nil
+	}
+	return nil, context.DeadlineExceeded
 }

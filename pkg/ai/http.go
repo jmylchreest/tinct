@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -62,6 +64,11 @@ func (o Options) request(ctx context.Context, method, endpoint string, payload a
 	local.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
 	resp, err := local.Do(req) // #nosec G704 -- endpoint is explicitly supplied by the caller, including local servers.
 	if err != nil {
+		// net/http includes the full URL in transport errors. Download URLs may
+		// contain signed credentials, so retain the cause without the URL.
+		if urlErr, ok := errors.AsType[*url.Error](err); ok {
+			err = urlErr.Err
+		}
 		return nil, fmt.Errorf("AI request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -111,8 +118,8 @@ func decodeImage(encoded, mime string) (Image, error) {
 	}
 	return Image{Bytes: data, MIMEType: mime}, nil
 }
-func (o Options) download(ctx context.Context, url string) (Image, error) {
-	data, err := o.request(ctx, http.MethodGet, url, nil, nil)
+func (o Options) download(ctx context.Context, imageURL string) (Image, error) {
+	data, err := o.request(ctx, http.MethodGet, imageURL, nil, nil)
 	if err != nil {
 		return Image{}, err
 	}

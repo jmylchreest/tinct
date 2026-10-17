@@ -3,8 +3,10 @@ package ai
 import (
 	"context"
 	"fmt"
-	"google.golang.org/genai"
+	"net/http"
 	"strings"
+
+	"google.golang.org/genai"
 )
 
 // Google wraps a caller-configured SDK client (Gemini API or Vertex AI).
@@ -58,8 +60,15 @@ func (p Google) gemini(ctx context.Context, r ImageRequest) (Image, error) {
 		return Image{}, fmt.Errorf("no image data in response")
 	}
 	for _, part := range response.Candidates[0].Content.Parts {
-		if part != nil && part.InlineData != nil && len(part.InlineData.Data) > 0 && strings.HasPrefix(part.InlineData.MIMEType, "image/") {
-			return Image{Bytes: part.InlineData.Data, MIMEType: part.InlineData.MIMEType}, nil
+		if part == nil || part.InlineData == nil || len(part.InlineData.Data) == 0 {
+			continue
+		}
+		mime := part.InlineData.MIMEType
+		if mime == "" {
+			mime = http.DetectContentType(part.InlineData.Data)
+		}
+		if strings.HasPrefix(mime, "image/") {
+			return Image{Bytes: part.InlineData.Data, MIMEType: mime}, nil
 		}
 	}
 	return Image{}, fmt.Errorf("no inline image data in response")
