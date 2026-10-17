@@ -202,6 +202,7 @@ def foot(c):
         for role in ("background", "foreground"):
             c.check(colours[role] == rgb(PALETTES[theme][role]), theme + " requested " + role)
         c.run("foot", "--config", str(main), "--check-config")
+        c.run("foot", "--config", str(config / "tinct.ini"), "--check-config")
         if daemon is not None:
             c.check(daemon.poll() is None, "generation preserves existing Foot process")
             capture(c, "existing-foot-after-generation", [

@@ -125,7 +125,7 @@ func TestFootPlugin_Hooks(t *testing.T) {
 	if !spec.AutoCreateDir {
 		t.Error("AutoCreateDir should be true")
 	}
-	if spec.Reload != nil {
+	if spec.Reload != nil || spec.ReloadFn != nil {
 		t.Fatal("Foot signals select themes, not reload config; no reload hook is allowed")
 	}
 	if spec.InstructionsFn == nil {
