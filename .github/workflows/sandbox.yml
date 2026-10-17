@@ -24,8 +24,12 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26.x'
-      - name: Test validator orchestration
-        run: python3 -m unittest discover -s tests/sandbox -p 'test_*.py' -v
+      - name: Install screenshot test dependencies
+        run: |
+          python3 -m venv /tmp/sandbox-test-env
+          /tmp/sandbox-test-env/bin/pip install Pillow==12.3.0
+      - name: Test validator orchestration and visual failure detection
+        run: /tmp/sandbox-test-env/bin/python -m unittest discover -s tests/sandbox -p 'test_*.py' -v
       - name: Build Linux executable
         run: CGO_ENABLED=0 go build -o /tmp/tinct-validator ./cmd/tinct
       - name: Validate application in isolated desktop

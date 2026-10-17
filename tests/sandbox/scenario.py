@@ -9,6 +9,7 @@ import sys
 import time
 import traceback
 from PIL import Image
+from visual import analyse, missing_text
 
 RESULTS = Path("/tmp/results")
 PROCESSES = []
@@ -75,17 +76,32 @@ def generate(theme):
     return tuple(map(int, re.search(r"--noti-bg:\s*(\d+),(\d+),(\d+)", css.read_text()).groups()))
 
 
-def screenshot(name, background, danger=None):
-    # Allow GTK's animations and compositor frames to settle.
+def screenshot(name, theme, surface, panel=False, critical=False):
     time.sleep(1)
     path = RESULTS / (name + ".png")
     run("grim", str(path))
     with Image.open(path) as image:
-        check(image.size == (1280, 900), name + " screenshot dimensions")
-        counts = {colour: count for count, colour in image.convert("RGB").getcolors(1280 * 900)}
-    check(counts.get(background, 0) > 1000, name + " rendered theme background")
-    if danger:
-        check(counts.get(danger, 0) > 50, name + " rendered critical border")
+        result, overlay = analyse(image, theme, surface, panel, critical)
+        overlay.save(RESULTS / (name + "-regions.png"))
+        # OCR only the application area, enlarged for stable recognition of small fonts.
+        crop = image.crop((780, 0, 1280, 300 if panel else 140)).convert("RGB")
+        crop = crop.resize((crop.width * 3, crop.height * 3))
+        crop.save(RESULTS / (name + "-ocr.png"))
+    expected = (["Critical notification", "The border uses the danger colour", "Normal notification", "Readable body text"]
+                if critical else ["Light notification", "Theme changed without restart"])
+    if panel:
+        expected += ["Notifications", "Do Not Disturb", "Clear All"]
+    # Save numeric evidence before invoking OCR so a timeout retains partial results.
+    report = RESULTS / (name + "-metrics.json")
+    report.write_text(json.dumps(result, indent=2) + "\n")
+    recognised = run("tesseract", str(RESULTS / (name + "-ocr.png")), "stdout", "-l", "eng", "--psm", "6")
+    result["ocr"] = {"text": recognised, "expected": expected,
+                     "missing": missing_text(recognised, expected)}
+    result["passed"] = result["passed"] and not result["ocr"]["missing"]
+    report.write_text(json.dumps(result, indent=2) + "\n")
+    for metric in result["metrics"]:
+        check(metric["passed"], name + " " + metric["name"])
+    check(not result["ocr"]["missing"], name + " expected text visible: " + str(result["ocr"]["missing"]))
 
 
 def swaync():
@@ -107,15 +123,15 @@ def swaync():
     run("notify-send", "-a", "Tinct validation", "-t", "0", "Normal notification", "Readable body text")
     run("notify-send", "-a", "Critical validation", "-u", "critical", "-t", "0",
         "Critical notification", "The border uses the danger colour")
-    screenshot("dark-popups", dark_surface, (243, 139, 168))
+    screenshot("dark-popups", "dark", dark_surface, critical=True)
     run("swaync-client", "--open-panel", "--skip-wait")
-    screenshot("dark-panel", (30, 30, 46), (243, 139, 168))
+    screenshot("dark-panel", "dark", dark_surface, panel=True, critical=True)
     light_surface = generate("light")
     check(daemon.poll() is None, "live reload preserves daemon process")
-    screenshot("light-panel", (239, 241, 245), (210, 15, 57))
+    screenshot("light-panel", "light", light_surface, panel=True, critical=True)
     run("swaync-client", "--close-panel", "--skip-wait")
     run("notify-send", "-t", "0", "Light notification", "Theme changed without restart")
-    screenshot("light-popup", light_surface)
+    screenshot("light-popup", "light", light_surface)
     daemon.terminate()
     daemon.wait(timeout=5)
     wait_until(lambda: not owns_notifications(), "notification service stops")
