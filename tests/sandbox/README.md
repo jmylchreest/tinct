@@ -97,3 +97,12 @@ contrast and OCR, then regenerates a light theme and checks the same Waybar
 process renders it through Tinct's SIGUSR2 hook. The user stylesheet and desktop
 region must remain unchanged. The fixture fixes module content and font size;
 it does not test hardware-backed modules or every possible user layout.
+
+## Fuzzel
+
+`--app fuzzel` validates the generated include through Fuzzel's native parser,
+then renders a fixed three-entry menu with the generated opacity preserved.
+Dark/light screenshots measure selected/unselected text and background colours,
+contrast and OCR. Virtual Wayland keyboard events move the selection and filter
+the list; accepting must return the expected entry. Fuzzel has no live theme
+reload, so each theme starts a new process. No host keyboard is involved.

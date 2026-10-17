@@ -51,7 +51,7 @@ text=cdd6f4ff
 match=89b4faff
 selection=313244ff
 selection-text=cdd6f4ff
-selection-match=89b4faff
+selection-match=cdd6f4ff
 border=89b4faff
 ```
 
@@ -121,7 +121,7 @@ All values are emitted in fuzzel's `RRGGBBAA` (hex without `#`) format.
 | `match` | `accent2` | Matched substring within an entry. |
 | `selection` | `accent1` | Selected entry background. |
 | `selection-text` | `onAccent1` | Selected entry text. |
-| `selection-match` | `accent2` | Matched substring within the selected entry. |
+| `selection-match` | `onAccent1` | Contrast-safe matched text on the selection background. |
 | `counter` | `info` | "N/M results" counter. |
 | `border` | `accent1` | Launcher window border. |
 

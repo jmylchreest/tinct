@@ -1,4 +1,6 @@
 """Real desktop application fixtures sharing the sandbox process lifecycle."""
+import configparser
+import subprocess
 import json
 import os
 from pathlib import Path
@@ -46,17 +48,19 @@ def measure(image, regions):
     records = []
     overlay = image.copy()
     draw = ImageDraw.Draw(overlay)
-    for name, box, colour, minimum in regions:
+    for name, box, colour, minimum, *options in regions:
+        tolerance = options[0] if options else 0
         crop = image.crop(box)
         counts = {colour: count for count, colour in crop.getcolors(crop.width * crop.height)}
-        value = counts.get(colour, 0) / (crop.width * crop.height)
+        value = sum(count for pixel, count in counts.items()
+                    if max(abs(a - b) for a, b in zip(pixel, colour)) <= tolerance) / (crop.width * crop.height)
         passed = value >= minimum
-        records.append(dict(name=name, region=box, value=value, minimum=minimum, passed=passed))
+        records.append(dict(name=name, region=box, value=value, minimum=minimum, tolerance=tolerance, passed=passed))
         draw.rectangle(box, outline="lime" if passed else "red", width=2)
     return records, overlay
 
 
-def capture(c, name, regions, crop_box, expected, text_colours):
+def capture(c, name, regions, crop_box, expected, text_colours, ocr_boxes=None):
     time.sleep(1)
     path = c.RESULTS / (name + ".png")
     c.run("grim", str(path))
@@ -64,15 +68,19 @@ def capture(c, name, regions, crop_box, expected, text_colours):
         c.check(image.size == (1280, 900), name + " dimensions")
         records, overlay = measure(image, regions)
         overlay.save(c.RESULTS / (name + "-regions.png"))
-        crop = image.crop(crop_box).convert("RGB")
-        crop.resize((crop.width * 3, crop.height * 3)).save(c.RESULTS / (name + "-ocr.png"))
+        ocr_paths = []
+        for index, box in enumerate(ocr_boxes or [crop_box]):
+            crop = image.crop(box).convert("RGB")
+            ocr_path = c.RESULTS / (name + f"-ocr-{index}.png")
+            crop.resize((crop.width * 3, crop.height * 3)).save(ocr_path)
+            ocr_paths.append(ocr_path)
     for foreground, background in text_colours:
         ratio = contrast(foreground, background)
         records.append(dict(name="text contrast", value=ratio, minimum=4.5, passed=ratio >= 4.5))
     report = {"metrics": records}
     report_path = c.RESULTS / (name + "-metrics.json")
     report_path.write_text(json.dumps(report, indent=2))
-    text = c.run("tesseract", str(c.RESULTS / (name + "-ocr.png")), "stdout", "-l", "eng", "--psm", "6")
+    text = "\n".join(c.run("tesseract", str(path), "stdout", "-l", "eng", "--psm", "6") for path in ocr_paths)
     report["ocr"] = dict(text=text, expected=expected, missing=missing_text(text, expected))
     report["passed"] = all(r["passed"] for r in records) and not report["ocr"]["missing"]
     report_path.write_text(json.dumps(report, indent=2))
@@ -113,3 +121,56 @@ def waybar(c):
     c.check((config / "style.css").read_text() == style, "Waybar user stylesheet preserved")
     log = (c.RESULTS / "waybar.log").read_text().lower()
     c.check(not any(marker in log for marker in ("[error]", "theme parsing error")), "Waybar has no runtime/CSS errors")
+
+
+def fuzzel(c):
+    compositor(c)
+    config = Path.home() / ".config/fuzzel"
+    config.mkdir(parents=True, exist_ok=True)
+    entries = c.RESULTS / "entries.txt"
+    entries.write_text("Code editor\nWeb browser\nMusic player\n")
+    main = config / "fuzzel.ini"
+    content = f"include={config / 'themes/tinct.ini'}\nfont=DejaVu Sans Mono:size=14\ndpi-aware=no\nanchor=top-left\nx-margin=40\ny-margin=100\nwidth=40\nlines=3\nline-height=32\nhorizontal-pad=16\nvertical-pad=8\n[border]\nwidth=2\nradius=0\n"
+    main.write_text(content)
+    for theme in ("dark", "light"):
+        path = generate(c, "fuzzel", theme, "fuzzel/themes/tinct.ini")
+        ini = configparser.ConfigParser()
+        ini.read(path)
+        colours = {key: rgb(value) for key, value in ini["colors"].items()}
+        for key, role in (("background", "background"), ("text", "foreground"), ("selection", "accent1")):
+            c.check(colours[key] == rgb(PALETTES[theme][role]), theme + " requested " + key)
+        # Preserve generated opacity; compare composited pixels against the known desktop.
+        alpha = int(ini["colors"]["background"][6:8], 16) / 255
+        background = tuple(int(a * alpha) + round(b * (1 - alpha)) for a, b in zip(colours["background"], (48, 52, 59)))
+        c.check(main.read_text() == content, theme + " generation preserves Fuzzel user config")
+        c.run("fuzzel", "--config", str(main), "--check-config")
+        result = c.RESULTS / (theme + "-selection.txt")
+        with entries.open() as source, result.open("w") as out, (c.RESULTS / (theme + "-fuzzel.log")).open("w") as log:
+            proc = subprocess.Popen(["fuzzel", "--config", str(main), "--dmenu", "--no-sort", "--no-exit-on-keyboard-focus-loss", "--prompt", "Find: "], stdin=source, stdout=out, stderr=log)
+        c.PROCESSES.append(proc)
+        def shot(state, selected_y, other_y, expected):
+            regions = [
+                ("launcher background", (180, 110, 450, 135), background, .80, 1),
+                ("selected background", (60, selected_y, 450, selected_y + 40), colours["selection"], .60),
+                ("selected text", (60, selected_y, 450, selected_y + 40), colours["selection-text"], .002),
+                ("unselected text", (60, other_y, 450, other_y + 40), colours["text"], .002),
+                ("desktop preserved", (700, 0, 1280, 900), (48, 52, 59), .99),
+            ]
+            capture(c, theme + "-fuzzel-" + state, regions, (40, 100, 650, 300), expected,
+                    [(colours["selection-text"], colours["selection"]), (colours["text"], background)],
+                    ocr_boxes=[(50, y, 505, y + 40) for y in (110, 153, 196, 239)])
+            c.check(proc.poll() is None, state + " Fuzzel running")
+        shot("initial", 153, 196, ["Find", "Code editor", "Web browser", "Music player"])
+        c.run("wtype", "-s", "200", "-k", "Down", "-s", "200")
+        shot("navigated", 196, 153, ["Code editor", "Web browser", "Music player"])
+        c.run("wtype", "-s", "200", "Music", "-s", "200")
+        capture(c, theme + "-fuzzel-filtered", [
+            ("filtered selection", (60, 153, 450, 193), colours["selection"], .60),
+            ("other entries absent", (60, 196, 450, 236), background, .995, 1),
+        ], (40, 100, 650, 300), ["Music player"], [(colours["selection-match"], colours["selection"])],
+                ocr_boxes=[(50, y, 505, y + 40) for y in (110, 153, 196, 239)])
+        time.sleep(.5)
+        c.run("wtype", "-s", "200", "-k", "Return", "-s", "200")
+        c.check(proc.wait(timeout=5) == 0, theme + " Fuzzel selection accepted")
+        c.check(result.read_text().strip() == "Music player", theme + " keyboard search selects expected entry")
+        c.check(main.read_text() == content, "Fuzzel user config preserved")

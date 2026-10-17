@@ -144,7 +144,7 @@ def swaync():
           "no GTK stylesheet parsing errors")
 
 
-VALIDATORS = {"swaync": swaync, "waybar": lambda: desktop.waybar(sys.modules[__name__])}
+VALIDATORS = {"swaync": swaync, "waybar": lambda: desktop.waybar(sys.modules[__name__]), "fuzzel": lambda: desktop.fuzzel(sys.modules[__name__])}
 
 
 def main():

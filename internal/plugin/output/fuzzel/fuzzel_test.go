@@ -1,6 +1,8 @@
 package fuzzel
 
 import (
+	"image/color"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -136,5 +138,35 @@ func TestFuzzelPlugin_ColorFormatting(t *testing.T) {
 	// Check that colors section exists.
 	if !strings.Contains(content, "[colors]") {
 		t.Error("Generated content should contain [colors] section")
+	}
+}
+
+func TestSelectedMatchContrast(t *testing.T) {
+	for _, theme := range []colour.ThemeType{colour.ThemeDark, colour.ThemeLight} {
+		files, err := New().Generate(colour.NewThemeData(plugintesting.CreateTestPalette(theme), "", "", ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		values := map[string]color.Color{}
+		for line := range strings.SplitSeq(string(files["tinct.ini"]), "\n") {
+			key, value, ok := strings.Cut(line, "=")
+			if !ok || (key != "selection" && key != "selection-match") {
+				continue
+			}
+			if len(value) != 8 {
+				t.Fatalf("invalid RGBA value: %q", value)
+			}
+			n, err := strconv.ParseUint(value, 16, 32)
+			if err != nil {
+				t.Fatal(err)
+			}
+			values[key] = color.RGBA{R: uint8((n >> 24) & 255), G: uint8((n >> 16) & 255), B: uint8((n >> 8) & 255), A: uint8(n & 255)}
+		}
+		if len(values) != 2 {
+			t.Fatal("missing selection colours")
+		}
+		if ratio := colour.ContrastRatio(values["selection"], values["selection-match"]); ratio < 4.5 {
+			t.Errorf("selected match contrast %.2f < 4.5", ratio)
+		}
 	}
 }
