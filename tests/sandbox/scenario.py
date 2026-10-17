@@ -87,7 +87,7 @@ def screenshot(name, theme, surface, panel=False, critical=False):
         crop = image.crop((780, 0, 1280, 300 if panel else 140)).convert("RGB")
         crop = crop.resize((crop.width * 3, crop.height * 3))
         crop.save(RESULTS / (name + "-ocr.png"))
-    expected = (["Critical notification", "Normal notification", "Readable body text"]
+    expected = (["Critical notification", "The border uses the danger colour", "Normal notification", "Readable body text"]
                 if critical else ["Light notification", "Theme changed without restart"])
     if panel:
         expected += ["Notifications", "Do Not Disturb", "Clear All"]

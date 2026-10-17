@@ -9,7 +9,7 @@ class VisualTests(unittest.TestCase):
         draw = ImageDraw.Draw(image)
         draw.rectangle((780, 0, 1279, 899), fill=(30, 30, 46))
         draw.rectangle((810, 145, 1250, 265), fill=(43, 43, 63))
-        draw.rectangle((810, 145, 1249, 199), outline=(243, 139, 168), width=2)
+        draw.rectangle((810, 148, 1249, 197), outline=(243, 139, 168), width=2)
         # Synthetic glyph-like marks isolate colour/layout gates from OCR.
         for x in range(820, 1200, 8):
             draw.rectangle((x, 160, x + 2, 168), fill=(205, 214, 244))
@@ -42,8 +42,16 @@ class VisualTests(unittest.TestCase):
 
     def test_missing_critical_border_rejected(self):
         image = self.fixture()
-        ImageDraw.Draw(image).rectangle((810, 145, 1249, 199), outline=(43, 43, 63), width=2)
-        self.assertIn("critical_border_fraction", self.failures(image))
+        ImageDraw.Draw(image).rectangle((810, 148, 1249, 197), outline=(43, 43, 63), width=2)
+        self.assertIn("critical_border_top_fraction", self.failures(image))
+
+    def test_interior_danger_colour_cannot_replace_border(self):
+        image = self.fixture()
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((810, 148, 1249, 197), outline=(43, 43, 63), width=2)
+        draw.rectangle((830, 175, 1200, 185), fill=(243, 139, 168))
+        self.assertIn("critical_border_top_fraction", self.failures(image))
+        self.assertIn("critical_border_left_fraction", self.failures(image))
 
     def test_offscreen_content_rejected(self):
         image = Image.new("RGB", (1280, 900), (48, 52, 59))

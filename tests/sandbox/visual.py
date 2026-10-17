@@ -46,8 +46,17 @@ def analyse(image, theme, surface, panel, critical):
         coverage("panel_header_text_fraction", (790, 10, 1265, 120), foreground, .002, .20)
         measure("panel_contrast_ratio", contrast(foreground, background), 4.5)
     if critical:
-        border = (810, 145, 1250, 200) if panel else (792, 5, 1268, 57)
-        coverage("critical_border_fraction", border, danger, .002, .10)
+        x0, y0, x1, y1 = (810, 148, 1250, 198) if panel else (792, 6, 1268, 56)
+        # Exclude rounded corners and the card interior: coloured body content
+        # must not compensate for a missing border. Require all four edges.
+        edges = {
+            "top": (x0 + 14, y0, x1 - 14, y0 + 3),
+            "bottom": (x0 + 14, y1 - 3, x1 - 14, y1),
+            "left": (x0, y0 + 14, x0 + 3, y1 - 14),
+            "right": (x1 - 3, y0 + 14, x1, y1 - 14),
+        }
+        for edge, box in edges.items():
+            coverage("critical_border_" + edge + "_fraction", box, danger, .20)
     return {"metrics": metrics, "passed": all(m["passed"] for m in metrics)}, overlay
 
 
