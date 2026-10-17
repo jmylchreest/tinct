@@ -103,9 +103,9 @@ def waybar(c):
             ("bar background", (200, 2, 400, 38), colours["background"], .95),
             ("title foreground", (0, 0, 180, 40), colours["foreground"], .005),
             ("module surface", (580, 2, 700, 38), colours["surface"], .30),
-            ("module text", (580, 2, 700, 38), colours["on-surface"], .005),
+            ("module text", (580, 2, 700, 38), colours["onSurface"], .005),
             ("desktop preserved", (0, 60, 1280, 900), (48, 52, 59), .99),
         ], (0, 0, 1280, 50), ["Tinct status", "Music ready", "Clock ready"],
-        [(colours["foreground"], colours["background"]), (colours["on-surface"], colours["surface"])])
+        [(colours["foreground"], colours["background"]), (colours["onSurface"], colours["surface"])])
     c.check((config / "style.css").read_text() == style, "Waybar user stylesheet preserved")
     c.check("error" not in (c.RESULTS / "waybar.log").read_text().lower(), "Waybar has no runtime/CSS errors")

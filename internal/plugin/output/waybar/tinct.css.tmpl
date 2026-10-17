@@ -31,19 +31,19 @@ window#waybar {
 #workspaces button {
     padding: 0 8px;
     background: transparent;
-    color: @foreground-muted;
+    color: @foregroundMuted;
     border-bottom: 2px solid transparent;
 }
 
 #workspaces button.active {
     background: @accent1;
-    color: @on-accent1;
+    color: @onAccent1;
     border-bottom: 2px solid @accent1;
 }
 
 #workspaces button.urgent {
     background: @danger;
-    color: @on-danger;
+    color: @onDanger;
 }
 
 #workspaces button:hover {
@@ -72,7 +72,7 @@ window#waybar {
     padding: 0 10px;
     margin: 0 2px;
     background: @surface;
-    color: @on-surface;
+    color: @onSurface;
 }
 
 /* ============================================================================
@@ -94,7 +94,7 @@ window#waybar {
 
 @keyframes blink {
     to {
-        color: @on-danger;
+        color: @onDanger;
         background: @danger;
     }
 }
@@ -104,7 +104,7 @@ window#waybar {
 }
 
 #pulseaudio.muted {
-    color: @foreground-muted;
+    color: @foregroundMuted;
 }
 
 /* ============================================================================
@@ -120,7 +120,7 @@ window#waybar {
  * ============================================================================ */
 
 #tray {
-    background: @surface-variant;
+    background: @surfaceVariant;
 }
 
 #tray > .passive {
@@ -129,5 +129,5 @@ window#waybar {
 
 #tray > .needs-attention {
     background: @warning;
-    color: @on-warning;
+    color: @onWarning;
 }
