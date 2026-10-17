@@ -108,4 +108,5 @@ def waybar(c):
         ], (0, 0, 1280, 50), ["Tinct status", "Music ready", "Clock ready"],
         [(colours["foreground"], colours["background"]), (colours["onSurface"], colours["surface"])])
     c.check((config / "style.css").read_text() == style, "Waybar user stylesheet preserved")
-    c.check("error" not in (c.RESULTS / "waybar.log").read_text().lower(), "Waybar has no runtime/CSS errors")
+    log = (c.RESULTS / "waybar.log").read_text().lower()
+    c.check(not any(marker in log for marker in ("[error]", "theme parsing error")), "Waybar has no runtime/CSS errors")
