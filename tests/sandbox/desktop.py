@@ -29,14 +29,14 @@ def compositor(c):
     c.check(proc.poll() is None, "headless compositor running")
 
 
-def generate(c, app, theme, relative):
+def generate(c, app, theme, relative, extra=()):
     argv = ["tinct", "generate", "-i", "file", "-o", app, "-t", theme, "--force"]
     # A full input palette exercises roles required by terminal/launcher templates.
     palette = dict(PALETTES[theme], accent2="c678dd", accent3="56b6c2", accent4="e5c07b",
                    success="98c379", warning="e5c07b", info="61afef")
     for key, value in palette.items():
         argv += ["--colour", key + "=#" + value]
-    c.run(*argv, timeout=5)
+    c.run(*argv, *extra, timeout=5)
     path = Path.home() / ".config" / relative
     c.check(path.is_file() and path.stat().st_size > 100, theme + " generated " + relative)
     (c.RESULTS / (theme + "-" + path.name)).write_bytes(path.read_bytes())
@@ -184,7 +184,8 @@ def foot(c):
     content = f"include={config / 'tinct-colors.ini'}\nfont=DejaVu Sans Mono:size=16\ndpi-aware=no\npad=20x20\n[cursor]\nblink=no\n"
     main.write_text(content)
     script = c.RESULTS / "terminal-fixture.py"
-    script.write_text("import sys, time\n"
+    script.write_text("import sys, time, os\n"
+                      f"open({str(c.RESULTS / 'foot-tty')!r}, 'w').write(os.ttyname(1))\n"
                       "sys.stdout.write('\\x1b[2J\\x1b[HFoot palette validation\\r\\nReadable terminal text\\r\\n\\r\\n')\n"
                       "for base in (40, 100):\n"
                       "    for index in range(8):\n"
@@ -209,11 +210,14 @@ def foot(c):
                 ("existing background unchanged", (20, 250, 1260, 880), rgb(PALETTES["dark"]["background"]), .99),
                 ("existing foreground unchanged", (20, 20, 450, 70), rgb(PALETTES["dark"]["foreground"]), .005),
             ], (10, 10, 600, 75), ["Foot palette validation", "Readable terminal text"], [])
-            daemon.terminate()
-            daemon.wait(timeout=5)
-        daemon = c.start("foot", "--config", str(main), "--fullscreen", "python3", str(script), log=theme + "-foot.log")
+            original_pid = daemon.pid
+            generate(c, "foot", theme, "foot/tinct-colors.ini",
+                     ("--foot.tty", (c.RESULTS / "foot-tty").read_text(), "--verbose"))
+            c.check(daemon.pid == original_pid and daemon.poll() is None, "OSC preserves original Foot process")
+        else:
+            daemon = c.start("foot", "--config", str(main), "--fullscreen", "python3", str(script), log=theme + "-foot.log")
         time.sleep(.5)
-        c.check(daemon.poll() is None, theme + " new Foot process alive")
+        c.check(daemon.poll() is None, theme + " Foot process alive")
         regions = [
             ("terminal background", (20, 250, 1260, 880), colours["background"], .99),
             ("terminal text", (20, 20, 450, 70), colours["foreground"], .005),
@@ -224,4 +228,12 @@ def foot(c):
         capture(c, theme + "-foot", regions, (10, 10, 600, 75),
                 ["Foot palette validation", "Readable terminal text"],
                 [(colours["foreground"], colours["background"])])
+    daemon.terminate()
+    daemon.wait(timeout=5)
+    daemon = c.start("foot", "--config", str(main), "--fullscreen", "python3", str(script), log="new-light-foot.log")
+    time.sleep(.5)
+    c.check(daemon.poll() is None, "new Foot process loads generated light palette")
+    capture(c, "new-light-foot", regions, (10, 10, 600, 75),
+            ["Foot palette validation", "Readable terminal text"],
+            [(colours["foreground"], colours["background"])])
     c.check(main.read_text() == content, "Foot user config preserved")

@@ -91,14 +91,33 @@ The example `tinct.ini` already contains the `include=` line at the top, plus se
 
 ## Reload behaviour
 
-Foot does not reread its configuration through `SIGUSR1` or `SIGUSR2`: these
-signals select themes already loaded into the process. Tinct therefore does not
-signal or restart existing terminals after generating the palette.
+Use `--foot.tty /dev/tty` when running Tinct directly inside the Foot terminal
+whose colours you want to update:
 
-Open a new standalone Foot process to load the updated file. If you use
-`foot --server`, restart that server when it is safe to close its terminal
-sessions; new clients on an existing server still use its cached configuration.
-Existing terminals retain their colours, content and scrollback.
+```bash
+tinct generate -i image -p ~/Pictures/wallpaper.jpg -o foot --foot.tty /dev/tty
+```
+
+For an explicitly selected other Foot terminal, run `tty` inside that terminal
+and pass its `/dev/pts/N` path instead. Only the selected terminal receives the
+update; Tinct does not discover or broadcast to other windows. Ensure the target
+belongs to Foot and is not behind a terminal multiplexer such as tmux.
+
+The opt-in update sends OSC sequences directly to the terminal device, preserving
+the process, text and scrollback. It updates the 16 ANSI colours, default text and
+background, selection colours, and sets the cursor colour to the foreground.
+It uses the rendered `[colors]` palette, including custom template overrides;
+these live colour values must be six-digit RGB hex. URL colours, fonts, padding,
+and other configuration settings are not live-reloaded. Use `--verbose` to see
+any failure to open or update the selected terminal.
+
+Without `--foot.tty`, existing terminals remain unchanged. The generated file is
+still needed for future processes. Foot's `SIGUSR1`/`SIGUSR2` select cached themes;
+they do not reread configuration. In server mode, new clients also use cached
+configuration until the server is restarted; existing clients can be targeted
+individually with OSC without restarting the server.
+
+Protocol reference: [Foot OSC documentation](https://manpages.debian.org/testing/foot/foot-ctlseqs.7.en.html#OSC).
 
 ## Uninstall / revert
 
@@ -119,12 +138,13 @@ Existing terminals retain their colours, content and scrollback.
 3. **Open a new Foot process** to load the changed configuration. In server mode,
    restart the server when it is safe to close its terminal sessions.
 
-4. **External state**: this plugin only writes to `~/.config/foot/`. No further cleanup is required.
+4. **Live state**: OSC updates affect the selected terminal until its colours are reset or its process exits. Removing the generated files does not undo a live update.
 
 ## Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--foot.tty` | Disabled | Update this Foot terminal via OSC (`/dev/tty` or `/dev/pts/N`) |
 | `--foot.output-dir` | `~/.config/foot` | Override the output directory |
 
 ## Colour role mapping
@@ -171,7 +191,7 @@ See the [templating reference](https://jmylchreest.github.io/tinct/docs/templati
 
 ### Colours unchanged in already-open foot windows
 
-This is expected. Open a new standalone Foot process, or restart your Foot server when it is safe to close its sessions. Theme-selection signals do not reread the generated file.
+Live updates are opt-in: use `--foot.tty /dev/tty` directly inside the intended Foot terminal. Otherwise open a new standalone process. Theme-selection signals do not reread the generated file.
 
 ### `unknown option: include=`
 

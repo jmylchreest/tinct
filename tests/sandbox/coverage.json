@@ -25,7 +25,8 @@
       "OCR",
       "screenshots",
       "existing-process-preservation",
-      "new-process-palette"
+      "new-process-palette",
+      "live-osc-same-process"
     ]
   },
   "fuzzel": {

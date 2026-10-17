@@ -112,6 +112,7 @@ reload, so each theme starts a new process. No host keyboard is involved.
 `--app foot` validates the generated include using Foot's native config parser,
 then opens a fullscreen terminal with fixed text and 16 ANSI background swatches.
 It measures every swatch in its own region, checks foreground/background colours
-and OCR, then verifies generation preserves the existing terminal and a new Foot
-process loads the updated palette.
+and OCR, then verifies generation alone leaves the existing terminal unchanged.
+An explicit OSC update must change its palette while preserving the same process
+and visible text. A fresh process must also load the updated palette from disk.
 The fixture uses no shell interpolation and requires no GPU or host terminal.
