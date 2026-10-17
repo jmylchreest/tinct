@@ -37,10 +37,10 @@ def main():
         with (args.artifacts / "build.log").open("w") as log:
             command([args.engine, "build", "-t", image, str(HERE)], timeout=600,
                     stdout=log, stderr=subprocess.STDOUT)
+        created = True  # Even a timed-out create may have allocated the named container.
         command([args.engine, "create", "--name", name, "--network", "none",
                  "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
                  "--pids-limit", "256", "--memory", "1g", image, args.app])
-        created = True
         command([args.engine, "cp", str(args.binary.resolve()), name + ":/usr/local/bin/tinct"])
         with (args.artifacts / "container.log").open("w") as log:
             command([args.engine, "start", "--attach", name], timeout=120,

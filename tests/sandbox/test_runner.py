@@ -40,6 +40,11 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(operations[-4:], ["stop", "cp", "rm", "image"])
         self.assertIn(":/tmp/results/.", calls[-3][2])
 
+    def test_create_timeout_still_cleans_up(self):
+        status, result, calls = self.exercise("create")
+        self.assertEqual(status, 1)
+        self.assertEqual([argv[1] for argv in calls][-4:], ["stop", "cp", "rm", "image"])
+
     def test_build_failure_does_not_touch_nonexistent_container(self):
         status, result, calls = self.exercise("build")
         self.assertEqual(status, 1)

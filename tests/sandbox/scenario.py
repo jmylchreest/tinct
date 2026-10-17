@@ -16,9 +16,18 @@ CHECKS = []
 
 
 def run(*argv, timeout=10):
-    result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
     with (RESULTS / "commands.log").open("a") as log:
-        log.write(json.dumps(list(argv)) + "\n" + result.stdout + result.stderr)
+        log.write(json.dumps(list(argv)) + "\n")
+        log.flush()
+        try:
+            result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired as error:
+            for output in (error.stdout, error.stderr):
+                if output:
+                    log.write(output.decode(errors="replace") if isinstance(output, bytes) else output)
+            log.write("COMMAND TIMED OUT\n")
+            raise
+        log.write(result.stdout + result.stderr)
     result.check_returncode()
     return result.stdout
 
