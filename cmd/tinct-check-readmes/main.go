@@ -73,6 +73,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/output/qt6"
 	"github.com/jmylchreest/tinct/internal/plugin/output/rofi"
 	"github.com/jmylchreest/tinct/internal/plugin/output/rosec"
+	"github.com/jmylchreest/tinct/internal/plugin/output/swaync"
 	"github.com/jmylchreest/tinct/internal/plugin/output/swayosd"
 	"github.com/jmylchreest/tinct/internal/plugin/output/tmux"
 	"github.com/jmylchreest/tinct/internal/plugin/output/walker"
@@ -104,7 +105,7 @@ func builtinRegistry() []output.Plugin {
 		hyprpaper.New(), kdeplasma.New(), kitty.New(), konsole.New(),
 		libadwaita.New(), markdownout.New(), mc.New(), neovim.New(),
 		niri.New(), qt5.New(), qt6.New(), rofi.New(), rosec.New(),
-		swayosd.New(), tmux.New(), walker.New(), warp.New(),
+		swaync.New(), swayosd.New(), tmux.New(), walker.New(), warp.New(),
 		waybar.New(), wbg.New(), wezterm.New(), wofi.New(),
 		yazi.New(), zellij.New(),
 	}
