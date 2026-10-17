@@ -129,6 +129,9 @@ def fuzzel(c):
     config.mkdir(parents=True, exist_ok=True)
     entries = c.RESULTS / "entries.txt"
     entries.write_text("Code editor\nWeb browser\nMusic player\n")
+    main = config / "fuzzel.ini"
+    content = f"include={config / 'themes/tinct.ini'}\nfont=DejaVu Sans Mono:size=14\ndpi-aware=no\nanchor=top-left\nx-margin=40\ny-margin=100\nwidth=40\nlines=3\nline-height=32\nhorizontal-pad=16\nvertical-pad=8\n[border]\nwidth=2\nradius=0\n"
+    main.write_text(content)
     for theme in ("dark", "light"):
         path = generate(c, "fuzzel", theme, "fuzzel/themes/tinct.ini")
         ini = configparser.ConfigParser()
@@ -139,9 +142,7 @@ def fuzzel(c):
         # Preserve generated opacity; compare composited pixels against the known desktop.
         alpha = int(ini["colors"]["background"][6:8], 16) / 255
         background = tuple(int(a * alpha) + round(b * (1 - alpha)) for a, b in zip(colours["background"], (48, 52, 59)))
-        main = config / "fuzzel.ini"
-        content = f"include={path}\nfont=DejaVu Sans Mono:size=14\ndpi-aware=no\nanchor=top-left\nx-margin=40\ny-margin=100\nwidth=40\nlines=3\nline-height=32\nhorizontal-pad=16\nvertical-pad=8\n[border]\nwidth=2\nradius=0\n"
-        main.write_text(content)
+        c.check(main.read_text() == content, theme + " generation preserves Fuzzel user config")
         c.run("fuzzel", "--config", str(main), "--check-config")
         result = c.RESULTS / (theme + "-selection.txt")
         with entries.open() as source, result.open("w") as out, (c.RESULTS / (theme + "-fuzzel.log")).open("w") as log:
@@ -162,9 +163,14 @@ def fuzzel(c):
         shot("initial", 153, 196, ["Find", "Code editor", "Web browser", "Music player"])
         c.run("wtype", "-s", "200", "-k", "Down", "-s", "200")
         shot("navigated", 196, 153, ["Code editor", "Web browser", "Music player"])
-        c.run("wtype", "-s", "200", "Web", "-s", "200")
+        c.run("wtype", "-s", "200", "Music", "-s", "200")
+        capture(c, theme + "-fuzzel-filtered", [
+            ("filtered selection", (60, 153, 450, 193), colours["selection"], .60),
+            ("other entries absent", (60, 196, 450, 236), background, .995, 1),
+        ], (40, 100, 650, 300), ["Music player"], [],
+                ocr_boxes=[(50, y, 505, y + 40) for y in (110, 153, 196, 239)])
         time.sleep(.5)
         c.run("wtype", "-s", "200", "-k", "Return", "-s", "200")
         c.check(proc.wait(timeout=5) == 0, theme + " Fuzzel selection accepted")
-        c.check(result.read_text().strip() == "Web browser", theme + " keyboard search selects expected entry")
+        c.check(result.read_text().strip() == "Music player", theme + " keyboard search selects expected entry")
         c.check(main.read_text() == content, "Fuzzel user config preserved")
