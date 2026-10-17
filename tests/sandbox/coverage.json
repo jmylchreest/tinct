@@ -1,0 +1,162 @@
+{
+  "alacritty": {
+    "status": "planned",
+    "validator": null
+  },
+  "awww": {
+    "status": "planned",
+    "validator": null
+  },
+  "btop": {
+    "status": "planned",
+    "validator": null
+  },
+  "dunst": {
+    "status": "planned",
+    "validator": null
+  },
+  "foot": {
+    "status": "planned",
+    "validator": null
+  },
+  "fuzzel": {
+    "status": "planned",
+    "validator": null
+  },
+  "ghostty": {
+    "status": "planned",
+    "validator": null
+  },
+  "gnome-shell": {
+    "status": "planned",
+    "validator": null
+  },
+  "gtk3": {
+    "status": "planned",
+    "validator": null
+  },
+  "gtk4": {
+    "status": "planned",
+    "validator": null
+  },
+  "helix": {
+    "status": "planned",
+    "validator": null
+  },
+  "histui": {
+    "status": "planned",
+    "validator": null
+  },
+  "hyprland": {
+    "status": "planned",
+    "validator": null
+  },
+  "hyprlock": {
+    "status": "planned",
+    "validator": null
+  },
+  "hyprpaper": {
+    "status": "planned",
+    "validator": null
+  },
+  "kde-plasma": {
+    "status": "planned",
+    "validator": null
+  },
+  "kitty": {
+    "status": "planned",
+    "validator": null
+  },
+  "konsole": {
+    "status": "planned",
+    "validator": null
+  },
+  "libadwaita": {
+    "status": "planned",
+    "validator": null
+  },
+  "markdown": {
+    "status": "planned",
+    "validator": null
+  },
+  "mc": {
+    "status": "planned",
+    "validator": null
+  },
+  "neovim": {
+    "status": "planned",
+    "validator": null
+  },
+  "niri": {
+    "status": "planned",
+    "validator": null
+  },
+  "qt5": {
+    "status": "planned",
+    "validator": null
+  },
+  "qt6": {
+    "status": "planned",
+    "validator": null
+  },
+  "rofi": {
+    "status": "planned",
+    "validator": null
+  },
+  "rosec": {
+    "status": "planned",
+    "validator": null
+  },
+  "swayosd": {
+    "status": "planned",
+    "validator": null
+  },
+  "tmux": {
+    "status": "planned",
+    "validator": null
+  },
+  "walker": {
+    "status": "planned",
+    "validator": null
+  },
+  "warp": {
+    "status": "planned",
+    "validator": null
+  },
+  "waybar": {
+    "status": "planned",
+    "validator": null
+  },
+  "wbg": {
+    "status": "planned",
+    "validator": null
+  },
+  "wezterm": {
+    "status": "planned",
+    "validator": null
+  },
+  "wofi": {
+    "status": "planned",
+    "validator": null
+  },
+  "yazi": {
+    "status": "planned",
+    "validator": null
+  },
+  "zellij": {
+    "status": "planned",
+    "validator": null
+  },
+  "swaync": {
+    "status": "implemented",
+    "validator": "swaync",
+    "checks": [
+      "generation",
+      "runtime",
+      "reload",
+      "rendered-colours",
+      "screenshots",
+      "stopped-daemon"
+    ]
+  }
+}
