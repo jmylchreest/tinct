@@ -128,7 +128,7 @@ def fuzzel(c):
     config = Path.home() / ".config/fuzzel"
     config.mkdir(parents=True, exist_ok=True)
     entries = c.RESULTS / "entries.txt"
-    entries.write_text("Alpha editor\nBeta browser\nGamma terminal\n")
+    entries.write_text("Code editor\nWeb browser\nMusic player\n")
     for theme in ("dark", "light"):
         path = generate(c, "fuzzel", theme, "fuzzel/themes/tinct.ini")
         ini = configparser.ConfigParser()
@@ -145,7 +145,7 @@ def fuzzel(c):
         c.run("fuzzel", "--config", str(main), "--check-config")
         result = c.RESULTS / (theme + "-selection.txt")
         with entries.open() as source, result.open("w") as out, (c.RESULTS / (theme + "-fuzzel.log")).open("w") as log:
-            proc = subprocess.Popen(["fuzzel", "--config", str(main), "--dmenu", "--no-sort", "--prompt", "Find: "], stdin=source, stdout=out, stderr=log)
+            proc = subprocess.Popen(["fuzzel", "--config", str(main), "--dmenu", "--no-sort", "--no-exit-on-keyboard-focus-loss", "--prompt", "Find: "], stdin=source, stdout=out, stderr=log)
         c.PROCESSES.append(proc)
         def shot(state, selected_y, other_y, expected):
             regions = [
@@ -159,12 +159,12 @@ def fuzzel(c):
                     [(colours["selection-text"], colours["selection"]), (colours["text"], background)],
                     ocr_boxes=[(50, y, 505, y + 40) for y in (110, 153, 196, 239)])
             c.check(proc.poll() is None, state + " Fuzzel running")
-        shot("initial", 153, 196, ["Find", "Alpha editor", "Beta browser", "Gamma terminal"])
+        shot("initial", 153, 196, ["Find", "Code editor", "Web browser", "Music player"])
         c.run("wtype", "-k", "Down")
-        shot("navigated", 196, 153, ["Alpha editor", "Beta browser", "Gamma terminal"])
-        c.run("wtype", "Beta")
+        shot("navigated", 196, 153, ["Code editor", "Web browser", "Music player"])
+        c.run("wtype", "Web")
         time.sleep(.5)
         c.run("wtype", "-k", "Return")
         c.check(proc.wait(timeout=5) == 0, theme + " Fuzzel selection accepted")
-        c.check(result.read_text().strip() == "Beta browser", theme + " keyboard search selects expected entry")
+        c.check(result.read_text().strip() == "Web browser", theme + " keyboard search selects expected entry")
         c.check(main.read_text() == content, "Fuzzel user config preserved")
