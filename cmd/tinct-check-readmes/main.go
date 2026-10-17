@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -30,6 +29,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jmylchreest/tinct/internal/plugin/input"
+	"github.com/jmylchreest/tinct/internal/plugin/metadata"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/pkg/plugin"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
@@ -482,10 +482,7 @@ func deriveReloadMethod(spec hooks.Spec) string {
 // runPluginInfo execs <binary> --plugin-info and parses the JSON.
 func runPluginInfo(binary string) (plugin.PluginInfo, error) {
 	var info plugin.PluginInfo
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	cmd := exec.CommandContext(ctx, binary, "--plugin-info")
-	out, err := cmd.Output()
+	out, err := metadata.Query(context.Background(), binary)
 	if err != nil {
 		return info, fmt.Errorf("exec %s --plugin-info: %w", binary, err)
 	}

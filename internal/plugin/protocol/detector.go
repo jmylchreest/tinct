@@ -5,9 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
-	"time"
 
+	"github.com/jmylchreest/tinct/internal/plugin/metadata"
 	"github.com/jmylchreest/tinct/pkg/plugin"
 )
 
@@ -29,12 +28,7 @@ type PluginInfo = plugin.PluginInfo
 
 // DetectProtocol detects which protocol a plugin uses by querying it.
 func DetectProtocol(pluginPath string) (*DetectorResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// Query plugin info.
-	cmd := exec.CommandContext(ctx, pluginPath, "--plugin-info")
-	output, err := cmd.Output()
+	output, err := metadata.Query(context.Background(), pluginPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query plugin: %w", err)
 	}

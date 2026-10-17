@@ -8,7 +8,6 @@ import (
 	"image/color"
 	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
 	"github.com/jmylchreest/tinct/internal/plugin/input/shared/palettebuilder"
+	"github.com/jmylchreest/tinct/internal/plugin/metadata"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
 	"github.com/jmylchreest/tinct/internal/plugin/output/alacritty"
 	"github.com/jmylchreest/tinct/internal/plugin/output/awww"
@@ -276,8 +276,7 @@ type PluginInfo struct {
 
 // queryPluginInfo queries a plugin for its metadata.
 func queryPluginInfo(pluginPath string) (PluginInfo, error) {
-	cmd := exec.Command(pluginPath, "--plugin-info")
-	cmdOutput, err := cmd.Output()
+	cmdOutput, err := metadata.Query(context.Background(), pluginPath)
 	if err != nil {
 		return PluginInfo{}, fmt.Errorf("failed to execute plugin: %w", err)
 	}
