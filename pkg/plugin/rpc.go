@@ -244,9 +244,9 @@ func parseInputResponse(data []byte) (colors []rgbBlock, roleHints map[string]in
 // GetMetadata calls the remote GetMetadata method.
 func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
-	err := call(c.client, "Plugin.GetMetadata", new(any), &info, callTimeout)
+	err := call(c.client, "Plugin.GetMetadata", &legacyNoArgs, &info, callTimeout)
 	if err != nil {
-		return info, fmt.Errorf("RPC call failed: %w", err)
+		return PluginInfo{}, fmt.Errorf("RPC call failed: %w", err)
 	}
 	return info, nil
 }
@@ -302,7 +302,7 @@ func (c *InputPluginRPCClient) ValidateContext(ctx context.Context, args map[str
 // WallpaperPath calls the remote WallpaperPath method.
 func (c *InputPluginRPCClient) WallpaperPath() string {
 	var path string
-	err := call(c.client, "Plugin.WallpaperPath", new(any), &path, callTimeout)
+	err := call(c.client, "Plugin.WallpaperPath", &legacyNoArgs, &path, callTimeout)
 	if err != nil {
 		return ""
 	}
@@ -312,7 +312,7 @@ func (c *InputPluginRPCClient) WallpaperPath() string {
 // WallpaperRawPath calls the remote WallpaperRawPath method.
 func (c *InputPluginRPCClient) WallpaperRawPath() string {
 	var path string
-	err := call(c.client, "Plugin.WallpaperRawPath", new(any), &path, callTimeout)
+	err := call(c.client, "Plugin.WallpaperRawPath", &legacyNoArgs, &path, callTimeout)
 	if err != nil {
 		return ""
 	}
@@ -322,7 +322,7 @@ func (c *InputPluginRPCClient) WallpaperRawPath() string {
 // GetFlagHelp calls the remote GetFlagHelp method.
 func (c *InputPluginRPCClient) GetFlagHelp() []FlagHelp {
 	var help []FlagHelp
-	err := call(c.client, "Plugin.GetFlagHelp", new(any), &help, callTimeout)
+	err := call(c.client, "Plugin.GetFlagHelp", &legacyNoArgs, &help, callTimeout)
 	if err != nil {
 		return []FlagHelp{}
 	}
@@ -484,7 +484,7 @@ func (c *OutputPluginRPCClient) PreExecute(ctx context.Context) (skip bool, reas
 		Reason string
 		Error  string
 	}
-	err = callContext(ctx, c.client, "Plugin.PreExecute", new(any), &resp, callTimeout)
+	err = callContext(ctx, c.client, "Plugin.PreExecute", &legacyNoArgs, &resp, callTimeout)
 	if err != nil {
 		return false, "", fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -510,9 +510,9 @@ func (c *OutputPluginRPCClient) PostExecute(ctx context.Context, files []string)
 // GetMetadata calls the remote GetMetadata method.
 func (c *OutputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 	var info PluginInfo
-	err := call(c.client, "Plugin.GetMetadata", new(any), &info, callTimeout)
+	err := call(c.client, "Plugin.GetMetadata", &legacyNoArgs, &info, callTimeout)
 	if err != nil {
-		return info, fmt.Errorf("RPC call failed: %w", err)
+		return PluginInfo{}, fmt.Errorf("RPC call failed: %w", err)
 	}
 	return info, nil
 }
@@ -600,7 +600,7 @@ func (c *OutputPluginRPCClient) GetTemplates() (map[string][]byte, bool) {
 // GetFlagHelp calls the remote GetFlagHelp method.
 func (c *OutputPluginRPCClient) GetFlagHelp() []FlagHelp {
 	var help []FlagHelp
-	err := call(c.client, "Plugin.GetFlagHelp", new(any), &help, callTimeout)
+	err := call(c.client, "Plugin.GetFlagHelp", &legacyNoArgs, &help, callTimeout)
 	if err != nil {
 		return []FlagHelp{}
 	}
@@ -700,3 +700,8 @@ func isMissingMethodErr(err error) bool {
 	return strings.Contains(msg, "can't find method") ||
 		strings.Contains(msg, "can't find service")
 }
+
+// legacyNoArgs preserves the interface-encoded request expected by older RPC
+// methods taking any. A non-nil builtin value can also be discarded safely by
+// net/rpc when the method is absent. Keep noArgs for methods taking struct{}.
+var legacyNoArgs any = ""

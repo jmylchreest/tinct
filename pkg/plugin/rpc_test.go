@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"image/color"
 	"net"
 	"net/rpc"
@@ -628,4 +629,70 @@ func TestAlreadyCancelledRPCDoesNotSend(t *testing.T) {
 	if _, err := client.Generate(ctx, InputOptions{}); !errors.Is(err, context.Canceled) {
 		t.Fatalf("error = %v", err)
 	}
+}
+
+func TestLegacyNoArgumentRPCsRoundTrip(t *testing.T) {
+	for _, missing := range []bool{false, true} {
+		t.Run(fmt.Sprint("missing=", missing), func(t *testing.T) {
+			srv := rpc.NewServer()
+			var impl any = &InputPluginRPCServer{Impl: &mockInputPlugin{metadata: PluginInfo{Name: "test"}, wallpaper: "/tmp/wallpaper"}}
+			if missing {
+				impl = &slowService{}
+			}
+			if err := srv.RegisterName("Plugin", impl); err != nil {
+				t.Fatal(err)
+			}
+			server, conn := net.Pipe()
+			defer server.Close()
+			go srv.ServeConn(server)
+			transport := rpc.NewClient(conn)
+			defer transport.Close()
+			client := &InputPluginRPCClient{client: transport}
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				info, err := client.GetMetadata()
+				if missing {
+					if err == nil || !isMissingMethodErr(err) {
+						t.Errorf("missing metadata error: %v", err)
+					}
+				} else if err != nil || info.Name != "test" {
+					t.Errorf("metadata: %+v, %v", info, err)
+				}
+				path := client.WallpaperPath()
+				_ = client.WallpaperRawPath()
+				_ = client.GetFlagHelp()
+				if !missing && path != "/tmp/wallpaper" {
+					t.Errorf("wallpaper: %q", path)
+				}
+			}()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("no-argument RPC stalled")
+			}
+		})
+	}
+}
+
+func TestOutputNoArgumentRPCsRoundTrip(t *testing.T) {
+	srv := rpc.NewServer()
+	if err := srv.RegisterName("Plugin", &OutputPluginRPCServer{Impl: &mockOutputPlugin{metadata: PluginInfo{Name: "output"}}}); err != nil {
+		t.Fatal(err)
+	}
+	server, conn := net.Pipe()
+	defer server.Close()
+	go srv.ServeConn(server)
+	transport := rpc.NewClient(conn)
+	defer transport.Close()
+	client := &OutputPluginRPCClient{client: transport}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if _, _, err := client.PreExecute(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := client.GetMetadata(); err != nil || info.Name != "output" {
+		t.Fatalf("metadata: %+v, %v", info, err)
+	}
+	_ = client.GetFlagHelp()
 }
