@@ -7,10 +7,12 @@
 package appdetect
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // IsPresentAny checks if ANY of the specified binaries OR directories exist.
@@ -29,6 +31,7 @@ import (
 //	IsPresentAny(nil, []string{"~/.config/hypr", "~/.config/i3"}) // Check for either config
 //	IsPresentAny([]string{"kitty"}, []string{"~/.config/kitty"})  // Check for binary OR config
 func IsPresentAny(binaries, directories []string) bool {
+	var flatpaks flatpakInventory
 	// Check binaries
 	for _, binary := range binaries {
 		if binary == "" {
@@ -41,7 +44,7 @@ func IsPresentAny(binaries, directories []string) bool {
 		}
 
 		// Check Flatpak
-		if isFlatpakInstalled(binary) {
+		if flatpaks.installed(binary) {
 			return true
 		}
 
@@ -80,6 +83,7 @@ func IsPresentAny(binaries, directories []string) bool {
 //	IsPresentAll(nil, []string{"~/.config/hypr"})                   // Require config dir
 //	IsPresentAll([]string{"ptyxis"}, []string{"~/.local/share/org.gnome.Ptyxis/"}) // Require both
 func IsPresentAll(binaries, directories []string) bool {
+	var flatpaks flatpakInventory
 	// Check all binaries
 	for _, binary := range binaries {
 		if binary == "" {
@@ -94,7 +98,7 @@ func IsPresentAll(binaries, directories []string) bool {
 		}
 
 		// Check Flatpak
-		if !found && isFlatpakInstalled(binary) {
+		if !found && flatpaks.installed(binary) {
 			found = true
 		}
 
@@ -121,44 +125,49 @@ func IsPresentAll(binaries, directories []string) bool {
 	return true
 }
 
-// isFlatpakInstalled checks if an application is installed via Flatpak.
-// Common Flatpak app ID patterns:
-//   - app.devsuite.<App>
-//   - org.gnome.<App>
-//   - com.github.<user>.<App>
-func isFlatpakInstalled(appName string) bool {
-	// Check if flatpak command exists
-	if _, err := exec.LookPath("flatpak"); err != nil {
-		return false
-	}
+// flatpakInventory is lazy and scoped to one detection call. All candidate
+// binaries and patterns share a single bounded flatpak list invocation. The next
+// detection call refreshes the inventory so installations never stay stale.
+type flatpakInventory struct {
+	loaded bool
+	apps   []string
+}
 
-	// Try common Flatpak app ID patterns
+func (f *flatpakInventory) load() {
+	if f.loaded {
+		return
+	}
+	f.loaded = true
+	if _, err := exec.LookPath("flatpak"); err != nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "flatpak", "list", "--app", "--columns=application")
+	cmd.WaitDelay = 250 * time.Millisecond
+	output, err := cmd.Output()
+	if err != nil {
+		return
+	}
+	f.apps = strings.Fields(string(output))
+}
+
+func (f *flatpakInventory) installed(appName string) bool {
+	f.load()
 	patterns := []string{
 		"app.devsuite." + strings.Title(appName),
 		"org.gnome." + strings.Title(appName),
 		"com.github.*." + strings.Title(appName),
-		// Also try lowercase variants
 		"app.devsuite." + appName,
 		"org.gnome." + appName,
 	}
-
-	for _, pattern := range patterns {
-		cmd := exec.Command("flatpak", "list", "--app", "--columns=application")
-		output, err := cmd.Output()
-		if err != nil {
-			continue
-		}
-
-		// Check if any installed Flatpak matches the pattern
-		apps := strings.SplitSeq(string(output), "\n")
-		for app := range apps {
-			app = strings.TrimSpace(app)
+	for _, app := range f.apps {
+		for _, pattern := range patterns {
 			if matchesPattern(app, pattern) {
 				return true
 			}
 		}
 	}
-
 	return false
 }
 
@@ -250,6 +259,7 @@ func matchesPattern(s, pattern string) bool {
 //	GetInstallationType([]string{"ptyxis"}, nil)           // Check only for binary
 //	GetInstallationType(nil, []string{"/path/to/config"})  // Check only for directory
 func GetInstallationType(binaries, directories []string) string {
+	var flatpaks flatpakInventory
 	// Check binaries first
 	for _, binary := range binaries {
 		if binary == "" {
@@ -260,7 +270,7 @@ func GetInstallationType(binaries, directories []string) string {
 			return "native"
 		}
 
-		if isFlatpakInstalled(binary) {
+		if flatpaks.installed(binary) {
 			return "flatpak"
 		}
 
