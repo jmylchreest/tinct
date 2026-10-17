@@ -1,10 +1,11 @@
 package swaync
 
 import (
-	"github.com/jmylchreest/tinct/internal/colour"
-	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/shared/testing"
 	"strings"
 	"testing"
+
+	"github.com/jmylchreest/tinct/internal/colour"
+	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/shared/testing"
 )
 
 func TestSwayNC(t *testing.T) {
@@ -16,7 +17,14 @@ func TestSwayNC(t *testing.T) {
 			t.Fatal(err)
 		}
 		css := string(files["tinct.css"])
-		for _, expected := range []string{":root", "--noti-bg:", "--text-color:", ".notification.critical"} {
+		palette := data.GetPaletteHelper()
+		for _, expected := range []string{
+			"--noti-bg: " + palette.Get("surface").RGBDecimal() + ";",
+			"--text-color: " + palette.Get("foreground").RGBA() + ";",
+			// The upstream border shorthand has three class selectors; this
+			// override needs four to win even when imported after that rule.
+			".notification-row .notification-background .notification.critical {\n    border-color: " + palette.Get("danger").RGBA() + ";",
+		} {
 			if !strings.Contains(css, expected) {
 				t.Errorf("missing %s", expected)
 			}
@@ -29,6 +37,12 @@ func TestSwayNC(t *testing.T) {
 		}
 	}
 	spec := New().Hooks()
+	if len(spec.RequiredBinaries) != 1 || spec.RequiredBinaries[0] != "swaync-client" || !spec.AutoCreateDir {
+		t.Fatal("hooks must check swaync-client and create the output directory")
+	}
+	if spec.Reload == nil {
+		t.Fatal("reload hook is required")
+	}
 	if strings.Join(spec.Reload.Args, " ") != "swaync-client --reload-css --skip-wait" {
 		t.Fatal("reload must not wait for daemon startup")
 	}

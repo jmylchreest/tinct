@@ -15,6 +15,7 @@
     --text-color-disabled: {{ get . "foregroundMuted" | rgba }};
     --bg-selected: {{ get . "accent1" | rgba }};
 }
-.notification.critical {
+/* Override the default notification border shorthand at higher specificity. */
+.notification-row .notification-background .notification.critical {
     border-color: {{ get . "danger" | rgba }};
 }
