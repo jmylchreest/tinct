@@ -15,7 +15,7 @@ plugin:
   default_output_dir: ~/.config/foot
   generated_files: [tinct-colors.ini, tinct.ini]
   reload:
-    method: manual
+    method: none
     user_action_required: true
 ---
 
