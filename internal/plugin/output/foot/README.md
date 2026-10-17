@@ -15,9 +15,8 @@ plugin:
   default_output_dir: ~/.config/foot
   generated_files: [tinct-colors.ini, tinct.ini]
   reload:
-    method: signal
-    command: pkill -SIGUSR1 -x foot
-    user_action_required: false
+    method: none
+    user_action_required: true
 ---
 
 # foot
@@ -92,23 +91,14 @@ The example `tinct.ini` already contains the `include=` line at the top, plus se
 
 ## Reload behaviour
 
-### Automatic
+Foot does not reread its configuration through `SIGUSR1` or `SIGUSR2`: these
+signals select themes already loaded into the process. Tinct therefore does not
+signal or restart existing terminals after generating the palette.
 
-After writing the files, the plugin sends `SIGUSR1` to every running `foot` process (foot's documented colour-reload signal). The reload is in-place — open terminals keep their content and scrollback; only the colours change.
-
-The signal is sent silently at normal verbosity; the only user-facing message at normal verbosity is the reminder to add the `include=` line on your first run. Pass `-v` to see the signal broadcast in the log.
-
-If no `foot` is running at generate time, the signal is a no-op and the next foot you launch picks up the new palette from the file on disk.
-
-### Manual fallback
-
-If for any reason the auto-reload didn't happen (foot wasn't running, or you generated on a different machine):
-
-```bash
-pkill -SIGUSR1 -x foot
-```
-
-`-x` matches the exact process name so this doesn't accidentally signal anything else.
+Open a new standalone Foot process to load the updated file. If you use
+`foot --server`, restart that server when it is safe to close its terminal
+sessions; new clients on an existing server still use its cached configuration.
+Existing terminals retain their colours, content and scrollback.
 
 ## Uninstall / revert
 
@@ -126,11 +116,8 @@ pkill -SIGUSR1 -x foot
    rm ~/.config/foot/tinct-colors.ini ~/.config/foot/tinct.ini
    ```
 
-3. **Reload to drop the theme**:
-
-   ```bash
-   pkill -SIGUSR1 -x foot
-   ```
+3. **Open a new Foot process** to load the changed configuration. In server mode,
+   restart the server when it is safe to close its terminal sessions.
 
 4. **External state**: this plugin only writes to `~/.config/foot/`. No further cleanup is required.
 
@@ -184,11 +171,7 @@ See the [templating reference](https://jmylchreest.github.io/tinct/docs/templati
 
 ### Colours unchanged in already-open foot windows
 
-The auto-reload happens via `SIGUSR1`; if a window pre-dates the signal (e.g. it was launched after `tinct generate` finished writing but before the signal was delivered), trigger a reload manually:
-
-```bash
-pkill -SIGUSR1 -x foot
-```
+This is expected. Open a new standalone Foot process, or restart your Foot server when it is safe to close its sessions. Theme-selection signals do not reread the generated file.
 
 ### `unknown option: include=`
 

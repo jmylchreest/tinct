@@ -4,8 +4,8 @@
 # Include this fragment from your foot.ini with:
 #   include={{ .OutputDir }}/{{ .ColorFileName }}
 #
-# foot reloads its colour configuration in-place on SIGUSR1, which tinct
-# broadcasts automatically after writing the file.
+# Open a new foot process to load changed colours. In server mode, restart
+# the server first. SIGUSR1/SIGUSR2 select cached themes; they do not reload.
 #
 # Detected theme: {{ themeType . }}
 

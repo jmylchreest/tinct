@@ -107,21 +107,14 @@ func (p *Plugin) DefaultOutputDir() string {
 		filepath.Join(paths.XDGConfigDir(), pluginName))
 }
 
-// Hooks declares foot's pre/post-execute behaviour. foot reloads its
-// colour config in-place on SIGUSR1, so we signal-broadcast to every
-// running foot instance. The user-facing InstructionsFn only prints the
-// include-line reminder; the signal happens silently except in
-// verbose mode (the runner emits its own diagnostics when verbose).
+// Hooks checks prerequisites and explains how to load the palette.
+// Foot signals select already-loaded themes; they do not reload config files.
 func (p *Plugin) Hooks() hooks.Spec {
 	return hooks.Spec{
 		RequiredBinaries: []string{pluginName},
 		AutoCreateDir:    true,
-		Reload: &hooks.ReloadSpec{
-			Verb: hooks.VerbSignal,
-			Args: []string{pluginName, "SIGUSR1"},
-		},
 		InstructionsFn: func(_ hooks.Context) string {
-			return "   Add `include=~/.config/foot/tinct-colors.ini` to your foot.ini (or rename the generated tinct.ini to foot.ini if you don't have one yet)."
+			return "   Add `include=~/.config/foot/tinct-colors.ini` to your foot.ini (or rename the generated tinct.ini to foot.ini if you don't have one yet). Open a new foot process to load the palette; restart your foot server if using server mode."
 		},
 	}
 }

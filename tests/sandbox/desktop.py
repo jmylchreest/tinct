@@ -174,3 +174,54 @@ def fuzzel(c):
         c.check(proc.wait(timeout=5) == 0, theme + " Fuzzel selection accepted")
         c.check(result.read_text().strip() == "Music player", theme + " keyboard search selects expected entry")
         c.check(main.read_text() == content, "Fuzzel user config preserved")
+
+
+def foot(c):
+    compositor(c)
+    config = Path.home() / ".config/foot"
+    config.mkdir(parents=True, exist_ok=True)
+    main = config / "foot.ini"
+    content = f"include={config / 'tinct-colors.ini'}\nfont=DejaVu Sans Mono:size=16\ndpi-aware=no\npad=20x20\n[cursor]\nblink=no\n"
+    main.write_text(content)
+    script = c.RESULTS / "terminal-fixture.py"
+    script.write_text("import sys, time\n"
+                      "sys.stdout.write('\\x1b[2J\\x1b[HFoot palette validation\\r\\nReadable terminal text\\r\\n\\r\\n')\n"
+                      "for base in (40, 100):\n"
+                      "    for index in range(8):\n"
+                      "        sys.stdout.write(f'\\x1b[{base + index}m      ')\n"
+                      "    sys.stdout.write('\\x1b[0m\\r\\n\\r\\n')\n"
+                      "sys.stdout.write('\\x1b[?25l')\n"
+                      "sys.stdout.flush()\n"
+                      "time.sleep(90)\n")
+    daemon = None
+    for theme in ("dark", "light"):
+        path = generate(c, "foot", theme, "foot/tinct-colors.ini")
+        ini = configparser.ConfigParser()
+        ini.read(path)
+        colours = {key: rgb(value) for key, value in ini["colors"].items()}
+        for role in ("background", "foreground"):
+            c.check(colours[role] == rgb(PALETTES[theme][role]), theme + " requested " + role)
+        c.run("foot", "--config", str(main), "--check-config")
+        c.run("foot", "--config", str(config / "tinct.ini"), "--check-config")
+        if daemon is not None:
+            c.check(daemon.poll() is None, "generation preserves existing Foot process")
+            capture(c, "existing-foot-after-generation", [
+                ("existing background unchanged", (20, 250, 1260, 880), rgb(PALETTES["dark"]["background"]), .99),
+                ("existing foreground unchanged", (20, 20, 450, 70), rgb(PALETTES["dark"]["foreground"]), .005),
+            ], (10, 10, 600, 75), ["Foot palette validation", "Readable terminal text"], [])
+            daemon.terminate()
+            daemon.wait(timeout=5)
+        daemon = c.start("foot", "--config", str(main), "--fullscreen", "python3", str(script), log=theme + "-foot.log")
+        time.sleep(.5)
+        c.check(daemon.poll() is None, theme + " new Foot process alive")
+        regions = [
+            ("terminal background", (20, 250, 1260, 880), colours["background"], .99),
+            ("terminal text", (20, 20, 450, 70), colours["foreground"], .005),
+        ]
+        for row, prefix in enumerate(("regular", "bright")):
+            for index in range(8):
+                regions.append((prefix + str(index), (20 + index * 78, 95 + row * 50, 98 + index * 78, 120 + row * 50), colours[prefix + str(index)], .80))
+        capture(c, theme + "-foot", regions, (10, 10, 600, 75),
+                ["Foot palette validation", "Readable terminal text"],
+                [(colours["foreground"], colours["background"])])
+    c.check(main.read_text() == content, "Foot user config preserved")

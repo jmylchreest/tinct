@@ -16,8 +16,17 @@
     "validator": null
   },
   "foot": {
-    "status": "planned",
-    "validator": null
+    "status": "implemented",
+    "validator": "foot",
+    "checks": [
+      "generation",
+      "native-config-parser",
+      "ANSI-palette",
+      "OCR",
+      "screenshots",
+      "existing-process-preservation",
+      "new-process-palette"
+    ]
   },
   "fuzzel": {
     "status": "implemented",

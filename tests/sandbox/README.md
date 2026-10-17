@@ -1,8 +1,8 @@
 # Application sandbox validators
 
-Run real applications against files produced by the actual Tinct CLI. The first
-adapter is SwayNC; this is an extensible suite, not a claim that all output plugins
-have visual coverage. See `coverage.json` for the explicit inventory.
+Run real applications against files produced by the actual Tinct CLI. Implemented
+adapters cover SwayNC, Waybar, Fuzzel and Foot. Other output plugins do not yet
+have visual coverage; see `coverage.json` for the explicit inventory.
 
 ## Run locally
 
@@ -60,8 +60,8 @@ parser or renderer, including generation, reload and failure behaviour where
 available. Keep native parser checks distinct from visual checks. Do not mark
 missing applications or unsupported environments as passing.
 
-Wayland apps (Waybar, Fuzzel, Foot), X11 apps (Dunst through Xvfb), terminal apps
-(tmux, Neovim), GTK/Qt fixtures, and compositor-specific sessions need separate
+X11 apps (Dunst through Xvfb), terminal apps (tmux, Neovim), GTK/Qt fixtures,
+and additional compositor-specific sessions still need separate
 adapters. GNOME Shell/KDE sessions and applications unavailable in Alpine need
 separate images or runner arrangements. Wallpaper adapters need real compositor
 protocol tests; mock binary success alone does not prove they work.
@@ -81,7 +81,7 @@ titles, body text and panel controls. OCR text and missing phrases are retained
 in the metric report. OCR is an additional visibility check, not proof that every
 glyph is unclipped or every possible overlap is absent.
 
-These regions target the fixed 1280x900 default SwayNC layout in this fixture.
+These regions target fixed 1280x900 application layouts in the test fixtures.
 Application layout changes may require reviewing and updating them. There is no
 whole-screen similarity score or golden screenshot: unchanged desktop pixels
 cannot compensate for a missing panel or notification. Synthetic negative tests
@@ -106,3 +106,12 @@ Dark/light screenshots measure selected/unselected text and background colours,
 contrast and OCR. Virtual Wayland keyboard events move the selection and filter
 the list; accepting must return the expected entry. Fuzzel has no live theme
 reload, so each theme starts a new process. No host keyboard is involved.
+
+## Foot
+
+`--app foot` validates the generated include using Foot's native config parser,
+then opens a fullscreen terminal with fixed text and 16 ANSI background swatches.
+It measures every swatch in its own region, checks foreground/background colours
+and OCR, then verifies generation preserves the existing terminal and a new Foot
+process loads the updated palette.
+The fixture uses no shell interpolation and requires no GPU or host terminal.
