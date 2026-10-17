@@ -10,6 +10,7 @@ import time
 import traceback
 from PIL import Image
 from visual import analyse, missing_text
+import desktop
 
 RESULTS = Path("/tmp/results")
 PROCESSES = []
@@ -143,7 +144,7 @@ def swaync():
           "no GTK stylesheet parsing errors")
 
 
-VALIDATORS = {"swaync": swaync}
+VALIDATORS = {"swaync": swaync, "waybar": lambda: desktop.waybar(sys.modules[__name__])}
 
 
 def main():

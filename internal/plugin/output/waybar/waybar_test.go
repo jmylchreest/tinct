@@ -1,6 +1,7 @@
 package waybar
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -149,6 +150,24 @@ func TestWaybarPlugin_AllColorsExported(t *testing.T) {
 	for _, color := range coreColors {
 		if !strings.Contains(coloursCSS, color) {
 			t.Errorf("Colours CSS missing color variable: %s", color)
+		}
+	}
+}
+
+func TestExampleReferencesExportedColours(t *testing.T) {
+	for _, theme := range []colour.ThemeType{colour.ThemeDark, colour.ThemeLight} {
+		files, err := New().Generate(colour.NewThemeData(plugintesting.CreateTestPalette(theme), "", "", ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		definitions := map[string]bool{}
+		for _, match := range regexp.MustCompile(`@define-color ([A-Za-z0-9_-]+)`).FindAllStringSubmatch(string(files["tinct.css"]), -1) {
+			definitions[match[1]] = true
+		}
+		for _, match := range regexp.MustCompile(`@([A-Za-z0-9_-]+)`).FindAllStringSubmatch(string(files["../tinct-style.css"]), -1) {
+			if match[1] != "import" && match[1] != "keyframes" && !definitions[match[1]] {
+				t.Errorf("example references undefined colour %s", match[1])
+			}
 		}
 	}
 }

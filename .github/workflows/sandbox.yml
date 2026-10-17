@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [swaync]
+        app: [swaync, waybar]
     steps:
       - uses: actions/checkout@v7
         with:

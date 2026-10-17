@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--engine", choices=("docker", "podman"), default="docker")
     parser.add_argument("--binary", required=True, type=pathlib.Path)
-    parser.add_argument("--app", choices=("swaync",), default="swaync")
+    parser.add_argument("--app", choices=("swaync", "waybar"), default="swaync")
     parser.add_argument("--artifacts", required=True, type=pathlib.Path)
     args = parser.parse_args()
     if not args.binary.is_file():
