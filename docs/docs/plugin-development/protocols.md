@@ -32,6 +32,18 @@ Tinct automatically detects which protocol to use:
 
 No configuration required.
 
+## RPC deadlines and cancellation
+
+Go-plugin RPC calls for metadata, validation, configuration and lifecycle hooks
+have a 30-second limit. Generation has a 10-minute limit to allow for remote AI
+requests. Calls that accept a caller context also honour earlier deadlines and
+cancellation.
+
+Cancellation or a timeout closes the RPC transport, and the executor terminates
+its owned plugin process. The session is not reusable after cancellation; do not
+assume a plugin's in-memory state survives a cancelled run. This is host-side
+cancellation, not a cancellation message delivered to the remote plugin method.
+
 ## JSON-stdio protocol
 
 Best for simple plugins written in any language.

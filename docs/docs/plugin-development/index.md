@@ -104,3 +104,6 @@ jq -r '"background=\(.colours.background.hex)"' > ~/.config/myapp/theme.conf
 - [Protocol details](./protocols.md) - Understand communication
 - [Creating plugins](./creating.md) - Full examples
 - [Lifecycle hooks](./hooks.md) - Advanced control
+
+- [Shared AI drivers](./ai-drivers.md) - Reuse image and text generation transports in Go plugins
+- [Application validation](./validation.md) - Test generated themes with real application screenshots

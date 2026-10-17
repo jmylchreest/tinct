@@ -4,7 +4,8 @@
 # Include this fragment from your foot.ini with:
 #   include={{ .OutputDir }}/{{ .ColorFileName }}
 #
-# Open a new foot process to load changed colours. In server mode, restart
+# For live colours, run Tinct with --foot.tty /dev/tty inside Foot.
+# Otherwise open a new foot process to load changed colours. In server mode, restart
 # the server first. SIGUSR1/SIGUSR2 select cached themes; they do not reload.
 #
 # Detected theme: {{ themeType . }}

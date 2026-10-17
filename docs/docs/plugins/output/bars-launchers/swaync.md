@@ -7,12 +7,14 @@ plugin:
   category: bars-launchers
   source: builtin
   app: SwayNotificationCenter
-  app_url: https://github.com/ErikReider/SwayNotificationCenter
-  requires: [swaync-client]
+  app_url: 'https://github.com/ErikReider/SwayNotificationCenter'
+  requires:
+    - swaync-client
   optional: []
   pattern: include-file
   default_output_dir: ~/.config/swaync
-  generated_files: [tinct.css]
+  generated_files:
+    - tinct.css
   reload:
     method: ipc
     command: org.erikreider.swaync.cc.ReloadCss

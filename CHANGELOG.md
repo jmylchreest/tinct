@@ -13,6 +13,25 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Added
+
+- SwayNC output plugin: generates a colour overlay while preserving the user's stylesheet and configuration, and reloads CSS in an existing notification daemon.
+- Opt-in Foot live colour updates with `--foot.tty /dev/tty` or an explicitly selected `/dev/pts/N`. OSC updates preserve the terminal process and displayed text; generated files still configure future processes.
+- Public `pkg/ai` image and text drivers for built-in and external Go plugins, including an OpenAI-compatible Images API driver with configurable local endpoints and an Anthropic text driver. These are SDK capabilities, not new CLI input plugins.
+- Isolated application validators for SwayNC, Waybar, Fuzzel and Foot, running locally with Podman/Docker and on GitHub runners. Screenshots are checked with colour measurements, contrast thresholds and OCR.
+
+### Fixed
+
+- Bound subprocess execution and plugin metadata probes, handle literal paths safely, honour RPC caller cancellation and clean up plugin sessions.
+- Cache plugin metadata and avoid repeated Flatpak inventory queries within a detection call.
+- Correct Waybar example stylesheet colour references and improve Fuzzel selected-match text contrast.
+- Remove Foot's incorrect signal-based reload: its signals select cached themes rather than rereading configuration. Live updates now use the explicit OSC option above.
+
+### Changed
+
+- Google, OpenRouter and MiniMax input plugins share the public AI drivers while retaining their existing flags, caching and palette extraction.
+- Update Go dependencies, documentation dependencies and SBOM tooling.
+
 ## [0.5.0]
 *2026-08-28*
 

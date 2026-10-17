@@ -4,7 +4,7 @@
 
 Generate colour palettes from images, AI, remote themes, or manual specifications. Apply them consistently to terminals, desktop environments, window managers, and external devices.
 
-[![Go Version](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-jmylchreest.github.io%2Ftinct-blue)](https://jmylchreest.github.io/tinct/)
 
@@ -65,7 +65,7 @@ tinct generate -i remote-json \
 
 ## Features
 
-- **Multiple input sources** - Images, AI generation (Google Gemini, OpenRouter), remote themes (JSON/CSS), manual specification
+- **Multiple input sources** - Images, AI generation (Google Gemini, OpenRouter, MiniMax), remote themes (JSON/CSS), manual specification
 - **25+ applications** - Terminals, desktops, window managers, bars, editors
 - **Smart categorisation** - Auto-assigns semantic colours with WCAG contrast checking
 - **Plugin ecosystem** - Extend with external plugins from repositories or build your own in any language
@@ -75,10 +75,10 @@ tinct generate -i remote-json \
 
 | Category | Applications |
 |----------|-------------|
-| Terminals | Alacritty, Ghostty, Kitty, Konsole, Ptyxis |
+| Terminals | Alacritty, Foot, Ghostty, Kitty, Konsole, Ptyxis |
 | Desktop | GNOME Shell, KDE Plasma, GTK3/4, Libadwaita, Qt5/6, niri |
 | Hyprland | Hyprland, Hyprpaper, Hyprlock |
-| Bars & Launchers | Waybar, Dunst, SwayOSD, Fuzzel, Walker, Wofi |
+| Bars & Launchers | Waybar, Dunst, SwayNC, SwayOSD, Fuzzel, Walker, Wofi |
 | Editors | Neovim, Zellij |
 
 Need more? Install external plugins from the [plugin repository](https://github.com/jmylchreest/tinct-plugins):
@@ -109,3 +109,7 @@ Contributions welcome! See the [documentation](https://jmylchreest.github.io/tin
 ## License
 
 MIT License - see [LICENSE](LICENSE)
+
+## Application validation
+
+The [sandbox validators](tests/sandbox/README.md) run real SwayNC, Waybar, Fuzzel and Foot instances in isolated headless desktops. GitHub CI checks rendered colours, contrast and OCR alongside the Go tests. Other applications do not yet have visual coverage.
