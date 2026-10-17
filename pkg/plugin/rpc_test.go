@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"image/color"
+	"io"
 	"net"
 	"net/rpc"
 	"strings"
@@ -695,4 +696,55 @@ func TestOutputNoArgumentRPCsRoundTrip(t *testing.T) {
 		t.Fatalf("metadata: %+v, %v", info, err)
 	}
 	_ = client.GetFlagHelp()
+}
+
+// delayedRequestCodec does not inspect the body until the caller has returned.
+// Close intentionally leaves the write pending, like a half-closed transport.
+type delayedRequestCodec struct {
+	entered  chan struct{}
+	release  chan struct{}
+	observed chan string
+}
+
+func (c *delayedRequestCodec) WriteRequest(_ *rpc.Request, body any) error {
+	close(c.entered)
+	<-c.release
+	c.observed <- body.(InputOptions).PluginArgs["prompt"].(string)
+	return io.ErrClosedPipe
+}
+func (c *delayedRequestCodec) ReadResponseHeader(*rpc.Response) error { <-c.release; return io.EOF }
+func (*delayedRequestCodec) ReadResponseBody(any) error               { return nil }
+func (*delayedRequestCodec) Close() error                             { return nil }
+
+func TestCancelledRPCOwnsRequestArguments(t *testing.T) {
+	codec := &delayedRequestCodec{entered: make(chan struct{}), release: make(chan struct{}), observed: make(chan string, 1)}
+	transport := rpc.NewClientWithCodec(codec)
+	defer transport.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	args := InputOptions{PluginArgs: map[string]any{"prompt": "original"}}
+	done := make(chan error, 1)
+	go func() {
+		var reply string
+		done <- callContext(ctx, transport, "Plugin.Generate", args, &reply, time.Second)
+	}()
+	select {
+	case <-codec.entered:
+	case <-time.After(time.Second):
+		t.Fatal("request did not start")
+	}
+	cancel()
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v", err)
+	}
+	args.PluginArgs["prompt"] = "modified"
+	close(codec.release)
+	select {
+	case got := <-codec.observed:
+		if got != "original" {
+			t.Fatalf("worker read caller mutation: %q", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("request writer did not finish")
+	}
 }

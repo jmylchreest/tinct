@@ -361,7 +361,7 @@ func (e *PluginExecutor) dispenseRPCPlugin(ctx context.Context, name string, plu
 	e.cancelRPC = cancel
 	stop := context.AfterFunc(ctx, cancel)
 	defer stop()
-	rpcCmd := exec.CommandContext(sessionCtx, e.path) //nolint:gosec // G204: Plugin path validated during installation and locked in plugin.lock
+	rpcCmd := exec.CommandContext(sessionCtx, e.path) // #nosec G204 -- Executing the user-selected plugin binary is intentional; no shell or interpolated arguments are used.
 	rpcCmd.Env = pluginEnv()
 	e.client = goplug.NewClient(&goplug.ClientConfig{
 		HandshakeConfig:  protocol.Handshake,

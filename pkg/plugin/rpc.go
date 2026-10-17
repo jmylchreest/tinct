@@ -2,12 +2,15 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"image/color"
 	"maps"
 	"net/rpc"
+	"reflect"
 	"strings"
 	"time"
 
@@ -640,11 +643,16 @@ func callContext(ctx context.Context, client *rpc.Client, method string, args, r
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("RPC %s cancelled: %w", method, err)
 	}
+	// The worker can outlive this call. Snapshot args before handing them off so
+	// callers may reuse their maps and slices as soon as cancellation returns.
+	ownedArgs, err := snapshotRPCArgs(args)
+	if err != nil {
+		return fmt.Errorf("RPC %s arguments: %w", method, err)
+	}
 	done := make(chan error, 1)
-	go func() { done <- client.Call(method, args, reply) }()
+	go func() { done <- client.Call(method, ownedArgs, reply) }()
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
-	var err error
 	select {
 	case err = <-done:
 		return err
@@ -655,6 +663,23 @@ func callContext(ctx context.Context, client *rpc.Client, method string, args, r
 	}
 	_ = client.Close()
 	return err
+}
+
+// snapshotRPCArgs copies the complete request using the same encoding as net/rpc.
+// In particular this retains interface encoding for legacy no-argument methods.
+func snapshotRPCArgs(args any) (any, error) {
+	if args == nil {
+		return nil, fmt.Errorf("nil RPC arguments")
+	}
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(args); err != nil {
+		return nil, fmt.Errorf("encode request: %w", err)
+	}
+	owned := reflect.New(reflect.TypeOf(args))
+	if err := gob.NewDecoder(&buf).Decode(owned.Interface()); err != nil {
+		return nil, fmt.Errorf("decode request copy: %w", err)
+	}
+	return owned.Elem().Interface(), nil
 }
 
 // noArgs is the canonical zero-value used for RPC methods that take no
