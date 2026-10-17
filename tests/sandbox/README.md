@@ -65,3 +65,26 @@ Wayland apps (Waybar, Fuzzel, Foot), X11 apps (Dunst through Xvfb), terminal app
 adapters. GNOME Shell/KDE sessions and applications unavailable in Alpine need
 separate images or runner arrangements. Wallpaper adapters need real compositor
 protocol tests; mock binary success alone does not prove they work.
+
+## Quantitative screenshot evidence
+
+Each screenshot now produces `*-metrics.json` with measured values, thresholds,
+pass/fail results and region coordinates, plus `*-regions.png` showing checked
+bounds. Checks measure notification surface and foreground pixel fractions,
+critical-border coverage, panel background/header coverage and preservation of
+the desktop outside the application. Foreground/background contrast must reach
+4.5:1; this checks the expected solid colours which must also occur in the image,
+not every antialiased text pixel or overall accessibility compliance.
+
+Tesseract reads enlarged application crops and requires the expected notification
+titles, body text and panel controls. OCR text and missing phrases are retained
+in the metric report. OCR is an additional visibility check, not proof that every
+glyph is unclipped or every possible overlap is absent.
+
+These regions target the fixed 1280x900 default SwayNC layout in this fixture.
+Application layout changes may require reviewing and updating them. There is no
+whole-screen similarity score or golden screenshot: unchanged desktop pixels
+cannot compensate for a missing panel or notification. Synthetic negative tests
+cover blank screens, hidden text, absent panels/borders and displaced content.
+To run the Python tests locally, install Pillow 12.3.0 in a virtual environment,
+then run `python -m unittest discover -s tests/sandbox -p 'test_*.py' -v`.
