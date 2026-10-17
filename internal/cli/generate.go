@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/manager"
 	"github.com/jmylchreest/tinct/internal/telemetry"
 	"github.com/jmylchreest/tinct/internal/version"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 )
 
 const (
@@ -29,16 +29,8 @@ const (
 	pluginTypeInput  = "input"
 )
 
-// isValidPath checks if a path is safe to use in commands.
-func isValidPath(path string) bool {
-	// Reject paths with suspicious characters
-	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
-		return false
-	}
-	// Clean the path and ensure it matches
-	cleaned := filepath.Clean(path)
-	return cleaned == path
-}
+// isValidPath validates the literal executable path passed to os/exec.
+func isValidPath(path string) bool { return subprocess.ValidPath(path) }
 
 var (
 	// Generate command flags.
@@ -229,7 +221,7 @@ func runGlobalHookScript(ctx context.Context, hookName string, verbose, dryRun b
 	defer cancel()
 
 	// #nosec G204 -- hookPath is validated to be a safe file path
-	cmd := exec.CommandContext(hookCtx, hookPath)
+	cmd := subprocess.CommandContext(hookCtx, hookPath)
 
 	// Set environment variables for the hook script.
 	env := append(os.Environ(),

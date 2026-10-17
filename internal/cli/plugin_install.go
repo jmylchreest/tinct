@@ -16,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/security"
 	"github.com/jmylchreest/tinct/internal/ui/progress"
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 )
 
 const (
@@ -352,7 +353,10 @@ func installFromGit(info PluginSourceInfo, pluginName, pluginDir string, verbose
 
 	// Clone the repository using -- to separate options from arguments (prevents command injection).
 	// #nosec G204 -- URL is validated via security.ValidateGitURL above.
-	cloneCmd := exec.Command("git", "clone", "--depth", "1", "--", info.URL, tmpDir)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cloneCmd := subprocess.CommandContext(ctx, "git", "clone", "--depth", "1", "--", info.URL, tmpDir)
+	cloneCmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	if output, err := cloneCmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("failed to clone repository: %w\nOutput: %s", err, string(output))
 	}

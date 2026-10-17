@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
+
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 )
 
 // runReloadVerb dispatches a ReloadSpec to its verb implementation. An
@@ -33,7 +34,7 @@ func runExecVerb(ctx context.Context, args []string, pluginName string, verbose 
 		}
 		return
 	}
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec // verb args declared by the plugin, not user input
+	cmd := subprocess.CommandContext(ctx, args[0], args[1:]...)
 	if err := cmd.Run(); err != nil && verbose {
 		fmt.Fprintf(os.Stderr, "%swarning: %s failed: %v\n", linePrefix(pluginName), args[0], err)
 	}

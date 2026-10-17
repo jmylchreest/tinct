@@ -1,20 +1,9 @@
 package main
 
-import (
-	"path/filepath"
-	"strings"
-)
+import "strings"
 
-// isValidPath checks if a path is safe to use in commands.
-func isValidPath(path string) bool {
-	// Reject paths with suspicious characters
-	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
-		return false
-	}
-	// Clean the path and ensure it matches
-	cleaned := filepath.Clean(path)
-	return cleaned == path
-}
+// isValidPath validates a literal process argument.
+func isValidPath(path string) bool { return path != "" && !strings.ContainsRune(path, 0) }
 
 // isValidExecutableName checks if a string is a safe executable name (no path separators).
 func isValidExecutableName(name string) bool {

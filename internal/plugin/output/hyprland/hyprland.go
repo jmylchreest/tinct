@@ -3,17 +3,15 @@ package hyprland
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"text/template"
-
-	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
@@ -23,6 +21,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
+	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl templates
@@ -111,7 +111,7 @@ func (p *Plugin) GetTargetVersion() string {
 // detectHyprlandVersion runs "hyprctl version" or "hyprland --version" to get the version.
 func detectHyprlandVersion(_ bool) string {
 	// Try hyprctl version first (works when Hyprland is running)
-	cmdOutput, err := exec.Command("hyprctl", "version").Output()
+	cmdOutput, err := subprocess.Probe(context.Background(), "hyprctl", "version")
 	if err == nil {
 		if v := parseHyprlandVersion(string(cmdOutput)); v != "" {
 			return v
@@ -119,7 +119,7 @@ func detectHyprlandVersion(_ bool) string {
 	}
 
 	// Fall back to hyprland --version
-	cmdOutput, err = exec.Command("hyprland", "--version").Output()
+	cmdOutput, err = subprocess.Probe(context.Background(), "hyprland", "--version")
 	if err == nil {
 		if v := parseHyprlandVersion(string(cmdOutput)); v != "" {
 			return v

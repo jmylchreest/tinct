@@ -7,14 +7,10 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"text/template"
-
-	ps "github.com/mitchellh/go-ps"
-	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
@@ -25,6 +21,9 @@ import (
 	"github.com/jmylchreest/tinct/pkg/dbus"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
+	ps "github.com/mitchellh/go-ps"
+	"github.com/spf13/cobra"
 )
 
 // pluginName is this plugin's identifier: the Name() result, the
@@ -108,7 +107,7 @@ func (p *Plugin) DefaultOutputDir() string {
 }
 
 // PreExecute checks if GNOME Shell and User Themes extension are installed.
-func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err error) {
+func (p *Plugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
 	// Check if all required binaries are installed
 	if !appdetect.IsPresentAll([]string{pluginName, "gsettings", "gnome-extensions"}, nil) {
 		if !appdetect.IsPresentAny([]string{pluginName}, nil) {
@@ -137,8 +136,7 @@ func (p *Plugin) PreExecute(_ context.Context) (skip bool, reason string, err er
 	}
 
 	// Check if User Themes extension is enabled
-	cmd := exec.Command("gnome-extensions", "info", userThemeExtensionID)
-	cmdOutput, err := cmd.Output()
+	cmdOutput, err := subprocess.Probe(ctx, "gnome-extensions", "info", userThemeExtensionID)
 	if err == nil {
 		outputStr := string(cmdOutput)
 		if !strings.Contains(outputStr, "State: ENABLED") && !strings.Contains(outputStr, "State: ACTIVE") {
@@ -278,11 +276,11 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		if execCtx.WallpaperPath != "" {
 			wallpaperURI := "file://" + execCtx.WallpaperPath
 
-			cmd := exec.CommandContext(ctx, "gsettings", "set",
+			cmd := subprocess.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-uri", wallpaperURI)
 			_ = cmd.Run() //nolint:errcheck // Best effort wallpaper setting
 
-			cmd = exec.CommandContext(ctx, "gsettings", "set",
+			cmd = subprocess.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-uri-dark", wallpaperURI)
 			_ = cmd.Run() //nolint:errcheck // Best effort wallpaper setting
 
@@ -301,7 +299,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	// Strategy 2: Use gsettings theme toggling (fallback)
 
 	// Get current theme setting
-	cmd := exec.CommandContext(ctx, "gsettings", "get", "org.gnome.shell.extensions.user-theme", "name")
+	cmd := subprocess.CommandContext(ctx, "gsettings", "get", "org.gnome.shell.extensions.user-theme", "name")
 	cmdOutput, err := cmd.Output()
 	currentTheme := ""
 	if err == nil {
@@ -332,7 +330,7 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 	}
 
 	// Set the theme
-	cmd = exec.CommandContext(ctx, "gsettings", "set",
+	cmd = subprocess.CommandContext(ctx, "gsettings", "set",
 		"org.gnome.shell.extensions.user-theme", "name", targetTheme)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to set GNOME Shell theme: %w", err)
@@ -351,14 +349,14 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 		wallpaperURI := "file://" + execCtx.WallpaperPath
 
 		// Get current wallpaper (check both light and dark)
-		cmd = exec.CommandContext(ctx, "gsettings", "get", "org.gnome.desktop.background", "picture-uri")
+		cmd = subprocess.CommandContext(ctx, "gsettings", "get", "org.gnome.desktop.background", "picture-uri")
 		currentLight, err := cmd.Output()
 		currentLightURI := ""
 		if err == nil && len(currentLight) > 0 {
 			currentLightURI = strings.Trim(strings.TrimSpace(string(currentLight)), "'\"")
 		}
 
-		cmd = exec.CommandContext(ctx, "gsettings", "get", "org.gnome.desktop.background", "picture-uri-dark")
+		cmd = subprocess.CommandContext(ctx, "gsettings", "get", "org.gnome.desktop.background", "picture-uri-dark")
 		currentDark, err := cmd.Output()
 		currentDarkURI := ""
 		if err == nil && len(currentDark) > 0 {
@@ -372,21 +370,21 @@ func (p *Plugin) PostExecute(ctx context.Context, execCtx output.ExecutionContex
 			}
 
 			// Set for light mode
-			cmd = exec.CommandContext(ctx, "gsettings", "set",
+			cmd = subprocess.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-uri", wallpaperURI)
 			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("failed to set wallpaper: %w", err)
 			}
 
 			// Set for dark mode
-			cmd = exec.CommandContext(ctx, "gsettings", "set",
+			cmd = subprocess.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-uri-dark", wallpaperURI)
 			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("failed to set dark wallpaper: %w", err)
 			}
 
 			// Set picture options to zoom
-			cmd = exec.CommandContext(ctx, "gsettings", "set",
+			cmd = subprocess.CommandContext(ctx, "gsettings", "set",
 				"org.gnome.desktop.background", "picture-options", "zoom")
 			_ = cmd.Run() //nolint:errcheck // Best effort, non-critical setting
 

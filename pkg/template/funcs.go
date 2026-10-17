@@ -8,12 +8,14 @@ import (
 	"text/template"
 
 	"github.com/jmylchreest/tinct/pkg/colour"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 )
 
 // TemplateFuncs returns standard template functions for all output plugins.
 // These functions provide consistent color access and formatting across all templates.
 func TemplateFuncs() template.FuncMap {
 	return template.FuncMap{
+		"shellQuote": subprocess.ShellQuote,
 		// Color role access.
 		"get":        getRoleFunc,
 		"getSafe":    getSafeRoleFunc,
