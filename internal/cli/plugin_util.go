@@ -2,12 +2,13 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
+	"github.com/jmylchreest/tinct/internal/plugin/metadata"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 )
@@ -30,8 +31,7 @@ func getPluginDir() (string, error) {
 
 // queryPluginMetadata queries a plugin for its name, description, type, and version.
 func queryPluginMetadata(pluginPath string) (name, description, pluginType, version, protocolVersion string) {
-	cmd := exec.Command(pluginPath, "--plugin-info")
-	output, err := cmd.Output()
+	output, err := metadata.Query(context.Background(), pluginPath)
 	if err != nil {
 		return "", "", "", "", ""
 	}

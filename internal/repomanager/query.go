@@ -1,15 +1,16 @@
 package repomanager
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/jmylchreest/tinct/internal/compression"
+	pluginmetadata "github.com/jmylchreest/tinct/internal/plugin/metadata"
 )
 
 // PluginMetadata contains queried plugin information.
@@ -97,8 +98,7 @@ func QueryScriptPlugin(scriptPath string) (*PluginMetadata, error) {
 
 // queryPluginInfo executes a plugin and queries its metadata.
 func queryPluginInfo(pluginPath string) (*PluginMetadata, error) {
-	cmd := exec.Command(pluginPath, "--plugin-info")
-	output, err := cmd.Output()
+	output, err := pluginmetadata.Query(context.Background(), pluginPath)
 	if err != nil {
 		return nil, fmt.Errorf("plugin-info query failed: %w", err)
 	}

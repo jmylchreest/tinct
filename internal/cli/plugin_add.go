@@ -2,13 +2,14 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/jmylchreest/tinct/internal/plugin/metadata"
 	"github.com/jmylchreest/tinct/internal/plugin/protocol"
 	"github.com/jmylchreest/tinct/internal/plugin/repository"
 )
@@ -81,8 +82,7 @@ func resolvePluginSource(source, pluginDir, forcedSourceType string, verbose boo
 
 // queryFullPluginMetadata queries all metadata from a plugin including protocol version.
 func queryFullPluginMetadata(pluginPath string) (*pluginMetadata, error) {
-	cmd := exec.Command(pluginPath, "--plugin-info")
-	output, err := cmd.Output()
+	output, err := metadata.Query(context.Background(), pluginPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute plugin --plugin-info: %w", err)
 	}
