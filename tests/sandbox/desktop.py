@@ -167,7 +167,7 @@ def fuzzel(c):
         capture(c, theme + "-fuzzel-filtered", [
             ("filtered selection", (60, 153, 450, 193), colours["selection"], .60),
             ("other entries absent", (60, 196, 450, 236), background, .995, 1),
-        ], (40, 100, 650, 300), ["Music player"], [],
+        ], (40, 100, 650, 300), ["Music player"], [(colours["selection-match"], colours["selection"])],
                 ocr_boxes=[(50, y, 505, y + 40) for y in (110, 153, 196, 239)])
         time.sleep(.5)
         c.run("wtype", "-s", "200", "-k", "Return", "-s", "200")

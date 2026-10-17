@@ -33,8 +33,8 @@ selection={{ get . "accent1" | hexAlpha | trimPrefix "#" }}
 # Selected entry text
 selection-text={{ get . "onAccent1" | hexAlpha | trimPrefix "#" }}
 
-# Selected entry matched substring
-selection-match={{ get . "accent2" | hexAlpha | trimPrefix "#" }}
+# Selected matches must remain readable against the selection background.
+selection-match={{ get . "onAccent1" | hexAlpha | trimPrefix "#" }}
 
 # Match counter color
 counter={{ get . "info" | hexAlpha | trimPrefix "#" }}
