@@ -29,16 +29,8 @@ const (
 	pluginTypeInput  = "input"
 )
 
-// isValidPath checks if a path is safe to use in commands.
-func isValidPath(path string) bool {
-	// Reject paths with suspicious characters
-	if strings.Contains(path, "..") || strings.ContainsAny(path, "|&;`$()") {
-		return false
-	}
-	// Clean the path and ensure it matches
-	cleaned := filepath.Clean(path)
-	return cleaned == path
-}
+// isValidPath validates the literal executable path passed to os/exec.
+func isValidPath(path string) bool { return subprocess.ValidPath(path) }
 
 var (
 	// Generate command flags.

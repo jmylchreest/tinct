@@ -3,10 +3,11 @@ package hyprland
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -111,7 +112,7 @@ func (p *Plugin) GetTargetVersion() string {
 // detectHyprlandVersion runs "hyprctl version" or "hyprland --version" to get the version.
 func detectHyprlandVersion(_ bool) string {
 	// Try hyprctl version first (works when Hyprland is running)
-	cmdOutput, err := exec.Command("hyprctl", "version").Output()
+	cmdOutput, err := subprocess.Probe(context.Background(), "hyprctl", "version")
 	if err == nil {
 		if v := parseHyprlandVersion(string(cmdOutput)); v != "" {
 			return v
@@ -119,7 +120,7 @@ func detectHyprlandVersion(_ bool) string {
 	}
 
 	// Fall back to hyprland --version
-	cmdOutput, err = exec.Command("hyprland", "--version").Output()
+	cmdOutput, err = subprocess.Probe(context.Background(), "hyprland", "--version")
 	if err == nil {
 		if v := parseHyprlandVersion(string(cmdOutput)); v != "" {
 			return v

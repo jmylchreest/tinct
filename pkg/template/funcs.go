@@ -4,6 +4,7 @@ package template
 
 import (
 	"fmt"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 	"strings"
 	"text/template"
 
@@ -14,6 +15,7 @@ import (
 // These functions provide consistent color access and formatting across all templates.
 func TemplateFuncs() template.FuncMap {
 	return template.FuncMap{
+		"shellQuote": subprocess.ShellQuote,
 		// Color role access.
 		"get":        getRoleFunc,
 		"getSafe":    getSafeRoleFunc,

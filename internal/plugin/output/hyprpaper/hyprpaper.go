@@ -6,6 +6,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -144,7 +145,7 @@ func (p *Plugin) GetTargetVersion() string {
 // detectHyprpaperVersion runs "hyprpaper -h" to get the version.
 func detectHyprpaperVersion(_ bool) string {
 	// hyprpaper -h outputs version in the header: "┏ hyprpaper v0.8.0".
-	cmdOutput, err := exec.Command("hyprpaper", "-h").Output()
+	cmdOutput, err := subprocess.Probe(context.Background(), "hyprpaper", "-h")
 	if err == nil {
 		if v := parseHyprpaperVersion(string(cmdOutput)); v != "" {
 			return v
@@ -327,7 +328,7 @@ func (p *Plugin) applyWallpaper(ctx context.Context, wallpaperPath string) {
 	// Check if hyprpaper is running before trying to set wallpaper.
 	// Note: v0.8.0 removed listloaded/listactive, so we skip the check and just try.
 	if !p.isVersion08OrNewer() {
-		cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
+		cmd := subprocess.CommandContext(ctx, "hyprctl", "hyprpaper", "listloaded")
 		if err := cmd.Run(); err != nil {
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   Skipping wallpaper application (hyprpaper not running)\n")
@@ -373,7 +374,7 @@ func (p *Plugin) setWallpaperV08(ctx context.Context, absPath string) error {
 	}
 
 	// #nosec G204 -- hyprctl is a system command with validated absolute path for wallpaper.
-	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "wallpaper", arg)
+	cmd := subprocess.CommandContext(ctx, "hyprctl", "hyprpaper", "wallpaper", arg)
 	cmdOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to set wallpaper: %w (output: %s)", err, strings.TrimSpace(string(cmdOutput)))
@@ -391,12 +392,12 @@ func (p *Plugin) setWallpaperLegacy(ctx context.Context, absPath string) error {
 	assignments := p.getAssignmentsOrWildcard(ctx)
 
 	// Unload all existing wallpapers to clear any cached images.
-	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "unload", "all")
+	cmd := subprocess.CommandContext(ctx, "hyprctl", "hyprpaper", "unload", "all")
 	_ = cmd.Run() //nolint:errcheck // Explicitly ignore errors - wallpapers might not be loaded
 
 	// Preload the new wallpaper.
 	// #nosec G204 -- absPath is validated to be a safe file path.
-	cmd = exec.CommandContext(ctx, "hyprctl", "hyprpaper", "preload", absPath)
+	cmd = subprocess.CommandContext(ctx, "hyprctl", "hyprpaper", "preload", absPath)
 	if cmdOutput, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to preload wallpaper: %w (output: %s)", err, string(cmdOutput))
 	}
@@ -435,7 +436,7 @@ func monitorDisplayName(monitor string) string {
 func (p *Plugin) setWallpaperOnMonitors(ctx context.Context, assignments []string, absPath string) {
 	for _, monitor := range assignments {
 		// #nosec G204 -- hyprctl is a system command with validated absolute path for wallpaper.
-		cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "wallpaper", monitor+","+absPath)
+		cmd := subprocess.CommandContext(ctx, "hyprctl", "hyprpaper", "wallpaper", monitor+","+absPath)
 		if err := cmd.Run(); err != nil {
 			if p.verbose {
 				fmt.Fprintf(os.Stderr, "   Warning: failed to set wallpaper on %s: %v\n", monitorDisplayName(monitor), err)
@@ -463,7 +464,7 @@ func (p *Plugin) logWallpaperResult(assignments []string, absPath string) {
 // getActiveWallpaperAssignments retrieves the current monitor assignments from listactive.
 // Returns a list of monitor names (or empty string for wildcard).
 func (p *Plugin) getActiveWallpaperAssignments(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "hyprctl", "hyprpaper", "listactive")
+	cmd := subprocess.CommandContext(ctx, "hyprctl", "hyprpaper", "listactive")
 	cmdOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active wallpapers: %w", err)

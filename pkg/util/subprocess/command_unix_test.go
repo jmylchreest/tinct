@@ -65,3 +65,27 @@ func TestCommandPreservesOutputAndArguments(t *testing.T) {
 		t.Fatalf("output = %q", output)
 	}
 }
+
+func TestShellQuoteIsLiteral(t *testing.T) {
+	value := "wallpaper '$(printf injected)' ; $HOME `echo bad` (1)..png\nnext"
+	out, err := CommandContext(context.Background(), "sh", "-c", "printf %s "+ShellQuote(value)).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(out) != value {
+		t.Fatalf("quoted value changed: %q", out)
+	}
+}
+
+func TestProbeHonoursCallerDeadline(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	_, err := Probe(ctx, "sh", "-c", "sleep 5 & wait")
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v", err)
+	}
+	if time.Since(start) > time.Second {
+		t.Fatal("probe ignored caller deadline")
+	}
+}

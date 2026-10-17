@@ -4,7 +4,9 @@ package subprocess
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -18,3 +20,24 @@ func CommandContext(ctx context.Context, name string, args ...string) *exec.Cmd 
 	configureCancellation(cmd)
 	return cmd
 }
+
+// Probe runs a short discovery command with a five-second deadline.
+func Probe(ctx context.Context, name string, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	data, err := CommandContext(ctx, name, args...).Output()
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("probe %s: %w", name, ctx.Err())
+	}
+	if err != nil {
+		return nil, fmt.Errorf("probe %s: %w", name, err)
+	}
+	return data, nil
+}
+
+// ValidPath reports whether path can be passed as a literal process argument.
+// It is not a sandbox containment check or an escaping function for shell code.
+func ValidPath(path string) bool { return path != "" && !strings.ContainsRune(path, 0) }
+
+// ShellQuote quotes a literal for a POSIX shell, including embedded apostrophes.
+func ShellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'" }
