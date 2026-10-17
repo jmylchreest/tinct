@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmylchreest/tinct/pkg/ai"
 	"github.com/spf13/cobra"
 	"google.golang.org/genai"
 
@@ -394,7 +395,7 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 }
 
 // generateImageWithImagen generates an image using the Imagen API (GenerateImages).
-func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBasePath string, verbose bool) (string, error) { //nolint:gocyclo
+func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBasePath string, verbose bool) (string, error) { //nolint:gocyclo // Provider-specific configuration and metadata remain plugin policy.
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
 		return "", err
@@ -438,42 +439,18 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBaseP
 		}
 	}
 
-	// Generate images
-	response, err := client.Models.GenerateImages(ctx, model, enhancedPrompt, genConfig)
+	generated, err := (ai.Google{Client: client}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: enhancedPrompt, AspectRatio: genConfig.AspectRatio, Size: genConfig.ImageSize, NegativePrompt: genConfig.NegativePrompt})
 	if err != nil {
-		return "", fmt.Errorf("image generation failed: %w", err)
+		return "", err
 	}
-
-	// Check if we got any images
-	if len(response.GeneratedImages) == 0 {
-		return "", fmt.Errorf("no images generated in response")
-	}
-
-	// Get the first generated image
-	generatedImage := response.GeneratedImages[0]
-
-	// Check if image was filtered
-	if generatedImage.RAIFilteredReason != "" {
-		return "", fmt.Errorf("image was filtered by safety system: %s", generatedImage.RAIFilteredReason)
-	}
-
-	// Get image data
-	if generatedImage.Image == nil {
-		return "", fmt.Errorf("generated image has no image data")
-	}
-
-	imageBytes := generatedImage.Image.ImageBytes
-	if len(imageBytes) == 0 {
-		return "", fmt.Errorf("generated image has empty image data")
-	}
-
+	imageBytes := generated.Bytes
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
 	}
 
 	// Determine extension from the actual image format; PNG is requested via
 	// OutputMIMEType but the response is authoritative.
-	mimeType, ext := imageExtension(generatedImage.Image.MIMEType, imageBytes)
+	mimeType, ext := imageExtension(generated.MIMEType, imageBytes)
 	outputPath := outputBasePath + ext
 
 	if verbose {
@@ -487,28 +464,17 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBaseP
 
 	// Save metadata alongside the image
 	metadata := &ImageMetadata{
-		Prompt:            aiflags.Prompt,
-		EnhancedPrompt:    enhancedPrompt,
-		NegativePrompt:    genConfig.NegativePrompt,
-		Model:             model,
-		Backend:           p.backend,
-		AspectRatio:       commonflags.AspectRatio,
-		ImageSize:         p.imageSize,
-		CreatedAt:         time.Now(),
-		ImagePath:         outputPath,
-		ImageSize_:        len(imageBytes),
-		RAIFilteredReason: generatedImage.RAIFilteredReason,
-	}
-
-	// Extract safety attributes if available
-	if generatedImage.SafetyAttributes != nil {
-		metadata.SafetyAttributes = make(map[string]any)
-		if len(generatedImage.SafetyAttributes.Categories) > 0 {
-			metadata.SafetyAttributes["categories"] = generatedImage.SafetyAttributes.Categories
-		}
-		if len(generatedImage.SafetyAttributes.Scores) > 0 {
-			metadata.SafetyAttributes["scores"] = generatedImage.SafetyAttributes.Scores
-		}
+		Prompt:           aiflags.Prompt,
+		EnhancedPrompt:   enhancedPrompt,
+		NegativePrompt:   genConfig.NegativePrompt,
+		Model:            model,
+		Backend:          p.backend,
+		AspectRatio:      commonflags.AspectRatio,
+		ImageSize:        p.imageSize,
+		CreatedAt:        time.Now(),
+		ImagePath:        outputPath,
+		ImageSize_:       len(imageBytes),
+		SafetyAttributes: generated.SafetyAttributes,
 	}
 
 	if err := p.saveMetadata(outputPath, metadata); err != nil && verbose {
@@ -519,7 +485,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBaseP
 }
 
 // generateImageWithGemini generates an image using the Gemini API (GenerateContent).
-func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputBasePath string, verbose bool) (string, error) { //nolint:gocyclo
+func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputBasePath string, verbose bool) (string, error) {
 	client, err := p.clientSetup(ctx, verbose)
 	if err != nil {
 		return "", err
@@ -534,54 +500,12 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputBaseP
 		fmt.Fprintf(os.Stderr, "  Enhanced prompt: %s\n", enhancedPrompt)
 	}
 
-	// Build generation config for Gemini
-	// Note: ResponseMIMEType is only for text outputs, not for image generation
-	genConfig := &genai.GenerateContentConfig{
-		ResponseModalities: []string{"Image"},
-	}
-
-	// Create the prompt with system instructions for aspect ratio
-	promptText := fmt.Sprintf("Generate an image with aspect ratio %s: %s", commonflags.AspectRatio, enhancedPrompt)
-
-	// Build content array with text prompt
-	// genai.Text() returns []*Content, which we can use directly
-	contents := genai.Text(promptText)
-
-	// Generate content
-	response, err := client.Models.GenerateContent(ctx, model, contents, genConfig)
+	generated, err := (ai.Google{Client: client, Gemini: true}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: enhancedPrompt, AspectRatio: commonflags.AspectRatio})
 	if err != nil {
-		return "", fmt.Errorf("image generation failed: %w", err)
+		return "", err
 	}
-
-	// Check if response is valid
-	if response == nil {
-		return "", fmt.Errorf("received nil response from API")
-	}
-
-	// Check if we got any parts in the response
-	if len(response.Candidates) == 0 {
-		return "", fmt.Errorf("no candidates in response")
-	}
-
-	if response.Candidates[0].Content == nil || len(response.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("no image data in response")
-	}
-
-	// Extract image data from the first part's inline data
-	var imageBytes []byte
-	var reportedMIME string
-	for _, part := range response.Candidates[0].Content.Parts {
-		if part.InlineData != nil && part.InlineData.Data != nil {
-			imageBytes = part.InlineData.Data
-			reportedMIME = part.InlineData.MIMEType
-			break
-		}
-	}
-
-	if len(imageBytes) == 0 {
-		return "", fmt.Errorf("no inline image data found in response")
-	}
-
+	imageBytes := generated.Bytes
+	reportedMIME := generated.MIMEType
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
 	}
