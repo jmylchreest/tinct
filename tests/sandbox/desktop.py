@@ -48,17 +48,19 @@ def measure(image, regions):
     records = []
     overlay = image.copy()
     draw = ImageDraw.Draw(overlay)
-    for name, box, colour, minimum in regions:
+    for name, box, colour, minimum, *options in regions:
+        tolerance = options[0] if options else 0
         crop = image.crop(box)
         counts = {colour: count for count, colour in crop.getcolors(crop.width * crop.height)}
-        value = counts.get(colour, 0) / (crop.width * crop.height)
+        value = sum(count for pixel, count in counts.items()
+                    if max(abs(a - b) for a, b in zip(pixel, colour)) <= tolerance) / (crop.width * crop.height)
         passed = value >= minimum
-        records.append(dict(name=name, region=box, value=value, minimum=minimum, passed=passed))
+        records.append(dict(name=name, region=box, value=value, minimum=minimum, tolerance=tolerance, passed=passed))
         draw.rectangle(box, outline="lime" if passed else "red", width=2)
     return records, overlay
 
 
-def capture(c, name, regions, crop_box, expected, text_colours):
+def capture(c, name, regions, crop_box, expected, text_colours, ocr_boxes=None):
     time.sleep(1)
     path = c.RESULTS / (name + ".png")
     c.run("grim", str(path))
@@ -66,15 +68,19 @@ def capture(c, name, regions, crop_box, expected, text_colours):
         c.check(image.size == (1280, 900), name + " dimensions")
         records, overlay = measure(image, regions)
         overlay.save(c.RESULTS / (name + "-regions.png"))
-        crop = image.crop(crop_box).convert("RGB")
-        crop.resize((crop.width * 3, crop.height * 3)).save(c.RESULTS / (name + "-ocr.png"))
+        ocr_paths = []
+        for index, box in enumerate(ocr_boxes or [crop_box]):
+            crop = image.crop(box).convert("RGB")
+            ocr_path = c.RESULTS / (name + f"-ocr-{index}.png")
+            crop.resize((crop.width * 3, crop.height * 3)).save(ocr_path)
+            ocr_paths.append(ocr_path)
     for foreground, background in text_colours:
         ratio = contrast(foreground, background)
         records.append(dict(name="text contrast", value=ratio, minimum=4.5, passed=ratio >= 4.5))
     report = {"metrics": records}
     report_path = c.RESULTS / (name + "-metrics.json")
     report_path.write_text(json.dumps(report, indent=2))
-    text = c.run("tesseract", str(c.RESULTS / (name + "-ocr.png")), "stdout", "-l", "eng", "--psm", "6")
+    text = "\n".join(c.run("tesseract", str(path), "stdout", "-l", "eng", "--psm", "6") for path in ocr_paths)
     report["ocr"] = dict(text=text, expected=expected, missing=missing_text(text, expected))
     report["passed"] = all(r["passed"] for r in records) and not report["ocr"]["missing"]
     report_path.write_text(json.dumps(report, indent=2))
@@ -128,9 +134,11 @@ def fuzzel(c):
         ini = configparser.ConfigParser()
         ini.read(path)
         colours = {key: rgb(value) for key, value in ini["colors"].items()}
+        for key, role in (("background", "background"), ("text", "foreground"), ("selection", "accent1")):
+            c.check(colours[key] == rgb(PALETTES[theme][role]), theme + " requested " + key)
         # Preserve generated opacity; compare composited pixels against the known desktop.
         alpha = int(ini["colors"]["background"][6:8], 16) / 255
-        background = tuple(round(a * alpha + b * (1 - alpha)) for a, b in zip(colours["background"], (48, 52, 59)))
+        background = tuple(int(a * alpha) + round(b * (1 - alpha)) for a, b in zip(colours["background"], (48, 52, 59)))
         main = config / "fuzzel.ini"
         content = f"include={path}\nfont=DejaVu Sans Mono:size=14\ndpi-aware=no\nanchor=top-left\nx-margin=40\ny-margin=100\nwidth=40\nlines=3\nline-height=32\nhorizontal-pad=16\nvertical-pad=8\n[border]\nwidth=2\nradius=0\n"
         main.write_text(content)
@@ -141,18 +149,19 @@ def fuzzel(c):
         c.PROCESSES.append(proc)
         def shot(state, selected_y, other_y, expected):
             regions = [
-                ("launcher background", (180, 110, 450, 135), background, .80),
-                ("selected background", (60, selected_y, 450, selected_y + 28), colours["selection"], .60),
-                ("selected text", (60, selected_y, 450, selected_y + 28), colours["selection-text"], .002),
-                ("unselected text", (60, other_y, 450, other_y + 28), colours["text"], .002),
+                ("launcher background", (180, 110, 450, 135), background, .80, 1),
+                ("selected background", (60, selected_y, 450, selected_y + 40), colours["selection"], .60),
+                ("selected text", (60, selected_y, 450, selected_y + 40), colours["selection-text"], .002),
+                ("unselected text", (60, other_y, 450, other_y + 40), colours["text"], .002),
                 ("desktop preserved", (700, 0, 1280, 900), (48, 52, 59), .99),
             ]
-            capture(c, theme + "-fuzzel-" + state, regions, (40, 100, 650, 260), expected,
-                    [(colours["selection-text"], colours["selection"]), (colours["text"], background)])
+            capture(c, theme + "-fuzzel-" + state, regions, (40, 100, 650, 300), expected,
+                    [(colours["selection-text"], colours["selection"]), (colours["text"], background)],
+                    ocr_boxes=[(50, y, 505, y + 40) for y in (110, 153, 196, 239)])
             c.check(proc.poll() is None, state + " Fuzzel running")
-        shot("initial", 142, 174, ["Find", "Alpha editor", "Beta browser", "Gamma terminal"])
+        shot("initial", 153, 196, ["Find", "Alpha editor", "Beta browser", "Gamma terminal"])
         c.run("wtype", "-k", "Down")
-        shot("navigated", 174, 142, ["Alpha editor", "Beta browser", "Gamma terminal"])
+        shot("navigated", 196, 153, ["Alpha editor", "Beta browser", "Gamma terminal"])
         c.run("wtype", "Beta")
         time.sleep(.5)
         c.run("wtype", "-k", "Return")
