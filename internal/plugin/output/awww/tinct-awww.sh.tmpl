@@ -24,14 +24,14 @@ TINCT_AWWW_WALLPAPER={{ shellQuote .WallpaperPath }}
 # ============================================================================
 # Transition Settings
 # ============================================================================
-TINCT_AWWW_TRANSITION_TYPE="{{ .TransitionType }}"
-TINCT_AWWW_TRANSITION_STEP="{{ .TransitionStep }}"
-TINCT_AWWW_TRANSITION_FPS="{{ .TransitionFPS }}"
+TINCT_AWWW_TRANSITION_TYPE={{ shellQuote .TransitionType }}
+TINCT_AWWW_TRANSITION_STEP={{ shellQuote .TransitionStep }}
+TINCT_AWWW_TRANSITION_FPS={{ shellQuote .TransitionFPS }}
 {{- if .ResizeMode }}
-TINCT_AWWW_RESIZE="{{ .ResizeMode }}"
+TINCT_AWWW_RESIZE={{ shellQuote .ResizeMode }}
 {{- end }}
 {{- if .FillColor }}
-TINCT_AWWW_FILL_COLOR="{{ .FillColor }}"
+TINCT_AWWW_FILL_COLOR={{ shellQuote .FillColor }}
 {{- end }}
 
 # ============================================================================

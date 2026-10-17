@@ -6,15 +6,12 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"text/template"
-
-	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
@@ -24,6 +21,8 @@ import (
 	"github.com/jmylchreest/tinct/internal/version"
 	"github.com/jmylchreest/tinct/pkg/plugin/hooks"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
+	"github.com/spf13/cobra"
 )
 
 //go:embed *.tmpl templates

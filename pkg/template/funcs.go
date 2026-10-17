@@ -4,11 +4,11 @@ package template
 
 import (
 	"fmt"
-	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 	"strings"
 	"text/template"
 
 	"github.com/jmylchreest/tinct/pkg/colour"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 )
 
 // TemplateFuncs returns standard template functions for all output plugins.

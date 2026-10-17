@@ -1,11 +1,12 @@
 package wbg
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/jmylchreest/tinct/internal/colour"
 	plugintesting "github.com/jmylchreest/tinct/internal/plugin/output/shared/testing"
 	"github.com/jmylchreest/tinct/pkg/util/subprocess"
-	"strings"
-	"testing"
 )
 
 func TestWallpaperPathShellQuoting(t *testing.T) {

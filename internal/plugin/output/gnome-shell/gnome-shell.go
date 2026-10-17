@@ -6,15 +6,11 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"text/template"
-
-	ps "github.com/mitchellh/go-ps"
-	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
 	"github.com/jmylchreest/tinct/internal/plugin/output"
@@ -25,6 +21,9 @@ import (
 	"github.com/jmylchreest/tinct/pkg/dbus"
 	"github.com/jmylchreest/tinct/pkg/plugin/paths"
 	"github.com/jmylchreest/tinct/pkg/util/appdetect"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
+	ps "github.com/mitchellh/go-ps"
+	"github.com/spf13/cobra"
 )
 
 // pluginName is this plugin's identifier: the Name() result, the

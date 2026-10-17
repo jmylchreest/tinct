@@ -4,7 +4,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 	"io"
 	"net/http"
 	"os"
@@ -17,6 +16,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/security"
 	"github.com/jmylchreest/tinct/internal/ui/progress"
 	httputil "github.com/jmylchreest/tinct/internal/util/http"
+	"github.com/jmylchreest/tinct/pkg/util/subprocess"
 )
 
 const (
