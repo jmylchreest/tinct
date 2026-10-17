@@ -1,0 +1,40 @@
+name: Application sandboxes
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [swaync]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26.x'
+      - name: Test validator orchestration
+        run: python3 -m unittest discover -s tests/sandbox -p 'test_*.py' -v
+      - name: Build Linux executable
+        run: CGO_ENABLED=0 go build -o /tmp/tinct-validator ./cmd/tinct
+      - name: Validate application in isolated desktop
+        run: python3 tests/sandbox/run.py --engine docker --binary /tmp/tinct-validator --app ${{ matrix.app }} --artifacts sandbox-results/${{ matrix.app }}
+      - name: Retain reports, logs and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sandbox-${{ matrix.app }}
+          path: sandbox-results/
+          if-no-files-found: warn
+          retention-days: 14
