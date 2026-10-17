@@ -114,9 +114,7 @@ func TestFootPlugin_ExampleConfigContent(t *testing.T) {
 	}
 }
 
-// TestFootPlugin_Hooks verifies the declarative hooks spec wires up
-// SIGUSR1 reload (foot's documented colour-reload signal) and an
-// InstructionsFn for the user-facing include-line reminder.
+// TestFootPlugin_Hooks ensures generation never signals existing terminals.
 func TestFootPlugin_Hooks(t *testing.T) {
 	plugin := New()
 	spec := plugin.Hooks()
@@ -127,20 +125,8 @@ func TestFootPlugin_Hooks(t *testing.T) {
 	if !spec.AutoCreateDir {
 		t.Error("AutoCreateDir should be true")
 	}
-	if spec.Reload == nil {
-		t.Fatal("Reload spec should be set")
-	}
-	if spec.Reload.Verb != hooks.VerbSignal {
-		t.Errorf("Reload.Verb = %v, want %v", spec.Reload.Verb, hooks.VerbSignal)
-	}
-	wantArgs := []string{"foot", "SIGUSR1"}
-	if len(spec.Reload.Args) != len(wantArgs) {
-		t.Fatalf("Reload.Args = %v, want %v", spec.Reload.Args, wantArgs)
-	}
-	for i, a := range wantArgs {
-		if spec.Reload.Args[i] != a {
-			t.Errorf("Reload.Args[%d] = %q, want %q", i, spec.Reload.Args[i], a)
-		}
+	if spec.Reload != nil {
+		t.Fatal("Foot signals select themes, not reload config; no reload hook is allowed")
 	}
 	if spec.InstructionsFn == nil {
 		t.Fatal("InstructionsFn should be set so users see the include= reminder")

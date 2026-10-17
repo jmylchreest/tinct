@@ -106,3 +106,11 @@ Dark/light screenshots measure selected/unselected text and background colours,
 contrast and OCR. Virtual Wayland keyboard events move the selection and filter
 the list; accepting must return the expected entry. Fuzzel has no live theme
 reload, so each theme starts a new process. No host keyboard is involved.
+
+## Foot
+
+`--app foot` validates the generated include using Foot's native config parser,
+then opens a fullscreen terminal with fixed text and 16 ANSI background swatches.
+It measures every swatch in its own region, checks foreground/background colours
+and OCR, then verifies generation preserves the existing terminal and a new Foot process loads the updated palette.
+The fixture uses no shell interpolation and requires no GPU or host terminal.
