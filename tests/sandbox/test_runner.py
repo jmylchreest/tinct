@@ -79,7 +79,7 @@ class RunnerTests(unittest.TestCase):
         for app, entry in coverage.items():
             self.assertIn(entry["status"], ("planned", "implemented"))
             if entry["status"] == "implemented":
-                self.assertIn(app, ("swaync", "waybar"))
+                self.assertIn(app, ("swaync", "waybar", "fuzzel"))
 
 
 if __name__ == "__main__":

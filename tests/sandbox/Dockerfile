@@ -1,5 +1,5 @@
 FROM alpine:3.24
-RUN apk add --no-cache waybar swaync sway swaybg grim dbus ttf-dejavu libnotify mesa-dri-gallium python3 py3-pillow tesseract-ocr tesseract-ocr-data-eng \
+RUN apk add --no-cache fuzzel wtype waybar swaync sway swaybg grim dbus ttf-dejavu libnotify mesa-dri-gallium python3 py3-pillow tesseract-ocr tesseract-ocr-data-eng \
     && adduser -D tester \
     && mkdir -p /tmp/runtime /tmp/results \
     && chown tester:tester /tmp/runtime /tmp/results \

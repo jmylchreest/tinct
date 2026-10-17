@@ -1,4 +1,6 @@
 """Real desktop application fixtures sharing the sandbox process lifecycle."""
+import configparser
+import subprocess
 import json
 import os
 from pathlib import Path
@@ -113,3 +115,47 @@ def waybar(c):
     c.check((config / "style.css").read_text() == style, "Waybar user stylesheet preserved")
     log = (c.RESULTS / "waybar.log").read_text().lower()
     c.check(not any(marker in log for marker in ("[error]", "theme parsing error")), "Waybar has no runtime/CSS errors")
+
+
+def fuzzel(c):
+    compositor(c)
+    config = Path.home() / ".config/fuzzel"
+    config.mkdir(parents=True, exist_ok=True)
+    entries = c.RESULTS / "entries.txt"
+    entries.write_text("Alpha editor\nBeta browser\nGamma terminal\n")
+    for theme in ("dark", "light"):
+        path = generate(c, "fuzzel", theme, "fuzzel/themes/tinct.ini")
+        ini = configparser.ConfigParser()
+        ini.read(path)
+        colours = {key: rgb(value) for key, value in ini["colors"].items()}
+        # Preserve generated opacity; compare composited pixels against the known desktop.
+        alpha = int(ini["colors"]["background"][6:8], 16) / 255
+        background = tuple(round(a * alpha + b * (1 - alpha)) for a, b in zip(colours["background"], (48, 52, 59)))
+        main = config / "fuzzel.ini"
+        content = f"include={path}\nfont=DejaVu Sans Mono:size=14\ndpi-aware=no\nanchor=top-left\nx-margin=40\ny-margin=100\nwidth=40\nlines=3\nline-height=32\nhorizontal-pad=16\nvertical-pad=8\n[border]\nwidth=2\nradius=0\n"
+        main.write_text(content)
+        c.run("fuzzel", "--config", str(main), "--check-config")
+        result = c.RESULTS / (theme + "-selection.txt")
+        with entries.open() as source, result.open("w") as out, (c.RESULTS / (theme + "-fuzzel.log")).open("w") as log:
+            proc = subprocess.Popen(["fuzzel", "--config", str(main), "--dmenu", "--no-sort", "--prompt", "Find: "], stdin=source, stdout=out, stderr=log)
+        c.PROCESSES.append(proc)
+        def shot(state, selected_y, other_y, expected):
+            regions = [
+                ("launcher background", (180, 110, 450, 135), background, .80),
+                ("selected background", (60, selected_y, 450, selected_y + 28), colours["selection"], .60),
+                ("selected text", (60, selected_y, 450, selected_y + 28), colours["selection-text"], .002),
+                ("unselected text", (60, other_y, 450, other_y + 28), colours["text"], .002),
+                ("desktop preserved", (700, 0, 1280, 900), (48, 52, 59), .99),
+            ]
+            capture(c, theme + "-fuzzel-" + state, regions, (40, 100, 650, 260), expected,
+                    [(colours["selection-text"], colours["selection"]), (colours["text"], background)])
+            c.check(proc.poll() is None, state + " Fuzzel running")
+        shot("initial", 142, 174, ["Find", "Alpha editor", "Beta browser", "Gamma terminal"])
+        c.run("wtype", "-k", "Down")
+        shot("navigated", 174, 142, ["Alpha editor", "Beta browser", "Gamma terminal"])
+        c.run("wtype", "Beta")
+        time.sleep(.5)
+        c.run("wtype", "-k", "Return")
+        c.check(proc.wait(timeout=5) == 0, theme + " Fuzzel selection accepted")
+        c.check(result.read_text().strip() == "Beta browser", theme + " keyboard search selects expected entry")
+        c.check(main.read_text() == content, "Fuzzel user config preserved")

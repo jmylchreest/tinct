@@ -20,8 +20,17 @@
     "validator": null
   },
   "fuzzel": {
-    "status": "planned",
-    "validator": null
+    "status": "implemented",
+    "validator": "fuzzel",
+    "checks": [
+      "generation",
+      "native-config-parser",
+      "rendered-colours",
+      "OCR",
+      "keyboard-navigation",
+      "keyboard-search",
+      "screenshots"
+    ]
   },
   "ghostty": {
     "status": "planned",
