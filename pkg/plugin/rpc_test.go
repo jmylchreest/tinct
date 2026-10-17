@@ -544,3 +544,88 @@ func TestCallSurfacesMissingMethod(t *testing.T) {
 		t.Errorf("error %q not recognised as a missing method", err.Error())
 	}
 }
+
+// A peer that does not read must not block request submission past cancellation.
+func TestCallContextCancelsBlockedWrite(t *testing.T) {
+	server, conn := net.Pipe()
+	defer server.Close()
+	client := rpc.NewClient(conn)
+	defer client.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	var reply string
+	err := callContext(ctx, client, "Plugin.Echo", "hello", &reply, time.Minute)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v", err)
+	}
+	if time.Since(start) > time.Second {
+		t.Fatal("blocked writing RPC request")
+	}
+}
+
+type waitingOutput struct {
+	mockOutputPlugin
+	release chan struct{}
+}
+
+func (p *waitingOutput) Generate(context.Context, PaletteData) (map[string][]byte, error) {
+	<-p.release
+	return map[string][]byte{"late": []byte("reply")}, nil
+}
+
+func (p *waitingOutput) PreExecute(context.Context) (skip bool, reason string, err error) {
+	<-p.release
+	return false, "", nil
+}
+
+func (p *waitingOutput) PostExecute(context.Context, []string) error {
+	<-p.release
+	return nil
+}
+
+func TestOutputRPCHonoursCallerDeadline(t *testing.T) {
+	for _, method := range []string{"Generate", "PreExecute", "PostExecute"} {
+		t.Run(method, func(t *testing.T) {
+			impl := &waitingOutput{release: make(chan struct{})}
+			defer close(impl.release)
+			srv := rpc.NewServer()
+			if err := srv.RegisterName("Plugin", &OutputPluginRPCServer{Impl: impl}); err != nil {
+				t.Fatal(err)
+			}
+			server, conn := net.Pipe()
+			defer server.Close()
+			go srv.ServeConn(server)
+			transport := rpc.NewClient(conn)
+			defer transport.Close()
+			client := &OutputPluginRPCClient{client: transport}
+			ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+			defer cancel()
+			var err error
+			switch method {
+			case "Generate":
+				var result map[string][]byte
+				result, err = client.Generate(ctx, PaletteData{})
+				if result != nil {
+					t.Fatal("returned a reply after cancellation")
+				}
+			case "PreExecute":
+				_, _, err = client.PreExecute(ctx)
+			case "PostExecute":
+				err = client.PostExecute(ctx, nil)
+			}
+			if !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestAlreadyCancelledRPCDoesNotSend(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	client := &InputPluginRPCClient{} // No transport should be touched.
+	if _, err := client.Generate(ctx, InputOptions{}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v", err)
+	}
+}

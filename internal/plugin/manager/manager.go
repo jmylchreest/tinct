@@ -355,6 +355,13 @@ type externalPluginBase struct {
 // failure is never fatal — a plugin that cannot be configured still
 // generates, it just does not see its args early.
 func (b *externalPluginBase) session(kind string) (*executor.PluginExecutor, error) {
+	return b.sessionContext(context.Background(), kind)
+}
+
+func (b *externalPluginBase) sessionContext(ctx context.Context, kind string) (*executor.PluginExecutor, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -370,7 +377,7 @@ func (b *externalPluginBase) session(kind string) (*executor.PluginExecutor, err
 
 	if !b.configured {
 		b.configured = true
-		cfgErr := pluginExec.Configure(context.Background(), kind, plugin.ConfigureRequest{
+		cfgErr := pluginExec.Configure(ctx, kind, plugin.ConfigureRequest{
 			Args:    b.args,
 			DryRun:  b.dryRun,
 			Verbose: b.verbose,
@@ -383,6 +390,9 @@ func (b *externalPluginBase) session(kind string) (*executor.PluginExecutor, err
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return b.execSession, nil
 }
 
@@ -475,7 +485,7 @@ func NewExternalInputPlugin(name, description, path string) *ExternalInputPlugin
 // Uses the hybrid executor which automatically detects and uses the appropriate
 // protocol (go-plugin RPC or JSON-stdio).
 func (p *ExternalInputPlugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
-	pluginExec, err := p.session("input")
+	pluginExec, err := p.sessionContext(ctx, "input")
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +730,7 @@ func (p *ExternalOutputPlugin) DefaultOutputDir() string {
 // PreExecute calls the external plugin's pre-execute hook.
 // Implements the output.PreExecuteHook interface.
 func (p *ExternalOutputPlugin) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
-	pluginExec, err := p.session("output")
+	pluginExec, err := p.sessionContext(ctx, "output")
 	if err != nil {
 		return false, "", err
 	}
@@ -748,7 +758,7 @@ func (p *ExternalOutputPlugin) GetFlagHelp() []input.FlagHelp {
 // into pluginExec.PostExecute and the parameter becomes load-bearing
 // without changing this signature.
 func (p *ExternalOutputPlugin) PostExecute(ctx context.Context, _ output.ExecutionContext, writtenFiles []string) error {
-	pluginExec, err := p.session("output")
+	pluginExec, err := p.sessionContext(ctx, "output")
 	if err != nil {
 		return err
 	}

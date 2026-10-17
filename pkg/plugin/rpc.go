@@ -173,9 +173,9 @@ type rgbBlock struct {
 // Generate calls the remote Generate method and parses both the legacy bare-
 // array response and the 0.3.0 envelope response. Any hints in the envelope
 // are cached and exposed via LastRoleHints / LastThemeHint.
-func (c *InputPluginRPCClient) Generate(_ context.Context, opts InputOptions) ([]color.Color, error) {
+func (c *InputPluginRPCClient) Generate(ctx context.Context, opts InputOptions) ([]color.Color, error) {
 	var respBytes []byte
-	err := call(c.client, "Plugin.Generate", opts, &respBytes, generateTimeout)
+	err := callContext(ctx, c.client, "Plugin.Generate", opts, &respBytes, generateTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -258,8 +258,13 @@ func (c *InputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 // Configure calls the remote optional Configure method for input
 // plugins. See OutputPluginRPCClient.Configure.
 func (c *InputPluginRPCClient) Configure(req ConfigureRequest) error {
+	return c.ConfigureContext(context.Background(), req)
+}
+
+// ConfigureContext is Configure with caller cancellation.
+func (c *InputPluginRPCClient) ConfigureContext(ctx context.Context, req ConfigureRequest) error {
 	var msg string
-	if err := call(c.client, "Plugin.Configure", req, &msg, callTimeout); err != nil {
+	if err := callContext(ctx, c.client, "Plugin.Configure", req, &msg, callTimeout); err != nil {
 		if isMissingMethodErr(err) {
 			return nil
 		}
@@ -272,11 +277,16 @@ func (c *InputPluginRPCClient) Configure(req ConfigureRequest) error {
 }
 
 func (c *InputPluginRPCClient) Validate(args map[string]any) error {
+	return c.ValidateContext(context.Background(), args)
+}
+
+// ValidateContext is Validate with caller cancellation.
+func (c *InputPluginRPCClient) ValidateContext(ctx context.Context, args map[string]any) error {
 	if args == nil {
 		args = map[string]any{}
 	}
 	var msg string
-	err := call(c.client, "Plugin.Validate", args, &msg, callTimeout)
+	err := callContext(ctx, c.client, "Plugin.Validate", args, &msg, callTimeout)
 	if err != nil {
 		if isMissingMethodErr(err) {
 			return nil
@@ -458,23 +468,23 @@ type OutputPluginRPCClient struct {
 }
 
 // Generate calls the remote Generate method.
-func (c *OutputPluginRPCClient) Generate(_ context.Context, palette PaletteData) (map[string][]byte, error) {
+func (c *OutputPluginRPCClient) Generate(ctx context.Context, palette PaletteData) (map[string][]byte, error) {
 	var result map[string][]byte
-	err := call(c.client, "Plugin.Generate", palette, &result, generateTimeout)
+	err := callContext(ctx, c.client, "Plugin.Generate", palette, &result, generateTimeout)
 	if err != nil {
-		return result, fmt.Errorf("RPC call failed: %w", err)
+		return nil, fmt.Errorf("RPC call failed: %w", err)
 	}
 	return result, nil
 }
 
 // PreExecute calls the remote PreExecute method.
-func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (skip bool, reason string, err error) {
+func (c *OutputPluginRPCClient) PreExecute(ctx context.Context) (skip bool, reason string, err error) {
 	var resp struct {
 		Skip   bool
 		Reason string
 		Error  string
 	}
-	err = call(c.client, "Plugin.PreExecute", new(any), &resp, callTimeout)
+	err = callContext(ctx, c.client, "Plugin.PreExecute", new(any), &resp, callTimeout)
 	if err != nil {
 		return false, "", fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -485,9 +495,9 @@ func (c *OutputPluginRPCClient) PreExecute(_ context.Context) (skip bool, reason
 }
 
 // PostExecute calls the remote PostExecute method.
-func (c *OutputPluginRPCClient) PostExecute(_ context.Context, files []string) error {
+func (c *OutputPluginRPCClient) PostExecute(ctx context.Context, files []string) error {
 	var errMsg string
-	err := call(c.client, "Plugin.PostExecute", files, &errMsg, callTimeout)
+	err := callContext(ctx, c.client, "Plugin.PostExecute", files, &errMsg, callTimeout)
 	if err != nil {
 		return fmt.Errorf("RPC call failed: %w", err)
 	}
@@ -511,11 +521,16 @@ func (c *OutputPluginRPCClient) GetMetadata() (PluginInfo, error) {
 // against pre-0.3.0 SDKs don't expose the method; that is treated as a
 // successful validation so older plugins remain compatible.
 func (c *OutputPluginRPCClient) Validate(args map[string]any) error {
+	return c.ValidateContext(context.Background(), args)
+}
+
+// ValidateContext is Validate with caller cancellation.
+func (c *OutputPluginRPCClient) ValidateContext(ctx context.Context, args map[string]any) error {
 	if args == nil {
 		args = map[string]any{}
 	}
 	var msg string
-	err := call(c.client, "Plugin.Validate", args, &msg, callTimeout)
+	err := callContext(ctx, c.client, "Plugin.Validate", args, &msg, callTimeout)
 	if err != nil {
 		if isMissingMethodErr(err) {
 			return nil
@@ -534,8 +549,13 @@ func (c *OutputPluginRPCClient) Validate(args map[string]any) error {
 // that as "can't find method" and we treat it as a no-op rather than an
 // error, matching Validate and GetHooks.
 func (c *OutputPluginRPCClient) Configure(req ConfigureRequest) error {
+	return c.ConfigureContext(context.Background(), req)
+}
+
+// ConfigureContext is Configure with caller cancellation.
+func (c *OutputPluginRPCClient) ConfigureContext(ctx context.Context, req ConfigureRequest) error {
 	var msg string
-	if err := call(c.client, "Plugin.Configure", req, &msg, callTimeout); err != nil {
+	if err := callContext(ctx, c.client, "Plugin.Configure", req, &msg, callTimeout); err != nil {
 		if isMissingMethodErr(err) {
 			return nil
 		}
@@ -605,29 +625,36 @@ const (
 	generateTimeout = 10 * time.Minute
 )
 
-// call invokes an RPC method with a deadline, converting what net/rpc
-// would leave as an indefinite hang into an actionable error.
-//
-// On timeout the call is abandoned rather than cancelled — net/rpc gives
-// no way to withdraw it. A late reply is written into the reply pointer
-// after this returns, so every caller must pass a pointer to a local it
-// no longer reads once call returns non-nil. All callers in this file do.
+// call applies the default RPC deadline for APIs without a caller context.
 func call(client *rpc.Client, method string, args, reply any, timeout time.Duration) error {
-	pending := client.Go(method, args, reply, make(chan *rpc.Call, 1))
+	return callContext(context.Background(), client, method, args, reply, timeout)
+}
 
+// callContext closes the transport when cancelled or timed out. net/rpc cannot
+// cancel a single request, so the session must not be reused after cancellation.
+// The executor also terminates its owned plugin process. Some transports (yamux)
+// only half-close, so we cannot wait for the pending call here. Callers must not
+// read or return the reply on error: a late response may still populate it.
+// Send runs in the goroutine too: writing can block if the peer stops reading.
+func callContext(ctx context.Context, client *rpc.Client, method string, args, reply any, timeout time.Duration) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("RPC %s cancelled: %w", method, err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- client.Call(method, args, reply) }()
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
-
+	var err error
 	select {
-	case done := <-pending.Done:
-		return done.Error
+	case err = <-done:
+		return err
+	case <-ctx.Done():
+		err = ctx.Err()
 	case <-timer.C:
-		return fmt.Errorf(
-			"plugin did not respond to %s within %s; it may be built against an "+
-				"incompatible protocol version (host %s, minimum %s) — try updating it",
-			method, timeout, ProtocolVersion, MinCompatibleVersion,
-		)
+		err = fmt.Errorf("plugin did not respond to %s within %s; check its protocol version: %w", method, timeout, context.DeadlineExceeded)
 	}
+	_ = client.Close()
+	return err
 }
 
 // noArgs is the canonical zero-value used for RPC methods that take no
