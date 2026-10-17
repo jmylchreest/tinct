@@ -8,12 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 func newCache() *cache {
-	return &cache{gate: make(chan struct{}, 1), entries: make(map[string]entry)}
+	return &cache{gates: make(map[string]chan struct{}), entries: make(map[string]entry)}
 }
 
 func TestQueryCachesAndInvalidates(t *testing.T) {
@@ -108,14 +109,76 @@ if [ -f "$TINCT_TEST_READY" ]; then echo '{"name":"ok"}'; else echo invalid; fi
 
 func TestQueryDeadlineWhileWaitingForProbe(t *testing.T) {
 	c := newCache()
-	c.gate <- struct{}{}
 	path := filepath.Join(t.TempDir(), "plugin")
 	if err := os.WriteFile(path, nil, 0o700); err != nil {
 		t.Fatal(err)
 	}
+	c.gateFor(path) <- struct{}{}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 	if _, err := c.query(ctx, path); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestQueryResolvesPATH(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tinct-test-plugin")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\necho '{\"name\":\"path\"}'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	data, err := newCache().query(context.Background(), "tinct-test-plugin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(data)) != `{"name":"path"}` {
+		t.Fatalf("data = %s", data)
+	}
+}
+
+func TestQueryIndependentPlugins(t *testing.T) {
+	c := newCache()
+	dir := t.TempDir()
+	// A probe already in progress must not block a different executable.
+	c.gateFor(filepath.Join(dir, "slow")) <- struct{}{}
+	path := filepath.Join(dir, "fast")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\necho '{}'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	for range 2 { // Cover both a cache miss and the subsequent cache hit.
+		if _, err := c.query(ctx, path); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestQueryConcurrentConsumers(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "plugin")
+	calls := filepath.Join(dir, "calls")
+	t.Setenv("TINCT_TEST_CALLS", calls)
+	script := "#!/bin/sh\necho call >> \"$TINCT_TEST_CALLS\"\nsleep 0.05\necho '{}'\n"
+	if err := os.WriteFile(path, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	c := newCache()
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Go(func() {
+			if _, err := c.query(context.Background(), path); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	wg.Wait()
+	data, err := os.ReadFile(calls)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "call\n" {
+		t.Fatalf("expected one probe, got %q", data)
 	}
 }

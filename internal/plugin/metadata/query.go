@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -19,11 +20,12 @@ type entry struct {
 }
 
 type cache struct {
-	gate    chan struct{}
+	mu      sync.Mutex
+	gates   map[string]chan struct{}
 	entries map[string]entry
 }
 
-var queries = cache{gate: make(chan struct{}, 1), entries: make(map[string]entry)}
+var queries = cache{gates: make(map[string]chan struct{}), entries: make(map[string]entry)}
 
 // Query returns valid JSON from --plugin-info within five seconds, plus at most
 // one second to drain inherited pipes. Successful results are reused while the
@@ -39,14 +41,19 @@ func (c *cache) query(ctx context.Context, path string) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	path, err := filepath.Abs(path)
+	resolved, err := exec.LookPath(path)
+	if err != nil {
+		return nil, fmt.Errorf("resolve plugin executable: %w", err)
+	}
+	path, err = filepath.Abs(resolved)
 	if err != nil {
 		return nil, fmt.Errorf("resolve plugin path: %w", err)
 	}
-	// Serialize cache fills so concurrent consumers do not launch duplicate probes.
+	// Serialize fills for this executable without blocking unrelated plugins.
+	gate := c.gateFor(path)
 	select {
-	case c.gate <- struct{}{}:
-		defer func() { <-c.gate }()
+	case gate <- struct{}{}:
+		defer func() { <-gate }()
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -57,7 +64,10 @@ func (c *cache) query(ctx context.Context, path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("stat plugin: %w", err)
 	}
-	if old, ok := c.entries[path]; ok && unchanged(old.info, info) {
+	c.mu.Lock()
+	old, ok := c.entries[path]
+	c.mu.Unlock()
+	if ok && unchanged(old.info, info) {
 		return append([]byte(nil), old.data...), nil
 	}
 	cmd := exec.CommandContext(ctx, path, "--plugin-info") // #nosec G204 -- the caller explicitly selects an external plugin executable.
@@ -75,11 +85,25 @@ func (c *cache) query(ctx context.Context, path string) ([]byte, error) {
 	// Do not cache an executable that was replaced while it was being queried.
 	current, err := os.Stat(path)
 	if err == nil && unchanged(info, current) {
+		c.mu.Lock()
 		c.entries[path] = entry{info: info, data: append([]byte(nil), data...)}
+		c.mu.Unlock()
 	}
 	return data, nil
 }
 
 func unchanged(a, b os.FileInfo) bool {
 	return os.SameFile(a, b) && a.Size() == b.Size() && a.Mode() == b.Mode() && a.ModTime().Equal(b.ModTime())
+}
+
+// gateFor returns a per-executable lock; map access remains safe across probes.
+func (c *cache) gateFor(path string) chan struct{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	gate := c.gates[path]
+	if gate == nil {
+		gate = make(chan struct{}, 1)
+		c.gates[path] = gate
+	}
+	return gate
 }
