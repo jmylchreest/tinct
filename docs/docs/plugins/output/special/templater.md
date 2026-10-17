@@ -132,7 +132,7 @@ Two common patterns:
 
 ### Manual fallback
 
-Reload each downstream app yourself, using whatever method it expects — `dunstctl reload`, `pkill -USR1 -x foot`, `i3-msg reload`, restart, etc. If you have multiple downstream apps, you'll probably want to wrap `tinct generate ... -o templater` in a shell function that reloads them all after generation.
+Reload each downstream app yourself, using whatever method it expects — `dunstctl reload`, `i3-msg reload`, restart, etc. Foot signals select cached themes; they do not reload generated configuration. Use the built-in Foot plugin with `--foot.tty` for live colour updates. If you have multiple downstream apps, you'll probably want to wrap `tinct generate ... -o templater` in a shell function that reloads them all after generation.
 
 ## Uninstall / revert
 

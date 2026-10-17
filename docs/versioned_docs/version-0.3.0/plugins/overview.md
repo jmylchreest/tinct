@@ -29,8 +29,8 @@ Generate configuration files for applications:
 - [Terminals](/docs/plugins/output#terminals) - Alacritty, Ghostty, Kitty, Konsole, Ptyxis
 - [Desktop environments](/docs/plugins/output#desktop-environments) - GNOME, KDE, GTK, Qt
 - [Window managers](/docs/plugins/output#hyprland-ecosystem) - Hyprland, Hyprlock, Hyprpaper
-- [Bars and launchers](/docs/plugins/output#bars-and-launchers) - Waybar, Dunst, Fuzzel, etc.
-- [Editors](/docs/plugins/output#editors-and-multiplexers) - Neovim, Zellij
+- [Bars and launchers](/docs/plugins/output#bars--launchers) - Waybar, Dunst, Fuzzel, etc.
+- [Editors](/docs/plugins/output#editors--multiplexers) - Neovim, Zellij
 - [Special](/docs/plugins/output#special-purpose) - Markdown export, custom templates
 
 ## Built-in vs external

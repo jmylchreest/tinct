@@ -70,6 +70,7 @@ const sidebars: SidebarsConfig = {
             'plugins/input/image',
             'plugins/input/google-genai',
             'plugins/input/openrouter',
+            'plugins/input/minimax',
             'plugins/input/remote-json',
             'plugins/input/remote-css',
             'plugins/input/file',
@@ -121,6 +122,8 @@ const sidebars: SidebarsConfig = {
         'plugin-development/creating',
         'plugin-development/hooks',
         'plugin-development/publishing',
+        'plugin-development/ai-drivers',
+        'plugin-development/validation',
       ],
     },
     // Changelog is a single Keep-a-Changelog file maintained at
