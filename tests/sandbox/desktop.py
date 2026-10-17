@@ -20,7 +20,8 @@ def rgb(value):
 def compositor(c):
     proc = c.start("sway", "-c", "/opt/sandbox/sway.conf", log="sway.log")
     runtime = Path(os.environ["XDG_RUNTIME_DIR"])
-    c.wait_until(lambda: any(p.is_socket() for p in runtime.glob("wayland-*")), "Wayland socket")
+    c.wait_until(lambda: any(p.is_socket() for p in runtime.glob("wayland-*")) and
+                 any(p.is_socket() for p in runtime.glob("sway-ipc.*.sock")), "Wayland and Sway IPC sockets")
     os.environ["WAYLAND_DISPLAY"] = next(p.name for p in runtime.glob("wayland-*") if p.is_socket())
     os.environ["SWAYSOCK"] = str(next(runtime.glob("sway-ipc.*.sock")))
     c.check(proc.poll() is None, "headless compositor running")
@@ -96,6 +97,8 @@ def waybar(c):
     for theme in ("dark", "light"):
         path = generate(c, "waybar", theme, "waybar/themes/tinct.css")
         colours = {name: rgb(value) for name, value in re.findall(r"@define-color ([\w-]+) (#[0-9a-fA-F]{6});", path.read_text())}
+        for role in ("background", "foreground"):
+            c.check(colours[role] == rgb(PALETTES[theme][role]), theme + " generated requested " + role)
         if daemon is None:
             daemon = c.start("waybar", "-c", str(config / "config.json"), "-s", str(config / "style.css"), log="waybar.log")
         c.check(daemon.poll() is None, theme + " same Waybar process alive")
