@@ -15,7 +15,7 @@ plugin:
   generated_files: [tinct.css]
   reload:
     method: ipc
-    command: swaync-client --reload-css --skip-wait
+    command: org.erikreider.swaync.cc.ReloadCss
     user_action_required: false
 ---
 
@@ -49,7 +49,9 @@ Keep the default SwayNC stylesheet or your existing layout rules. The generated 
 
 ## Reload behaviour
 
-After generation tinct runs `swaync-client --reload-css --skip-wait`. The last flag prevents waiting for a daemon that has not started. Run the same command manually after first adding the import. Changing SwayNC's stylesheet location requires restarting it.
+After generation tinct calls SwayNC’s `ReloadCss` D-Bus method directly with a three-second deadline and service activation disabled. A stopped daemon is left stopped. This avoids the client’s connection wait loop, which can occur even with `--skip-wait`.
+
+When SwayNC is running, use `swaync-client --reload-css --skip-wait` to reload manually after adding the import. Changing its stylesheet location requires restarting it.
 
 ## Flags
 

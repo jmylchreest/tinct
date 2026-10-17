@@ -153,7 +153,7 @@ func (p *Plugin) Hooks() hooks.Spec {
 	return hooks.Spec{
 		RequiredBinaries: []string{"swaync-client"},
 		AutoCreateDir:    true,
-		Reload:           &hooks.ReloadSpec{Verb: hooks.VerbExec, Args: []string{"swaync-client", "--reload-css", "--skip-wait"}},
+		ReloadFn:         reloadCSS,
 		Instructions:     `Import "tinct.css" after your other colour rules in ~/.config/swaync/style.css.`,
 	}
 }

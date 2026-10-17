@@ -10,7 +10,7 @@
     --noti-bg-hover: {{ get . "surfaceVariant" | rgba }};
     --noti-bg-focus: {{ get . "surfaceVariant" | rgba }};
     --noti-close-bg: {{ get . "surfaceVariant" | rgba }};
-    --noti-close-bg-hover: {{ get . "accent1Muted" | rgba }};
+    --noti-close-bg-hover: {{ if has . "accent1Muted" }}{{ get . "accent1Muted" | rgba }}{{ else }}{{ get . "surfaceVariant" | rgba }}{{ end }};
     --text-color: {{ get . "foreground" | rgba }};
     --text-color-disabled: {{ get . "foregroundMuted" | rgba }};
     --bg-selected: {{ get . "accent1" | rgba }};
