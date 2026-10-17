@@ -124,8 +124,15 @@
     "validator": null
   },
   "waybar": {
-    "status": "planned",
-    "validator": null
+    "status": "implemented",
+    "validator": "waybar",
+    "checks": [
+      "generation",
+      "rendered-colours",
+      "OCR",
+      "reload",
+      "screenshots"
+    ]
   },
   "wbg": {
     "status": "planned",

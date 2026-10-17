@@ -88,3 +88,12 @@ cannot compensate for a missing panel or notification. Synthetic negative tests
 cover blank screens, hidden text, absent panels/borders and displaced content.
 To run the Python tests locally, install Pillow 12.3.0 in a virtual environment,
 then run `python -m unittest discover -s tests/sandbox -p 'test_*.py' -v`.
+
+## Waybar
+
+`--app waybar` starts a real bar with fixed title, media and clock labels. It
+imports Tinct's generated example stylesheet, verifies bar/module colours, text
+contrast and OCR, then regenerates a light theme and checks the same Waybar
+process renders it through Tinct's SIGUSR2 hook. The user stylesheet and desktop
+region must remain unchanged. The fixture fixes module content and font size;
+it does not test hardware-backed modules or every possible user layout.
