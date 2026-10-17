@@ -3,17 +3,13 @@
 package minimax
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"image/color"
 	_ "image/jpeg" // Required for JPEG image decoding
 	_ "image/png"  // Required for PNG image decoding
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmylchreest/tinct/pkg/ai"
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
@@ -309,15 +306,7 @@ func getAPIKey() (string, error) {
 // imageRequest is the MiniMax text-to-image request body. Width/Height take
 // precedence over AspectRatio when set, so we send explicit dimensions to pin
 // the resolution and omit the aspect ratio.
-type imageRequest struct {
-	Model          string `json:"model"`
-	Prompt         string `json:"prompt"`
-	AspectRatio    string `json:"aspect_ratio,omitempty"`
-	Width          int    `json:"width,omitempty"`
-	Height         int    `json:"height,omitempty"`
-	ResponseFormat string `json:"response_format"`
-	N              int    `json:"n"`
-}
+type imageRequest = ai.MiniMaxRequest
 
 // resolveDimensions converts an aspect ratio ("W:H") and a size flag ("1K", "2K",
 // or a pixel count) into explicit width/height for the request, with the long edge
@@ -392,21 +381,12 @@ func clampDimension(px int) int {
 
 // imageResponse is the MiniMax text-to-image response. MiniMax reports errors
 // through base_resp.status_code even on an HTTP 200, so it must be checked.
-type imageResponse struct {
-	Data struct {
-		ImageBase64 []string `json:"image_base64"`
-		ImageURLs   []string `json:"image_urls"`
-	} `json:"data"`
-	BaseResp struct {
-		StatusCode int    `json:"status_code"`
-		StatusMsg  string `json:"status_msg"`
-	} `json:"base_resp"`
-}
+type imageResponse = ai.MiniMaxResponse
 
 // generateImage calls the MiniMax API to create an image.
 // outputBasePath is the path without extension - the actual extension is determined
 // from the API response and the final path is returned.
-func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) { //nolint:gocyclo
+func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) {
 	apiKey, err := getAPIKey()
 	if err != nil {
 		return "", err
@@ -421,82 +401,12 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 		fullPrompt = fmt.Sprintf("%s\n\nAvoid: %s", enhancedPrompt, negativePrompt)
 	}
 
-	request := imageRequest{
-		Model:          model,
-		Prompt:         fullPrompt,
-		ResponseFormat: "base64",
-		N:              1,
-	}
-
-	// Prefer explicit dimensions (pins resolution at the requested aspect ratio);
-	// fall back to letting MiniMax size the image from the aspect ratio alone.
-	width, height, ok := resolveDimensions(commonflags.AspectRatio, p.imageSize)
-	if ok {
-		request.Width = width
-		request.Height = height
-	} else {
-		request.AspectRatio = commonflags.AspectRatio
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Calling MiniMax API with model: %s\n", model)
-		fmt.Fprintf(os.Stderr, "  Aspect ratio: %s\n", commonflags.AspectRatio)
-		if ok {
-			fmt.Fprintf(os.Stderr, "  Resolution: %dx%d\n", width, height)
-		}
-		fmt.Fprintf(os.Stderr, "  Enhanced prompt: %s\n", enhancedPrompt)
-		if negativePrompt != "" {
-			fmt.Fprintf(os.Stderr, "  Negative prompt: %s\n", negativePrompt)
-		}
-	}
-
-	reqBody, err := json.Marshal(request)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.apiURL, bytes.NewReader(reqBody))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{Timeout: 5 * time.Minute}
-	resp, err := client.Do(req) // #nosec G704 -- URL is the MiniMax API endpoint
-	if err != nil {
-		return "", fmt.Errorf("API request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Response status: %d\n", resp.StatusCode) // #nosec G705 -- status code is an integer
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var response imageResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	// MiniMax signals failures via base_resp even on HTTP 200.
-	if response.BaseResp.StatusCode != 0 {
-		return "", fmt.Errorf("API error %d: %s", response.BaseResp.StatusCode, response.BaseResp.StatusMsg)
-	}
-
-	imageBytes, err := p.extractImageBytes(ctx, response)
+	width, height, _ := resolveDimensions(commonflags.AspectRatio, p.imageSize)
+	generated, err := (ai.MiniMax{Options: ai.Options{APIKey: apiKey}, Endpoint: p.apiURL}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: fullPrompt, AspectRatio: commonflags.AspectRatio, Width: width, Height: height})
 	if err != nil {
 		return "", err
 	}
-
+	imageBytes := generated.Bytes
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
 	}
@@ -534,44 +444,8 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 // extractImageBytes pulls the raw image bytes from a MiniMax response, preferring
 // inline base64 and falling back to a (short-lived) image URL.
 func (p *Plugin) extractImageBytes(ctx context.Context, response imageResponse) ([]byte, error) {
-	if len(response.Data.ImageBase64) > 0 {
-		imageBytes, err := base64.StdEncoding.DecodeString(response.Data.ImageBase64[0])
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode image data: %w", err)
-		}
-		return imageBytes, nil
-	}
-
-	if len(response.Data.ImageURLs) > 0 {
-		return fetchImageBytes(ctx, response.Data.ImageURLs[0])
-	}
-
-	return nil, fmt.Errorf("no image returned in response")
-}
-
-// fetchImageBytes downloads image bytes from a URL (used when MiniMax returns a URL
-// instead of inline base64; these URLs expire 24h after generation).
-func fetchImageBytes(ctx context.Context, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create image request: %w", err)
-	}
-	client := &http.Client{Timeout: 2 * time.Minute}
-	resp, err := client.Do(req) // #nosec G704 -- URL returned by the MiniMax API
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch image: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("image fetch returned status %d", resp.StatusCode) // #nosec G705
-	}
-
-	imageBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read image: %w", err)
-	}
-	return imageBytes, nil
+	image, err := (ai.MiniMax{}).DecodeImage(ctx, response)
+	return image.Bytes, err
 }
 
 // saveMetadata saves generation metadata as a JSON file alongside the image.

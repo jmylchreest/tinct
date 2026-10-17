@@ -2,10 +2,8 @@
 package openrouter
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -22,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmylchreest/tinct/pkg/ai"
 	"github.com/spf13/cobra"
 
 	"github.com/jmylchreest/tinct/internal/colour"
@@ -295,85 +294,10 @@ func getAPIKey() (string, error) {
 	return apiKey, nil
 }
 
-// ChatCompletionRequest represents the request body for OpenRouter chat completions.
-type ChatCompletionRequest struct {
-	Model       string       `json:"model"`
-	Messages    []Message    `json:"messages"`
-	Modalities  []string     `json:"modalities,omitempty"`
-	ImageConfig *ImageConfig `json:"image_config,omitempty"`
-	MaxTokens   int          `json:"max_tokens,omitempty"`
-}
-
-// Message represents a chat message.
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-// ImageConfig contains image generation configuration.
-type ImageConfig struct {
-	AspectRatio string `json:"aspect_ratio,omitempty"`
-}
-
-// ChatCompletionResponse represents the response from OpenRouter.
-type ChatCompletionResponse struct {
-	ID      string    `json:"id"`
-	Model   string    `json:"model"`
-	Choices []Choice  `json:"choices"`
-	Error   *APIError `json:"error,omitempty"`
-}
-
-// Choice represents a completion choice.
-type Choice struct {
-	Index        int             `json:"index"`
-	Message      ResponseMessage `json:"message"`
-	FinishReason string          `json:"finish_reason"`
-}
-
-// ResponseMessage represents the assistant's response message.
-type ResponseMessage struct {
-	Role    string      `json:"role"`
-	Content string      `json:"content"`
-	Images  []ImageData `json:"images,omitempty"`
-}
-
-// ImageData represents an image in the response.
-type ImageData struct {
-	Type     string   `json:"type"`
-	ImageURL ImageURL `json:"image_url"`
-}
-
-// ImageURL contains the image URL data.
-type ImageURL struct {
-	URL string `json:"url"`
-}
-
-// APIError represents an API error response.
-type APIError struct {
-	Message string `json:"message"`
-	Type    string `json:"type"`
-	Code    any    `json:"code"` // Can be string or number depending on provider
-}
-
-// CodeString returns the error code as a string.
-func (e *APIError) CodeString() string {
-	if e.Code == nil {
-		return ""
-	}
-	switch v := e.Code.(type) {
-	case string:
-		return v
-	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	default:
-		return fmt.Sprintf("%v", e.Code)
-	}
-}
-
 // generateImage calls OpenRouter API to create an image.
 // outputBasePath is the path without extension - the actual extension is determined
 // from the API response and the final path is returned.
-func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) { //nolint:gocyclo
+func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) {
 	apiKey, err := getAPIKey()
 	if err != nil {
 		return "", err
@@ -389,135 +313,12 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 		fullPrompt = fmt.Sprintf("%s\n\nAvoid: %s", enhancedPrompt, negativePrompt)
 	}
 
-	// Build request
-	request := ChatCompletionRequest{
-		Model: model,
-		Messages: []Message{
-			{
-				Role:    "user",
-				Content: fullPrompt,
-			},
-		},
-		Modalities: []string{"image", "text"},
-	}
-
-	// Add aspect ratio configuration for supported models
-	if commonflags.AspectRatio != "" {
-		request.ImageConfig = &ImageConfig{
-			AspectRatio: commonflags.AspectRatio,
-		}
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Calling OpenRouter API with model: %s\n", model)
-		fmt.Fprintf(os.Stderr, "  Aspect ratio: %s\n", commonflags.AspectRatio)
-		fmt.Fprintf(os.Stderr, "  Enhanced prompt: %s\n", enhancedPrompt)
-		if negativePrompt != "" {
-			fmt.Fprintf(os.Stderr, "  Negative prompt: %s\n", negativePrompt)
-		}
-	}
-
-	// Marshal request
-	reqBody, err := json.Marshal(request)
+	generated, err := (ai.OpenRouter{Options: ai.Options{APIKey: apiKey}}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: fullPrompt, AspectRatio: commonflags.AspectRatio})
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return "", err
 	}
-
-	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, "POST", apiBaseURL+"/chat/completions", bytes.NewReader(reqBody))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("HTTP-Referer", "https://github.com/jmylchreest/tinct")
-	req.Header.Set("X-Title", "tinct")
-
-	// Execute request
-	client := &http.Client{Timeout: 5 * time.Minute}
-	resp, err := client.Do(req) // #nosec G704 -- URL is the OpenRouter API endpoint configured by the user
-	if err != nil {
-		return "", fmt.Errorf("API request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Response status: %d\n", resp.StatusCode) // #nosec G705 -- status code is an integer, not user-controlled content
-	}
-
-	// Check for HTTP errors
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
-	}
-
-	// Parse response
-	var response ChatCompletionResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	// Check for API error
-	if response.Error != nil {
-		return "", fmt.Errorf("API error: %s", response.Error.Message)
-	}
-
-	// Check for choices
-	if len(response.Choices) == 0 {
-		return "", fmt.Errorf("no choices in response")
-	}
-
-	// Get image from response
-	choice := response.Choices[0]
-	if len(choice.Message.Images) == 0 {
-		return "", fmt.Errorf("no images in response (model may not support image generation)")
-	}
-
-	// Extract base64 image data
-	imageURL := choice.Message.Images[0].ImageURL.URL
-	if !strings.HasPrefix(imageURL, "data:image/") {
-		return "", fmt.Errorf("unexpected image URL format: %s", imageURL[:min(50, len(imageURL))])
-	}
-
-	// Parse data URL: data:image/png;base64,<data>
-	// Extract MIME type to determine file extension
-	parts := strings.SplitN(imageURL, ",", 2)
-	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid data URL format")
-	}
-
-	// Parse MIME type from "data:image/jpeg;base64"
-	mimeType := ""
-	header := parts[0] // e.g., "data:image/jpeg;base64"
-	if after, ok := strings.CutPrefix(header, "data:"); ok {
-		header = after
-		if before, _, ok := strings.Cut(header, ";"); ok {
-			mimeType = before
-		}
-	}
-
-	// Determine file extension based on MIME type
-	ext := getExtensionForMIME(mimeType)
-	actualPath = outputBasePath + ext
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Image format: %s (extension: %s)\n", mimeType, ext)
-	}
-
-	imageBytes, err := base64.StdEncoding.DecodeString(parts[1])
-	if err != nil {
-		return "", fmt.Errorf("failed to decode image data: %w", err)
-	}
-
-	if verbose {
-		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
-	}
-
+	imageBytes := generated.Bytes
+	actualPath = outputBasePath + getExtensionForMIME(generated.MIMEType)
 	// Write image to file with correct extension
 	if err := os.WriteFile(actualPath, imageBytes, 0o600); err != nil {
 		return "", fmt.Errorf("failed to write image to file: %w", err)
@@ -533,7 +334,7 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 		CreatedAt:      time.Now(),
 		ImagePath:      actualPath,
 		ImageSize_:     len(imageBytes),
-		FinishReason:   choice.FinishReason,
+		FinishReason:   generated.FinishReason,
 	}
 
 	if err := p.saveMetadata(actualPath, metadata); err != nil && verbose {
