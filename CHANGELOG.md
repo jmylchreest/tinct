@@ -13,6 +13,9 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.6.0]
+*2026-10-18*
+
 ### Added
 
 - SwayNC output plugin: generates a colour overlay while preserving the user's stylesheet and configuration, and reloads CSS in an existing notification daemon.
@@ -31,6 +34,25 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 - Google, OpenRouter and MiniMax input plugins share the public AI drivers while retaining their existing flags, caching and palette extraction.
 - Update Go dependencies, documentation dependencies and SBOM tooling.
+
+### Added
+
+- feat(foot): apply live colours to explicitly selected terminals via OSC (#43) (8783b02)
+- feat(swaync): add notification centre colour themes (#37) (f470c67)
+
+### Fixed
+
+- fix(foot): validate terminal palettes and remove incorrect reload signal (#42) (6678dee)
+- fix(fuzzel): validate launcher rendering and improve selected-match contrast (#41) (8e98550)
+- fix(waybar): validate real rendering and correct example colour references (#40) (15d69d7)
+- fix: query Flatpak inventory once per detection call (#35) (a934aed)
+- fix: honour RPC caller cancellation and stop plugin sessions (#34) (469cac7)
+- fix: bound and cache plugin metadata probes (#33) (0cc1374)
+- fix: bound subprocesses and handle literal paths safely (#32) (bce5d85)
+
+### Changed
+
+- refactor(ai): share generation drivers across built-in and external plugins (#36) (27ce7f2)
 
 ## [0.5.0]
 *2026-08-28*
