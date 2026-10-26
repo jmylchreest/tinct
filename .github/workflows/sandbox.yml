@@ -36,7 +36,7 @@ jobs:
         run: python3 tests/sandbox/run.py --engine docker --binary /tmp/tinct-validator --app ${{ matrix.app }} --artifacts sandbox-results/${{ matrix.app }}
       - name: Retain reports, logs and screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sandbox-${{ matrix.app }}
           path: sandbox-results/
