@@ -13,6 +13,17 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.6.1]
+*2026-11-17*
+
+### Added
+
+- feat(ai): add generic request parameters and compatible image inputs (#51) (2d5b987)
+
+### Fixed
+
+- fix(ci): reduce redundant Actions work (044166b)
+
 ## [0.6.0]
 *2026-10-18*
 
