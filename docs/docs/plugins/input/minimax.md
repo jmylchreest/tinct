@@ -19,7 +19,7 @@ plugin:
 
 # minimax
 
-Generates an image through [MiniMax](https://platform.minimax.io/) (the Hailuo image API), then extracts a palette from the result via k-means. MiniMax's text-to-image endpoint is fast and inexpensive, with a single image model (`image-01`).
+Generates an image through [MiniMax](https://platform.minimax.io/) (the Hailuo image API), then extracts a palette from the result via k-means. The default is `MiniMax-H3-Image`, using the shared OpenAI-compatible Images transport. The older `image-01` model remains available explicitly.
 
 The generated image is cached locally and exported as a wallpaper, so the same `tinct generate …` invocation produces both the palette and the wallpaper for output plugins like `hyprpaper`, `awww`, and `wbg`.
 
@@ -61,15 +61,17 @@ Generated images are cached under `~/.cache/tinct/generated/minimax/`. Each file
 
 ### Resolution
 
+The default H3 model uses an area tier of `2K` with the requested aspect ratio (about 2720×1536 for 16:9). Use `--ai.params '{"size":"3840x2160"}'` for exact 4K UHD output, or `--minimax.image-size 4K` for the larger 4K area tier. H3 area tiers are pixel-area targets, not long-edge lengths.
+
 `image-01` accepts dimensions up to **2048px** per side (divisible by 8). With only an aspect ratio set, MiniMax renders at a low default (~720p), which looks soft on a high-DPI monitor. The plugin therefore derives explicit `width`/`height` from `--aspect-ratio` and `--minimax.image-size` (default `2K`), so `16:9` produces **2048×1152**. Pass `--minimax.image-size 1K` for faster/smaller renders, or an explicit long-edge pixel count (512–2048).
 
 ### Endpoint override
 
-By default the plugin calls `https://api.minimax.io/v1/image_generation`. To route through a proxy or a compatible host, set `--minimax.base-url` to the full endpoint URL.
+The default H3 model calls `https://api.minimax.io/v1/images/generations`. The configured `--minimax.base-url` retains the legacy `/v1/image_generation` value for compatibility; H3 derives the corresponding Images endpoint. Explicit `image-01` requests use the native endpoint. See the H3 section below for proxy URL formats.
 
 ### Model selection
 
-MiniMax exposes a single image model and no models-list API, so `--ai.list-models` prints a maintained catalogue (works offline; no API key needed) rather than a live query. `--ai.model` defaults to `image-01`; you can pass any valid MiniMax image model ID.
+MiniMax image models use a maintained catalogue, so `--ai.list-models` prints a maintained catalogue (works offline; no API key needed) rather than a live query. `--ai.model` defaults to `MiniMax-H3-Image`; you can pass any valid MiniMax image model ID.
 
 ## Flags
 
@@ -77,8 +79,9 @@ MiniMax exposes a single image model and no models-list API, so `--ai.list-model
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--ai.params` | _(none)_ | JSON request-body overrides; see Custom API parameters below |
 | `--ai.prompt` | _(required)_ | Text description of the image to generate |
-| `--ai.model` | `image-01` | MiniMax image model ID |
+| `--ai.model` | `MiniMax-H3-Image` | MiniMax image model ID |
 | `--ai.list-models` | `false` | List the maintained model catalogue and exit |
 | `--ai.no-extended-prompt` | `false` | Disable tinct's automatic wallpaper-orientation prompt enhancement |
 | `--ai.no-negative-prompt` | `false` | Disable the default negative prompt |
@@ -89,7 +92,7 @@ MiniMax exposes a single image model and no models-list API, so `--ai.list-model
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--minimax.base-url` | `https://api.minimax.io/v1/image_generation` | MiniMax image generation endpoint URL (override for proxies) |
-| `--minimax.image-size` | `2K` | Target long-edge resolution: `1K`, `2K`, or pixels (512–2048) |
+| `--minimax.image-size` | `2K` | H3 area tier: `1K`, `2K`, `4K`; image-01 long-edge size: `1K`, `2K`, or pixels (512–2048) |
 
 ### Shared image flags
 
@@ -142,3 +145,35 @@ Cache hits are intentional. Pass `--cache-overwrite` to force a fresh generation
 - [`google-genai`](./google-genai.md) — Google Gemini / Imagen image generation
 - [`openrouter`](./openrouter.md) — multi-provider router across dozens of image models
 - [`image`](./image.md) — use an existing image instead of generating one
+
+## Custom API parameters
+
+`--ai.params` accepts a JSON object merged recursively into the final provider request body. Explicit values override defaults; arrays and `null` replace their defaults. Unknown fields are forwarded to the server, and integer precision is preserved. For example:
+
+```bash
+# H3 (default)
+--ai.params '{"size":"3840x2160","output_format":"png"}'
+
+# Legacy image-01
+--ai.model image-01 --ai.params '{"width":1536,"height":1024,"prompt_optimizer":false}'
+```
+
+Automatic cache keys include the parameters, model, prompt controls, aspect ratio, provider settings and letterbox processing. Existing cache entries using the old prompt/model-only hash are not reused. Custom `--cache-filename` values override this naming; use `--cache-overwrite` when changing settings. Metadata records explicit parameters. Credentials and endpoint configuration remain separate.
+
+## H3 Image through the shared OpenAI-compatible transport
+
+`MiniMax-H3-Image` is the default and uses `/v1/images/generations`. Select `--ai.model image-01` for the legacy model. An explicit H3 example:
+
+```bash
+tinct generate -i minimax \
+  --ai.model MiniMax-H3-Image \
+  --ai.prompt "misty mountains at dawn" \
+  --ai.params '{"size":"3840x2160","output_format":"png"}' \
+  -o hyprpaper,kitty
+```
+
+H3 uses the shared Images client; the native `image-01` response adapter is retained. Without explicit `size`, H3 receives `--aspect-ratio` and `--minimax.image-size` as an area level (`1K`, `2K`, or `4K`, default `2K`). When `--ai.params` supplies concrete dimensions, the generated aspect/area defaults are omitted because H3 does not allow them alongside explicit size. Other parameters are forwarded unchanged. Use `--ai.model` to select the model family and endpoint.
+
+For H3, `--minimax.base-url` accepts an API root ending in `/v1`, an existing `/v1/image_generation` endpoint, or `/v1/images/generations`; tinct derives the corresponding Images endpoint. Requests use a ten-minute timeout and are not automatically retried.
+
+The [official MiniMax CLI](https://github.com/MiniMax-AI/cli/blob/main/src/commands/image/generate.ts) documents the separate H3 and image-01 routes. [MiniMax H3 local serving](https://github.com/MiniMax-AI/MiniMax-H3-Image) also documents an OpenAI-style Images endpoint; local deployments can use the generic `openai` input directly, with their own model ID and server parameters.

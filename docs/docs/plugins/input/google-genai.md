@@ -67,7 +67,8 @@ Generated images are cached under `~/.cache/tinct/generated/google-genai/`. Each
 | Model | Notes |
 |-------|-------|
 | `gemini-3-pro-image-preview` | Nano Banana Pro — highest quality (~$0.134/image) |
-| `gemini-3.1-flash-image` | **Default.** Nano Banana 2, GA — fast, balanced quality (~$0.0672/image) |
+| `gemini-nano-banana-2.1` | **Default.** Balanced generation with improved visual quality and panoramic output; supports 1K, 2K and 4K |
+| `gemini-3.1-flash-image` | Previous Nano Banana 2 model (~$0.0672/image) |
 | `gemini-2.5-flash-image` | Nano Banana — cheapest Gemini image model (~$0.039/image) |
 | `imagen-4.0-ultra-generate-001` | Imagen 4 Ultra — _deprecated, earliest shutdown 2026-08-17_ |
 | `imagen-4.0-generate-001` | Imagen 4 — _deprecated, earliest shutdown 2026-08-17_ |
@@ -82,8 +83,9 @@ The Imagen family is deprecated; Google recommends migrating to `gemini-3.1-flas
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--ai.params` | _(none)_ | JSON request-body overrides; see Custom API parameters below |
 | `--ai.prompt` | _(required)_ | Text description of the image to generate |
-| `--ai.model` | `auto` | Model ID; `auto` resolves to `gemini-2.5-flash-image` |
+| `--ai.model` | `auto` | Model ID; `auto` resolves to `gemini-nano-banana-2.1` |
 | `--ai.list-models` | `false` | List available models and exit |
 | `--ai.no-extended-prompt` | `false` | Disable tinct's automatic wallpaper-orientation prompt enhancement |
 | `--ai.no-negative-prompt` | `false` | Disable the default negative prompt |
@@ -156,3 +158,15 @@ Confirm `--cache` is enabled (default) so the file persists past the run. If you
 
 - [`openrouter`](./openrouter.md) — same idea, but multi-provider via OpenRouter (often includes free image models)
 - [`image`](./image.md) — use an existing image instead of generating one
+
+## Custom API parameters
+
+`--ai.params` accepts a JSON object merged recursively into the final provider request body. Explicit values override defaults; arrays and `null` replace their defaults. Unknown fields are forwarded to the server, and integer precision is preserved. For example:
+
+```bash
+--ai.params '{"generationConfig":{"imageConfig":{"aspectRatio":"21:9"}}}'
+```
+
+Use the backend REST body shape: `generationConfig` for Gemini, or `parameters` / `instances` for Imagen. Overrides run after SDK serialization, so new server fields do not require SDK struct changes.
+
+Automatic cache keys include the parameters, model, prompt controls, aspect ratio, provider settings and letterbox processing. Existing cache entries using the old prompt/model-only hash are not reused. Custom `--cache-filename` values override this naming; use `--cache-overwrite` when changing settings. Metadata records explicit parameters. Credentials and endpoint configuration remain separate.

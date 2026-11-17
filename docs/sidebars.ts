@@ -71,6 +71,7 @@ const sidebars: SidebarsConfig = {
             'plugins/input/google-genai',
             'plugins/input/openrouter',
             'plugins/input/minimax',
+            'plugins/input/openai',
             'plugins/input/remote-json',
             'plugins/input/remote-css',
             'plugins/input/file',

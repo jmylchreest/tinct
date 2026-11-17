@@ -3,8 +3,6 @@ package googlegenai
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"image/color"
 	_ "image/jpeg" // Required for JPEG image decoding
@@ -43,7 +41,7 @@ const extPNG = ".png"
 
 const (
 	// defaultModel is the default model used when none is specified.
-	defaultModel = "gemini-3.1-flash-image"
+	defaultModel = "gemini-nano-banana-2.1"
 
 	// defaultBackend is the default backend used when none is specified.
 	defaultBackend = "gemini-api"
@@ -78,6 +76,7 @@ func warnIfDeprecatedModel(model string) {
 
 // ImageMetadata contains metadata about a generated image.
 type ImageMetadata struct {
+	Params map[string]any `json:"params,omitempty"`
 	// Generation parameters
 	Prompt         string `json:"prompt"`
 	EnhancedPrompt string `json:"enhanced_prompt,omitempty"`
@@ -149,6 +148,9 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 
 // Validate checks if required inputs are configured.
 func (p *Plugin) Validate() error {
+	if _, err := aiflags.ParseParams(); err != nil {
+		return err
+	}
 	// Skip validation if just listing models
 	if aiflags.ListModels {
 		return nil
@@ -161,6 +163,9 @@ func (p *Plugin) Validate() error {
 
 // Generate creates an image using Google Gen AI and extracts colors.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+	if _, err := aiflags.ParseParams(); err != nil {
+		return nil, err
+	}
 	// If list-models flag is set, print the maintained model catalogue and exit.
 	// Listing does not call the API: model availability is stable and per-model
 	// pricing is not exposed by the API, so we maintain the list (with prices) here.
@@ -284,8 +289,10 @@ func (p *Plugin) getImageBasePath(model string) (string, error) {
 
 	filename := commonflags.CacheFilename
 	if filename == "" {
-		hash := sha256.Sum256([]byte(aiflags.Prompt + model))
-		hashStr := hex.EncodeToString(hash[:])[:16]
+		hashStr, err := aiflags.CacheKey(model, p.backend, p.imageSize)
+		if err != nil {
+			return "", err
+		}
 		// Return without extension - will be added based on actual image format
 		filename = fmt.Sprintf("genai-%s", hashStr)
 	} else {
@@ -380,7 +387,8 @@ func (p *Plugin) clientSetup(ctx context.Context, verbose bool) (*genai.Client, 
 // Gemini image models (e.g. gemini-2.5-flash-image, gemini-3-pro-image-preview) generate via
 // GenerateContent; Imagen models (imagen-*) generate via GenerateImages.
 func isGeminiModel(model string) bool {
-	return strings.HasPrefix(model, "gemini-") && strings.Contains(model, "image")
+	return strings.HasPrefix(model, "gemini-nano-banana-") ||
+		(strings.HasPrefix(model, "gemini-") && strings.Contains(model, "image"))
 }
 
 // generateImage calls Google Gen AI SDK to create an image.
@@ -405,6 +413,10 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBaseP
 	enhancedPrompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
 
 	// Build generation config
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return "", err
+	}
 	genConfig := &genai.GenerateImagesConfig{
 		NumberOfImages: 1,
 		AspectRatio:    commonflags.AspectRatio,
@@ -439,7 +451,7 @@ func (p *Plugin) generateImageWithImagen(ctx context.Context, model, outputBaseP
 		}
 	}
 
-	generated, err := (ai.Google{Client: client}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: enhancedPrompt, AspectRatio: genConfig.AspectRatio, Size: genConfig.ImageSize, NegativePrompt: genConfig.NegativePrompt})
+	generated, err := (ai.Google{Client: client}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: enhancedPrompt, AspectRatio: genConfig.AspectRatio, Size: genConfig.ImageSize, NegativePrompt: genConfig.NegativePrompt, Params: params})
 	if err != nil {
 		return "", err
 	}
@@ -500,7 +512,11 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputBaseP
 		fmt.Fprintf(os.Stderr, "  Enhanced prompt: %s\n", enhancedPrompt)
 	}
 
-	generated, err := (ai.Google{Client: client, Gemini: true}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: enhancedPrompt, AspectRatio: commonflags.AspectRatio})
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return "", err
+	}
+	generated, err := (ai.Google{Client: client, Gemini: true}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: enhancedPrompt, AspectRatio: commonflags.AspectRatio, Params: params})
 	if err != nil {
 		return "", err
 	}
@@ -544,6 +560,7 @@ func (p *Plugin) generateImageWithGemini(ctx context.Context, model, outputBaseP
 
 // saveMetadata saves generation metadata as a JSON file alongside the image.
 func (p *Plugin) saveMetadata(imagePath string, metadata *ImageMetadata) error {
+	metadata.Params, _ = aiflags.ParseParams()
 	return imagecolours.SaveMetadata(imagePath, metadata)
 }
 
@@ -561,6 +578,7 @@ func fileExists(path string) bool {
 func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 	return []input.FlagHelp{
 		// Shared AI flags
+		{Name: "ai.params", Type: "string", Default: "", Description: "JSON request-body overrides (recursive merge); field names depend on provider/model"},
 		{Name: "ai.prompt", Type: "string", Default: "", Description: "Text description for AI image generation (required)", Required: true},
 		{Name: "ai.model", Type: "string", Default: defaultModel, Description: "AI model to use for image generation", Required: false},
 		{Name: "ai.list-models", Type: "bool", Default: "false", Description: "List available AI models and exit", Required: false},
@@ -598,6 +616,13 @@ func ListModels() {
 		Notes       string
 	}{
 		{
+			ID:          defaultModel,
+			Name:        "Gemini Nano Banana 2.1",
+			Description: "Balanced wallpaper generation with improved visual quality and panoramic output (default)",
+			Cost:        "See Google pricing for the selected resolution",
+			Generation:  "Nano Banana 2.1",
+		},
+		{
 			ID:          "gemini-3-pro-image-preview",
 			Name:        "Gemini 3 Pro Image (Nano Banana Pro)",
 			Description: "Highest quality; advanced multimodal reasoning, best-in-class text rendering, blends up to 8 reference images with identity preservation",
@@ -607,7 +632,7 @@ func ListModels() {
 		{
 			ID:          "gemini-3.1-flash-image",
 			Name:        "Gemini 3.1 Flash Image (Nano Banana 2)",
-			Description: "High-efficiency Gemini 3 sibling to Pro; fast, high-volume image generation and editing with strong text rendering (default)",
+			Description: "High-efficiency Gemini 3 sibling to Pro; fast, high-volume image generation and editing with strong text rendering",
 			Cost:        "$0.0672 per image",
 			Generation:  "Gemini 3",
 		},

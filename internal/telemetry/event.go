@@ -186,7 +186,7 @@ func NewPluginCommandEvent(p PluginCommandEventParams) Event {
 // isAIInput returns true if the input plugin is AI-powered.
 func isAIInput(inputPlugin string) bool {
 	switch inputPlugin {
-	case "google-genai", "openrouter":
+	case "google-genai", "openrouter", "minimax", "openai":
 		return true
 	default:
 		return false

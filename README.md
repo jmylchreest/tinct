@@ -51,7 +51,7 @@ export GOOGLE_API_KEY=$(bw get password google-genai)             # Bitwarden CL
 tinct generate -i google-genai --ai.prompt "sunset over rolling hills of tuscany" -o all
 ```
 
-OpenRouter is also supported as an alternative (`-i openrouter`), giving access to multiple AI models. See the [AI generation docs](https://jmylchreest.github.io/tinct/docs/plugins/input/google-genai) for details.
+Direct OpenAI and compatible local image servers are supported with `-i openai` and generic `--ai.params` JSON overrides; see the [OpenAI plugin](internal/plugin/input/openai/README.md). OpenRouter is also supported as an alternative (`-i openrouter`), giving access to multiple AI models. See the [AI generation docs](https://jmylchreest.github.io/tinct/docs/plugins/input/google-genai) for details.
 
 ### From a popular theme
 

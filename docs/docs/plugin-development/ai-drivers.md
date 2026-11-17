@@ -34,7 +34,7 @@ image, err := driver.GenerateImage(ctx, ai.ImageRequest{
 
 The base URL includes the server's API prefix; trailing slashes are accepted. The driver appends `/images/generations`. It accepts base64 image data or a downloadable image URL. It does not force a provider-specific response format. Image downloads do not receive the API key.
 
-This supports local hosting when the server actually implements the Images API. An OpenAI-compatible text endpoint (including a llama.cpp or Ollama deployment) is not evidence that it implements image generation. Use `OpenAIText` for its chat text protocol; use the separate `OpenRouter` adapter only for servers implementing that image extension. Unsupported endpoints return errors rather than silently switching protocols. A future generic CLI input plugin can wrap this driver with endpoint/model/key flags without changing the transport.
+This supports local hosting when the server actually implements the Images API. An OpenAI-compatible text endpoint (including a llama.cpp or Ollama deployment) is not evidence that it implements image generation. Use `OpenAIText` for its chat text protocol; use the separate `OpenRouter` adapter only for servers implementing that image extension. Unsupported endpoints return errors rather than silently switching protocols. The built-in `openai` input wraps these drivers with endpoint, protocol, model and credential-variable flags.
 
 ## Policy and limits
 
@@ -44,4 +44,19 @@ This supports local hosting when the server actually implements the Images API. 
 
 `EnhanceForWallpaper(prompt, disabled)` and `BuildNegative(extra, suppress)` expose the existing prompt policy without CLI globals. Drivers do not add prompt enhancements implicitly. MiniMax and OpenRouter callers can append negative prompts as instructions; Google Imagen uses its dedicated field where supported. OpenAI's Images API does not receive a synthetic negative-prompt field.
 
-Existing Google, OpenRouter and MiniMax input plugins use these drivers. Their flags, cache handling, metadata and palette extraction stay in the plugins. OpenAI and Anthropic are SDK capabilities in this change, not new registered CLI inputs.
+Existing Google, OpenRouter and MiniMax input plugins use these drivers. Their flags, cache handling, metadata and palette extraction stay in the plugins. The built-in `openai` input exposes Images or image-output Chat Completions. Anthropic remains a text-only SDK capability.
+
+
+## Request-body overrides
+
+All image drivers accept `ImageRequest.Params`, a `map[string]any` recursively merged into the final provider request body. This includes Google's SDK-serialized request. Scalars, arrays and `nil` replace defaults. Use `json.Number` for integers that must retain precision; the CLI parses `--ai.params` with this representation. The driver does not mutate the supplied parameter map.
+
+```go
+image, err := driver.GenerateImage(ctx, ai.ImageRequest{
+    Model: "your-image-model",
+    Prompt: "A forest at dawn",
+    Params: map[string]any{"quality": "high", "size": "3840x2160"},
+})
+```
+
+Fields are endpoint/model-specific and are forwarded without translation. Streaming is rejected; only the first returned image is consumed. Credentials and connection settings belong in `Options`. The MiniMax H3 plugin selects `OpenAI` for its Images endpoint; legacy image-01 uses `MiniMax`.

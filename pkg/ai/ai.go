@@ -21,6 +21,8 @@ type TextGenerator interface {
 // ImageRequest describes one generation. Size is a provider-specific size string;
 // Width and Height are used by MiniMax, AspectRatio by OpenRouter and Google.
 type ImageRequest struct {
+	// Params recursively overrides the final provider request body.
+	Params                                           map[string]any
 	Model, Prompt, NegativePrompt, AspectRatio, Size string
 	Width, Height                                    int
 }

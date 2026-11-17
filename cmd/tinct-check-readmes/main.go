@@ -39,6 +39,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/googlegenai"
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
 	markdownin "github.com/jmylchreest/tinct/internal/plugin/input/markdown"
+	"github.com/jmylchreest/tinct/internal/plugin/input/openai"
 	"github.com/jmylchreest/tinct/internal/plugin/input/openrouter"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
@@ -131,6 +132,7 @@ func inputBuiltinRegistry() []builtinInputPlugin {
 		{remotecss.New(), "remotecss"},
 		{googlegenai.New(), "googlegenai"},
 		{openrouter.New(), "openrouter"},
+		{openai.New(), "openai"},
 	}
 }
 

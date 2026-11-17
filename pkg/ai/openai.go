@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -26,7 +27,11 @@ func (p OpenAI) GenerateImage(ctx context.Context, r ImageRequest) (Image, error
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	if err := p.Options.post(ctx, p.Options.endpoint("https://api.openai.com/v1", "/images/generations"), payload, &response, p.Options.bearer()); err != nil {
+	body, err := MarshalRequest(payload, r.Params)
+	if err != nil {
+		return Image{}, err
+	}
+	if err := p.Options.post(ctx, p.Options.endpoint("https://api.openai.com/v1", "/images/generations"), json.RawMessage(body), &response, p.Options.bearer()); err != nil {
 		return Image{}, err
 	}
 	if response.Error != nil {
