@@ -95,7 +95,10 @@ Examples:
 			}
 
 			// Create GitHub client
-			client := repomanager.NewGitHubClient()
+			client, err := repomanager.NewGitHubClient()
+			if err != nil {
+				return err
+			}
 
 			// Load manifest
 			mgr, err := repomanager.LoadManifest(opts.manifestPath)
@@ -202,7 +205,10 @@ func syncFromConfig(opts syncOptions) error {
 	mgr.CreateSnapshot()
 
 	// Create GitHub client (reused for all GitHub sources)
-	client := repomanager.NewGitHubClient()
+	client, err := repomanager.NewGitHubClient()
+	if err != nil {
+		return err
+	}
 
 	// Create protocol version tracker for cascade filtering
 	tracker := NewProtocolVersionTracker()
