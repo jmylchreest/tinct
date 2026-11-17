@@ -13,6 +13,9 @@ var (
 	// Prompt is the text description for image generation.
 	Prompt string
 
+	// Params is a JSON object merged into the provider request body.
+	Params string
+
 	// Model is the AI model to use for generation.
 	Model string
 
@@ -44,6 +47,7 @@ func RegisterFlags(cmd *cobra.Command) bool {
 	}
 
 	cmd.Flags().StringVar(&Prompt, "ai.prompt", "", "Text description for AI image generation (required for AI plugins)")
+	cmd.Flags().StringVar(&Params, "ai.params", "", "JSON request-body overrides (recursive merge); field names depend on provider/model")
 	cmd.Flags().StringVar(&Model, "ai.model", "auto", "AI model to use for image generation")
 	cmd.Flags().BoolVar(&ListModels, "ai.list-models", false, "List available AI models and exit")
 	cmd.Flags().BoolVar(&NoExtendedPrompt, "ai.no-extended-prompt", false, "Disable automatic wallpaper prompt enhancements")
@@ -59,6 +63,7 @@ func Reset() {
 	defer mu.Unlock()
 
 	Prompt = ""
+	Params = ""
 	Model = "auto"
 	ListModels = false
 	NoExtendedPrompt = false

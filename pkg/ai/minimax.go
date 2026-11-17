@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -45,7 +46,11 @@ func (p MiniMax) GenerateImage(ctx context.Context, r ImageRequest) (Image, erro
 		endpoint = p.Options.endpoint("https://api.minimax.io/v1", "/image_generation")
 	}
 	var response MiniMaxResponse
-	if err := p.Options.post(ctx, endpoint, request, &response, p.Options.bearer()); err != nil {
+	body, err := MarshalRequest(request, r.Params)
+	if err != nil {
+		return Image{}, err
+	}
+	if err := p.Options.post(ctx, endpoint, json.RawMessage(body), &response, p.Options.bearer()); err != nil {
 		return Image{}, err
 	}
 	return p.DecodeImage(ctx, response)

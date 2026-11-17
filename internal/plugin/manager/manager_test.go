@@ -98,7 +98,7 @@ func TestBuildRegistersBuiltinPlugins(t *testing.T) {
 	}
 
 	// Check for specific built-in plugins.
-	expectedInputs := []string{"image", "file", "remote-json", "remote-css", "google-genai"}
+	expectedInputs := []string{"image", "file", "remote-json", "remote-css", "google-genai", "minimax", "openrouter", "openai"}
 	for _, name := range expectedInputs {
 		if _, ok := manager.GetInputPlugin(name); !ok {
 			t.Errorf("Built-in input plugin '%s' not registered", name)

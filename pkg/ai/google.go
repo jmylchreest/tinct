@@ -19,6 +19,9 @@ type Google struct {
 }
 
 func (p Google) GenerateImage(ctx context.Context, r ImageRequest) (Image, error) {
+	if r.Params["stream"] == true {
+		return Image{}, fmt.Errorf("stream=true is unsupported for image generation")
+	}
 	if p.Client == nil {
 		return Image{}, fmt.Errorf("Google client is required")
 	}
@@ -27,7 +30,7 @@ func (p Google) GenerateImage(ctx context.Context, r ImageRequest) (Image, error
 	if p.Gemini {
 		return p.gemini(ctx, r)
 	}
-	response, err := p.Client.Models.GenerateImages(ctx, r.Model, r.Prompt, &genai.GenerateImagesConfig{NumberOfImages: 1, AspectRatio: r.AspectRatio, ImageSize: r.Size, NegativePrompt: r.NegativePrompt, OutputMIMEType: "image/png"})
+	response, err := p.Client.Models.GenerateImages(ctx, r.Model, r.Prompt, &genai.GenerateImagesConfig{NumberOfImages: 1, AspectRatio: r.AspectRatio, ImageSize: r.Size, NegativePrompt: r.NegativePrompt, OutputMIMEType: "image/png", HTTPOptions: &genai.HTTPOptions{ExtrasRequestProvider: func(body map[string]any) map[string]any { return MergeParams(body, r.Params) }}})
 	if err != nil {
 		return Image{}, fmt.Errorf("Google image generation: %w", err)
 	}
@@ -52,7 +55,7 @@ func (p Google) gemini(ctx context.Context, r ImageRequest) (Image, error) {
 	if r.AspectRatio != "" {
 		prompt = fmt.Sprintf("Generate an image with aspect ratio %s: %s", r.AspectRatio, prompt)
 	}
-	response, err := p.Client.Models.GenerateContent(ctx, r.Model, genai.Text(prompt), &genai.GenerateContentConfig{ResponseModalities: []string{"Image"}})
+	response, err := p.Client.Models.GenerateContent(ctx, r.Model, genai.Text(prompt), &genai.GenerateContentConfig{ResponseModalities: []string{"Image"}, HTTPOptions: &genai.HTTPOptions{ExtrasRequestProvider: func(body map[string]any) map[string]any { return MergeParams(body, r.Params) }}})
 	if err != nil {
 		return Image{}, fmt.Errorf("Google image generation: %w", err)
 	}

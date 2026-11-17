@@ -146,6 +146,8 @@ tinct generate -i image -p ~/wallpaper.jpg -o all --save-palette palette.json
 
 ### AI generation
 
+All AI inputs accept `--ai.params` as a quoted JSON request-body object. Objects merge recursively; explicit values override generated defaults. Fields are provider-specific. See [AI request parameters](./extract.md#ai-request-parameters) for examples and [OpenRouter](../plugins/input/openrouter.md) for model selection and compatible endpoint setup. Use `tinct extract` to generate an image and inspect its palette without applying theme or wallpaper changes.
+
 ```bash
 # Google Gemini
 export GOOGLE_API_KEY="your-key"

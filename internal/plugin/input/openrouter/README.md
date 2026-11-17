@@ -57,7 +57,7 @@ export OPENROUTER_API_KEY=$(bw get password openrouter)
 export OPENROUTER_API_KEY=$(pass show openrouter)
 ```
 
-Generated images are cached under `~/.cache/tinct/generated/openrouter/`. Each file is keyed by a hash of the prompt and model, so re-running the same prompt is free. File extensions are chosen based on the MIME type returned by the API (PNG / JPEG / WebP / GIF).
+Generated images are cached under `~/.cache/tinct/generated/openrouter/`. Automatic filenames include a hash of the prompt, model, API parameters and processing settings. Repeating the same request reuses its cached image without another generation charge. File extensions are chosen based on the MIME type returned by the API (PNG / JPEG / WebP / GIF).
 
 ### Model selection
 
@@ -68,7 +68,24 @@ When `--ai.model` is `auto` (the default):
 3. If `--openrouter.prefer-free` is `true` (default), pick a free model when one is available.
 4. Otherwise, pick the cheapest (per-image / per-request / per-token, normalised against typical generation cost).
 
-Use `--ai.list-models` to see what's currently available with live pricing.
+Use `--ai.list-models` to see what's currently available with live pricing:
+
+```bash
+tinct extract -i openrouter --ai.list-models
+```
+
+Pin an image-output model for predictable selection. Auto-selection optimises cost; it does not rank image quality. The following saves a palette and caches the generated image without applying wallpaper or theme changes:
+
+```bash
+tinct extract -i openrouter \
+  --ai.model google/gemini-nano-banana-2.1 \
+  --ai.prompt "misty mountains at dawn, panoramic landscape" \
+  --aspect-ratio 21:9 \
+  --ai.params '{"image_config":{"aspect_ratio":"21:9"}}' \
+  --format json --output palette.json
+```
+
+Use a model ID from the live list if the example model is unavailable to your account.
 
 ## Flags
 
@@ -76,6 +93,7 @@ Use `--ai.list-models` to see what's currently available with live pricing.
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--ai.params` | _(none)_ | JSON request-body overrides; see Custom API parameters below |
 | `--ai.prompt` | _(required)_ | Text description of the image to generate |
 | `--ai.model` | `auto` | Specific model ID, or `auto` to let tinct pick the cheapest image-capable model |
 | `--ai.list-models` | `false` | List available models with live pricing and exit |
@@ -145,5 +163,52 @@ Cache hits are intentional. Pass `--cache-overwrite` to force a fresh generation
 
 ## Related plugins
 
+- [`openai`](../openai/) — configurable OpenAI-compatible Images and Chat Completions endpoints
 - [`google-genai`](../googlegenai/) — same idea, but Google Gemini / Imagen directly (no router)
 - [`image`](../image/) — use an existing image instead of generating one
+
+## Custom API parameters
+
+`--ai.params` accepts one JSON object, quoted as a single shell argument. It merges recursively into the final request body: nested objects retain unspecified defaults; scalars, arrays and `null` replace existing values. Invalid JSON, arrays and top-level `null` are rejected before generation. Unknown fields are forwarded to the server.
+
+For the Chat Completions route used by this plugin:
+
+```bash
+--ai.params '{"image_config":{"aspect_ratio":"21:9"}}'
+```
+
+This overrides only `image_config.aspect_ratio`; generated messages, model and modalities remain intact. Use `--ai.model` to select a model and `--ai.prompt` for the prompt. Advanced overrides of `messages` or `modalities` replace the entire array and can remove the image-generation request.
+
+Parameter names depend on the endpoint and selected model. There is no universal quality or size field: OpenAI Images parameters such as top-level `quality` and `size` are not automatically translated into OpenRouter chat parameters. Check the selected model's supported fields. Keep `--aspect-ratio` consistent with the API request, or use `--trim-letterbox=false` to preserve the returned dimensions.
+
+OpenRouter also documents a dedicated [Image API](https://openrouter.ai/docs/guides/overview/multimodal/image-generation) at `/api/v1/images`. This plugin uses `/api/v1/chat/completions`; parameters shown for the dedicated Image API are not interchangeable with this route. The generic `openai` plugin's Images mode appends `/images/generations`, so it does not target that dedicated OpenRouter endpoint either.
+
+Streaming is not supported. Tinct uses the first returned image; requesting multiple images may incur charges for images it does not use. Credentials, endpoint URLs and headers are configured separately from request-body parameters.
+
+### Cache behaviour
+
+Automatic cache keys include the parameters, model, prompt controls, aspect ratio, provider settings and letterbox processing. JSON whitespace and object key order do not change the key. Existing entries using the old prompt/model-only hash are not reused. A custom `--cache-filename` overrides automatic naming; use `--cache-overwrite` when changing settings with a custom filename. Metadata records explicit parameters.
+
+## Using the generic OpenAI plugin
+
+OpenRouter's image-output Chat Completions response is also supported by the generic plugin. Set the protocol, API root, credential variable and model explicitly:
+
+```bash
+export OPENROUTER_API_KEY="…"
+tinct extract -i openai \
+  --openai.base-url https://openrouter.ai/api/v1 \
+  --openai.protocol chat \
+  --openai.api-key-env OPENROUTER_API_KEY \
+  --ai.model google/gemini-nano-banana-2.1 \
+  --ai.prompt "misty mountains at dawn, panoramic landscape" \
+  --aspect-ratio 21:9 \
+  --ai.params '{"image_config":{"aspect_ratio":"21:9"}}' \
+  --format json --output palette.json
+```
+
+| Route | Model selection | Credentials |
+|-------|-----------------|-------------|
+| `-i openrouter` | Live model list, prices and automatic selection, or an explicit model | `OPENROUTER_API_KEY` |
+| `-i openai --openai.protocol chat` | Explicit model required for custom endpoints | Environment variable named by `--openai.api-key-env` |
+
+Both routes use the shared image client. Their caches are separate, so switching plugins can generate another paid image. Choose the dedicated plugin for OpenRouter discovery and defaults; choose the generic plugin when configuring compatible endpoints yourself.

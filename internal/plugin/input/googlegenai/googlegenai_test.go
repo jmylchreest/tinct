@@ -369,6 +369,7 @@ func TestIsGeminiModel(t *testing.T) {
 		{"gemini-2.5-flash-image", true},
 		{"gemini-3-pro-image-preview", true},
 		{"gemini-3.1-flash-image", true},
+		{"gemini-nano-banana-2.1", true},
 		{"imagen-4.0-generate-001", false},
 		{"imagen-4.0-ultra-generate-001", false},
 		{"imagen-4.0-fast-generate-001", false},

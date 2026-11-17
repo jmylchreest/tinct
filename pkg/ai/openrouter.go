@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -78,7 +79,11 @@ func (p OpenRouter) GenerateImage(ctx context.Context, r ImageRequest) (Image, e
 	headers["HTTP-Referer"] = "https://github.com/jmylchreest/tinct"
 	headers["X-Title"] = "tinct"
 	var response ChatCompletionResponse
-	if err := p.Options.post(ctx, p.Options.endpoint("https://openrouter.ai/api/v1", "/chat/completions"), request, &response, headers); err != nil {
+	body, err := MarshalRequest(request, r.Params)
+	if err != nil {
+		return Image{}, err
+	}
+	if err := p.Options.post(ctx, p.Options.endpoint("https://openrouter.ai/api/v1", "/chat/completions"), json.RawMessage(body), &response, headers); err != nil {
 		return Image{}, err
 	}
 	if response.Error != nil {
@@ -88,7 +93,13 @@ func (p OpenRouter) GenerateImage(ctx context.Context, r ImageRequest) (Image, e
 		return Image{}, fmt.Errorf("no images in response")
 	}
 	choice := response.Choices[0]
-	header, data, ok := strings.Cut(choice.Message.Images[0].ImageURL.URL, ",")
+	source := choice.Message.Images[0].ImageURL.URL
+	if !strings.HasPrefix(source, "data:") {
+		image, err := p.Options.download(ctx, source)
+		image.FinishReason = choice.FinishReason
+		return image, err
+	}
+	header, data, ok := strings.Cut(source, ",")
 	if !ok || !strings.HasPrefix(header, "data:image/") || !strings.HasSuffix(header, ";base64") {
 		return Image{}, fmt.Errorf("expected base64 image data URL")
 	}

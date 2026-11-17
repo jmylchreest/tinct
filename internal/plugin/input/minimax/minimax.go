@@ -4,8 +4,6 @@ package minimax
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"image/color"
 	_ "image/jpeg" // Required for JPEG image decoding
@@ -40,11 +38,9 @@ const (
 	defaultAPIURL = "https://api.minimax.io/v1/image_generation"
 
 	// defaultModel is the model used when none is specified.
-	defaultModel = "image-01"
+	defaultModel = "MiniMax-H3-Image"
 
-	// defaultImageSize is the target long-edge resolution. MiniMax defaults to
-	// 720p when only an aspect ratio is given, so we request the maximum the
-	// model supports for crisp wallpapers.
+	// defaultImageSize is the H3 area tier, or the image-01 long-edge resolution.
 	defaultImageSize = "2K"
 
 	// minImageDimension and maxImageDimension are MiniMax's accepted width/height
@@ -55,6 +51,7 @@ const (
 
 // ImageMetadata contains metadata about a generated image.
 type ImageMetadata struct {
+	Params map[string]any `json:"params,omitempty"`
 	// Generation parameters
 	Prompt         string `json:"prompt"`
 	EnhancedPrompt string `json:"enhanced_prompt,omitempty"`
@@ -114,12 +111,15 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 		cmd.Flags().StringVar(&p.apiURL, "minimax.base-url", p.apiURL, "MiniMax image generation endpoint URL (override for proxies)")
 	}
 	if cmd.Flags().Lookup("minimax.image-size") == nil {
-		cmd.Flags().StringVar(&p.imageSize, "minimax.image-size", p.imageSize, "Target long-edge resolution: 1K, 2K, or pixels (512-2048)")
+		cmd.Flags().StringVar(&p.imageSize, "minimax.image-size", p.imageSize, "image-01 long-edge resolution (1K, 2K, pixels); H3 area level (1K, 2K, 4K)")
 	}
 }
 
 // Validate checks if required inputs are configured.
 func (p *Plugin) Validate() error {
+	if _, err := aiflags.ParseParams(); err != nil {
+		return err
+	}
 	// Skip validation if just listing models
 	if aiflags.ListModels {
 		return nil
@@ -132,6 +132,9 @@ func (p *Plugin) Validate() error {
 
 // Generate creates an image using MiniMax and extracts colors.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) {
+	if _, err := aiflags.ParseParams(); err != nil {
+		return nil, err
+	}
 	// If list-models flag is set, print the maintained catalogue and exit.
 	// Listing does not call the API: MiniMax exposes no image-model listing
 	// endpoint and no pricing, so we maintain the list (with prices) here.
@@ -250,8 +253,10 @@ func (p *Plugin) getImageBasePath(model string) (string, error) {
 
 	filename := commonflags.CacheFilename
 	if filename == "" {
-		hash := sha256.Sum256([]byte(aiflags.Prompt + model))
-		hashStr := hex.EncodeToString(hash[:])[:16]
+		hashStr, err := aiflags.CacheKey(model, p.apiURL, p.imageSize)
+		if err != nil {
+			return "", err
+		}
 		// Return without extension - will be added based on actual image format
 		filename = fmt.Sprintf("minimax-%s", hashStr)
 	} else {
@@ -387,6 +392,9 @@ type imageResponse = ai.MiniMaxResponse
 // outputBasePath is the path without extension - the actual extension is determined
 // from the API response and the final path is returned.
 func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string, verbose bool) (actualPath string, err error) {
+	if strings.HasPrefix(model, "MiniMax-H3-Image") {
+		return p.generateH3Image(ctx, model, outputBasePath, verbose)
+	}
 	apiKey, err := getAPIKey()
 	if err != nil {
 		return "", err
@@ -401,8 +409,12 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 		fullPrompt = fmt.Sprintf("%s\n\nAvoid: %s", enhancedPrompt, negativePrompt)
 	}
 
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return "", err
+	}
 	width, height, _ := resolveDimensions(commonflags.AspectRatio, p.imageSize)
-	generated, err := (ai.MiniMax{Options: ai.Options{APIKey: apiKey}, Endpoint: p.apiURL}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: fullPrompt, AspectRatio: commonflags.AspectRatio, Width: width, Height: height})
+	generated, err := (ai.MiniMax{Options: ai.Options{APIKey: apiKey}, Endpoint: p.apiURL}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: fullPrompt, AspectRatio: commonflags.AspectRatio, Width: width, Height: height, Params: params})
 	if err != nil {
 		return "", err
 	}
@@ -411,10 +423,14 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 		fmt.Fprintf(os.Stderr, "Received image data: %d bytes\n", len(imageBytes))
 	}
 
+	return p.saveImageBytes(imageBytes, model, outputBasePath, verbose)
+}
+
+func (p *Plugin) saveImageBytes(imageBytes []byte, model, outputBasePath string, verbose bool) (string, error) {
 	// Determine format from the bytes themselves (MiniMax does not return a MIME type).
 	mimeType := http.DetectContentType(imageBytes)
 	ext := getExtensionForMIME(mimeType)
-	actualPath = outputBasePath + ext
+	actualPath := outputBasePath + ext
 
 	if verbose {
 		fmt.Fprintf(os.Stderr, "Image format: %s (extension: %s)\n", mimeType, ext)
@@ -426,8 +442,8 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 
 	metadata := &ImageMetadata{
 		Prompt:         aiflags.Prompt,
-		EnhancedPrompt: enhancedPrompt,
-		NegativePrompt: negativePrompt,
+		EnhancedPrompt: aiprompt.EnhanceForWallpaper(aiflags.Prompt),
+		NegativePrompt: aiprompt.BuildNegative(aiflags.NegativePrompt, aiflags.NoNegativePrompt),
 		Model:          model,
 		AspectRatio:    commonflags.AspectRatio,
 		CreatedAt:      time.Now(),
@@ -441,6 +457,37 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 	return actualPath, nil
 }
 
+// generateH3Image uses MiniMax's OpenAI-compatible Images endpoint for the H3 family.
+func (p *Plugin) generateH3Image(ctx context.Context, model, base string, verbose bool) (string, error) {
+	apiKey, err := getAPIKey()
+	if err != nil {
+		return "", err
+	}
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return "", err
+	}
+	prompt := aiprompt.EnhanceForWallpaper(aiflags.Prompt)
+	if negative := aiprompt.BuildNegative(aiflags.NegativePrompt, aiflags.NoNegativePrompt); negative != "" {
+		prompt += "\nAvoid: " + negative
+	}
+	request := map[string]any{"model": model, "prompt": prompt, "n": 1, "response_format": "b64_json"}
+	// Explicit dimensions cannot be combined with area/aspect_ratio on H3.
+	if size, exists := params["size"]; !exists || size == "auto" {
+		request["aspect_ratio"] = commonflags.AspectRatio
+		request["area"] = p.imageSize
+	}
+	endpoint := strings.TrimRight(p.apiURL, "/")
+	endpoint = strings.TrimSuffix(endpoint, "/image_generation")
+	endpoint = strings.TrimSuffix(endpoint, "/images/generations")
+	client := ai.OpenAI{Options: ai.Options{BaseURL: endpoint, APIKey: apiKey, Timeout: 10 * time.Minute}}
+	result, err := client.GenerateImage(ctx, ai.ImageRequest{Params: aiflags.MergeParams(request, params)})
+	if err != nil {
+		return "", err
+	}
+	return p.saveImageBytes(result.Bytes, model, base, verbose)
+}
+
 // extractImageBytes pulls the raw image bytes from a MiniMax response, preferring
 // inline base64 and falling back to a (short-lived) image URL.
 func (p *Plugin) extractImageBytes(ctx context.Context, response imageResponse) ([]byte, error) {
@@ -450,6 +497,11 @@ func (p *Plugin) extractImageBytes(ctx context.Context, response imageResponse) 
 
 // saveMetadata saves generation metadata as a JSON file alongside the image.
 func (p *Plugin) saveMetadata(imagePath string, metadata *ImageMetadata) error {
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return err
+	}
+	metadata.Params = params
 	return imagecolours.SaveMetadata(imagePath, metadata)
 }
 
@@ -474,9 +526,15 @@ func ListModels() {
 		Cost        string
 	}{
 		{
+			ID:          "MiniMax-H3-Image",
+			Name:        "MiniMax H3 Image",
+			Description: "OpenAI-compatible image generation (default); use ai.params for size/area and other controls",
+			Cost:        "See MiniMax pricing",
+		},
+		{
 			ID:          "image-01",
 			Name:        "MiniMax Image 01 (Hailuo)",
-			Description: "Text-to-image generation with strong prompt adherence (default)",
+			Description: "Legacy text-to-image generation with strong prompt adherence",
 			Cost:        "~$0.0035 per image",
 		},
 	}
@@ -504,6 +562,7 @@ func ListModels() {
 func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 	return []input.FlagHelp{
 		// Shared AI flags
+		{Name: "ai.params", Type: "string", Default: "", Description: "JSON request-body overrides (recursive merge); field names depend on provider/model"},
 		{Name: "ai.prompt", Type: "string", Default: "", Description: "Text description for AI image generation (required)", Required: true},
 		{Name: "ai.model", Type: "string", Default: defaultModel, Description: "AI model to use for image generation", Required: false},
 		{Name: "ai.list-models", Type: "bool", Default: "false", Description: "List available AI models and exit", Required: false},
@@ -526,6 +585,6 @@ func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 		{Name: "trim-letterbox", Type: "bool", Default: "true", Description: "Trim solid letterbox borders from generated images", Required: false},
 		// Plugin-specific flags
 		{Name: "minimax.base-url", Type: "string", Default: defaultAPIURL, Description: "MiniMax image generation endpoint URL (override for proxies)", Required: false},
-		{Name: "minimax.image-size", Type: "string", Default: defaultImageSize, Description: "Target long-edge resolution: 1K, 2K, or pixels (512-2048)", Required: false},
+		{Name: "minimax.image-size", Type: "string", Default: defaultImageSize, Description: "image-01 long-edge resolution (1K, 2K, pixels); H3 area level (1K, 2K, 4K)", Required: false},
 	}
 }

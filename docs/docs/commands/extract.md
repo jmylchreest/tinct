@@ -46,6 +46,32 @@ for the built-in image plugin, and for installed external plugins whatever
 their `--plugin-info` declares. Run `tinct extract --help` to see the set
 available on your machine.
 
+## AI request parameters
+
+The `google-genai`, `minimax`, `openai` and `openrouter` inputs share `--ai.params`. Pass one quoted JSON object containing fields in the selected provider's request-body format:
+
+```bash
+tinct extract -i openai \
+  --ai.prompt "misty mountains at dawn" \
+  --ai.params '{"quality":"high","size":"3840x2160"}' \
+  --aspect-ratio 16:9 --format json --output palette.json
+```
+
+This generates and caches an image and writes a palette, without running wallpaper or theme output plugins. Generation requires API credentials and may incur provider charges.
+
+Objects merge recursively into the generated request. Explicit scalars, arrays and `null` replace defaults; invalid JSON or a non-object value is rejected. Unknown keys are passed through for server validation. Use one `--ai.params` object for all overrides; repeated flags do not accumulate values.
+
+| Provider | Example request-body overrides |
+|----------|--------------------------------|
+| [Google Gemini](../plugins/input/google-genai.md) | `{"generationConfig":{"imageConfig":{"imageSize":"2K"}}}` |
+| [MiniMax H3](../plugins/input/minimax.md) | `{"size":"3840x2160","output_format":"png"}` |
+| [OpenAI Images](../plugins/input/openai.md) | `{"quality":"high","size":"3840x2160"}` |
+| [OpenRouter Chat Completions](../plugins/input/openrouter.md) | `{"image_config":{"aspect_ratio":"21:9"}}` |
+
+Fields and accepted values depend on the endpoint and model; tinct does not translate them between providers. Set credentials and endpoints using environment variables and provider flags, not this JSON. Parameters affect automatic cache keys. When using `--cache-filename`, pass `--cache-overwrite` to regenerate after changing parameters.
+
+The same flag works with `tinct generate`. See each provider's guide for model selection, limits and complete examples.
+
 ## Output formats
 
 ### palette (default)

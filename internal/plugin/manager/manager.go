@@ -21,6 +21,7 @@ import (
 	"github.com/jmylchreest/tinct/internal/plugin/input/image"
 	"github.com/jmylchreest/tinct/internal/plugin/input/markdown"
 	"github.com/jmylchreest/tinct/internal/plugin/input/minimax"
+	"github.com/jmylchreest/tinct/internal/plugin/input/openai"
 	"github.com/jmylchreest/tinct/internal/plugin/input/openrouter"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotecss"
 	"github.com/jmylchreest/tinct/internal/plugin/input/remotejson"
@@ -125,6 +126,7 @@ func (m *Manager) registerBuiltinPlugins() {
 	m.inputRegistry.Register(googlegenai.New())
 	m.inputRegistry.Register(minimax.New())
 	m.inputRegistry.Register(openrouter.New())
+	m.inputRegistry.Register(openai.New())
 
 	// Register output plugins.
 	m.outputRegistry.Register(alacritty.New())

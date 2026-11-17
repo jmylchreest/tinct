@@ -231,7 +231,7 @@ func TestGenerateImageSuccess(t *testing.T) {
 	plugin.apiURL = srv.URL
 
 	base := filepath.Join(t.TempDir(), "out")
-	path, err := plugin.generateImage(context.Background(), defaultModel, base, false)
+	path, err := plugin.generateImage(context.Background(), "image-01", base, false)
 	if err != nil {
 		t.Fatalf("generateImage failed: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestGenerateImageBaseRespError(t *testing.T) {
 	plugin.apiURL = srv.URL
 
 	base := filepath.Join(t.TempDir(), "out")
-	if _, err := plugin.generateImage(context.Background(), defaultModel, base, false); err == nil {
+	if _, err := plugin.generateImage(context.Background(), "image-01", base, false); err == nil {
 		t.Error("expected error from non-zero base_resp.status_code")
 	}
 }
@@ -284,7 +284,7 @@ func TestGenerateImageHTTPError(t *testing.T) {
 	plugin.apiURL = srv.URL
 
 	base := filepath.Join(t.TempDir(), "out")
-	if _, err := plugin.generateImage(context.Background(), defaultModel, base, false); err == nil {
+	if _, err := plugin.generateImage(context.Background(), "image-01", base, false); err == nil {
 		t.Error("expected error from HTTP 401")
 	}
 }
@@ -298,7 +298,89 @@ func TestGenerateImageMissingAPIKey(t *testing.T) {
 
 	plugin := New()
 	base := filepath.Join(t.TempDir(), "out")
-	if _, err := plugin.generateImage(context.Background(), defaultModel, base, false); err == nil {
+	if _, err := plugin.generateImage(context.Background(), "image-01", base, false); err == nil {
 		t.Error("expected error when MINIMAX_API_KEY is unset")
+	}
+}
+
+func TestCustomParamsOnWire(t *testing.T) {
+	resetFlags()
+	defer resetFlags()
+	aiflags.Params = `{"width":1024,"height":768,"prompt_optimizer":false,"seed":9007199254740993}`
+	t.Setenv("MINIMAX_API_KEY", "test")
+	raw := pngBytes(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+		}
+		for k, v := range map[string]string{"width": "1024", "height": "768", "prompt_optimizer": "false", "seed": "9007199254740993"} {
+			if string(body[k]) != v {
+				t.Errorf("%s = %s, want %s", k, body[k], v)
+			}
+		}
+		var out imageResponse
+		out.Data.ImageBase64 = []string{base64.StdEncoding.EncodeToString(raw)}
+		_ = json.NewEncoder(w).Encode(out)
+	}))
+	defer server.Close()
+	p := New()
+	p.apiURL = server.URL
+	if _, err := p.generateImage(context.Background(), "image-01", filepath.Join(t.TempDir(), "params"), false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestH3UsesSharedImagesProtocol(t *testing.T) {
+	for _, params := range []string{`{}`, `{"size":"3840x2160","output_format":"png"}`} {
+		t.Run(params, func(t *testing.T) {
+			checkH3UsesSharedImagesProtocol(t, params)
+		})
+	}
+}
+
+func checkH3UsesSharedImagesProtocol(t *testing.T, params string) {
+	t.Helper()
+	resetFlags()
+	defer resetFlags()
+	aiflags.Prompt = "forest"
+	aiflags.Params = params
+	t.Setenv("MINIMAX_API_KEY", "test")
+	raw := pngBytes(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/images/generations" {
+			t.Error(r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test" {
+			t.Error("missing auth")
+		}
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		if request["model"] != "MiniMax-H3-Image" || request["response_format"] != "b64_json" {
+			t.Errorf("bad request: %v", request)
+		}
+		if _, explicit := request["size"]; explicit {
+			if _, exists := request["aspect_ratio"]; exists {
+				t.Error("explicit size conflicts with aspect_ratio")
+			}
+			if _, exists := request["area"]; exists {
+				t.Error("explicit size conflicts with area")
+			}
+		} else if request["area"] != "2K" || request["aspect_ratio"] != "16:9" {
+			t.Errorf("missing defaults: %v", request)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []map[string]string{{"b64_json": base64.StdEncoding.EncodeToString(raw)}}})
+	}))
+	defer server.Close()
+	p := New()
+	p.apiURL = server.URL + "/v1/image_generation"
+	path, err := p.generateImage(context.Background(), defaultModel, filepath.Join(t.TempDir(), "h3"), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Ext(path) != ".png" {
+		t.Error(path)
 	}
 }

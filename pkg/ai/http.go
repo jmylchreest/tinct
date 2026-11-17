@@ -119,6 +119,10 @@ func decodeImage(encoded, mime string) (Image, error) {
 	return Image{Bytes: data, MIMEType: mime}, nil
 }
 func (o Options) download(ctx context.Context, imageURL string) (Image, error) {
+	u, err := url.Parse(imageURL)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil {
+		return Image{}, fmt.Errorf("image URL must be an http(s) URL without credentials")
+	}
 	data, err := o.request(ctx, http.MethodGet, imageURL, nil, nil)
 	if err != nil {
 		return Image{}, err

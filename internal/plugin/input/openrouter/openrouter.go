@@ -3,8 +3,6 @@ package openrouter
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"image/color"
@@ -44,6 +42,7 @@ const (
 
 // ImageMetadata contains metadata about a generated image.
 type ImageMetadata struct {
+	Params map[string]any `json:"params,omitempty"`
 	// Generation parameters
 	Prompt         string `json:"prompt"`
 	EnhancedPrompt string `json:"enhanced_prompt,omitempty"`
@@ -107,6 +106,9 @@ func (p *Plugin) RegisterFlags(cmd *cobra.Command) {
 
 // Validate checks if required inputs are configured.
 func (p *Plugin) Validate() error {
+	if _, err := aiflags.ParseParams(); err != nil {
+		return err
+	}
 	// Skip validation if just listing models
 	if aiflags.ListModels {
 		return nil
@@ -119,6 +121,9 @@ func (p *Plugin) Validate() error {
 
 // Generate creates an image using OpenRouter and extracts colors.
 func (p *Plugin) Generate(ctx context.Context, opts input.GenerateOptions) (*colour.Palette, error) { //nolint:gocyclo
+	if _, err := aiflags.ParseParams(); err != nil {
+		return nil, err
+	}
 	// If list-models flag is set, list models and exit
 	if aiflags.ListModels {
 		if err := p.listAvailableModels(ctx, opts.Verbose); err != nil {
@@ -240,8 +245,10 @@ func (p *Plugin) getImageBasePath(model string) (string, error) {
 
 	filename := commonflags.CacheFilename
 	if filename == "" {
-		hash := sha256.Sum256([]byte(aiflags.Prompt + model))
-		hashStr := hex.EncodeToString(hash[:])[:16]
+		hashStr, err := aiflags.CacheKey(model, apiBaseURL)
+		if err != nil {
+			return "", err
+		}
 		// Return without extension - will be added based on actual image format
 		filename = fmt.Sprintf("openrouter-%s", hashStr)
 	} else {
@@ -313,7 +320,11 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 		fullPrompt = fmt.Sprintf("%s\n\nAvoid: %s", enhancedPrompt, negativePrompt)
 	}
 
-	generated, err := (ai.OpenRouter{Options: ai.Options{APIKey: apiKey}}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: fullPrompt, AspectRatio: commonflags.AspectRatio})
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return "", err
+	}
+	generated, err := (ai.OpenRouter{Options: ai.Options{APIKey: apiKey}}).GenerateImage(ctx, ai.ImageRequest{Model: model, Prompt: fullPrompt, AspectRatio: commonflags.AspectRatio, Params: params})
 	if err != nil {
 		return "", err
 	}
@@ -346,6 +357,11 @@ func (p *Plugin) generateImage(ctx context.Context, model, outputBasePath string
 
 // saveMetadata saves generation metadata as a JSON file alongside the image.
 func (p *Plugin) saveMetadata(imagePath string, metadata *ImageMetadata) error {
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return err
+	}
+	metadata.Params = params
 	return imagecolours.SaveMetadata(imagePath, metadata)
 }
 
@@ -456,6 +472,7 @@ func wrapText(text string, width int, indent string) string {
 func (p *Plugin) GetFlagHelp() []input.FlagHelp {
 	return []input.FlagHelp{
 		// Shared AI flags
+		{Name: "ai.params", Type: "string", Default: "", Description: "JSON request-body overrides (recursive merge); field names depend on provider/model"},
 		{Name: "ai.prompt", Type: "string", Default: "", Description: "Text description for AI image generation (required)", Required: true},
 		{Name: "ai.model", Type: "string", Default: "auto", Description: "AI model to use (auto selects cheapest image model)", Required: false},
 		{Name: "ai.list-models", Type: "bool", Default: "false", Description: "List available AI models and exit", Required: false},
