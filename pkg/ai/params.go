@@ -11,8 +11,8 @@ import (
 func MergeParams(dst, params map[string]any) map[string]any {
 	for key, value := range params {
 		if object, ok := value.(map[string]any); ok {
-			base, _ := dst[key].(map[string]any)
-			if base == nil {
+			base, isObject := dst[key].(map[string]any)
+			if !isObject || base == nil {
 				base = make(map[string]any)
 			}
 			dst[key] = MergeParams(base, object)

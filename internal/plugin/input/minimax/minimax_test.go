@@ -334,48 +334,53 @@ func TestCustomParamsOnWire(t *testing.T) {
 func TestH3UsesSharedImagesProtocol(t *testing.T) {
 	for _, params := range []string{`{}`, `{"size":"3840x2160","output_format":"png"}`} {
 		t.Run(params, func(t *testing.T) {
-			resetFlags()
-			defer resetFlags()
-			aiflags.Prompt = "forest"
-			aiflags.Params = params
-			t.Setenv("MINIMAX_API_KEY", "test")
-			raw := pngBytes(t)
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/v1/images/generations" {
-					t.Error(r.URL.Path)
-				}
-				if r.Header.Get("Authorization") != "Bearer test" {
-					t.Error("missing auth")
-				}
-				var request map[string]any
-				if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-					t.Error(err)
-				}
-				if request["model"] != "MiniMax-H3-Image" || request["response_format"] != "b64_json" {
-					t.Errorf("bad request: %v", request)
-				}
-				if _, explicit := request["size"]; explicit {
-					if _, exists := request["aspect_ratio"]; exists {
-						t.Error("explicit size conflicts with aspect_ratio")
-					}
-					if _, exists := request["area"]; exists {
-						t.Error("explicit size conflicts with area")
-					}
-				} else if request["area"] != "2K" || request["aspect_ratio"] != "16:9" {
-					t.Errorf("missing defaults: %v", request)
-				}
-				_ = json.NewEncoder(w).Encode(map[string]any{"data": []map[string]string{{"b64_json": base64.StdEncoding.EncodeToString(raw)}}})
-			}))
-			defer server.Close()
-			p := New()
-			p.apiURL = server.URL + "/v1/image_generation"
-			path, err := p.generateImage(context.Background(), defaultModel, filepath.Join(t.TempDir(), "h3"), false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if filepath.Ext(path) != ".png" {
-				t.Error(path)
-			}
+			checkH3UsesSharedImagesProtocol(t, params)
 		})
+	}
+}
+
+func checkH3UsesSharedImagesProtocol(t *testing.T, params string) {
+	t.Helper()
+	resetFlags()
+	defer resetFlags()
+	aiflags.Prompt = "forest"
+	aiflags.Params = params
+	t.Setenv("MINIMAX_API_KEY", "test")
+	raw := pngBytes(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/images/generations" {
+			t.Error(r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test" {
+			t.Error("missing auth")
+		}
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		if request["model"] != "MiniMax-H3-Image" || request["response_format"] != "b64_json" {
+			t.Errorf("bad request: %v", request)
+		}
+		if _, explicit := request["size"]; explicit {
+			if _, exists := request["aspect_ratio"]; exists {
+				t.Error("explicit size conflicts with aspect_ratio")
+			}
+			if _, exists := request["area"]; exists {
+				t.Error("explicit size conflicts with area")
+			}
+		} else if request["area"] != "2K" || request["aspect_ratio"] != "16:9" {
+			t.Errorf("missing defaults: %v", request)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []map[string]string{{"b64_json": base64.StdEncoding.EncodeToString(raw)}}})
+	}))
+	defer server.Close()
+	p := New()
+	p.apiURL = server.URL + "/v1/image_generation"
+	path, err := p.generateImage(context.Background(), defaultModel, filepath.Join(t.TempDir(), "h3"), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Ext(path) != ".png" {
+		t.Error(path)
 	}
 }

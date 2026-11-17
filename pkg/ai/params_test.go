@@ -32,7 +32,7 @@ func TestOpenRouterImageURL(t *testing.T) {
 		fmt.Fprint(w, "image bytes")
 	}))
 	defer download.Close()
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintf(w, `{"choices":[{"finish_reason":"stop","message":{"images":[{"image_url":{"url":%q}}]}}]}`, download.URL)
 	}))
 	defer server.Close()

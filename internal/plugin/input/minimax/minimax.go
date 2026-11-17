@@ -497,7 +497,11 @@ func (p *Plugin) extractImageBytes(ctx context.Context, response imageResponse) 
 
 // saveMetadata saves generation metadata as a JSON file alongside the image.
 func (p *Plugin) saveMetadata(imagePath string, metadata *ImageMetadata) error {
-	metadata.Params, _ = aiflags.ParseParams()
+	params, err := aiflags.ParseParams()
+	if err != nil {
+		return err
+	}
+	metadata.Params = params
 	return imagecolours.SaveMetadata(imagePath, metadata)
 }
 

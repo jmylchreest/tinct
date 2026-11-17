@@ -29,6 +29,8 @@ import (
 
 const defaultBaseURL = "https://api.openai.com/v1"
 const defaultModel = "gpt-image-2.6-flare"
+const protocolImages = "images"
+const protocolChat = "chat"
 
 // Plugin implements input.Plugin and input.WallpaperProvider.
 type Plugin struct {
@@ -44,7 +46,7 @@ func New() *Plugin {
 	if baseURL == "" {
 		baseURL = defaultBaseURL
 	}
-	return &Plugin{baseURL: baseURL, protocol: "images", keyEnv: "OPENAI_API_KEY"}
+	return &Plugin{baseURL: baseURL, protocol: protocolImages, keyEnv: "OPENAI_API_KEY"}
 }
 
 // Name returns the registry name.
@@ -87,7 +89,7 @@ func (p *Plugin) model() (string, error) {
 	if aiflags.Model != "" && aiflags.Model != "auto" {
 		return aiflags.Model, nil
 	}
-	if strings.TrimRight(p.baseURL, "/") == defaultBaseURL && p.protocol == "images" {
+	if strings.TrimRight(p.baseURL, "/") == defaultBaseURL && p.protocol == protocolImages {
 		return defaultModel, nil
 	}
 	return "", fmt.Errorf("--ai.model is required for a custom endpoint or chat protocol")
@@ -102,7 +104,7 @@ func (p *Plugin) Validate() error {
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
 		return fmt.Errorf("AI base URL must be an http(s) URL without credentials, query or fragment")
 	}
-	if p.protocol != "images" && p.protocol != "chat" {
+	if p.protocol != protocolImages && p.protocol != protocolChat {
 		return fmt.Errorf("unsupported AI protocol %q: use images or chat", p.protocol)
 	}
 	if aiflags.ListModels {
@@ -123,10 +125,11 @@ func (p *Plugin) request(model string) ([]byte, error) {
 	if negative := aiprompt.BuildNegative(aiflags.NegativePrompt, aiflags.NoNegativePrompt); negative != "" {
 		prompt += "\nAvoid: " + negative
 	}
-	body := map[string]any{"model": model, "prompt": prompt, "n": 1}
-	if p.protocol == "chat" {
-		body = map[string]any{"model": model, "messages": []map[string]string{{"role": "user", "content": prompt}}, "modalities": []string{"image", "text"}, "image_config": map[string]string{"aspect_ratio": commonflags.AspectRatio}}
+	body := map[string]any{"prompt": prompt, "n": 1}
+	if p.protocol == protocolChat {
+		body = map[string]any{"messages": []map[string]string{{"role": "user", "content": prompt}}, "modalities": []string{"image", "text"}, "image_config": map[string]string{"aspect_ratio": commonflags.AspectRatio}}
 	}
+	body["model"] = model
 	return aiflags.MarshalRequest(body)
 }
 
@@ -195,7 +198,7 @@ func (p *Plugin) generateImage(ctx context.Context, body []byte, base, model str
 		return "", err
 	}
 	var driver ai.ImageGenerator = ai.OpenAI{Options: client}
-	if p.protocol == "chat" {
+	if p.protocol == protocolChat {
 		driver = ai.OpenRouter{Options: client}
 	}
 	result, err := driver.GenerateImage(ctx, ai.ImageRequest{Params: params})
