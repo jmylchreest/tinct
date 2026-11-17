@@ -25,7 +25,15 @@ This starts a local development server at http://localhost:3000/ with hot reload
 npm run build
 ```
 
-Generates static content in the `build` directory.
+Generates static content in the `build` directory. Run `npm run typecheck` to validate the TypeScript configuration.
+
+### Dependency maintenance
+
+The docs use TypeScript 7. The local tsconfig clears the Docusaurus preset's removed `baseUrl` option and supplies an explicit `@site/*` path mapping.
+
+The npm overrides pin patched compatible release lines for `serialize-javascript`, `tinypool`, and SockJS's `uuid` dependency while Docusaurus still requires older majors. Validate changes with both the production build and typecheck.
+
+As of 2026-11-17, `npm audit` still reports [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) in transitive `picomatch`. All published versions through 4.0.7 are affected, so a version bump cannot resolve it yet. The audit also lists dependent packages affected by the same advisory. Recheck when a patched release becomes available.
 
 ### Deployment
 

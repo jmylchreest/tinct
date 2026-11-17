@@ -3,13 +3,11 @@ package repomanager
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v70/github"
-	"golang.org/x/oauth2"
+	"github.com/google/go-github/v93/github"
 )
 
 // GitHubClient wraps the GitHub API client.
@@ -34,18 +32,16 @@ type GitHubAsset struct {
 }
 
 // NewGitHubClient creates a new GitHub API client.
-func NewGitHubClient() *GitHubClient {
-	var httpClient *http.Client
-
-	// Use token if available (for higher rate limits)
+func NewGitHubClient() (*GitHubClient, error) {
+	var options []github.ClientOptionsFunc
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
-		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-		httpClient = oauth2.NewClient(context.Background(), ts)
+		options = append(options, github.WithAuthToken(token))
 	}
-
-	return &GitHubClient{
-		client: github.NewClient(httpClient),
+	client, err := github.NewClient(options...)
+	if err != nil {
+		return nil, fmt.Errorf("create GitHub API client: %w", err)
 	}
+	return &GitHubClient{client: client}, nil
 }
 
 // GetReleases resolves version specifier and returns matching releases.

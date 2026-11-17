@@ -227,9 +227,8 @@ updates:
           - patch
 
   # --- npm: documentation site ------------------------------------------
-  # Majors are excluded: the two outstanding ones (glob 11 -> 13,
-  # typescript 5 -> 7) each want a deliberate PR with a real build and
-  # typecheck behind them, not an automated bump.
+  # Major updates need a deliberate compatibility review with a real
+  # documentation build and typecheck, rather than an automated bump.
   - package-ecosystem: npm
     directory: "/docs"
     schedule:

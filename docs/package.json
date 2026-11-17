@@ -19,19 +19,19 @@
     "@cmfcmf/docusaurus-search-local": "^2.0.1",
     "@docusaurus/core": "3.10.2",
     "@docusaurus/preset-classic": "3.10.2",
-    "@mdx-js/react": "^3.0.0",
-    "clsx": "^2.0.0",
-    "glob": "^11.0.0",
+    "@mdx-js/react": "^3.1.1",
+    "clsx": "^2.1.1",
+    "glob": "^14.0.6",
     "gray-matter": "^4.0.3",
-    "prism-react-renderer": "^2.3.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.10.2",
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
-    "typescript": "~5.9.3"
+    "typescript": "^7.0.2"
   },
   "browserslist": {
     "production": [
@@ -47,5 +47,12 @@
   },
   "engines": {
     "node": ">=20.0"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.1.4",
+    "tinypool": "^2.2.0",
+    "sockjs": {
+      "uuid": "^11.1.1"
+    }
   }
 }

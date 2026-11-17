@@ -104,32 +104,7 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 		Ambience:  make([]themeformat.Ambience, 0),
 	}
 
-	// Extract colors from palette
-	palette := themeData.Palette()
-	if palette != nil {
-		// Add categorised colors with roles
-		// Separate position roles (ambient/region) from regular colors
-		for role, cc := range palette.Colours {
-			roleStr := string(role)
-			if region, found := strings.CutPrefix(roleStr, "position"); found {
-				// This is an ambient/region color (e.g. "positionTopLeft")
-				// Convert camelCase to readable format (e.g. "TopLeft" -> "top_left")
-				region = camelToSnake(region)
-				theme.Ambience = append(theme.Ambience, themeformat.Ambience{
-					Hex:    cc.Hex,
-					Region: region,
-					Weight: cc.Weight,
-				})
-			} else {
-				// Regular color
-				theme.Colors = append(theme.Colors, themeformat.Color{
-					Hex:    cc.Hex,
-					Weight: cc.Weight,
-					Role:   roleStr,
-				})
-			}
-		}
-	}
+	populateThemeColours(theme, themeData)
 
 	// Handle wallpaper
 	var thumbnailData string
@@ -182,6 +157,35 @@ func (p *Plugin) Generate(themeData *colour.ThemeData) (map[string][]byte, error
 	return map[string][]byte{
 		filename: []byte(content),
 	}, nil
+}
+
+func populateThemeColours(theme *themeformat.Theme, themeData *colour.ThemeData) {
+	// Extract colors from palette
+	palette := themeData.Palette()
+	if palette != nil {
+		// Add categorised colors with roles
+		// Separate position roles (ambient/region) from regular colors
+		for role, cc := range palette.Colours {
+			roleStr := string(role)
+			if region, found := strings.CutPrefix(roleStr, "position"); found {
+				// This is an ambient/region color (e.g. "positionTopLeft")
+				// Convert camelCase to readable format (e.g. "TopLeft" -> "top_left")
+				region = camelToSnake(region)
+				theme.Ambience = append(theme.Ambience, themeformat.Ambience{
+					Hex:    cc.Hex,
+					Region: region,
+					Weight: cc.Weight,
+				})
+			} else {
+				// Regular color
+				theme.Colors = append(theme.Colors, themeformat.Color{
+					Hex:    cc.Hex,
+					Weight: cc.Weight,
+					Role:   roleStr,
+				})
+			}
+		}
+	}
 }
 
 // camelToSnake converts camelCase to snake_case.
