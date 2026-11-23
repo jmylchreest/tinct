@@ -16,7 +16,7 @@ require (
 	golang.org/x/image v0.48.0
 	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.48.0
-	google.golang.org/genai v1.77.0
+	google.golang.org/genai v1.79.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
